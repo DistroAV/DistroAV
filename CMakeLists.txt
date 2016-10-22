@@ -18,4 +18,5 @@ include_directories(
 	"${NDISDK_DIR}/Include")
 target_link_libraries(obs-ndi 
 	libobs
+	"${PTHREADS_LIB}"
 	"${NDISDK_DIR}/Lib/x86/Processing.NDI.Lib.x86.lib")

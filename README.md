@@ -10,3 +10,4 @@ You'll need to fill these CMake variables :
 - **NDISDK_DIR** (path) : location of the NewTek NDI SDK
 - **LIBOBS_INCLUDE_DIR** (path) : location of the libobs subfolder in the source code of OBS Studio
 - **LIBOBS_LIB** (filepath) : location of the obs.lib file
+- **PTHREADS_LIB** (filepath) : location of the pthreads library (maybe Windows only)
