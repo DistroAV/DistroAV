@@ -61,6 +61,7 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 
 	blog(LOG_INFO, "[obs-ndi] updating OBS source '%s' with NDI source '%s'", obs_source_get_name(s->source), recv_desc.source_to_connect_to.p_ndi_name);
 
+	NDIlib_recv_destroy(s->ndi_receiver);
 	s->ndi_receiver = NDIlib_recv_create2(&recv_desc);
 	if (!(s->ndi_receiver)) {
 		blog(LOG_ERROR, "[obs-ndi] can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
