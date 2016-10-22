@@ -63,11 +63,11 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 
 	NDIlib_recv_destroy(s->ndi_receiver);
 	s->ndi_receiver = NDIlib_recv_create2(&recv_desc);
-	if (!(s->ndi_receiver)) {
-		blog(LOG_ERROR, "[obs-ndi] can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
+	if (s->ndi_receiver) {
+		blog(LOG_INFO, "[obs-ndi] OBS source '%s' updated successfully", obs_source_get_name(s->source));	
 	}
 	else {
-		blog(LOG_INFO, "[obs-ndi] OBS source '%s' updated successfully", obs_source_get_name(s->source));
+		blog(LOG_ERROR, "[obs-ndi] can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
 	}
 }
 
@@ -84,6 +84,7 @@ void* ndi_source_create(obs_data_t *settings, obs_source_t *source) {
 void ndi_source_destroy(void *data) {
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 	NDIlib_recv_destroy(s->ndi_receiver);
+	// TODO : free s->ndi_sources and s
 }
 
 void ndi_source_videotick(void *data, float seconds) {
@@ -91,9 +92,13 @@ void ndi_source_videotick(void *data, float seconds) {
 	
 	NDIlib_video_frame_t video_frame;
 	NDIlib_audio_frame_t audio_frame;
+	NDIlib_audio_frame_interleaved_16s_t audio_frame_16s;
 
 	obs_source_frame obs_video_frame = { 0 };
 	obs_source_audio obs_audio_frame = { 0 };
+
+	uint8_t *audio_data;
+	long audio_data_size;
 
 	switch(NDIlib_recv_capture(s->ndi_receiver, &video_frame, &audio_frame, NULL, 0)) {
 		case NDIlib_frame_type_video:
@@ -119,7 +124,11 @@ void ndi_source_videotick(void *data, float seconds) {
 			break;
 
 		case NDIlib_frame_type_audio:
-			/*switch(audio_frame.no_channels) {
+			audio_frame_16s.reference_level = 0;
+			audio_frame_16s.p_data = static_cast<short *>(bzalloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(short)));
+			NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
+
+			switch(audio_frame_16s.no_channels) {
 				case 1:
 					obs_audio_frame.speakers = SPEAKERS_MONO;
 					break;
@@ -145,12 +154,17 @@ void ndi_source_videotick(void *data, float seconds) {
 					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 			}
 
-			obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
-			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
-			obs_audio_frame.frames = audio_frame.no_samples;
-			obs_audio_frame.data[0];
+			obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
+			obs_audio_frame.format = AUDIO_FORMAT_16BIT;
+			obs_audio_frame.frames = audio_frame_16s.no_samples;
 
-			obs_source_output_audio(s->source, &obs_audio_frame);*/
+			audio_data_size = audio_frame_16s.no_samples * audio_frame_16s.no_channels * sizeof(short);
+			audio_data = static_cast<uint8_t *>(bzalloc(audio_data_size));
+			memcpy(audio_data, audio_frame_16s.p_data, audio_data_size);
+
+			obs_audio_frame.data[0] = audio_data;
+
+			obs_source_output_audio(s->source, &obs_audio_frame);
 
 			NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
 			break;
@@ -168,7 +182,7 @@ struct obs_source_info create_ndi_source_info() {
 									  OBS_SOURCE_ASYNC | OBS_SOURCE_DO_NOT_DUPLICATE;
 	ndi_source_info.get_name		= ndi_source_getname;
 	ndi_source_info.get_properties	= ndi_source_getproperties;
-	ndi_source_info.update = ndi_source_update;
+	ndi_source_info.update			= ndi_source_update;
 	ndi_source_info.create			= ndi_source_create;
 	ndi_source_info.destroy			= ndi_source_destroy;
 	ndi_source_info.video_tick		= ndi_source_videotick;
