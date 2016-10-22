@@ -61,9 +61,6 @@ void *ndi_source_pollframe(void *data) {
 
 	uint8_t *audio_data;
 	long audio_data_size;
-	
-	uint64_t timestamp = os_gettime_ns();
-	uint64_t previous_audio_ts = timestamp;
 
 	while (s->running) {
 		switch (NDIlib_recv_capture(s->ndi_receiver, &video_frame, &audio_frame, NULL, 0)) {
@@ -90,8 +87,6 @@ void *ndi_source_pollframe(void *data) {
 				break;
 
 			case NDIlib_frame_type_audio:
-				timestamp = os_gettime_ns();
-
 				audio_frame_16s.reference_level = 0;
 				audio_frame_16s.p_data = static_cast<short *>(malloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(short)));
 				NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
@@ -122,7 +117,7 @@ void *ndi_source_pollframe(void *data) {
 					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 				}
 
-				obs_audio_frame.timestamp = timestamp;
+				obs_audio_frame.timestamp = os_gettime_ns() - (audio_frame_16s.sample_rate * audio_frame_16s.no_samples);
 				obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
 				obs_audio_frame.format = AUDIO_FORMAT_16BIT;
 				obs_audio_frame.frames = audio_frame_16s.no_samples;
