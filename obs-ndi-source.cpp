@@ -82,6 +82,7 @@ void *ndi_source_pollframe(void *data) {
 					break;
 				}
 
+				obs_video_frame.timestamp = video_frame.timecode * 100;
 				obs_video_frame.width = video_frame.xres;
 				obs_video_frame.height = video_frame.yres;
 				obs_video_frame.format = frame_format;
