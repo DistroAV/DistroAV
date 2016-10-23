@@ -34,9 +34,6 @@ bool obs_module_load(void)
 
 	ndi_finder = NDIlib_find_create(&find_desc);
 
-	DWORD no_sources;
-	NDIlib_find_get_sources(ndi_finder, &no_sources, 5000);
-
 	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
 
