@@ -3,7 +3,7 @@ obs-ndi
 Network A/V in OBS Studio with NewTek's NDI technology
 
 ## Build prerequisites
-You need QT 5.7, CMake, and a working development environment for OBS Studio installed on your computer.
+You need CMake, the NewTek NDI SDK and a working development environment for OBS Studio installed on your computer.
 
 ## How to build
 You'll need to fill these CMake variables :
