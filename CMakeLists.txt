@@ -9,8 +9,8 @@ set(obs-ndi_SOURCES
 	obs-ndi-source.cpp
 	obs-ndi-output.cpp)
 
-set(obs-obs
-	ndi_HEADERS-ndi.h)
+set(obs-ndi_HEADERS
+	obs-ndi.h)
 
 add_library(obs-ndi MODULE 
 	${obs-ndi_SOURCES}
