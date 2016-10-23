@@ -39,6 +39,13 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 		return true;
 	});
 
+	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
+		#ifdef _WIN32
+		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
+		#endif
+		return true;
+	});
+
 	s->no_sources = 0;
 	s->ndi_sources = NDIlib_find_get_sources(ndi_finder, &s->no_sources, 0);
 	
