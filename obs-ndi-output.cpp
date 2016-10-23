@@ -3,7 +3,7 @@
 #endif
 #include <obs-module.h>
 #include <util/platform.h>
-#include <media-io/format-conversion.h>
+#include <util/threading.h>
 #include <Processing.NDI.Lib.h>
 
 struct ndi_output {
@@ -14,6 +14,10 @@ struct ndi_output {
 
 	bool started;
 	NDIlib_send_instance_t ndi_sender;
+	pthread_t queue_thread;
+	pthread_mutex_t queue_mutex;
+	os_sem_t *queue_sem;
+	DARRAY(struct video_data) video_queue;
 };
 
 const char* ndi_output_getname(void *data) {
@@ -29,6 +33,46 @@ obs_properties_t* ndi_output_getproperties(void *data) {
 	obs_properties_add_text(props, "ndi_name", obs_module_text("OutputProps_NDIName"), OBS_TEXT_DEFAULT);
 
 	return props;
+}
+
+void ndi_source_sendframe(void *data, struct video_data *frame) {
+	struct ndi_output *o = static_cast<ndi_output *>(data);
+
+	uint32_t width = o->video_info.output_width;
+	uint32_t height = o->video_info.output_height;
+
+	NDIlib_video_frame_t video_frame = { 0 };
+	video_frame.xres = width;
+	video_frame.yres = height;
+	video_frame.FourCC = NDIlib_FourCC_type_BGRA;
+	video_frame.frame_rate_N = o->video_info.fps_num;
+	video_frame.frame_rate_D = o->video_info.fps_den;
+	video_frame.picture_aspect_ratio = (float)width / (float)height;
+	video_frame.is_progressive = true;
+	video_frame.timecode = frame->timestamp;
+
+	video_frame.p_data = frame->data[0];
+	video_frame.line_stride_in_bytes = frame->linesize[0];
+
+	NDIlib_send_send_video(o->ndi_sender, &video_frame);
+}
+
+void *ndi_source_processqueue(void *data) {
+	struct ndi_output *o = static_cast<ndi_output *>(data);
+
+	while (os_sem_wait(o->queue_sem) == 0) {
+		pthread_mutex_lock(&o->queue_mutex);
+		struct video_data frame = o->video_queue.array[0];
+		da_erase(o->video_queue, 0);
+		pthread_mutex_unlock(&o->queue_mutex);
+
+		if (frame.data[0]) {
+			ndi_source_sendframe(data, &frame);
+			free(frame.data[0]);
+		}
+	}
+
+	return NULL;
 }
 
 bool ndi_output_start(void *data) {
@@ -49,6 +93,7 @@ bool ndi_output_start(void *data) {
 		o->started = false;
 	}
 	
+	pthread_create(&o->queue_thread, NULL, ndi_source_processqueue, data);
 	return o->started;
 }
 
@@ -56,6 +101,8 @@ void ndi_output_stop(void *data, uint64_t ts) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	o->started = false;
 	obs_output_end_data_capture(o->output);
+	pthread_cancel(o->queue_thread);
+	da_free(o->video_queue);
 	NDIlib_send_destroy(o->ndi_sender);
 }
 
@@ -78,6 +125,10 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	convert_to.range = VIDEO_RANGE_DEFAULT;
 	obs_output_set_video_conversion(o->output, &convert_to);
 
+	da_init(o->video_queue);
+	pthread_mutex_init(&o->queue_mutex, NULL);
+	os_sem_init(&o->queue_sem, 0);
+
 	return o;
 }
 
@@ -89,23 +140,21 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	if (!o->started) return;
 
-	uint32_t width = o->video_info.output_width;
-	uint32_t height = o->video_info.output_height;
+	uint32_t video_height = o->video_info.output_height;
 
-	NDIlib_video_frame_t video_frame = { 0 };
-	video_frame.xres = width;
-	video_frame.yres = height;
-	video_frame.FourCC = NDIlib_FourCC_type_BGRA;
-	video_frame.frame_rate_N = o->video_info.fps_num;
-	video_frame.frame_rate_D = o->video_info.fps_den;
-	video_frame.picture_aspect_ratio = (float)width / (float)height;
-	video_frame.is_progressive = true;
-	video_frame.timecode = frame->timestamp;
+	pthread_mutex_lock(&o->queue_mutex);
 
-	video_frame.p_data = frame->data[0];
-	video_frame.line_stride_in_bytes = frame->linesize[0];
+	struct video_data queued_frame = {0};
+	queued_frame.timestamp = frame->timestamp;
+	queued_frame.linesize[0] = frame->linesize[0];
+	size_t data_size = frame->linesize[0] * video_height;
+	
+	queued_frame.data[0] = static_cast<uint8_t*>(malloc(data_size));
+	memcpy(queued_frame.data[0], frame->data[0], data_size);
+	da_push_back(o->video_queue, &queued_frame);
 
-	NDIlib_send_send_video(o->ndi_sender, &video_frame);
+	pthread_mutex_unlock(&o->queue_mutex);
+	os_sem_post(o->queue_sem);
 }
 
 void ndi_output_rawaudio(void *data, struct audio_data *frame) {
