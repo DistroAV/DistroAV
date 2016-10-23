@@ -39,7 +39,7 @@ bool obs_module_load(void)
 	ndi_output_info = create_ndi_output_info();
 	obs_register_output(&ndi_output_info);
 	
-	obs_frontend_add_tools_menu_item("Start NDI Output", [](void *private_data) {
+	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StartNDIOutput"), [](void *private_data) {
 		if (!ndi_out || !obs_output_active(ndi_out)) {
 			obs_output_release(ndi_out);
 
@@ -51,7 +51,7 @@ bool obs_module_load(void)
 		}
 	}, nullptr);
 
-	obs_frontend_add_tools_menu_item("Stop NDI Output", [](void *private_data) {
+	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StopNDIOutput"), [](void *private_data) {
 		if (ndi_out) {
 			obs_output_stop(ndi_out);
 		}

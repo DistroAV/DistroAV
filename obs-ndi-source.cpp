@@ -19,7 +19,7 @@ struct ndi_source {
 
 const char* ndi_source_getname(void *data) {
 	UNUSED_PARAMETER(data);
-	return "NDI Source";
+	return obs_module_text("NDISource");
 }
 
 obs_properties_t* ndi_source_getproperties(void *data) {
@@ -28,7 +28,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", "NDI source name",
+	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", obs_module_text("SourceProps_NDISourceName"),
 		OBS_COMBO_TYPE_LIST,
 		OBS_COMBO_FORMAT_INT);
 
@@ -156,15 +156,12 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
 	recv_desc.allow_video_fields = true;
 
-	blog(LOG_INFO, "[obs-ndi] updating OBS source '%s' with NDI source '%s'", obs_source_get_name(s->source), recv_desc.source_to_connect_to.p_ndi_name);
-
 	s->running = false;
 	pthread_cancel(s->frame_thread);
 	NDIlib_recv_destroy(s->ndi_receiver);
 	
 	s->ndi_receiver = NDIlib_recv_create2(&recv_desc);
 	if (s->ndi_receiver) {
-		blog(LOG_INFO, "[obs-ndi] OBS source '%s' updated successfully", obs_source_get_name(s->source));	
 		s->running = true;
 		pthread_create(&s->frame_thread, NULL, ndi_source_pollframe, data);
 	}
