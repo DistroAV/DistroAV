@@ -3,6 +3,7 @@
 #endif
 #include <obs-module.h>
 #include <util/platform.h>
+#include <media-io/format-conversion.h>
 #include <Processing.NDI.Lib.h>
 
 struct ndi_output {
@@ -10,7 +11,6 @@ struct ndi_output {
 	const char* ndi_name;
 	obs_video_info video_info;
 	obs_audio_info audio_info;
-	NDIlib_FourCC_type_e pixel_format;
 
 	bool started;
 	NDIlib_send_instance_t ndi_sender;
@@ -73,22 +73,6 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	obs_get_video_info(&o->video_info);
 	obs_get_audio_info(&o->audio_info);
 
-	blog(LOG_INFO, "[obs-ndi] output video format : %d", get_video_format_name(o->video_info.output_format));
-
-	switch (o->video_info.output_format) {
-		case VIDEO_FORMAT_BGRA:
-			o->pixel_format = NDIlib_FourCC_type_BGRA;
-			break;
-		case VIDEO_FORMAT_BGRX:
-			o->pixel_format = NDIlib_FourCC_type_BGRX;
-			break;
-		case VIDEO_FORMAT_UYVY:
-			o->pixel_format = NDIlib_FourCC_type_UYVY;
-			break;
-	}
-
-	blog(LOG_INFO, "[obs-ndi] output NDI format : %d", o->pixel_format);
-
 	return o;
 }
 
@@ -101,19 +85,36 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	if (!o->started) return;
 
+	uint32_t width = o->video_info.output_width;
+	uint32_t height = o->video_info.output_height;
+
 	NDIlib_video_frame_t video_frame = { 0 };
-	video_frame.xres = o->video_info.output_width;
-	video_frame.yres = o->video_info.output_height;
-	video_frame.FourCC = o->pixel_format;
+	video_frame.xres = width;
+	video_frame.yres = height;
+	video_frame.FourCC = NDIlib_FourCC_type_BGRA;
 	video_frame.frame_rate_N = o->video_info.fps_num;
 	video_frame.frame_rate_D = o->video_info.fps_den;
-	video_frame.picture_aspect_ratio = video_frame.xres / video_frame.yres;
+	video_frame.picture_aspect_ratio = (float)width / (float)height;
 	video_frame.is_progressive = true;
+	//video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.timecode = 0LL;
-	video_frame.p_data = frame->data[0];
-	video_frame.line_stride_in_bytes = frame->linesize[0];
 
-	NDIlib_send_send_video(o->ndi_sender, &video_frame);
+	uint8_t *video_data;
+	uint8_t video_linesize = 0;
+	if (o->video_info.output_format == VIDEO_FORMAT_NV12) {
+		video_linesize = width * 4;
+		video_data = static_cast<uint8_t*>(malloc(height * video_linesize));
+		
+		//decompress_nv12(frame->data, frame->linesize, 0, height, video_data, video_linesize);
+		//video_frame.p_data = video_data;
+		//video_frame.line_stride_in_bytes = video_linesize;
+
+		video_frame.p_data = frame->data[0];
+		video_frame.line_stride_in_bytes = frame->linesize[0];
+
+		NDIlib_send_send_video(o->ndi_sender, &video_frame);
+		free(video_data);
+	}
 }
 
 void ndi_output_rawaudio(void *data, struct audio_data *frame) {
@@ -123,6 +124,7 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	NDIlib_audio_frame_t audio_frame = { 0 };
 	audio_frame.sample_rate = o->audio_info.samples_per_sec;
 	audio_frame.no_channels = o->audio_info.speakers;
+	//audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.timecode = 0LL;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.p_data = (FLOAT*)(void*)(frame->data[0]);
