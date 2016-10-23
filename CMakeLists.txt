@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(obs-ndi)
 
 include(external/FindLibObs.cmake)
+include(external/ObsPluginHelpers.cmake)
 find_package(LibObs REQUIRED)
 find_package(w32-pthreads REQUIRED)
 
@@ -47,6 +48,10 @@ if(WIN32)
 	target_link_libraries(obs-ndi
 		w32-pthreads
 		"${NDISDK_DIR}/Lib/${ARCH_NAME}/Processing.NDI.Lib.${ARCH_NAME}.lib")
+	add_custom_command(TARGET obs-ndi POST_BUILD
+		COMMAND "${CMAKE_COMMAND}" -E copy
+		"${NDISDK_DIR}/Bin/${ARCH_NAME}/Processing.NDI.Lib.${ARCH_NAME}.dll"
+		"$<TARGET_FILE_DIR:obs-ndi>/Processing.NDI.Lib.${ARCH_NAME}.dll")
 endif()
 
 # OSX (WARNING : needs testing)
@@ -64,3 +69,5 @@ if(UNIX AND NOT APPLE)
 	target_link_libraries(obs-ndi
 		"${NDISDK_DIR}/Non-Windows/Linux/lib/${ARCH_NAME}/libndi.a")
 endif()
+
+install_external_plugin_with_data(obs-ndi data)
