@@ -41,8 +41,6 @@ bool obs_module_load(void)
 	
 	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StartNDIOutput"), [](void *private_data) {
 		if (!ndi_out || !obs_output_active(ndi_out)) {
-			obs_output_release(ndi_out);
-
 			obs_data_t *output_settings = obs_data_create();
 			obs_data_set_string(output_settings, "ndi_name", "OBS");
 			ndi_out = obs_output_create("ndi_output", "simple_ndi_output", output_settings, nullptr);
@@ -54,6 +52,14 @@ bool obs_module_load(void)
 	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StopNDIOutput"), [](void *private_data) {
 		if (ndi_out) {
 			obs_output_stop(ndi_out);
+			obs_output_release(ndi_out);
+		}
+	}, nullptr);
+
+	obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
+		if (event == OBS_FRONTEND_EVENT_EXIT && ndi_out) {
+			obs_output_stop(ndi_out);
+			obs_output_release(ndi_out);
 		}
 	}, nullptr);
 
@@ -63,7 +69,6 @@ bool obs_module_load(void)
 void obs_module_unload()
 {
 	blog(LOG_INFO, "[obs-ndi] goodbye !");
-	obs_output_release(ndi_out);
 	NDIlib_find_destroy(ndi_finder);
 	NDIlib_destroy();
 }
