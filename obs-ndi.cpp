@@ -17,6 +17,7 @@ struct obs_output_info ndi_output_info;
 
 NDIlib_find_instance_t ndi_finder;
 obs_output_t *ndi_out;
+bool ndi_out_running = false;
 
 bool obs_module_load(void)
 {
@@ -40,26 +41,29 @@ bool obs_module_load(void)
 	obs_register_output(&ndi_output_info);
 	
 	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StartNDIOutput"), [](void *private_data) {
-		if (!ndi_out || !obs_output_active(ndi_out)) {
+		if (!ndi_out || !ndi_out_running) {
 			obs_data_t *output_settings = obs_data_create();
 			obs_data_set_string(output_settings, "ndi_name", "OBS");
 			ndi_out = obs_output_create("ndi_output", "simple_ndi_output", output_settings, nullptr);
 			obs_output_start(ndi_out);
 			obs_data_release(output_settings);
+			ndi_out_running = true;
 		}
 	}, nullptr);
 
 	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StopNDIOutput"), [](void *private_data) {
-		if (ndi_out) {
+		if (ndi_out && ndi_out_running) {
 			obs_output_stop(ndi_out);
 			obs_output_release(ndi_out);
+			ndi_out_running = false;
 		}
 	}, nullptr);
 
 	obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
-		if (event == OBS_FRONTEND_EVENT_EXIT && ndi_out) {
+		if (event == OBS_FRONTEND_EVENT_EXIT && ndi_out_running) {
 			obs_output_stop(ndi_out);
 			obs_output_release(ndi_out);
+			ndi_out_running = false;
 		}
 	}, nullptr);
 
