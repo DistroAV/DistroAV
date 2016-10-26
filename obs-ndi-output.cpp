@@ -71,7 +71,7 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	obs_get_audio_info(&o->audio_info);
 
 	struct video_scale_info convert_to = {};
-	convert_to.format = VIDEO_FORMAT_BGRA;
+	convert_to.format = VIDEO_FORMAT_BGRX;
 	convert_to.width = o->video_info.output_width;
 	convert_to.height = o->video_info.output_height;
 	convert_to.colorspace = VIDEO_CS_DEFAULT;
@@ -82,7 +82,11 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 }
 
 void ndi_output_destroy(void *data) {
-	UNUSED_PARAMETER(data);
+	struct ndi_output *o = static_cast<ndi_output *>(data);
+
+	if (o) {
+		bfree(o);
+	}
 }
 
 void ndi_output_rawvideo(void *data, struct video_data *frame) {
@@ -95,7 +99,7 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	NDIlib_video_frame_t video_frame = { 0 };
 	video_frame.xres = width;
 	video_frame.yres = height;
-	video_frame.FourCC = NDIlib_FourCC_type_BGRA;
+	video_frame.FourCC = NDIlib_FourCC_type_BGRX;
 	video_frame.frame_rate_N = o->video_info.fps_num;
 	video_frame.frame_rate_D = o->video_info.fps_den;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
