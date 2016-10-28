@@ -4,7 +4,6 @@ project(obs-ndi)
 include(external/FindLibObs.cmake)
 include(external/ObsPluginHelpers.cmake)
 find_package(LibObs REQUIRED)
-find_package(w32-pthreads REQUIRED)
 
 set(OBS_FRONTEND_LIB "OBS_FRONTEND_LIB-NOTFOUND" CACHE FILEPATH "OBS frontend library")
 if(OBS_FRONTEND_LIB EQUAL "OBS_FRONTEND_LIB-NOTFOUND")
@@ -43,6 +42,7 @@ target_link_libraries(obs-ndi
 
 # Windows
 if(WIN32)
+	find_package(w32-pthreads REQUIRED)
 	include_directories(
 		"${NDISDK_DIR}/Include")
 	target_link_libraries(obs-ndi
