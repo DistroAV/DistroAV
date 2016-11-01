@@ -58,6 +58,8 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 		return true;
 	});
 
+	obs_properties_add_bool(props, "ndi_low_bandwidth", obs_module_text("SourceProps_NDILowBandwidth"));
+
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
 		#ifdef _WIN32
 		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
@@ -169,11 +171,12 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	NDIlib_source_t selected_source;
 	selected_source.p_ndi_name = obs_data_get_string(settings, "ndi_source_name");
 	selected_source.p_ip_address = obs_data_get_string(settings, "ndi_source_ip");
+	bool lowBandwidth = obs_data_get_bool(settings, "ndi_low_bandwidth");
 
 	NDIlib_recv_create_t recv_desc;
 	recv_desc.source_to_connect_to = selected_source;
 	recv_desc.color_format = NDIlib_recv_color_format_BGRX_BGRA;
-	recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
+	recv_desc.bandwidth = (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
 	recv_desc.allow_video_fields = true;
 
 	s->running = false;
