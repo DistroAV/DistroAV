@@ -26,7 +26,8 @@ endif()
 set(obs-ndi_SOURCES 
 	obs-ndi.cpp
 	obs-ndi-source.cpp
-	obs-ndi-output.cpp)
+	obs-ndi-output.cpp
+	obs-ndi-filter.cpp)
 
 set(obs-ndi_HEADERS
 	obs-ndi.h)

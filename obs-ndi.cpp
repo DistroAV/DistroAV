@@ -34,6 +34,9 @@ struct obs_source_info ndi_source_info;
 extern struct obs_output_info create_ndi_output_info();
 struct obs_output_info ndi_output_info;
 
+extern struct obs_source_info create_ndi_filter_info();
+struct obs_source_info ndi_filter_info;
+
 NDIlib_find_instance_t ndi_finder;
 obs_output_t *ndi_out;
 bool ndi_out_running = false;
@@ -59,6 +62,9 @@ bool obs_module_load(void)
 	ndi_output_info = create_ndi_output_info();
 	obs_register_output(&ndi_output_info);
 	
+	ndi_filter_info = create_ndi_filter_info();
+	obs_register_source(&ndi_filter_info);
+
 	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StartNDIOutput"), [](void *private_data) {
 		if (!ndi_out || !ndi_out_running) {
 			obs_data_t *output_settings = obs_data_create();
