@@ -194,8 +194,6 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 }
 
 void* ndi_source_create(obs_data_t *settings, obs_source_t *source) {
-	UNUSED_PARAMETER(settings);
-
 	struct ndi_source *s = static_cast<ndi_source *>(bzalloc(sizeof(struct ndi_source)));
 	s->source = source;
 	s->running = true;
