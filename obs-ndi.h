@@ -19,6 +19,6 @@
 #ifndef OBSNDI_H
 #define OBSNDI_H
 
-#define OBS_NDI_VERSION 0.2
+#define OBS_NDI_VERSION 0.3
 
 #endif // OBSNDI_H
