@@ -23,6 +23,7 @@
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
+#include <util/threading.h>
 #include <media-io/video-frame.h>
 #include <Processing.NDI.Lib.h>
 
@@ -37,6 +38,9 @@ struct ndi_filter {
 	gs_texrender_t *texrender;
 	uint32_t last_width;
 	uint32_t last_height;
+
+	pthread_t send_thread;
+	os_sem_t *send_sem;
 
 	uint8_t *video_data;
 	uint32_t video_linesize;
@@ -68,6 +72,28 @@ void ndi_filter_update(void *data, obs_data_t *settings) {
 	s->ndi_sender = NDIlib_send_create(&send_desc);
 }
 
+void *ndi_filter_send_thread(void *data) {
+	struct ndi_filter *s = static_cast<ndi_filter *>(data);
+
+	while (os_sem_wait(s->send_sem) == 0) {
+		NDIlib_video_frame_t video_frame = { 0 };
+		video_frame.xres = s->last_width;
+		video_frame.yres = s->last_height;
+		video_frame.FourCC = NDIlib_FourCC_type_BGRA;
+		video_frame.frame_rate_N = s->ovi.fps_num;
+		video_frame.frame_rate_D = s->ovi.fps_den;
+		video_frame.picture_aspect_ratio = (float)video_frame.xres / (float)video_frame.yres;
+		video_frame.is_progressive = false;
+		video_frame.timecode = os_gettime_ns();
+		video_frame.p_data = s->video_data;
+		video_frame.line_stride_in_bytes = s->video_linesize;
+
+		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
+	}
+
+	return NULL;
+}
+
 void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
@@ -90,7 +116,6 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	gs_blend_state_push();
 	gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-	//gs_texrender_reset(s->texrender);
 	if (gs_texrender_begin(s->texrender, width, height)) {
 		struct vec4 background;
 		vec4_zero(&background);
@@ -103,20 +128,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		gs_texrender_end(s->texrender);
 		gs_stage_texture(s->stagesurface, gs_texrender_get_texture(s->texrender));
 
-		NDIlib_video_frame_t video_frame = { 0 };
-		video_frame.xres = width;
-		video_frame.yres = height;
-		video_frame.FourCC = NDIlib_FourCC_type_BGRA;
-		video_frame.frame_rate_N = s->ovi.fps_num;
-		video_frame.frame_rate_D = s->ovi.fps_den;
-		video_frame.picture_aspect_ratio = (float)width / (float)height;
-		video_frame.is_progressive = false;
-		video_frame.timecode = os_gettime_ns();
-		video_frame.p_data = s->video_data;
-		video_frame.line_stride_in_bytes = s->video_linesize;
-
-		// TODO : Call this from another thread
-		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
+		os_sem_post(s->send_sem);
 	}
 
 	gs_blend_state_pop();
@@ -144,6 +156,9 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 
 	obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
 
+	os_sem_init(&s->send_sem, 0);
+	pthread_create(&s->send_thread, NULL, ndi_filter_send_thread, s);
+
 	obs_get_video_info(&s->ovi);
 	ndi_filter_update(s, settings);
 	return s;
@@ -151,6 +166,9 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 
 void ndi_filter_destroy(void *data) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
+	pthread_cancel(s->send_thread);
+	os_sem_destroy(s->send_sem);
+
 	obs_display_destroy(s->renderer);
 	NDIlib_send_destroy(s->ndi_sender);
 
