@@ -26,11 +26,20 @@
 #include <media-io/video-frame.h>
 #include <Processing.NDI.Lib.h>
 
+#define TEXFORMAT GS_BGRA
+
 struct ndi_filter {
 	obs_source_t *context;
 	NDIlib_send_instance_t ndi_sender;
 	struct obs_video_info ovi;
 	obs_display_t *renderer;
+	gs_stagesurf_t *stagesurface;
+	gs_texrender_t *texrender;
+	uint32_t last_width;
+	uint32_t last_height;
+
+	uint8_t *video_data;
+	uint32_t video_linesize;
 };
 
 const char* ndi_filter_getname(void *data) {
@@ -66,15 +75,23 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 
 	uint32_t width = obs_source_get_base_width(target);
 	uint32_t height = obs_source_get_base_height(target);
-	gs_color_format texformat = GS_BGRA;
 
-	gs_texrender_t *texrender = gs_texrender_create(texformat, GS_ZS_NONE);
-	gs_stagesurf_t *stagesurf = gs_stagesurface_create(width, height, texformat);
+	if (s->last_width != width || s->last_height != height) {
+		gs_stagesurface_unmap(s->stagesurface);
+		gs_stagesurface_destroy(s->stagesurface);
+
+		s->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
+		gs_stagesurface_map(s->stagesurface, &s->video_data, &s->video_linesize);
+
+		s->last_width = width;
+		s->last_height = height;
+	}
 
 	gs_blend_state_push();
 	gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-	if (gs_texrender_begin(texrender, width, height)) {
+	//gs_texrender_reset(s->texrender);
+	if (gs_texrender_begin(s->texrender, width, height)) {
 		struct vec4 background;
 		vec4_zero(&background);
 
@@ -83,8 +100,8 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 
 		obs_source_video_render(target);
 
-		gs_texrender_end(texrender);
-		gs_stage_texture(stagesurf, gs_texrender_get_texture(texrender));
+		gs_texrender_end(s->texrender);
+		gs_stage_texture(s->stagesurface, gs_texrender_get_texture(s->texrender));
 
 		NDIlib_video_frame_t video_frame = { 0 };
 		video_frame.xres = width;
@@ -95,22 +112,26 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		video_frame.picture_aspect_ratio = (float)width / (float)height;
 		video_frame.is_progressive = false;
 		video_frame.timecode = os_gettime_ns();
+		video_frame.p_data = s->video_data;
+		video_frame.line_stride_in_bytes = s->video_linesize;
 
-		gs_stagesurface_map(stagesurf, (uint8_t **)(&video_frame.p_data), (uint32_t*)(&video_frame.line_stride_in_bytes));
+		// TODO : Call this from another thread
 		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
-		gs_stagesurface_unmap(stagesurf);
 	}
 
 	gs_blend_state_pop();
 
 	//obs_source_release(target);
-	gs_stagesurface_destroy(stagesurf);
-	gs_texrender_destroy(texrender);
 }
 
 void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(bzalloc(sizeof(struct ndi_filter)));
 	s->context = source;
+
+	s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+
+	s->last_width = 0;
+	s->last_height = 0;
 
 	gs_init_data display_desc = {};
 	display_desc.adapter = 0;
@@ -132,11 +153,17 @@ void ndi_filter_destroy(void *data) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 	obs_display_destroy(s->renderer);
 	NDIlib_send_destroy(s->ndi_sender);
+
+	gs_stagesurface_unmap(s->stagesurface);
+	gs_stagesurface_destroy(s->stagesurface);
+	gs_texrender_destroy(s->texrender);
 }
 
 void ndi_filter_tick(void *data, float seconds) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
+	
 	obs_get_video_info(&s->ovi);
+	gs_texrender_reset(s->texrender);
 }
 
 void ndi_filter_videofilter(void *data, gs_effect_t *effect) {
