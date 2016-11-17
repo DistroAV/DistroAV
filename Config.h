@@ -16,13 +16,22 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef OBSNDI_H
-#define OBSNDI_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
-#define OBS_NDI_VERSION 0.3
+#include <obs-module.h>
 
-void main_output_start();
-void main_output_stop();
-bool main_output_is_running();
+class Config {
+public:
+	Config();
+	static void OBSSaveCallback(obs_data_t *save_data, bool saving, void *private_data);
+	static Config* Current();
 
-#endif // OBSNDI_H
+	bool OutputEnabled;
+	const char* OutputName;
+	
+private:	
+	static Config *_instance;
+};
+
+#endif // CONFIG_H

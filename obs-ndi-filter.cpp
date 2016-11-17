@@ -179,7 +179,7 @@ void ndi_filter_destroy(void *data) {
 
 void ndi_filter_tick(void *data, float seconds) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
-	
+
 	obs_get_video_info(&s->ovi);
 	gs_texrender_reset(s->texrender);
 }

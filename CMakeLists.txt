@@ -27,10 +27,12 @@ set(obs-ndi_SOURCES
 	obs-ndi.cpp
 	obs-ndi-source.cpp
 	obs-ndi-output.cpp
-	obs-ndi-filter.cpp)
+	obs-ndi-filter.cpp
+	Config.cpp)
 
 set(obs-ndi_HEADERS
-	obs-ndi.h)
+	obs-ndi.h
+	Config.h)
 
 add_library(obs-ndi MODULE 
 	${obs-ndi_SOURCES}
