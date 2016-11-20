@@ -63,7 +63,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
 		#ifdef _WIN32
 		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
-		#elif __linux__
+		#elif __linux__ OR __APPLE__
 		system("open http://ndi.newtek.com");
 		#endif
 		
@@ -173,7 +173,7 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 
 	#ifdef _WIN32	
 	recv_desc.color_format = NDIlib_recv_color_format_BGRX_BGRA;
-	#elif __linux__
+	#elif __linux__ OR __APPLE__
 	recv_desc.prefer_UYVY = false;
 	#endif
 

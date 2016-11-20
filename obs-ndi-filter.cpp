@@ -117,7 +117,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 
 		#ifdef _WIN32
 		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
-		#elifdef __linux__
+		#elif __linux__ OR __APPLE__
 		NDIlib_send_send_video(s->ndi_sender, &video_frame);
 		#endif
 	}
@@ -142,7 +142,7 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	display_desc.zsformat = GS_ZS_NONE;
 	display_desc.cx = 0;
 	display_desc.cy = 0;
-
+	
 	#ifdef _WIN32
 	display_desc.window.hwnd = obs_frontend_get_main_window_handle();
 	#elif __APPLE__
@@ -150,7 +150,6 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	#endif
 	
 	s->renderer = obs_display_create(&display_desc);
-
 	obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
 
 	obs_get_video_info(&s->ovi);

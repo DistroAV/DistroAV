@@ -20,7 +20,7 @@
 #include <Windows.h>
 #endif
 
-#ifdef __linux__
+#ifdef __linux__ OR __APPLE__
 #include <Processing.NDI.compat.h>
 #endif
 
@@ -134,7 +134,7 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	
 	#ifdef _WIN32
 	NDIlib_send_send_video_async(o->ndi_sender, &video_frame);
-	#elif __linux__
+	#elif __linux__ OR __APPLE__
 	NDIlib_send_send_video(o->ndi_sender, &video_frame);
 	#endif
 }
@@ -151,7 +151,7 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 
 	#ifdef _WIN32
 	audio_frame.p_data = (FLOAT*)(void*)(frame->data[0]);
-	#elif __linux__
+	#elif __linux__ OR __APPLE__
 	audio_frame.p_data = (float*)(void*)(frame->data[0]);
 	#endif
 
