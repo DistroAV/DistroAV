@@ -64,6 +64,11 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 		#ifdef _WIN32
 		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
 		#endif
+
+		#ifdef UNIX
+		system("open http://ndi.newtek.com");
+		#endif
+		
 		return true;
 	});
 
@@ -206,7 +211,6 @@ void ndi_source_destroy(void *data) {
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 	s->running = false;
 	NDIlib_recv_destroy(s->ndi_receiver);
-	// TODO : free s->ndi_sources and s
 }
 
 struct obs_source_info create_ndi_source_info() {

@@ -5,11 +5,6 @@ include(external/FindLibObs.cmake)
 include(external/ObsPluginHelpers.cmake)
 find_package(LibObs REQUIRED)
 
-set(OBS_FRONTEND_LIB "OBS_FRONTEND_LIB-NOTFOUND" CACHE FILEPATH "OBS frontend library")
-if(OBS_FRONTEND_LIB EQUAL "OBS_FRONTEND_LIB-NOTFOUND")
-	message(FATAL_ERROR "Could not find OBS Frontend API\'s library !")
-endif()
-
 set(NDISDK_DIR "NDISDK_DIR-NOTFOUND" CACHE PATH "NewTek NDI SDK")
 if(NDISDK_DIR EQUAL "NDISDK_DIR-NOTFOUND")
 	message(FATAL_ERROR "Could not find NewTek's NDI SDK !")
@@ -17,10 +12,8 @@ endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(ARCH 64)
-	set(ARCH_NAME "x64")
 else()
 	set(ARCH 32)
-	set(ARCH_NAME "x86")
 endif()
 
 set(obs-ndi_SOURCES 
@@ -40,15 +33,26 @@ add_library(obs-ndi MODULE
 include_directories( 
 	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api")
 target_link_libraries(obs-ndi 
-	libobs
-	"${OBS_FRONTEND_LIB}")
+	libobs)
 
 # Windows
 if(WIN32)
+	set(OBS_FRONTEND_LIB "OBS_FRONTEND_LIB-NOTFOUND" CACHE FILEPATH "OBS frontend library")
+	if(OBS_FRONTEND_LIB EQUAL "OBS_FRONTEND_LIB-NOTFOUND")
+		message(FATAL_ERROR "Could not find OBS Frontend API\'s library !")
+	endif()
+
+	if(ARCH EQUAL 64)
+		set(ARCH_NAME "x64")
+	else()
+		set(ARCH_NAME "x86")
+	endif()
+
 	find_package(w32-pthreads REQUIRED)
 	include_directories(
 		"${NDISDK_DIR}/Include")
 	target_link_libraries(obs-ndi
+		"${OBS_FRONTEND_LIB}"
 		w32-pthreads
 		"${NDISDK_DIR}/Lib/${ARCH_NAME}/Processing.NDI.Lib.${ARCH_NAME}.lib")
 	add_custom_command(TARGET obs-ndi POST_BUILD
@@ -60,17 +64,25 @@ endif()
 # OSX (WARNING : needs testing)
 if(APPLE)
 	include_directories(
-		"${NDISDK_DIR}/Non-Windows/OSX/include")
+		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
-		"${NDISDK_DIR}/Non-Windows/OSX/bin/x64/libndi.dylib")
+		obs-frontend-api
+		"${NDISDK_DIR}/bin/x64/libndi.dylib")
 endif()
 
 # Linux (WARNING : needs testing)
 if(UNIX AND NOT APPLE)
+	if(ARCH EQUAL 64)
+		set(ARCH_NAME "x86_64")
+	else()
+		set(ARCH_NAME "i686")
+	endif()
+
 	include_directories(
-		"${NDISDK_DIR}/Non-Windows/Linux/include")
+		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
-		"${NDISDK_DIR}/Non-Windows/Linux/lib/${ARCH_NAME}/libndi.a")
+		obs-frontend-api
+		"${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-4.7/libndi.a")
 endif()
 
 install_external_plugin_with_data(obs-ndi data)
