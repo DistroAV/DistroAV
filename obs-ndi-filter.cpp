@@ -115,7 +115,11 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		video_frame.p_data = s->video_data;
 		video_frame.line_stride_in_bytes = s->video_linesize;
 
+		#ifdef _WIN32
 		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
+		#elifdef __linux__
+		NDIlib_send_send_video(s->ndi_sender, &video_frame);
+		#endif
 	}
 
 	gs_blend_state_pop();
@@ -135,10 +139,16 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	gs_init_data display_desc = {};
 	display_desc.adapter = 0;
 	display_desc.format = GS_BGRA;
-	display_desc.window.hwnd = obs_frontend_get_main_window_handle();
 	display_desc.zsformat = GS_ZS_NONE;
 	display_desc.cx = 0;
 	display_desc.cy = 0;
+
+	#ifdef _WIN32
+	display_desc.window.hwnd = obs_frontend_get_main_window_handle();
+	#elif __APPLE__
+	display_desc.window.view = obs_frontend_get_main_window_handle();
+	#endif
+	
 	s->renderer = obs_display_create(&display_desc);
 
 	obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);

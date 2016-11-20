@@ -78,11 +78,15 @@ if(UNIX AND NOT APPLE)
 		set(ARCH_NAME "i686")
 	endif()
 
+	add_library(ndilib STATIC IMPORTED)
+	set_target_properties(ndilib PROPERTIES
+		IMPORTED_LOCATION "${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-5.3/libndi.a")
+
 	include_directories(
 		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
 		obs-frontend-api
-		"${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-4.7/libndi.a")
+		ndilib)
 endif()
 
 install_external_plugin_with_data(obs-ndi data)

@@ -63,9 +63,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
 		#ifdef _WIN32
 		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
-		#endif
-
-		#ifdef UNIX
+		#elif __linux__
 		system("open http://ndi.newtek.com");
 		#endif
 		
@@ -98,20 +96,10 @@ void *ndi_source_pollframe(void *data) {
 	while (s->running) {
 		switch (NDIlib_recv_capture(s->ndi_receiver, &video_frame, &audio_frame, NULL, 0)) {
 			case NDIlib_frame_type_video:
-				video_format frame_format;
-				switch (video_frame.FourCC) {
-				case NDIlib_FourCC_type_BGRA:
-					frame_format = VIDEO_FORMAT_BGRA;
-					break;
-				case NDIlib_FourCC_type_BGRX:
-					frame_format = VIDEO_FORMAT_BGRX;
-					break;
-				}
-
 				obs_video_frame.timestamp = video_frame.timecode * 100;
 				obs_video_frame.width = video_frame.xres;
 				obs_video_frame.height = video_frame.yres;
-				obs_video_frame.format = frame_format;
+				obs_video_frame.format = VIDEO_FORMAT_BGRA;
 				obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
 				obs_video_frame.data[0] = video_frame.p_data;
 
@@ -179,10 +167,15 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	bool lowBandwidth = obs_data_get_bool(settings, "ndi_low_bandwidth");
 
 	NDIlib_recv_create_t recv_desc;
-	recv_desc.source_to_connect_to = selected_source;
-	recv_desc.color_format = NDIlib_recv_color_format_BGRX_BGRA;
+	recv_desc.source_to_connect_to = selected_source;	
 	recv_desc.bandwidth = (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
 	recv_desc.allow_video_fields = true;
+
+	#ifdef _WIN32	
+	recv_desc.color_format = NDIlib_recv_color_format_BGRX_BGRA;
+	#elif __linux__
+	recv_desc.prefer_UYVY = false;
+	#endif
 
 	s->running = false;
 	pthread_cancel(s->frame_thread);
