@@ -19,7 +19,7 @@
 #ifndef OBSNDI_H
 #define OBSNDI_H
 
-#define OBS_NDI_VERSION 0.3
+#define OBS_NDI_VERSION "0.3"
 
 void main_output_start();
 void main_output_stop();

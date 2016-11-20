@@ -44,7 +44,7 @@ bool main_output_running;
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO, "[obs-ndi] hello ! (version %.1f)", OBS_NDI_VERSION);
+	blog(LOG_INFO, "[obs-ndi] hello ! (version %s)", OBS_NDI_VERSION);
 
 	bool ndi_init = NDIlib_initialize();
 	if (!ndi_init) {
