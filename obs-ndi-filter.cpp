@@ -83,7 +83,7 @@ void *ndi_filter_send_thread(void *data) {
 		video_frame.frame_rate_N = s->ovi.fps_num;
 		video_frame.frame_rate_D = s->ovi.fps_den;
 		video_frame.picture_aspect_ratio = (float)video_frame.xres / (float)video_frame.yres;
-		video_frame.is_progressive = false;
+		video_frame.is_progressive = true;
 		video_frame.timecode = os_gettime_ns();
 		video_frame.p_data = s->video_data;
 		video_frame.line_stride_in_bytes = s->video_linesize;

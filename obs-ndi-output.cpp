@@ -122,7 +122,7 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	video_frame.frame_rate_N = o->video_info.fps_num;
 	video_frame.frame_rate_D = o->video_info.fps_den;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
-	video_frame.is_progressive = false;
+	video_frame.is_progressive = true;
 	video_frame.timecode = frame->timestamp;
 
 	video_frame.p_data = frame->data[0];
