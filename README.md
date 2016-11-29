@@ -1,11 +1,13 @@
 obs-ndi
 ==============
-Network A/V in OBS Studio with NewTek's NDI technology
+Network A/V in OBS Studio with NewTek's NDI technology.  
 
-## Build prerequisites
-You need CMake, the NewTek NDI SDK and a working development environment for OBS Studio installed on your computer.
+## Downloads
+Binaries for Windows are available in the [Releases](https://github.com/Palakis/obs-ndi/releases) section. Linux and OS X versions are not yet available, as compatibility with these systems is under development.
 
-## How to build
+## Compiling
+### Prerequisites
+You'll need CMake, the NewTek NDI SDK and a working development environment for OBS Studio installed on your computer.
 
 ### Windows
 In cmake-gui, you'll have to set these CMake variables :
