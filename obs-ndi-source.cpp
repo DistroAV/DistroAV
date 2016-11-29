@@ -32,7 +32,7 @@ struct ndi_source {
 	NDIlib_recv_instance_t ndi_receiver;
 	pthread_t frame_thread;
 	bool running;
-	DWORD no_sources;
+	int no_sources;
 	const NDIlib_source_t *ndi_sources;
 };
 
@@ -139,7 +139,7 @@ void *ndi_source_pollframe(void *data) {
 					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 				}
 
-				obs_audio_frame.timestamp = os_gettime_ns() - (audio_frame_16s.sample_rate * audio_frame_16s.no_samples);
+				obs_audio_frame.timestamp = audio_frame.timecode * 100;
 				obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
 				obs_audio_frame.format = AUDIO_FORMAT_16BIT;
 				obs_audio_frame.frames = audio_frame_16s.no_samples;
@@ -170,12 +170,7 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	recv_desc.source_to_connect_to = selected_source;	
 	recv_desc.bandwidth = (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
 	recv_desc.allow_video_fields = true;
-
-	#ifdef _WIN32	
-	recv_desc.color_format = NDIlib_recv_color_format_BGRX_BGRA;
-	#elif __linux__ OR __APPLE__
-	recv_desc.prefer_UYVY = false;
-	#endif
+	recv_desc.color_format = NDIlib_recv_color_format_e_BGRX_BGRA;
 
 	s->running = false;
 	pthread_cancel(s->frame_thread);

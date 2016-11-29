@@ -110,16 +110,12 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		video_frame.frame_rate_N = s->ovi.fps_num;
 		video_frame.frame_rate_D = s->ovi.fps_den;
 		video_frame.picture_aspect_ratio = (float)video_frame.xres / (float)video_frame.yres;
-		video_frame.is_progressive = true;
-		video_frame.timecode = os_gettime_ns();
+		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+		video_frame.timecode = NDIlib_send_timecode_synthesize;
 		video_frame.p_data = s->video_data;
 		video_frame.line_stride_in_bytes = s->video_linesize;
 
-		#ifdef _WIN32
 		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
-		#elif __linux__ OR __APPLE__
-		NDIlib_send_send_video(s->ndi_sender, &video_frame);
-		#endif
 	}
 
 	gs_blend_state_pop();

@@ -126,17 +126,13 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	video_frame.frame_rate_N = o->video_info.fps_num;
 	video_frame.frame_rate_D = o->video_info.fps_den;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
-	video_frame.is_progressive = true;
+	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 	video_frame.timecode = frame->timestamp;
 
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 	
-	#ifdef _WIN32
 	NDIlib_send_send_video_async(o->ndi_sender, &video_frame);
-	#elif __linux__ OR __APPLE__
-	NDIlib_send_send_video(o->ndi_sender, &video_frame);
-	#endif
 }
 
 void ndi_output_rawaudio(void *data, struct audio_data *frame) {
@@ -148,12 +144,7 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	audio_frame.no_channels = o->audio_info.speakers;
 	audio_frame.timecode = frame->timestamp;
 	audio_frame.no_samples = frame->frames;
-
-	#ifdef _WIN32
-	audio_frame.p_data = (FLOAT*)(void*)(frame->data[0]);
-	#elif __linux__ OR __APPLE__
 	audio_frame.p_data = (float*)(void*)(frame->data[0]);
-	#endif
 
 	NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
 }
