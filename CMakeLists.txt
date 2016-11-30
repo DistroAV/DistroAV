@@ -59,6 +59,8 @@ if(WIN32)
 		COMMAND "${CMAKE_COMMAND}" -E copy
 		"${NDISDK_DIR}/Bin/${ARCH_NAME}/Processing.NDI.Lib.${ARCH_NAME}.dll"
 		"$<TARGET_FILE_DIR:obs-ndi>/Processing.NDI.Lib.${ARCH_NAME}.dll")
+
+	install_external_plugin_with_data(obs-ndi data)
 endif()
 
 # OSX (WARNING : needs testing)
@@ -96,5 +98,3 @@ if(UNIX AND NOT APPLE)
 	install(FILES "${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-5.4/libndi.so.1.0.1"
                 DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
-
-install_external_plugin_with_data(obs-ndi data)
