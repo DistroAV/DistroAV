@@ -61,9 +61,9 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	obs_properties_add_bool(props, "ndi_low_bandwidth", obs_module_text("SourceProps_NDILowBandwidth"));
 
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
-		#ifdef _WIN32
+		#if defined(_WIN32)
 		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
-		#elif __linux__ OR __APPLE__
+		#elif defined(__linux__) || defined(__APPLE__)
 		system("open http://ndi.newtek.com");
 		#endif
 		

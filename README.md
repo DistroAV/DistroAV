@@ -7,7 +7,7 @@ Binaries for Windows are available in the [Releases](https://github.com/Palakis/
 
 ## Compiling
 ### Prerequisites
-You'll need CMake, the NewTek NDI SDK and a working development environment for OBS Studio installed on your computer.
+You'll need CMake, the NewTek NDI SDK V2 and a working development environment for OBS Studio installed on your computer.
 
 ### Windows
 In cmake-gui, you'll have to set these CMake variables :
@@ -15,8 +15,16 @@ In cmake-gui, you'll have to set these CMake variables :
 - **LIBOBS_INCLUDE_DIR** (path) : location of the libobs subfolder in the source code of OBS Studio
 - **LIBOBS_LIB** (filepath) : location of the obs.lib file
 
-### OS X
-*To do*
-
 ### Linux
+On Debian/Ubuntu :  
+```
+git clone https://github.com/Palakis/obs-ndi.git
+cd obs-ndi
+mkdir build && cd build
+cmake -DLIBOBS_INCLUDE_DIR="<path to the libobs sub-folder in obs-studio's source code>" -DNDISDK_DIR="<root dir of the NDI SDK>" -DCMAKE_INSTALL_PREFIX=/usr ..
+make -j4
+sudo make install
+```
+
+### OS X
 *To do*

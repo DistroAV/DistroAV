@@ -20,7 +20,7 @@
 #include <Windows.h>
 #endif
 
-#ifdef __linux__ OR __APPLE__
+#if defined(__linux__) || defined(__APPLE__)
 #include <Processing.NDI.compat.h>
 #endif
 
