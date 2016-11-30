@@ -80,6 +80,8 @@ if(UNIX AND NOT APPLE)
 		set(ARCH_NAME "i686")
 	endif()
 
+	set_target_properties(obs-ndi PROPERTIES PREFIX "")
+
 	add_library(ndilib SHARED IMPORTED)
 	set_target_properties(ndilib PROPERTIES
 		IMPORTED_LOCATION "${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-5.4/libndi.so.1.0.1")
