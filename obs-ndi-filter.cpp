@@ -41,6 +41,8 @@ struct ndi_filter {
 
 	uint8_t *video_data;
 	uint32_t video_linesize;
+
+	bool audio_initialized;
 };
 
 const char* ndi_filter_getname(void *data) {
@@ -71,7 +73,7 @@ void ndi_filter_update(void *data, obs_data_t *settings) {
 
 void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
-
+	
 	obs_source_t *target = obs_filter_get_target(s->context);
 
 	uint32_t width = obs_source_get_base_width(target);
@@ -119,7 +121,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	}
 
 	gs_blend_state_pop();
-
+	
 	//obs_source_release(target);
 }
 
@@ -131,6 +133,7 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 
 	s->last_width = 0;
 	s->last_height = 0;
+	s->audio_initialized = false;
 
 	gs_init_data display_desc = {};
 	display_desc.adapter = 0;
@@ -150,6 +153,7 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 
 	obs_get_video_info(&s->ovi);
 	ndi_filter_update(s, settings);
+
 	return s;
 }
 
@@ -171,11 +175,27 @@ void ndi_filter_tick(void *data, float seconds) {
 	gs_texrender_reset(s->texrender);
 }
 
-void ndi_filter_videofilter(void *data, gs_effect_t *effect) {
+void ndi_filter_videorender(void *data, gs_effect_t *effect) {
 	UNUSED_PARAMETER(effect);
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_source_skip_video_filter(s->context);
+}
+
+struct obs_audio_data* ndi_filter_audiofilter(void *data, struct obs_audio_data *audio_data) {
+	struct ndi_filter *s = static_cast<ndi_filter *>(data);
+	const audio_t *obs_audio = obs_get_audio();
+
+	NDIlib_audio_frame_t audio_frame = { 0 };
+	audio_frame.sample_rate = audio_output_get_sample_rate(obs_audio);
+	audio_frame.no_channels = audio_output_get_channels(obs_audio);
+	audio_frame.timecode = audio_data->timestamp;
+	audio_frame.no_samples = audio_data->frames;
+	audio_frame.p_data = (float*)(audio_data->data[0]);
+
+	NDIlib_send_send_audio(s->ndi_sender, &audio_frame);
+
+	return audio_data;
 }
 
 struct obs_source_info create_ndi_filter_info() {
@@ -189,7 +209,10 @@ struct obs_source_info create_ndi_filter_info() {
 	ndi_filter_info.destroy			= ndi_filter_destroy;
 	ndi_filter_info.update			= ndi_filter_update;
 	ndi_filter_info.video_tick		= ndi_filter_tick;
-	ndi_filter_info.video_render	= ndi_filter_videofilter;
+	ndi_filter_info.video_render	= ndi_filter_videorender;
+
+	// Audio is available only with async sources
+	ndi_filter_info.filter_audio	= ndi_filter_audiofilter; 
 
 	return ndi_filter_info;
 }
