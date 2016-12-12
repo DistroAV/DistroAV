@@ -2,6 +2,11 @@ obs-ndi
 ==============
 Network A/V in OBS Studio with NewTek's NDI technology.  
 
+## Features
+- **NDI Source** : receive NDI video and audio in OBS
+- **NDI Output** : transmit video and audio from OBS to NDI
+- **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single source or scene to NDI
+
 ## Downloads
 Binaries for Windows are available in the [Releases](https://github.com/Palakis/obs-ndi/releases) section. Linux and OS X versions are not yet available, as compatibility with these systems is under development.
 
