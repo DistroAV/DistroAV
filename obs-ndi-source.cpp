@@ -32,7 +32,7 @@ struct ndi_source {
 	NDIlib_recv_instance_t ndi_receiver;
 	pthread_t frame_thread;
 	bool running;
-	int no_sources;
+	uint32_t no_sources;
 	const NDIlib_source_t *ndi_sources;
 };
 

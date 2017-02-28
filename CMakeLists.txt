@@ -43,24 +43,44 @@ if(WIN32)
 	endif()
 
 	if(ARCH EQUAL 64)
-		set(ARCH_NAME "x64")
+		set(NDI_ARCH_NAME "x64")
+		set(OBS_ARCH_NAME "64bit")
 	else()
-		set(ARCH_NAME "x86")
+		set(NDI_ARCH_NAME "x86")
+		set(OBS_ARCH_NAME "32bit")
 	endif()
 
 	find_package(w32-pthreads REQUIRED)
+	
 	include_directories(
 		"${NDISDK_DIR}/Include")
+
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}"
 		w32-pthreads
-		"${NDISDK_DIR}/Lib/${ARCH_NAME}/Processing.NDI.Lib.${ARCH_NAME}.lib")
+		"${NDISDK_DIR}/Lib/${NDI_ARCH_NAME}/Processing.NDI.Lib.${NDI_ARCH_NAME}.lib")
+
 	add_custom_command(TARGET obs-ndi POST_BUILD
 		COMMAND "${CMAKE_COMMAND}" -E copy
-		"${NDISDK_DIR}/Bin/${ARCH_NAME}/Processing.NDI.Lib.${ARCH_NAME}.dll"
-		"$<TARGET_FILE_DIR:obs-ndi>/Processing.NDI.Lib.${ARCH_NAME}.dll")
+		"${NDISDK_DIR}/Bin/${NDI_ARCH_NAME}/Processing.NDI.Lib.${NDI_ARCH_NAME}.dll"
+		"$<TARGET_FILE_DIR:obs-ndi>/Processing.NDI.Lib.${NDI_ARCH_NAME}.dll")
 
-	install_external_plugin_with_data(obs-ndi data)
+	set(RELEASE_DIR "${PROJECT_SOURCE_DIR}/release")
+	add_custom_command(TARGET obs-ndi POST_BUILD
+		COMMAND if $<CONFIG:Release>==1 (
+			"${CMAKE_COMMAND}" -E make_directory
+			"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
+			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+			
+		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy_directory
+			"${PROJECT_SOURCE_DIR}/data"
+			"${RELEASE_DIR}/data/obs-plugins/obs-ndi")
+
+		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy 
+			"$<TARGET_FILE:obs-ndi>"
+			"${NDISDK_DIR}/Bin/${NDI_ARCH_NAME}/Processing.NDI.Lib.${NDI_ARCH_NAME}.dll" 
+			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+	)
 endif()
 
 # OSX (WARNING : needs testing)
