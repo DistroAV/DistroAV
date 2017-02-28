@@ -16,10 +16,6 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <Processing.NDI.Lib.h>
@@ -44,11 +40,11 @@ bool main_output_running;
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO, "[obs-ndi] hello ! (version %s)", OBS_NDI_VERSION);
+	blog(LOG_INFO, "hello ! (version %s)", OBS_NDI_VERSION);
 
 	bool ndi_init = NDIlib_initialize();
 	if (!ndi_init) {
-		blog(LOG_ERROR, "[obs-ndi] CPU unsupported by NDI library. Module won't load.");
+		blog(LOG_ERROR, "CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
@@ -89,7 +85,7 @@ bool obs_module_load(void)
 
 void obs_module_unload()
 {
-	blog(LOG_INFO, "[obs-ndi] goodbye !");
+	blog(LOG_INFO, "goodbye !");
 
 	NDIlib_find_destroy(ndi_finder);
 	NDIlib_destroy();
@@ -97,7 +93,7 @@ void obs_module_unload()
 
 void main_output_start() {
 	if (!main_output_running) {
-		blog(LOG_INFO, "[obs-ndi] starting main NDI output with name '%s'", Config::Current()->OutputName);
+		blog(LOG_INFO, "starting main NDI output with name '%s'", Config::Current()->OutputName);
 
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", Config::Current()->OutputName);
@@ -112,7 +108,7 @@ void main_output_start() {
 
 void main_output_stop() {
 	if (main_output_running) {
-		blog(LOG_INFO, "[obs-ndi] stopping main NDI output");
+		blog(LOG_INFO, "stopping main NDI output");
 
 		obs_output_stop(main_out);
 		obs_output_release(main_out);

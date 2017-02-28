@@ -16,16 +16,14 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
 #include <util/threading.h>
 #include <media-io/video-frame.h>
 #include <Processing.NDI.Lib.h>
+
+#include "obs-ndi.h"
 
 #define TEXFORMAT GS_BGRA
 

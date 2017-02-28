@@ -25,4 +25,6 @@ void main_output_start();
 void main_output_stop();
 bool main_output_is_running();
 
+#define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
+
 #endif // OBSNDI_H

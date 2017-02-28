@@ -16,10 +16,6 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 #if defined(__linux__) || defined(__APPLE__)
 #include <Processing.NDI.compat.h>
 #endif
@@ -28,6 +24,8 @@
 #include <util/platform.h>
 #include <util/threading.h>
 #include <Processing.NDI.Lib.h>
+
+#include "obs-ndi.h"
 
 struct ndi_output {
 	obs_output_t *output;

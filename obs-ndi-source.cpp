@@ -25,6 +25,8 @@
 #include <util/threading.h>
 #include <Processing.NDI.Lib.h>
 
+#include "obs-ndi.h"
+
 extern NDIlib_find_instance_t ndi_finder;
 
 struct ndi_source {
@@ -182,7 +184,7 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 		pthread_create(&s->frame_thread, NULL, ndi_source_pollframe, data);
 	}
 	else {
-		blog(LOG_ERROR, "[obs-ndi] can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
+		blog(LOG_ERROR, "can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
 	}
 }
 
