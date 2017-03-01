@@ -79,10 +79,11 @@ bool obs_module_load(void)
 	ndi_filter_info = create_ndi_filter_info();
 	obs_register_source(&ndi_filter_info);
 
-	obs_frontend_add_save_callback(Config::OBSSaveCallback, Config::Current());
+	Config* conf = Config::Current();
+	conf->Load();
 
-	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StartNDIOutput"), [](void *private_data) {
-		main_output_start();
+	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StartNDIOutput"), [conf](void *private_data) {
+		main_output_start(conf->OutputName);
 	}, nullptr);
 
 	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StopNDIOutput"), [](void *private_data) {
@@ -94,6 +95,9 @@ bool obs_module_load(void)
 			main_output_stop();
 		}
 	}, nullptr);
+
+	if (conf->OutputEnabled)
+		main_output_start(conf->OutputName);
 
 	return true;
 }
@@ -112,12 +116,12 @@ void obs_module_unload()
 		os_dlclose(loaded_lib);
 }
 
-void main_output_start() {
+void main_output_start(const char* output_name) {
 	if (!main_output_running) {
 		blog(LOG_INFO, "starting main NDI output with name '%s'", Config::Current()->OutputName);
 
 		obs_data_t *output_settings = obs_data_create();
-		obs_data_set_string(output_settings, "ndi_name", Config::Current()->OutputName);
+		obs_data_set_string(output_settings, "ndi_name", output_name);
 		
 		main_out = obs_output_create("ndi_output", "main_ndi_output", output_settings, nullptr);
 		obs_output_start(main_out);

@@ -26,6 +26,8 @@ public:
 	Config();
 	static void OBSSaveCallback(obs_data_t *save_data, bool saving, void *private_data);
 	static Config* Current();
+	void Load();
+	void Save();
 
 	bool OutputEnabled;
 	const char* OutputName;
