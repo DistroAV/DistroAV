@@ -191,6 +191,7 @@ const char* GetNDILibPath()
 	#elif defined(__APPLE__)
 		// TODO : make a redistributable NDI package for macOS / OS X
 	#endif
+
 	return path;
 }
 

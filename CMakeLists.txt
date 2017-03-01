@@ -93,8 +93,7 @@ if(APPLE)
 	include_directories(
 		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
-		obs-frontend-api
-		"${NDISDK_DIR}/bin/x64/libndi.dylib")
+		obs-frontend-api)
 endif()
 
 # Linux
@@ -109,21 +108,13 @@ if(UNIX AND NOT APPLE)
 
 	set_target_properties(obs-ndi PROPERTIES PREFIX "")
 
-	add_library(ndilib SHARED IMPORTED)
-	set_target_properties(ndilib PROPERTIES
-		IMPORTED_LOCATION "${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-5.4/libndi.so.1.0.1")
-
 	include_directories(
 		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
-		obs-frontend-api
-		ndilib)
+		obs-frontend-api)
 
 	install(TARGETS obs-ndi
 		LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/obs-plugins)
 	install(FILES data/locale/en-US.ini data/locale/fr-FR.ini
 		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/obs/obs-plugins/obs-ndi/locale")
-
-	install(FILES "${NDISDK_DIR}/lib/${ARCH_NAME}-linux-gnu-5.4/libndi.so.1.0.1"
-                DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 endif()
