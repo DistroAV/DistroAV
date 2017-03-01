@@ -140,13 +140,28 @@ bool main_output_is_running() {
 	return main_output_running;
 }
 
+const char* GetNDILibPath()
+{
+	char *path = "";
+
+	#if defined(_WIN32) || defined(_WIN64)
+		#if defined(_WIN64)
+			#define NDILIB_FILE "Processing.NDI.Lib.x64.dll"
+		#elif defined(_WIN32)
+			#define NDILIB_FILE "Processing.NDI.Lib.x86.dll"
+		#endif
+
+		path = getenv("NDI_RUNTIME_DIR_V2");
+		strcat(path, "\\");
+		strcat(path, NDILIB_FILE);
+	#endif
+
+	return path;
+}
+
 const NDIlib_v2* NDIlib_v2_load()
 {
-	char* lib_path = getenv("NDI_RUNTIME_DIR_V2");
-	strcat(lib_path, "\\");
-	strcat(lib_path, NDILIB_FILE);
-
-	loaded_lib = os_dlopen(lib_path);
+	loaded_lib = os_dlopen(GetNDILibPath());
 
 	if (loaded_lib)
 	{

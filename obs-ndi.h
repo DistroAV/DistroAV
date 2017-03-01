@@ -26,14 +26,6 @@
 	#define PROCESSINGNDILIB_DEPRECATED
 	#define PROCESSINGNDILIB_API extern "C" __attribute((visibility("default")))
 #endif
-
-#if defined(_WIN32) || defined(_WIN64)
-	#if defined(_WIN64)
-		#define NDILIB_FILE "Processing.NDI.Lib.x64.dll"
-	#elif defined(_WIN32)
-		#define NDILIB_FILE "Processing.NDI.Lib.x86.dll"
-	#endif
-#endif
  
 #include <Processing.NDI.compat.h>
 #include <Processing.NDI.structs.h>
