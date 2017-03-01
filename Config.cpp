@@ -37,7 +37,7 @@ Config::Config()
 	if (obs_config)
 	{
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_ENABLE, OutputEnabled);
-		config_set_default_string(obs_config, SECTION_NAME, PARAM_NAME, OutputName);
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
 	}
 }
 
@@ -54,7 +54,7 @@ void Config::Save()
 	config_t* obs_config = obs_frontend_get_global_config();
 
 	config_set_bool(obs_config, SECTION_NAME, PARAM_ENABLE, OutputEnabled);
-	config_set_string(obs_config, SECTION_NAME, PARAM_NAME, OutputName);
+	config_set_string(obs_config, SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
 
 	config_save(obs_config);
 }

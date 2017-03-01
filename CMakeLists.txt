@@ -1,9 +1,15 @@
 cmake_minimum_required(VERSION 3.5)
 project(obs-ndi)
 
+set(CMAKE_PREFIX_PATH "${QTDIR}")
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+
 include(external/FindLibObs.cmake)
-include(external/ObsPluginHelpers.cmake)
 find_package(LibObs REQUIRED)
+find_package(Qt5Core REQUIRED)
+find_package(Qt5Widgets REQUIRED)
 
 set(NDISDK_DIR "NDISDK_DIR-NOTFOUND" CACHE PATH "NewTek NDI SDK")
 if(NDISDK_DIR EQUAL "NDISDK_DIR-NOTFOUND")
@@ -21,19 +27,27 @@ set(obs-ndi_SOURCES
 	obs-ndi-source.cpp
 	obs-ndi-output.cpp
 	obs-ndi-filter.cpp
-	Config.cpp)
+	Config.cpp
+	forms/output-settings.cpp)
 
 set(obs-ndi_HEADERS
 	obs-ndi.h
-	Config.h)
+	Config.h
+	forms/output-settings.h)
 
 add_library(obs-ndi MODULE 
 	${obs-ndi_SOURCES}
 	${obs-ndi_HEADERS})
+
 include_directories( 
-	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api")
+	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
+	${Qt5Core_INCLUDES}
+	${Qt5Widgets_INCLUDES})
+
 target_link_libraries(obs-ndi 
-	libobs)
+	libobs
+	Qt5::Core
+	Qt5::Widgets)
 
 # Windows
 if(WIN32)

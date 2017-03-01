@@ -23,8 +23,12 @@
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
+#include <QMainWindow>
+#include <QAction>
+
 #include "obs-ndi.h"
 #include "Config.h"
+#include "forms/output-settings.h"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
@@ -45,6 +49,8 @@ void* loaded_lib = nullptr;
 NDIlib_find_instance_t ndi_finder;
 obs_output_t *main_out;
 bool main_output_running;
+
+OutputSettings* output_settings;
 
 bool obs_module_load(void)
 {
@@ -82,13 +88,18 @@ bool obs_module_load(void)
 	Config* conf = Config::Current();
 	conf->Load();
 
-	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StartNDIOutput"), [conf](void *private_data) {
-		main_output_start(conf->OutputName);
-	}, nullptr);
+	// Ui setup
+	QAction *menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(obs_module_text("NDIPlugin.Menu.OutputSettings"));
+	
+	obs_frontend_push_ui_translation(obs_module_get_string);
+	QMainWindow* main_window = (QMainWindow*)obs_frontend_get_main_window();
+	output_settings = new OutputSettings(main_window);
+	obs_frontend_pop_ui_translation();
 
-	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StopNDIOutput"), [](void *private_data) {
-		main_output_stop();
-	}, nullptr);
+	auto menu_cb = [] {
+		output_settings->ToggleShowHide();
+	};
+	menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
 	obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
 		if (event == OBS_FRONTEND_EVENT_EXIT) {
@@ -96,8 +107,9 @@ bool obs_module_load(void)
 		}
 	}, nullptr);
 
+	// Run the server if configured
 	if (conf->OutputEnabled)
-		main_output_start(conf->OutputName);
+		main_output_start(conf->OutputName.toUtf8().constData());
 
 	return true;
 }

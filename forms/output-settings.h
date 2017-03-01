@@ -16,25 +16,30 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef OUTPUTSETTINGS_H
+#define OUTPUTSETTINGS_H
 
-#include <QString>
-#include <obs-module.h>
+#include <QDialog>
 
-class Config {
+namespace Ui {
+class OutputSettings;
+}
+
+class OutputSettings : public QDialog
+{
+    Q_OBJECT
+
 public:
-	Config();
-	static void OBSSaveCallback(obs_data_t *save_data, bool saving, void *private_data);
-	static Config* Current();
-	void Load();
-	void Save();
+    explicit OutputSettings(QWidget *parent = 0);
+    ~OutputSettings();
+	void showEvent(QShowEvent *event);
+	void ToggleShowHide();
 
-	bool OutputEnabled;
-	QString OutputName;
-	
-private:	
-	static Config *_instance;
+private Q_SLOTS:
+	void FormAccepted();
+
+private:
+    Ui::OutputSettings *ui;
 };
 
-#endif // CONFIG_H
+#endif // OUTPUTSETTINGS_H
