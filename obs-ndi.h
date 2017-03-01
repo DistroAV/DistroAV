@@ -42,7 +42,7 @@
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
 
-void main_output_start();
+void main_output_start(const char* output_name);
 void main_output_stop();
 bool main_output_is_running();
 
