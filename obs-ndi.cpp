@@ -185,8 +185,12 @@ const char* GetNDILibPath()
 		strcat(path, runtime_dir);
 		strcat(path, "\\");
 		strcat(path, dll_file);
+	#elif defined(__linux__)
+		// TODO : make a redistributable NDI package for Linux x86 and x86_64
+		path = "/usr/lib/libndi.so.1.0.1";
+	#elif defined(__APPLE__)
+		// TODO : make a redistributable NDI package for macOS / OS X
 	#endif
-
 	return path;
 }
 
@@ -198,10 +202,7 @@ const NDIlib_v2* NDIlib_v2_load()
 		return nullptr;
 	}
 
-	blog(LOG_INFO, "%s", dll_file);
-
 	loaded_lib = os_dlopen(dll_file);
-
 	bfree((void*)dll_file);
 
 	if (loaded_lib)
