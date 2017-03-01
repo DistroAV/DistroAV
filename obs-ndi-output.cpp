@@ -120,7 +120,10 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	video_frame.frame_rate_D = o->video_info.fps_den;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = frame->timestamp;
+	// This will also fix the timestamp issue. More investigation needed if
+	// there is an advantage of one option over the other.
+	// video_frame.timecode = frame->timestamp / 100;
+	video_frame.timecode = NDIlib_send_timecode_synthesize;
 
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
@@ -135,7 +138,8 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	NDIlib_audio_frame_t audio_frame = { 0 };
 	audio_frame.sample_rate = o->audio_info.samples_per_sec;
 	audio_frame.no_channels = o->audio_info.speakers;
-	audio_frame.timecode = frame->timestamp;
+	// audio_frame.timecode = frame->timestamp / 100;
+	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.p_data = (float*)(void*)(frame->data[0]);
 
