@@ -43,10 +43,8 @@ if(WIN32)
 	endif()
 
 	if(ARCH EQUAL 64)
-		set(NDI_ARCH_NAME "x64")
 		set(OBS_ARCH_NAME "64bit")
 	else()
-		set(NDI_ARCH_NAME "x86")
 		set(OBS_ARCH_NAME "32bit")
 	endif()
 
@@ -58,11 +56,6 @@ if(WIN32)
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}"
 		w32-pthreads)
-
-	add_custom_command(TARGET obs-ndi POST_BUILD
-		COMMAND "${CMAKE_COMMAND}" -E copy
-		"${NDISDK_DIR}/Bin/${NDI_ARCH_NAME}/Processing.NDI.Lib.${NDI_ARCH_NAME}.dll"
-		"$<TARGET_FILE_DIR:obs-ndi>/Processing.NDI.Lib.${NDI_ARCH_NAME}.dll")
 
 	set(RELEASE_DIR "${PROJECT_SOURCE_DIR}/release")
 	add_custom_command(TARGET obs-ndi POST_BUILD
@@ -77,7 +70,6 @@ if(WIN32)
 
 		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy 
 			"$<TARGET_FILE:obs-ndi>"
-			"${NDISDK_DIR}/Bin/${NDI_ARCH_NAME}/Processing.NDI.Lib.${NDI_ARCH_NAME}.dll" 
 			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
 	)
 endif()
