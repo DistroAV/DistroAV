@@ -16,14 +16,20 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #include <obs-module.h>
 #include <obs-frontend-api.h>
-#include <Processing.NDI.Lib.h>
+#include <util/platform.h>
 #include "obs-ndi.h"
 #include "Config.h"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
+
+const NDIlib_v2* ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -34,6 +40,8 @@ struct obs_output_info ndi_output_info;
 extern struct obs_source_info create_ndi_filter_info();
 struct obs_source_info ndi_filter_info;
 
+void* loaded_lib = nullptr;
+
 NDIlib_find_instance_t ndi_finder;
 obs_output_t *main_out;
 bool main_output_running;
@@ -42,8 +50,15 @@ bool obs_module_load(void)
 {
 	blog(LOG_INFO, "hello ! (version %s)", OBS_NDI_VERSION);
 
-	bool ndi_init = NDIlib_initialize();
-	if (!ndi_init) {
+	ndiLib = NDIlib_v2_load();
+	if (!ndiLib)
+	{
+		blog(LOG_ERROR, "Error when loading the NDI library. Are the NDI redistributables installed?");
+		return false;
+	}
+
+	if (!ndiLib->NDIlib_initialize())
+	{
 		blog(LOG_ERROR, "CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
@@ -53,7 +68,7 @@ bool obs_module_load(void)
 	NDIlib_find_create_t find_desc = { 0 };
 	find_desc.show_local_sources = true;
 	find_desc.p_groups = NULL;
-	ndi_finder = NDIlib_find_create(&find_desc);
+	ndi_finder = ndiLib->NDIlib_find_create(&find_desc);
 
 	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
@@ -87,8 +102,13 @@ void obs_module_unload()
 {
 	blog(LOG_INFO, "goodbye !");
 
-	NDIlib_find_destroy(ndi_finder);
-	NDIlib_destroy();
+	if (ndiLib)
+	{
+		ndiLib->NDIlib_find_destroy(ndi_finder);
+		ndiLib->NDIlib_destroy();
+	}
+
+	os_dlclose(loaded_lib);
 }
 
 void main_output_start() {
@@ -118,4 +138,80 @@ void main_output_stop() {
 
 bool main_output_is_running() {
 	return main_output_running;
+}
+
+const NDIlib_v2* NDIlib_v2_load()
+{
+	char* lib_path = getenv("NDI_RUNTIME_DIR_V2");
+	strcat(lib_path, "\\");
+	strcat(lib_path, NDILIB_FILE);
+
+	loaded_lib = os_dlopen(lib_path);
+
+	if (loaded_lib)
+	{
+		NDIlib_v2* sct = (NDIlib_v2*)bmalloc(sizeof(NDIlib_v2));
+		
+		// General lib
+		sct->NDIlib_initialize = (bool(*)())os_dlsym(loaded_lib, "NDIlib_initialize");
+		sct->NDIlib_destroy = (void(*)())os_dlsym(loaded_lib, "NDIlib_destroy");
+		sct->NDIlib_version = (const char*(*)())os_dlsym(loaded_lib, "NDIlib_version");
+		sct->NDIlib_is_supported_CPU = (bool(*)())os_dlsym(loaded_lib, "NDIlib_is_supported_cpu");
+		
+		// Find
+		sct->NDIlib_find_create = (NDIlib_find_instance_t(*)(const NDIlib_find_create_t* p_create_settings))os_dlsym(loaded_lib, "NDIlib_find_create");
+		sct->NDIlib_find_create2 = (NDIlib_find_instance_t(*)(const NDIlib_find_create_t* p_create_settings))os_dlsym(loaded_lib, "NDIlib_find_create2");
+		sct->NDIlib_find_destroy = (void(*)(NDIlib_find_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_find_destroy");
+		sct->NDIlib_find_get_sources = (const NDIlib_source_t*(*)(NDIlib_find_instance_t p_instance, uint32_t* p_no_sources, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_find_get_sources");
+		
+		// Send
+		sct->NDIlib_send_create = (NDIlib_send_instance_t(*)(const NDIlib_send_create_t* p_create_settings))os_dlsym(loaded_lib, "NDIlib_send_create");
+		sct->NDIlib_send_destroy = (void(*)(NDIlib_send_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_send_destroy");
+		sct->NDIlib_send_send_video = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_t* p_video_data))os_dlsym(loaded_lib, "NDIlib_send_send_video");
+		sct->NDIlib_send_send_video_async = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_t* p_video_data))os_dlsym(loaded_lib, "NDIlib_send_send_video_async");
+		sct->NDIlib_send_send_audio = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_t* p_audio_data))os_dlsym(loaded_lib, "NDIlib_send_send_audio");
+		sct->NDIlib_send_send_metadata = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata))os_dlsym(loaded_lib, "NDIlib_send_send_metadata");
+		sct->NDIlib_send_capture = (NDIlib_frame_type_e(*)(NDIlib_send_instance_t p_instance, NDIlib_metadata_frame_t* p_metadata, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_send_capture");
+		sct->NDIlib_send_free_metadata = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata))os_dlsym(loaded_lib, "NDIlib_send_free_metadata");
+		sct->NDIlib_send_get_tally = (bool(*)(NDIlib_send_instance_t p_instance, NDIlib_tally_t* p_tally, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_send_get_tally");
+		sct->NDIlib_send_get_no_connections = (int(*)(NDIlib_send_instance_t p_instance, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_send_get_no_connections");
+		sct->NDIlib_send_clear_connection_metadata = (void(*)(NDIlib_send_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_send_clear_connection_metadata");
+		sct->NDIlib_send_add_connection_metadata = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata))os_dlsym(loaded_lib, "NDIlib_send_add_connection_metadata");
+		sct->NDIlib_send_set_failover = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_source_t* p_failover_source))os_dlsym(loaded_lib, "NDIlib_send_set_failover");
+
+		// Recv
+		sct->NDIlib_recv_create2 = (NDIlib_recv_instance_t(*)(const NDIlib_recv_create_t* p_create_settings))os_dlsym(loaded_lib, "NDIlib_recv_create2");
+		sct->NDIlib_recv_create = (NDIlib_recv_instance_t(*)(const NDIlib_recv_create_t* p_create_settings))os_dlsym(loaded_lib, "NDIlib_recv_create");
+		sct->NDIlib_recv_destroy = (void(*)(NDIlib_recv_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_recv_destroy");
+		sct->NDIlib_recv_capture = (NDIlib_frame_type_e(*)(NDIlib_recv_instance_t p_instance, NDIlib_video_frame_t* p_video_data, NDIlib_audio_frame_t* p_audio_data, NDIlib_metadata_frame_t* p_metadata, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_recv_capture");
+		sct->NDIlib_recv_free_video = (void(*)(NDIlib_recv_instance_t p_instance, const NDIlib_video_frame_t* p_video_data))os_dlsym(loaded_lib, "NDIlib_recv_free_video");
+		sct->NDIlib_recv_free_audio = (void(*)(NDIlib_recv_instance_t p_instance, const NDIlib_audio_frame_t* p_audio_data))os_dlsym(loaded_lib, "NDIlib_recv_free_audio");
+		sct->NDIlib_recv_free_metadata = (void(*)(NDIlib_recv_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata))os_dlsym(loaded_lib, "NDIlib_recv_free_metadata");
+		sct->NDIlib_recv_send_metadata = (bool(*)(NDIlib_recv_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata))os_dlsym(loaded_lib, "NDIlib_recv_send_metadata");
+		sct->NDIlib_recv_set_tally = (bool(*)(NDIlib_recv_instance_t p_instance, const NDIlib_tally_t* p_tally))os_dlsym(loaded_lib, "NDIlib_recv_set_tally");
+		sct->NDIlib_recv_get_performance = (void(*)(NDIlib_recv_instance_t p_instance, NDIlib_recv_performance_t* p_total, NDIlib_recv_performance_t* p_dropped))os_dlsym(loaded_lib, "NDIlib_recv_get_performance");
+		sct->NDIlib_recv_get_queue = (void(*)(NDIlib_recv_instance_t p_instance, NDIlib_recv_queue_t* p_total))os_dlsym(loaded_lib, "NDIlib_recv_get_queue");
+		sct->NDIlib_recv_clear_connection_metadata = (void(*)(NDIlib_recv_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_recv_clear_connection_metadata");
+		sct->NDIlib_recv_add_connection_metadata = (void(*)(NDIlib_recv_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata))os_dlsym(loaded_lib, "NDIlib_recv_add_connection_metadata");
+		sct->NDIlib_recv_is_connected = (bool(*)(NDIlib_recv_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_recv_is_connected");
+		
+		// Routing
+		sct->NDIlib_routing_create = (NDIlib_routing_instance_t(*)(const NDIlib_routing_create_t* p_create_settings))os_dlsym(loaded_lib, "NDIlib_routing_create");
+		sct->NDIlib_routing_destroy = (void(*)(NDIlib_routing_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_routing_destroy");
+		sct->NDIlib_routing_change = (bool(*)(NDIlib_routing_instance_t p_instance, const NDIlib_source_t* p_source))os_dlsym(loaded_lib, "NDIlib_routing_change");
+		sct->NDIlib_routing_clear = (bool(*)(NDIlib_routing_instance_t p_instance))os_dlsym(loaded_lib, "NDIlib_routing_clear");
+		
+		// Util
+		sct->NDIlib_util_send_send_audio_interleaved_16s = (void(*)(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_16s_t* p_audio_data))os_dlsym(loaded_lib, "NDIlib_util_send_send_audio_interleaved_16s");
+		sct->NDIlib_util_audio_to_interleaved_16s = (void(*)(const NDIlib_audio_frame_t* p_src, NDIlib_audio_frame_interleaved_16s_t* p_dst))os_dlsym(loaded_lib, "NDIlib_util_audio_to_interleaved_16s");
+		sct->NDIlib_util_audio_from_interleaved_16s = (void(*)(const NDIlib_audio_frame_interleaved_16s_t* p_src, NDIlib_audio_frame_t* p_dst))os_dlsym(loaded_lib, "NDIlib_util_audio_from_interleaved_16s");
+
+		// v2
+		sct->NDIlib_find_wait_for_sources = (bool(*)(NDIlib_find_instance_t p_instance, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_find_wait_for_sources");
+		sct->NDIlib_find_get_current_sources = (const NDIlib_source_t* (*)(NDIlib_find_instance_t p_instance, uint32_t* p_no_sources))os_dlsym(loaded_lib, "NDIlib_find_get_current_sources");
+
+		return sct;
+	}
+
+	return nullptr;
 }

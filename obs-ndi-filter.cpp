@@ -21,7 +21,6 @@
 #include <util/platform.h>
 #include <util/threading.h>
 #include <media-io/video-frame.h>
-#include <Processing.NDI.Lib.h>
 
 #include "obs-ndi.h"
 
@@ -65,8 +64,8 @@ void ndi_filter_update(void *data, obs_data_t *settings) {
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
-	NDIlib_send_destroy(s->ndi_sender);
-	s->ndi_sender = NDIlib_send_create(&send_desc);
+	ndiLib->NDIlib_send_destroy(s->ndi_sender);
+	s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
 }
 
 void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
@@ -115,7 +114,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		video_frame.p_data = s->video_data;
 		video_frame.line_stride_in_bytes = s->video_linesize;
 
-		NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
+		ndiLib->NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
 	}
 
 	gs_blend_state_pop();
@@ -159,7 +158,7 @@ void ndi_filter_destroy(void *data) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_display_destroy(s->renderer);
-	NDIlib_send_destroy(s->ndi_sender);
+	ndiLib->NDIlib_send_destroy(s->ndi_sender);
 
 	gs_stagesurface_unmap(s->stagesurface);
 	gs_stagesurface_destroy(s->stagesurface);
@@ -191,7 +190,7 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data, struct obs_audio_data 
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.p_data = (float*)(audio_data->data[0]);
 
-	NDIlib_send_send_audio(s->ndi_sender, &audio_frame);
+	ndiLib->NDIlib_send_send_audio(s->ndi_sender, &audio_frame);
 
 	return audio_data;
 }

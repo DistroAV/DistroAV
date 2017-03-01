@@ -57,8 +57,7 @@ if(WIN32)
 
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}"
-		w32-pthreads
-		"${NDISDK_DIR}/Lib/${NDI_ARCH_NAME}/Processing.NDI.Lib.${NDI_ARCH_NAME}.lib")
+		w32-pthreads)
 
 	add_custom_command(TARGET obs-ndi POST_BUILD
 		COMMAND "${CMAKE_COMMAND}" -E copy

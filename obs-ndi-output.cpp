@@ -16,14 +16,9 @@
 	License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
-#if defined(__linux__) || defined(__APPLE__)
-#include <Processing.NDI.compat.h>
-#endif
-
 #include <obs-module.h>
 #include <util/platform.h>
 #include <util/threading.h>
-#include <Processing.NDI.Lib.h>
 
 #include "obs-ndi.h"
 
@@ -61,7 +56,7 @@ bool ndi_output_start(void *data) {
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
-	o->ndi_sender = NDIlib_send_create(&send_desc);
+	o->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
 	if (o->ndi_sender) {
 		o->started = true;
 		obs_output_begin_data_capture(o->output, 0);
@@ -77,7 +72,7 @@ void ndi_output_stop(void *data, uint64_t ts) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	o->started = false;
 	obs_output_end_data_capture(o->output);
-	NDIlib_send_destroy(o->ndi_sender);
+	ndiLib->NDIlib_send_destroy(o->ndi_sender);
 }
 
 void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
@@ -125,12 +120,12 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	video_frame.frame_rate_D = o->video_info.fps_den;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = frame->timestamp;
+	video_frame.timecode = NDIlib_send_timecode_synthesize;
 
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 	
-	NDIlib_send_send_video_async(o->ndi_sender, &video_frame);
+	ndiLib->NDIlib_send_send_video_async(o->ndi_sender, &video_frame);
 }
 
 void ndi_output_rawaudio(void *data, struct audio_data *frame) {
@@ -140,11 +135,11 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	NDIlib_audio_frame_t audio_frame = { 0 };
 	audio_frame.sample_rate = o->audio_info.samples_per_sec;
 	audio_frame.no_channels = o->audio_info.speakers;
-	audio_frame.timecode = frame->timestamp;
+	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.p_data = (float*)(void*)(frame->data[0]);
 
-	NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
+	ndiLib->NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
 }
 
 struct obs_output_info create_ndi_output_info() {

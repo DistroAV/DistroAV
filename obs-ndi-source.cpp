@@ -23,7 +23,6 @@
 #include <obs-module.h>
 #include <util/platform.h>
 #include <util/threading.h>
-#include <Processing.NDI.Lib.h>
 
 #include "obs-ndi.h"
 
@@ -73,7 +72,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	});
 
 	s->no_sources = 0;
-	s->ndi_sources = NDIlib_find_get_current_sources(ndi_finder, &s->no_sources);
+	s->ndi_sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder, &s->no_sources);
 
 	for (uint32_t i = 0; i < s->no_sources; i++) {
 		obs_property_list_add_int(source_list, s->ndi_sources[i].p_ndi_name, i);
@@ -96,9 +95,9 @@ void *ndi_source_pollframe(void *data) {
 	long audio_data_size;
 
 	while (s->running) {
-		switch (NDIlib_recv_capture(s->ndi_receiver, &video_frame, &audio_frame, NULL, 0)) {
+		switch (ndiLib->NDIlib_recv_capture(s->ndi_receiver, &video_frame, &audio_frame, NULL, 0)) {
 			case NDIlib_frame_type_video:
-				obs_video_frame.timestamp = video_frame.timecode * 100;
+				obs_video_frame.timestamp = video_frame.timecode;
 				obs_video_frame.width = video_frame.xres;
 				obs_video_frame.height = video_frame.yres;
 				obs_video_frame.format = VIDEO_FORMAT_BGRA;
@@ -107,13 +106,13 @@ void *ndi_source_pollframe(void *data) {
 
 				obs_source_output_video(s->source, &obs_video_frame);
 
-				NDIlib_recv_free_video(s->ndi_receiver, &video_frame);
+				ndiLib->NDIlib_recv_free_video(s->ndi_receiver, &video_frame);
 				break;
 
 			case NDIlib_frame_type_audio:
 				audio_frame_16s.reference_level = 0;
 				audio_frame_16s.p_data = static_cast<short *>(malloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(short)));
-				NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
+				ndiLib->NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
 
 				switch (audio_frame.no_channels) {
 				case 1:
@@ -141,7 +140,7 @@ void *ndi_source_pollframe(void *data) {
 					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 				}
 
-				obs_audio_frame.timestamp = audio_frame_16s.timecode * 100;
+				obs_audio_frame.timestamp = audio_frame_16s.timecode;
 				obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
 				obs_audio_frame.format = AUDIO_FORMAT_16BIT;
 				obs_audio_frame.frames = audio_frame_16s.no_samples;
@@ -149,7 +148,7 @@ void *ndi_source_pollframe(void *data) {
 
 				obs_source_output_audio(s->source, &obs_audio_frame);
 
-				NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
+				ndiLib->NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
 				break;
 
 			case NDIlib_frame_type_none:
@@ -176,9 +175,9 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 
 	s->running = false;
 	pthread_cancel(s->frame_thread);
-	NDIlib_recv_destroy(s->ndi_receiver);
+	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 	
-	s->ndi_receiver = NDIlib_recv_create2(&recv_desc);
+	s->ndi_receiver = ndiLib->NDIlib_recv_create2(&recv_desc);
 	if (s->ndi_receiver) {
 		s->running = true;
 		pthread_create(&s->frame_thread, NULL, ndi_source_pollframe, data);
@@ -200,7 +199,7 @@ void* ndi_source_create(obs_data_t *settings, obs_source_t *source) {
 void ndi_source_destroy(void *data) {
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 	s->running = false;
-	NDIlib_recv_destroy(s->ndi_receiver);
+	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 }
 
 struct obs_source_info create_ndi_source_info() {
