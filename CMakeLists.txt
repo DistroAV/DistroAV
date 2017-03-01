@@ -99,6 +99,8 @@ endif()
 
 # Linux
 if(UNIX AND NOT APPLE)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 	if(ARCH EQUAL 64)
 		set(ARCH_NAME "x86_64")
 	else()
