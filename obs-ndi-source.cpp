@@ -73,8 +73,8 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	});
 
 	s->no_sources = 0;
-	s->ndi_sources = NDIlib_find_get_sources(ndi_finder, &s->no_sources, 0);
-	
+	s->ndi_sources = NDIlib_find_get_current_sources(ndi_finder, &s->no_sources);
+
 	for (uint32_t i = 0; i < s->no_sources; i++) {
 		obs_property_list_add_int(source_list, s->ndi_sources[i].p_ndi_name, i);
 	}
