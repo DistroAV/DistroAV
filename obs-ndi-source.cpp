@@ -48,7 +48,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", obs_module_text("SourceProps_NDISourceName"),
+	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", obs_module_text("NDIPlugin.NDISourceName"),
 		OBS_COMBO_TYPE_LIST,
 		OBS_COMBO_FORMAT_INT);
 
@@ -59,7 +59,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 		return true;
 	});
 
-	obs_properties_add_bool(props, "ndi_low_bandwidth", obs_module_text("SourceProps_NDILowBandwidth"));
+	obs_properties_add_bool(props, "ndi_low_bandwidth", obs_module_text("NDIPlugin.SourceProps.LowBandwidth"));
 
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
 		#if defined(_WIN32)

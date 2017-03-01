@@ -44,7 +44,7 @@ struct ndi_filter {
 
 const char* ndi_filter_getname(void *data) {
 	UNUSED_PARAMETER(data);
-	return obs_module_text("NDIFilter");
+	return obs_module_text("NDIPlugin.FilterName");
 }
 
 obs_properties_t* ndi_filter_getproperties(void *data) {

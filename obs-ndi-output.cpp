@@ -34,7 +34,7 @@ struct ndi_output {
 
 const char* ndi_output_getname(void *data) {
 	UNUSED_PARAMETER(data);
-	return obs_module_text("NDIOutput");
+	return obs_module_text("NDIPlugin.OutputName");
 }
 
 obs_properties_t* ndi_output_getproperties(void *data) {
@@ -42,7 +42,7 @@ obs_properties_t* ndi_output_getproperties(void *data) {
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_properties_add_text(props, "ndi_name", obs_module_text("OutputProps_NDIName"), OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, "ndi_name", obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
 
 	return props;
 }

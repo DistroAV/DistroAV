@@ -81,11 +81,11 @@ bool obs_module_load(void)
 
 	obs_frontend_add_save_callback(Config::OBSSaveCallback, Config::Current());
 
-	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StartNDIOutput"), [](void *private_data) {
+	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StartNDIOutput"), [](void *private_data) {
 		main_output_start();
 	}, nullptr);
 
-	obs_frontend_add_tools_menu_item(obs_module_text("Tools_StopNDIOutput"), [](void *private_data) {
+	obs_frontend_add_tools_menu_item(obs_module_text("NDIPlugin.Tools.StopNDIOutput"), [](void *private_data) {
 		main_output_stop();
 	}, nullptr);
 
