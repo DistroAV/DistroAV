@@ -108,7 +108,8 @@ void obs_module_unload()
 		ndiLib->NDIlib_destroy();
 	}
 
-	os_dlclose(loaded_lib);
+	if (loaded_lib)
+		os_dlclose(loaded_lib);
 }
 
 void main_output_start() {
@@ -145,15 +146,23 @@ const char* GetNDILibPath()
 	char *path = "";
 
 	#if defined(_WIN32) || defined(_WIN64)
+		const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
+
+		const char* dll_file;
+
 		#if defined(_WIN64)
-			#define NDILIB_FILE "Processing.NDI.Lib.x64.dll"
+		dll_file = "Processing.NDI.Lib.x64.dll";
 		#elif defined(_WIN32)
-			#define NDILIB_FILE "Processing.NDI.Lib.x86.dll"
+		dll_file = "Processing.NDI.Lib.x86.dll";
 		#endif
 
-		path = getenv("NDI_RUNTIME_DIR_V2");
+		int buf_size = strlen(runtime_dir) + strlen(dll_file) + 3;
+		path = (char*)bmalloc(buf_size);
+		memset(path, 0, buf_size);
+
+		strcat(path, runtime_dir);
 		strcat(path, "\\");
-		strcat(path, NDILIB_FILE);
+		strcat(path, dll_file);
 	#endif
 
 	return path;
@@ -161,7 +170,12 @@ const char* GetNDILibPath()
 
 const NDIlib_v2* NDIlib_v2_load()
 {
-	loaded_lib = os_dlopen(GetNDILibPath());
+	const char* dll_file = GetNDILibPath();
+	blog(LOG_INFO, "%s", dll_file);
+
+	loaded_lib = os_dlopen(dll_file);
+
+	bfree((void*)dll_file);
 
 	if (loaded_lib)
 	{
@@ -224,7 +238,7 @@ const NDIlib_v2* NDIlib_v2_load()
 		// v2
 		sct->NDIlib_find_wait_for_sources = (bool(*)(NDIlib_find_instance_t p_instance, uint32_t timeout_in_ms))os_dlsym(loaded_lib, "NDIlib_find_wait_for_sources");
 		sct->NDIlib_find_get_current_sources = (const NDIlib_source_t* (*)(NDIlib_find_instance_t p_instance, uint32_t* p_no_sources))os_dlsym(loaded_lib, "NDIlib_find_get_current_sources");
-
+		
 		return sct;
 	}
 
