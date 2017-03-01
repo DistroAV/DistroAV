@@ -25,6 +25,7 @@
 #include <util/platform.h>
 #include <QMainWindow>
 #include <QAction>
+#include <QMessageBox>
 
 #include "obs-ndi.h"
 #include "Config.h"
@@ -56,10 +57,12 @@ bool obs_module_load(void)
 {
 	blog(LOG_INFO, "hello ! (version %s)", OBS_NDI_VERSION);
 
+	QMainWindow* main_window = (QMainWindow*)obs_frontend_get_main_window();
+
 	ndiLib = NDIlib_v2_load();
 	if (!ndiLib)
 	{
-		blog(LOG_ERROR, "Error when loading the NDI library. Are the NDI redistributables installed?");
+		QMessageBox::critical(main_window, obs_module_text("NDIPlugin.LibError.Title"), obs_module_text("NDIPlugin.LibError.Message"), QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
 
@@ -92,7 +95,6 @@ bool obs_module_load(void)
 	QAction *menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(obs_module_text("NDIPlugin.Menu.OutputSettings"));
 	
 	obs_frontend_push_ui_translation(obs_module_get_string);
-	QMainWindow* main_window = (QMainWindow*)obs_frontend_get_main_window();
 	output_settings = new OutputSettings(main_window);
 	obs_frontend_pop_ui_translation();
 
@@ -159,10 +161,14 @@ bool main_output_is_running() {
 
 const char* GetNDILibPath()
 {
-	char *path = "";
+	char *path = nullptr;
 
 	#if defined(_WIN32) || defined(_WIN64)
 		const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
+		if (!runtime_dir)
+		{
+			return nullptr;
+		}
 
 		const char* dll_file;
 
@@ -187,6 +193,11 @@ const char* GetNDILibPath()
 const NDIlib_v2* NDIlib_v2_load()
 {
 	const char* dll_file = GetNDILibPath();
+	if (!dll_file)
+	{
+		return nullptr;
+	}
+
 	blog(LOG_INFO, "%s", dll_file);
 
 	loaded_lib = os_dlopen(dll_file);
