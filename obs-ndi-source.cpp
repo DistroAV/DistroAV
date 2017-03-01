@@ -141,7 +141,7 @@ void *ndi_source_pollframe(void *data) {
 					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 				}
 
-				obs_audio_frame.timestamp = audio_frame.timecode * 100;
+				obs_audio_frame.timestamp = audio_frame_16s.timecode * 100;
 				obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
 				obs_audio_frame.format = AUDIO_FORMAT_16BIT;
 				obs_audio_frame.frames = audio_frame_16s.no_samples;
