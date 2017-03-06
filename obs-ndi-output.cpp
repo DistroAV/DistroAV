@@ -87,7 +87,7 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	obs_get_audio_info(&o->audio_info);
 
 	struct video_scale_info convert_to = {};
-	convert_to.format = VIDEO_FORMAT_BGRA;
+	convert_to.format = VIDEO_FORMAT_UYVY;
 	convert_to.width = o->video_info.output_width;
 	convert_to.height = o->video_info.output_height;
 	convert_to.colorspace = VIDEO_CS_DEFAULT;
@@ -115,15 +115,15 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	NDIlib_video_frame_t video_frame = { 0 };
 	video_frame.xres = width;
 	video_frame.yres = height;
-	video_frame.FourCC = NDIlib_FourCC_type_BGRA;
+	video_frame.FourCC = NDIlib_FourCC_type_UYVY;
 	video_frame.frame_rate_N = o->video_info.fps_num;
 	video_frame.frame_rate_D = o->video_info.fps_den;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	// This will also fix the timestamp issue. More investigation needed if
-	// there is an advantage of one option over the other.
-	// video_frame.timecode = frame->timestamp / 100;
+	
+	// TODO : find out which timestamp source is the best : OBS or synthesized
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
+	//video_frame.timecode = frame->timestamp;
 
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
@@ -138,10 +138,12 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	NDIlib_audio_frame_t audio_frame = { 0 };
 	audio_frame.sample_rate = o->audio_info.samples_per_sec;
 	audio_frame.no_channels = o->audio_info.speakers;
-	// audio_frame.timecode = frame->timestamp / 100;
-	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.p_data = (float*)(void*)(frame->data[0]);
+
+	// TODO : find out which timestamp source is the best : OBS or synthesized
+	audio_frame.timecode = NDIlib_send_timecode_synthesize;
+	//audio_frame.timecode = frame->timestamp;
 
 	ndiLib->NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
 }
