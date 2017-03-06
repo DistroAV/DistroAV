@@ -204,7 +204,6 @@ const NDIlib_v2* NDIlib_v2_load()
 	}
 
 	loaded_lib = os_dlopen(dll_file);
-	bfree((void*)dll_file);
 
 	if (loaded_lib)
 	{
