@@ -181,7 +181,7 @@ void *ndi_source_poll_video(void *data) {
 			obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
 			obs_video_frame.data[0] = video_frame.p_data;
 			
-			video_format_get_parameters(VIDEO_CS_709, VIDEO_RANGE_PARTIAL,
+			video_format_get_parameters(VIDEO_CS_DEFAULT, VIDEO_RANGE_DEFAULT,
 				obs_video_frame.color_matrix, obs_video_frame.color_range_min,
 				obs_video_frame.color_range_max);
 
