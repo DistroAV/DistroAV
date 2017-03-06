@@ -31,7 +31,8 @@ extern NDIlib_find_instance_t ndi_finder;
 struct ndi_source {
 	obs_source_t *source;
 	NDIlib_recv_instance_t ndi_receiver;
-	pthread_t frame_thread;
+	pthread_t video_thread;
+	pthread_t audio_thread;
 	bool running;
 	uint32_t no_sources;
 	const NDIlib_source_t *ndi_sources;
@@ -81,78 +82,112 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	return props;
 }
 
-void *ndi_source_pollframe(void *data) {
+void *ndi_source_poll_audio(void *data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
-	NDIlib_video_frame_t video_frame;
 	NDIlib_audio_frame_t audio_frame;
 	NDIlib_audio_frame_interleaved_16s_t audio_frame_16s;
 
-	obs_source_frame obs_video_frame = { 0 };
 	obs_source_audio obs_audio_frame = { 0 };
 
-	uint8_t *audio_data;
-	long audio_data_size;
 
+	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 	while (s->running) {
-		switch (ndiLib->NDIlib_recv_capture(s->ndi_receiver, &video_frame, &audio_frame, NULL, 0)) {
-			case NDIlib_frame_type_video:
-				obs_video_frame.timestamp = video_frame.timecode;
-				obs_video_frame.width = video_frame.xres;
-				obs_video_frame.height = video_frame.yres;
-				obs_video_frame.format = VIDEO_FORMAT_BGRA;
-				obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
-				obs_video_frame.data[0] = video_frame.p_data;
+		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver, NULL, &audio_frame, NULL, 1);
 
-				obs_source_output_video(s->source, &obs_video_frame);
+		if (frame_received == NDIlib_frame_type_audio)
+		{
+			audio_frame_16s.reference_level = 0;
+			audio_frame_16s.p_data = static_cast<short *>(malloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(short)));
+			ndiLib->NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
 
-				ndiLib->NDIlib_recv_free_video(s->ndi_receiver, &video_frame);
+			switch (audio_frame.no_channels) {
+			case 1:
+				obs_audio_frame.speakers = SPEAKERS_MONO;
 				break;
-
-			case NDIlib_frame_type_audio:
-				audio_frame_16s.reference_level = 0;
-				audio_frame_16s.p_data = static_cast<short *>(malloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(short)));
-				ndiLib->NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
-
-				switch (audio_frame.no_channels) {
-				case 1:
-					obs_audio_frame.speakers = SPEAKERS_MONO;
-					break;
-				case 2:
-					obs_audio_frame.speakers = SPEAKERS_STEREO;
-					break;
-				case 3:
-					obs_audio_frame.speakers = SPEAKERS_2POINT1;
-					break;
-				case 4:
-					obs_audio_frame.speakers = SPEAKERS_QUAD;
-					break;
-				case 5:
-					obs_audio_frame.speakers = SPEAKERS_4POINT1;
-					break;
-				case 6:
-					obs_audio_frame.speakers = SPEAKERS_5POINT1;
-					break;
-				case 8:
-					obs_audio_frame.speakers = SPEAKERS_7POINT1;
-					break;
-				default:
-					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
-				}
-
-				obs_audio_frame.timestamp = audio_frame_16s.timecode;
-				obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
-				obs_audio_frame.format = AUDIO_FORMAT_16BIT;
-				obs_audio_frame.frames = audio_frame_16s.no_samples;
-				obs_audio_frame.data[0] = (uint8_t*)(void*)audio_frame_16s.p_data;
-
-				obs_source_output_audio(s->source, &obs_audio_frame);
-
-				ndiLib->NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
+			case 2:
+				obs_audio_frame.speakers = SPEAKERS_STEREO;
 				break;
-
-			case NDIlib_frame_type_none:
+			case 3:
+				obs_audio_frame.speakers = SPEAKERS_2POINT1;
 				break;
+			case 4:
+				obs_audio_frame.speakers = SPEAKERS_QUAD;
+				break;
+			case 5:
+				obs_audio_frame.speakers = SPEAKERS_4POINT1;
+				break;
+			case 6:
+				obs_audio_frame.speakers = SPEAKERS_5POINT1;
+				break;
+			case 8:
+				obs_audio_frame.speakers = SPEAKERS_7POINT1;
+				break;
+			default:
+				obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
+			}
+
+			obs_audio_frame.timestamp = audio_frame_16s.timecode;
+			obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
+			obs_audio_frame.format = AUDIO_FORMAT_16BIT;
+			obs_audio_frame.frames = audio_frame_16s.no_samples;
+			obs_audio_frame.data[0] = (uint8_t*)(void*)audio_frame_16s.p_data;
+
+			obs_source_output_audio(s->source, &obs_audio_frame);
+
+			ndiLib->NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
+		}
+	}
+
+	return NULL;
+}
+
+void *ndi_source_poll_video(void *data) {
+	struct ndi_source *s = static_cast<ndi_source *>(data);
+
+	NDIlib_video_frame_t video_frame;
+	obs_source_frame obs_video_frame = { 0 };
+
+	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
+	while (s->running) {
+		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver, &video_frame, NULL, NULL, 1);
+
+		if (frame_received == NDIlib_frame_type_video)
+		{
+			switch (video_frame.FourCC) {
+				case NDIlib_FourCC_type_BGRA:
+					obs_video_frame.format = VIDEO_FORMAT_BGRA;
+					break;
+
+				case NDIlib_FourCC_type_BGRX:
+					obs_video_frame.format = VIDEO_FORMAT_BGRX;
+					break;
+
+				case NDIlib_FourCC_type_RGBA:
+				case NDIlib_FourCC_type_RGBX:
+					obs_video_frame.format = VIDEO_FORMAT_RGBA;
+					break;
+
+				case NDIlib_FourCC_type_UYVY:
+				case NDIlib_FourCC_type_UYVA:
+					obs_video_frame.format = VIDEO_FORMAT_UYVY;
+					break;
+			}
+
+			obs_video_frame.timestamp = video_frame.timecode;
+			obs_video_frame.width = video_frame.xres;
+			obs_video_frame.height = video_frame.yres;
+			obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
+			obs_video_frame.data[0] = video_frame.p_data;
+			
+			video_format_get_parameters(VIDEO_CS_709, VIDEO_RANGE_PARTIAL,
+				obs_video_frame.color_matrix, obs_video_frame.color_range_min,
+				obs_video_frame.color_range_max);
+
+			obs_source_output_video(s->source, &obs_video_frame);
+
+			ndiLib->NDIlib_recv_free_video(s->ndi_receiver, &video_frame);
 		}
 	}
 
@@ -171,16 +206,18 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	recv_desc.source_to_connect_to = selected_source;	
 	recv_desc.bandwidth = (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
 	recv_desc.allow_video_fields = true;
-	recv_desc.color_format = NDIlib_recv_color_format_e_BGRX_BGRA;
+	recv_desc.color_format = NDIlib_recv_color_format_e_UYVY_BGRA;
 
 	s->running = false;
-	pthread_cancel(s->frame_thread);
+	pthread_cancel(s->video_thread);
+	pthread_cancel(s->audio_thread);
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 	
 	s->ndi_receiver = ndiLib->NDIlib_recv_create2(&recv_desc);
 	if (s->ndi_receiver) {
 		s->running = true;
-		pthread_create(&s->frame_thread, NULL, ndi_source_pollframe, data);
+		pthread_create(&s->video_thread, NULL, ndi_source_poll_video, data);
+		pthread_create(&s->audio_thread, NULL, ndi_source_poll_audio, data);
 	}
 	else {
 		blog(LOG_ERROR, "can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
