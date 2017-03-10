@@ -40,7 +40,7 @@ struct ndi_source {
 
 const char* ndi_source_getname(void *data) {
 	UNUSED_PARAMETER(data);
-	return obs_module_text("NDISource");
+	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
 obs_properties_t* ndi_source_getproperties(void *data) {
@@ -49,7 +49,7 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", obs_module_text("NDIPlugin.NDISourceName"),
+	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", obs_module_text("NDIPlugin.SourceProps.SourceName"),
 		OBS_COMBO_TYPE_LIST,
 		OBS_COMBO_FORMAT_INT);
 
