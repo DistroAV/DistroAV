@@ -172,7 +172,7 @@ const char* GetNDILibPath()
 			return nullptr;
 		}
 
-		blog(LOG_INFO, "Found NDI runtime directory at %s");
+		blog(LOG_INFO, "Found NDI runtime directory at %s", runtime_dir);
 
 		const char* dll_file;
 
