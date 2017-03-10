@@ -168,8 +168,11 @@ const char* GetNDILibPath()
 		const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
 		if (!runtime_dir)
 		{
+			blog(LOG_ERROR, "Environment variable NDI_RUNTIME_DIR_V2 not set.");
 			return nullptr;
 		}
+
+		blog(LOG_INFO, "Found NDI runtime directory at %s");
 
 		const char* dll_file;
 
@@ -193,6 +196,7 @@ const char* GetNDILibPath()
 		// TODO : make a redistributable NDI package for macOS / OS X
 	#endif
 
+	blog(LOG_INFO, "Found NDI library at %s", path);
 	return path;
 }
 
@@ -201,6 +205,7 @@ const NDIlib_v2* load_ndilib()
 	const char* dll_file = GetNDILibPath();
 	if (!dll_file)
 	{
+		blog(LOG_ERROR, "GetNDILibPath() returned a null pointer");
 		return nullptr;
 	}
 
@@ -212,5 +217,6 @@ const NDIlib_v2* load_ndilib()
 		return lib_load();
 	}
 
+	blog(LOG_ERROR, "Can't find the NDI library");
 	return nullptr;
 }
