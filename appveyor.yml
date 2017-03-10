@@ -4,12 +4,12 @@ environment:
 install:
   - git submodule update --init --recursive
   - cd C:\projects\
+  - if not exist ndi-sdk-slim.zip curl -kLO https://www.slepin.fr/obs-ndi/ci/ndi-sdk-slim.zip -f --retry 5 -C -
+  - 7z x ndi-sdk-slim.zip -o"NDI_SDK"
   - if not exist dependencies2013.zip curl -kLO https://obsproject.com/downloads/dependencies2013.zip -f --retry 5 -C -
   - 7z x dependencies2013.zip -odependencies2013
   - if not exist qt570.zip curl -kLO https://www.slepin.fr/obs-websocket/ci/qt570.zip -f --retry 5 -C -
   - 7z x qt570.zip -o"Qt5.7.0"
-  - if not exist ndi-sdk-slim.zip curl -kLO https://www.slepin.fr/obs-ndi/ci/ndi-sdk-slim.zip -f --retry 5 -C -
-  - 7z x ndi-sdk-slim.zip -o"NDI_SDK"
   - set DepsPath32=%CD%\dependencies2013\win32
   - set DepsPath64=%CD%\dependencies2013\win64
   - set QTDIR32=%CD%\Qt5.7.0\msvc2013
@@ -28,7 +28,7 @@ install:
   - cmake -G "Visual Studio 12 2013 Win64" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-  - cd C:\projects\obs-websocket\
+  - cd C:\projects\obs-ndi\
   - mkdir build32
   - mkdir build64
   - cd ./build32
@@ -41,10 +41,10 @@ build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-websocket\build64\obs-websocket.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 before_deploy:
-  - 7z a "C:\projects\obs-websocket\build.zip" C:\projects\obs-websocket\release\*
+  - 7z a "C:\projects\obs-ndi\build.zip" C:\projects\obs-ndi\release\*
 
 deploy_script:
-  - ps: Push-AppveyorArtifact "C:\projects\obs-websocket\build.zip" -FileName "obs-websocket-$(git log --pretty=format:'%h' -n 1).zip"
+  - ps: Push-AppveyorArtifact "C:\projects\obs-ndi\build.zip" -FileName "obs-ndi-$(git log --pretty=format:'%h' -n 1).zip"
 
 test: off
 
