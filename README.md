@@ -35,3 +35,7 @@ sudo make install
 
 ### OS X
 *To do*
+
+### Automated Builds
+- Windows : [![Automated Build status for Windows](https://ci.appveyor.com/api/projects/status/github/Palakis/obs-ndi)](https://ci.appveyor.com/project/Palakis/obs-ndi/history)
+- Linux & OS X : coming soon
