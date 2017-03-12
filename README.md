@@ -1,6 +1,10 @@
 obs-ndi
 ==============
+
 Network A/V in OBS Studio with NewTek's NDI technology.  
+
+[![Gitter chat](https://badges.gitter.im/obs-ndi/obs-ndi.png)](https://gitter.im/obs-ndi/obs-ndi)
+
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
