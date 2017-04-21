@@ -17,7 +17,7 @@ PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
 	--pkglicense="LGPLv2.1" --maintainer="contact@slepin.fr" \
-	--requires="libndi" --pkggroup="video" \
+	--pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
 	--pakdir="/package"
 
