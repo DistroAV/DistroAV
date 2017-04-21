@@ -22,5 +22,3 @@ PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
 	--pakdir="/package"
 
 chmod ao+r /package/*
-
-ls -lh /package
