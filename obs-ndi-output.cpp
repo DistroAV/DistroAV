@@ -96,10 +96,10 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 
 	struct audio_convert_info aconv = {};
 	aconv.format = AUDIO_FORMAT_16BIT;
-	aconv.samples_per_sec = 48000;
-	aconv.speakers = SPEAKERS_STEREO;
+	aconv.samples_per_sec = o->audio_info.samples_per_sec;
+	aconv.speakers = o->audio_info.speakers;
 	obs_output_set_audio_conversion(o->output, &aconv);
-
+	
 	return o;
 }
 
@@ -141,8 +141,8 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	if (!o->started) return;
 	
 	NDIlib_audio_frame_interleaved_16s_t audio_frame = { 0 };
-	audio_frame.sample_rate = 48000; // Enforced by conversion
-	audio_frame.no_channels = 2; // Enforced by conversion
+	audio_frame.sample_rate = o->audio_info.samples_per_sec; // Same as conversion
+	audio_frame.no_channels = o->audio_info.speakers; // Same as conversion
 	audio_frame.no_samples = frame->frames;
 	audio_frame.p_data = (short*)(frame->data[0]);
 
