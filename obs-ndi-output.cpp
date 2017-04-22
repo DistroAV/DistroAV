@@ -95,7 +95,7 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	obs_output_set_video_conversion(o->output, &vconv);
 
 	struct audio_convert_info aconv = {};
-	aconv.format = AUDIO_FORMAT_16BIT;
+	aconv.format = AUDIO_FORMAT_FLOAT;
 	aconv.samples_per_sec = o->audio_info.samples_per_sec;
 	aconv.speakers = o->audio_info.speakers;
 	obs_output_set_audio_conversion(o->output, &aconv);
@@ -140,17 +140,17 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	if (!o->started) return;
 	
-	NDIlib_audio_frame_interleaved_16s_t audio_frame = { 0 };
+	NDIlib_audio_frame_interleaved_32f_t audio_frame = { 0 };
 	audio_frame.sample_rate = o->audio_info.samples_per_sec; // Same as conversion
 	audio_frame.no_channels = o->audio_info.speakers; // Same as conversion
 	audio_frame.no_samples = frame->frames;
-	audio_frame.p_data = (short*)(frame->data[0]);
+	audio_frame.p_data = (float*)(frame->data[0]);
 
 	// TODO : find out which timestamp source is the best : OBS or synthesized
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	//audio_frame.timecode = frame->timestamp;
 
-	ndiLib->NDIlib_util_send_send_audio_interleaved_16s(o->ndi_sender, &audio_frame);
+	ndiLib->NDIlib_util_send_send_audio_interleaved_32f(o->ndi_sender, &audio_frame);
 }
 
 struct obs_output_info create_ndi_output_info() {
