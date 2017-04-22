@@ -86,13 +86,19 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	obs_get_video_info(&o->video_info);
 	obs_get_audio_info(&o->audio_info);
 
-	struct video_scale_info convert_to = {};
-	convert_to.format = VIDEO_FORMAT_UYVY;
-	convert_to.width = o->video_info.output_width;
-	convert_to.height = o->video_info.output_height;
-	convert_to.colorspace = VIDEO_CS_DEFAULT;
-	convert_to.range = VIDEO_RANGE_DEFAULT;
-	obs_output_set_video_conversion(o->output, &convert_to);
+	struct video_scale_info vconv = {};
+	vconv.format = VIDEO_FORMAT_UYVY;
+	vconv.width = o->video_info.output_width;
+	vconv.height = o->video_info.output_height;
+	vconv.colorspace = VIDEO_CS_DEFAULT;
+	vconv.range = VIDEO_RANGE_DEFAULT;
+	obs_output_set_video_conversion(o->output, &vconv);
+
+	struct audio_convert_info aconv = {};
+	aconv.format = AUDIO_FORMAT_16BIT;
+	aconv.samples_per_sec = 48000;
+	aconv.speakers = SPEAKERS_STEREO;
+	obs_output_set_audio_conversion(o->output, &aconv);
 
 	return o;
 }
@@ -100,9 +106,8 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 void ndi_output_destroy(void *data) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 
-	if (o) {
+	if (o)
 		bfree(o);
-	}
 }
 
 void ndi_output_rawvideo(void *data, struct video_data *frame) {
@@ -134,18 +139,18 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	if (!o->started) return;
-
-	NDIlib_audio_frame_t audio_frame = { 0 };
-	audio_frame.sample_rate = o->audio_info.samples_per_sec;
-	audio_frame.no_channels = o->audio_info.speakers;
+	
+	NDIlib_audio_frame_interleaved_16s_t audio_frame = { 0 };
+	audio_frame.sample_rate = 48000; // Enforced by conversion
+	audio_frame.no_channels = 2; // Enforced by conversion
 	audio_frame.no_samples = frame->frames;
-	audio_frame.p_data = (float*)(void*)(frame->data[0]);
+	audio_frame.p_data = (short*)(frame->data[0]);
 
 	// TODO : find out which timestamp source is the best : OBS or synthesized
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	//audio_frame.timecode = frame->timestamp;
 
-	ndiLib->NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
+	ndiLib->NDIlib_util_send_send_audio_interleaved_16s(o->ndi_sender, &audio_frame);
 }
 
 struct obs_output_info create_ndi_output_info() {
