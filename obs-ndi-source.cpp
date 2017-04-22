@@ -88,7 +88,7 @@ void *ndi_source_poll_audio(void *data)
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	NDIlib_audio_frame_t audio_frame;
-	NDIlib_audio_frame_interleaved_32f_t audio_frame_32f;
+	NDIlib_audio_frame_interleaved_16s_t audio_frame_16s;
 
 	obs_source_audio obs_audio_frame = { 0 };
 
@@ -98,8 +98,9 @@ void *ndi_source_poll_audio(void *data)
 
 		if (frame_received == NDIlib_frame_type_audio)
 		{
-			audio_frame_32f.p_data = static_cast<float*>(malloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(float)));
-			ndiLib->NDIlib_util_audio_to_interleaved_32f(&audio_frame, &audio_frame_32f);
+			audio_frame_16s.reference_level = 0;
+			audio_frame_16s.p_data = static_cast<short *>(malloc(audio_frame.no_samples * audio_frame.no_channels * sizeof(short)));
+			ndiLib->NDIlib_util_audio_to_interleaved_16s(&audio_frame, &audio_frame_16s);
 
 			switch (audio_frame.no_channels) {
 			case 1:
@@ -127,11 +128,11 @@ void *ndi_source_poll_audio(void *data)
 				obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 			}
 
-			obs_audio_frame.timestamp = audio_frame_32f.timecode;
-			obs_audio_frame.samples_per_sec = audio_frame_32f.sample_rate;
-			obs_audio_frame.format = AUDIO_FORMAT_FLOAT;
-			obs_audio_frame.frames = audio_frame_32f.no_samples;
-			obs_audio_frame.data[0] = (uint8_t*)audio_frame_32f.p_data;
+			obs_audio_frame.timestamp = audio_frame_16s.timecode;
+			obs_audio_frame.samples_per_sec = audio_frame_16s.sample_rate;
+			obs_audio_frame.format = AUDIO_FORMAT_16BIT;
+			obs_audio_frame.frames = audio_frame_16s.no_samples;
+			obs_audio_frame.data[0] = (uint8_t*)(void*)audio_frame_16s.p_data;
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
 
