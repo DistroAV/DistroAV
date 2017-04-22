@@ -34,6 +34,7 @@ struct ndi_source {
 	pthread_t video_thread;
 	pthread_t audio_thread;
 	bool running;
+	NDIlib_tally_t tally;
 	uint32_t no_sources;
 	const NDIlib_source_t *ndi_sources;
 };
@@ -223,29 +224,43 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	}
 }
 
-void ndi_source_activate(void* data) {
+void ndi_source_shown(void* data) {
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	if (s->ndi_receiver)
 	{
-		NDIlib_tally_t tally = {};
-		tally.on_preview = false;
-		tally.on_program = true;
-
-		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &tally);
+		s->tally.on_preview = true;
+		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &s->tally);
 	}
 }
 
-void ndi_source_deactivate(void* data) {
+void ndi_source_hidden(void* data) {
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	if (s->ndi_receiver)
 	{
-		NDIlib_tally_t tally = {};
-		tally.on_preview = false;
-		tally.on_program = false;
+		s->tally.on_preview = false;
+		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &s->tally);
+	}
+}
 
-		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &tally);
+void ndi_source_activated(void* data) {
+	struct ndi_source *s = static_cast<ndi_source *>(data);
+
+	if (s->ndi_receiver)
+	{
+		s->tally.on_program = true;
+		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &s->tally);
+	}
+}
+
+void ndi_source_deactivated(void* data) {
+	struct ndi_source *s = static_cast<ndi_source *>(data);
+
+	if (s->ndi_receiver)
+	{
+		s->tally.on_program = false;
+		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &s->tally);
 	}
 }
 
@@ -273,8 +288,10 @@ struct obs_source_info create_ndi_source_info() {
 	ndi_source_info.get_name		= ndi_source_getname;
 	ndi_source_info.get_properties	= ndi_source_getproperties;
 	ndi_source_info.update			= ndi_source_update;
-	ndi_source_info.activate		= ndi_source_activate;
-	ndi_source_info.deactivate		= ndi_source_deactivate;
+	ndi_source_info.show			= ndi_source_shown;
+	ndi_source_info.hide			= ndi_source_hidden;
+	ndi_source_info.activate		= ndi_source_activated;
+	ndi_source_info.deactivate		= ndi_source_deactivated;
 	ndi_source_info.create			= ndi_source_create;
 	ndi_source_info.destroy			= ndi_source_destroy;
 
