@@ -21,6 +21,7 @@
 #include <util/platform.h>
 #include <util/threading.h>
 #include <media-io/video-frame.h>
+#include <media-io/audio-resampler.h>
 
 #include "obs-ndi.h"
 
@@ -30,6 +31,7 @@ struct ndi_filter {
 	obs_source_t *context;
 	NDIlib_send_instance_t ndi_sender;
 	struct obs_video_info ovi;
+	struct obs_audio_info oai;
 	obs_display_t *renderer;
 	gs_stagesurf_t *stagesurface;
 	gs_texrender_t *texrender;
@@ -38,6 +40,8 @@ struct ndi_filter {
 
 	uint8_t *video_data;
 	uint32_t video_linesize;
+
+	audio_resampler_t* resampler;
 
 	bool audio_initialized;
 };
@@ -144,11 +148,25 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	#elif __APPLE__
 	display_desc.window.view = obs_frontend_get_main_window_handle();
 	#endif
-	
+
+	obs_get_video_info(&s->ovi);
+	obs_get_audio_info(&s->oai);
+
+	struct resample_info src = {};
+	src.format = AUDIO_FORMAT_FLOAT_PLANAR;
+	src.samples_per_sec = s->oai.samples_per_sec;
+	src.speakers = s->oai.speakers;
+
+	struct resample_info dst = {};
+	dst.format = AUDIO_FORMAT_16BIT;
+	dst.samples_per_sec = s->oai.samples_per_sec;
+	dst.speakers = s->oai.speakers;
+
+	s->resampler = audio_resampler_create(&dst, &src);
+
 	s->renderer = obs_display_create(&display_desc);
 	obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
 
-	obs_get_video_info(&s->ovi);
 	ndi_filter_update(s, settings);
 
 	return s;
@@ -169,6 +187,7 @@ void ndi_filter_tick(void *data, float seconds) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_get_video_info(&s->ovi);
+	obs_get_audio_info(&s->oai);
 	gs_texrender_reset(s->texrender);
 }
 
@@ -181,16 +200,22 @@ void ndi_filter_videorender(void *data, gs_effect_t *effect) {
 
 struct obs_audio_data* ndi_filter_audiofilter(void *data, struct obs_audio_data *audio_data) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
-	const audio_t *obs_audio = obs_get_audio();
+	
+	uint8_t *output[MAX_AV_PLANES];
+	uint32_t frames = audio_data->frames;
+	uint64_t ts_offset;
 
-	NDIlib_audio_frame_t audio_frame = { 0 };
-	audio_frame.sample_rate = audio_output_get_sample_rate(obs_audio);
-	audio_frame.no_channels = audio_output_get_channels(obs_audio);
-	audio_frame.timecode = audio_data->timestamp;
+	audio_resampler_resample(s->resampler, output, &frames, &ts_offset, 
+		audio_data->data, audio_data->frames);
+
+	NDIlib_audio_frame_interleaved_16s_t audio_frame = { 0 };
+	audio_frame.sample_rate = s->oai.samples_per_sec;
+	audio_frame.no_channels = s->oai.speakers;
+	audio_frame.timecode = audio_data->timestamp + ts_offset;
 	audio_frame.no_samples = audio_data->frames;
-	audio_frame.p_data = (float*)(audio_data->data[0]);
+	audio_frame.p_data = (short*)(output[0]);
 
-	ndiLib->NDIlib_send_send_audio(s->ndi_sender, &audio_frame);
+	ndiLib->NDIlib_util_send_send_audio_interleaved_16s(s->ndi_sender, &audio_frame);
 
 	return audio_data;
 }
