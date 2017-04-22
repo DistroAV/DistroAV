@@ -91,7 +91,6 @@ void *ndi_source_poll_audio(void *data)
 
 	obs_source_audio obs_audio_frame = { 0 };
 
-
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 	while (s->running) {
 		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver, NULL, &audio_frame, NULL, 1);
@@ -224,6 +223,32 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	}
 }
 
+void ndi_source_activate(void* data) {
+	struct ndi_source *s = static_cast<ndi_source *>(data);
+
+	if (s->ndi_receiver)
+	{
+		NDIlib_tally_t tally = {};
+		tally.on_preview = false;
+		tally.on_program = true;
+
+		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &tally);
+	}
+}
+
+void ndi_source_deactivate(void* data) {
+	struct ndi_source *s = static_cast<ndi_source *>(data);
+
+	if (s->ndi_receiver)
+	{
+		NDIlib_tally_t tally = {};
+		tally.on_preview = false;
+		tally.on_program = false;
+
+		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &tally);
+	}
+}
+
 void* ndi_source_create(obs_data_t *settings, obs_source_t *source) {
 	struct ndi_source *s = static_cast<ndi_source *>(bzalloc(sizeof(struct ndi_source)));
 	s->source = source;
@@ -248,6 +273,8 @@ struct obs_source_info create_ndi_source_info() {
 	ndi_source_info.get_name		= ndi_source_getname;
 	ndi_source_info.get_properties	= ndi_source_getproperties;
 	ndi_source_info.update			= ndi_source_update;
+	ndi_source_info.activate		= ndi_source_activate;
+	ndi_source_info.deactivate		= ndi_source_deactivate;
 	ndi_source_info.create			= ndi_source_create;
 	ndi_source_info.destroy			= ndi_source_destroy;
 
