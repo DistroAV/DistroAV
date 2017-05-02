@@ -22,7 +22,7 @@ else()
 	set(ARCH 32)
 endif()
 
-set(obs-ndi_SOURCES 
+set(obs-ndi_SOURCES
 	obs-ndi.cpp
 	obs-ndi-source.cpp
 	obs-ndi-output.cpp
@@ -35,16 +35,16 @@ set(obs-ndi_HEADERS
 	Config.h
 	forms/output-settings.h)
 
-add_library(obs-ndi MODULE 
+add_library(obs-ndi MODULE
 	${obs-ndi_SOURCES}
 	${obs-ndi_HEADERS})
 
-include_directories( 
+include_directories(
 	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
 	${Qt5Core_INCLUDES}
 	${Qt5Widgets_INCLUDES})
 
-target_link_libraries(obs-ndi 
+target_link_libraries(obs-ndi
 	libobs
 	Qt5::Core
 	Qt5::Widgets)
@@ -56,14 +56,19 @@ if(WIN32)
 		message(FATAL_ERROR "Could not find OBS Frontend API\'s library !")
 	endif()
 
+	add_definitions(/O2)
+	string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+	message("${CMAKE_CXX_FLAGS_RELEASE}")
+
 	if(ARCH EQUAL 64)
 		set(OBS_ARCH_NAME "64bit")
 	else()
 		set(OBS_ARCH_NAME "32bit")
+		add_definitions(/arch:SSE2)
 	endif()
 
 	find_package(w32-pthreads REQUIRED)
-	
+
 	include_directories(
 		"${NDISDK_DIR}/Include")
 
@@ -77,12 +82,12 @@ if(WIN32)
 			"${CMAKE_COMMAND}" -E make_directory
 			"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
 			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
-			
+
 		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy_directory
 			"${PROJECT_SOURCE_DIR}/data"
 			"${RELEASE_DIR}/data/obs-plugins/obs-ndi")
 
-		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy 
+		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy
 			"$<TARGET_FILE:obs-ndi>"
 			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
 	)
@@ -98,7 +103,7 @@ endif()
 
 # Linux
 if(UNIX AND NOT APPLE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mtune=core2 -Ofast")
 
 	if(ARCH EQUAL 64)
 		set(ARCH_NAME "x86_64")
