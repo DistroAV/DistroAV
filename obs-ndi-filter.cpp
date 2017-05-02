@@ -41,8 +41,6 @@ struct ndi_filter {
 	uint8_t *video_data;
 	uint32_t video_linesize;
 
-	audio_resampler_t* resampler;
-
 	bool audio_initialized;
 };
 
@@ -74,7 +72,7 @@ void ndi_filter_update(void *data, obs_data_t *settings) {
 
 void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
-	
+
 	obs_source_t *target = obs_filter_get_target(s->context);
 
 	uint32_t width = obs_source_get_base_width(target);
@@ -122,7 +120,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	}
 
 	gs_blend_state_pop();
-	
+
 	//obs_source_release(target);
 }
 
@@ -142,7 +140,7 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	display_desc.zsformat = GS_ZS_NONE;
 	display_desc.cx = 0;
 	display_desc.cy = 0;
-	
+
 	#ifdef _WIN32
 	display_desc.window.hwnd = obs_frontend_get_main_window_handle();
 	#elif __APPLE__
@@ -151,18 +149,6 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 
 	obs_get_video_info(&s->ovi);
 	obs_get_audio_info(&s->oai);
-
-	struct resample_info src = {};
-	src.format = AUDIO_FORMAT_FLOAT_PLANAR;
-	src.samples_per_sec = s->oai.samples_per_sec;
-	src.speakers = s->oai.speakers;
-
-	struct resample_info dst = {};
-	dst.format = AUDIO_FORMAT_16BIT;
-	dst.samples_per_sec = s->oai.samples_per_sec;
-	dst.speakers = s->oai.speakers;
-
-	s->resampler = audio_resampler_create(&dst, &src);
 
 	s->renderer = obs_display_create(&display_desc);
 	obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
@@ -200,22 +186,29 @@ void ndi_filter_videorender(void *data, gs_effect_t *effect) {
 
 struct obs_audio_data* ndi_filter_audiofilter(void *data, struct obs_audio_data *audio_data) {
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
-	
-	uint8_t *output[MAX_AV_PLANES];
-	uint32_t frames = audio_data->frames;
-	uint64_t ts_offset;
 
-	audio_resampler_resample(s->resampler, output, &frames, &ts_offset, 
-		audio_data->data, audio_data->frames);
-
-	NDIlib_audio_frame_interleaved_16s_t audio_frame = { 0 };
+	NDIlib_audio_frame_t audio_frame = { 0 };
 	audio_frame.sample_rate = s->oai.samples_per_sec;
 	audio_frame.no_channels = s->oai.speakers;
-	audio_frame.timecode = audio_data->timestamp + ts_offset;
+	audio_frame.timecode = audio_data->timestamp;
 	audio_frame.no_samples = audio_data->frames;
-	audio_frame.p_data = (short*)(output[0]);
+	audio_frame.channel_stride_in_bytes = audio_frame.no_samples * 4;
 
-	ndiLib->NDIlib_util_send_send_audio_interleaved_16s(s->ndi_sender, &audio_frame);
+	size_t data_size =
+		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
+	uint8_t* ndi_data = (uint8_t*)bmalloc(data_size);
+
+	for (int i = 0; i < audio_frame.no_channels; i++)
+	{
+		memcpy(&ndi_data[i * audio_frame.channel_stride_in_bytes],
+			audio_data->data[i],
+			audio_frame.channel_stride_in_bytes);
+	}
+
+	audio_frame.p_data = (float*)ndi_data;
+
+	ndiLib->NDIlib_send_send_audio(s->ndi_sender, &audio_frame);
+	bfree(ndi_data);
 
 	return audio_data;
 }
@@ -234,7 +227,7 @@ struct obs_source_info create_ndi_filter_info() {
 	ndi_filter_info.video_render	= ndi_filter_videorender;
 
 	// Audio is available only with async sources
-	ndi_filter_info.filter_audio	= ndi_filter_audiofilter; 
+	ndi_filter_info.filter_audio	= ndi_filter_audiofilter;
 
 	return ndi_filter_info;
 }
