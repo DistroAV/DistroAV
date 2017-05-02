@@ -34,7 +34,7 @@
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-const NDIlib_v2* ndiLib = nullptr;
+const NDIlib_v2* ndiLib = NULL;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -46,7 +46,7 @@ extern struct obs_source_info create_ndi_filter_info();
 struct obs_source_info ndi_filter_info;
 
 const NDIlib_v2* load_ndilib();
-void* loaded_lib = nullptr;
+void* loaded_lib = NULL;
 
 NDIlib_find_instance_t ndi_finder;
 obs_output_t *main_out;
@@ -63,7 +63,11 @@ bool obs_module_load(void)
 	ndiLib = load_ndilib();
 	if (!ndiLib)
 	{
-		QMessageBox::critical(main_window, obs_module_text("NDIPlugin.LibError.Title"), obs_module_text("NDIPlugin.LibError.Message"), QMessageBox::Ok, QMessageBox::NoButton);
+		QMessageBox::critical(main_window,
+			obs_module_text("NDIPlugin.LibError.Title"),
+			obs_module_text("NDIPlugin.LibError.Message"),
+			QMessageBox::Ok, QMessageBox::NoButton);
+
 		return false;
 	}
 
@@ -85,7 +89,7 @@ bool obs_module_load(void)
 
 	ndi_output_info = create_ndi_output_info();
 	obs_register_output(&ndi_output_info);
-	
+
 	ndi_filter_info = create_ndi_filter_info();
 	obs_register_source(&ndi_filter_info);
 
@@ -93,22 +97,25 @@ bool obs_module_load(void)
 	conf->Load();
 
 	// Ui setup
-	QAction *menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(obs_module_text("NDIPlugin.Menu.OutputSettings"));
-	
+	QAction *menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
+			obs_module_text("NDIPlugin.Menu.OutputSettings"));
+
 	obs_frontend_push_ui_translation(obs_module_get_string);
 	output_settings = new OutputSettings(main_window);
 	obs_frontend_pop_ui_translation();
 
-	auto menu_cb = [] {
+	auto menu_cb = []
+	{
 		output_settings->ToggleShowHide();
 	};
 	menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-	obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
-		if (event == OBS_FRONTEND_EVENT_EXIT) {
+	obs_frontend_add_event_callback([](enum obs_frontend_event event,
+		void *private_data)
+	{
+		if (event == OBS_FRONTEND_EVENT_EXIT)
 			main_output_stop();
-		}
-	}, nullptr);
+	}, NULL);
 
 	// Run the server if configured
 	if (conf->OutputEnabled)
@@ -131,23 +138,30 @@ void obs_module_unload()
 		os_dlclose(loaded_lib);
 }
 
-void main_output_start(const char* output_name) {
-	if (!main_output_running) {
-		blog(LOG_INFO, "starting main NDI output with name '%s'", Config::Current()->OutputName);
+void main_output_start(const char* output_name)
+{
+	if (!main_output_running)
+	{
+		blog(LOG_INFO, "starting main NDI output with name '%s'",
+			Config::Current()->OutputName);
 
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", output_name);
-		
-		main_out = obs_output_create("ndi_output", "main_ndi_output", output_settings, nullptr);
+
+		main_out = obs_output_create("ndi_output", "main_ndi_output",
+			output_settings, NULL);
+
 		obs_output_start(main_out);
 		obs_data_release(output_settings);
-		
+
 		main_output_running = true;
 	}
 }
 
-void main_output_stop() {
-	if (main_output_running) {
+void main_output_stop()
+{
+	if (main_output_running)
+	{
 		blog(LOG_INFO, "stopping main NDI output");
 
 		obs_output_stop(main_out);
@@ -156,20 +170,21 @@ void main_output_stop() {
 	}
 }
 
-bool main_output_is_running() {
+bool main_output_is_running()
+{
 	return main_output_running;
 }
 
 const char* GetNDILibPath()
 {
-	char *path = nullptr;
+	char *path = NULL;
 
 	#if defined(_WIN32) || defined(_WIN64)
 		const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
 		if (!runtime_dir)
 		{
 			blog(LOG_ERROR, "Environment variable NDI_RUNTIME_DIR_V2 not set.");
-			return nullptr;
+			return NULL;
 		}
 
 		blog(LOG_INFO, "Found NDI runtime directory at %s", runtime_dir);
@@ -206,7 +221,7 @@ const NDIlib_v2* load_ndilib()
 	if (!dll_file)
 	{
 		blog(LOG_ERROR, "GetNDILibPath() returned a null pointer");
-		return nullptr;
+		return NULL;
 	}
 
 	loaded_lib = os_dlopen(dll_file);
@@ -218,5 +233,5 @@ const NDIlib_v2* load_ndilib()
 	}
 
 	blog(LOG_ERROR, "Can't find the NDI library");
-	return nullptr;
+	return NULL;
 }

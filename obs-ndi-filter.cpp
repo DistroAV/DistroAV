@@ -44,19 +44,23 @@ struct ndi_filter {
 	bool audio_initialized;
 };
 
-const char* ndi_filter_getname(void *data) {
+const char* ndi_filter_getname(void *data)
+{
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.FilterName");
 }
 
-obs_properties_t* ndi_filter_getproperties(void *data) {
+obs_properties_t* ndi_filter_getproperties(void *data)
+{
 	UNUSED_PARAMETER(data);
+
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 	return props;
 }
 
-void ndi_filter_update(void *data, obs_data_t *settings) {
+void ndi_filter_update(void *data, obs_data_t *settings)
+{
 	UNUSED_PARAMETER(settings);
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
@@ -70,7 +74,8 @@ void ndi_filter_update(void *data, obs_data_t *settings) {
 	s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
 }
 
-void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
+void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy)
+{
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_source_t *target = obs_filter_get_target(s->context);
@@ -78,12 +83,14 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	uint32_t width = obs_source_get_base_width(target);
 	uint32_t height = obs_source_get_base_height(target);
 
-	if (s->last_width != width || s->last_height != height) {
+	if (s->last_width != width || s->last_height != height)
+	{
 		gs_stagesurface_unmap(s->stagesurface);
 		gs_stagesurface_destroy(s->stagesurface);
 
 		s->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
-		gs_stagesurface_map(s->stagesurface, &s->video_data, &s->video_linesize);
+		gs_stagesurface_map(s->stagesurface,
+			&s->video_data, &s->video_linesize);
 
 		s->last_width = width;
 		s->last_height = height;
@@ -92,7 +99,8 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	gs_blend_state_push();
 	gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-	if (gs_texrender_begin(s->texrender, width, height)) {
+	if (gs_texrender_begin(s->texrender, width, height))
+	{
 		struct vec4 background;
 		vec4_zero(&background);
 
@@ -102,7 +110,8 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		obs_source_video_render(target);
 
 		gs_texrender_end(s->texrender);
-		gs_stage_texture(s->stagesurface, gs_texrender_get_texture(s->texrender));
+		gs_stage_texture(s->stagesurface,
+			gs_texrender_get_texture(s->texrender));
 
 		NDIlib_video_frame_t video_frame = { 0 };
 		video_frame.xres = s->last_width;
@@ -110,7 +119,8 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 		video_frame.FourCC = NDIlib_FourCC_type_BGRA;
 		video_frame.frame_rate_N = s->ovi.fps_num;
 		video_frame.frame_rate_D = s->ovi.fps_den;
-		video_frame.picture_aspect_ratio = (float)video_frame.xres / (float)video_frame.yres;
+		video_frame.picture_aspect_ratio =
+			(float)video_frame.xres / (float)video_frame.yres;
 		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 		video_frame.timecode = NDIlib_send_timecode_synthesize;
 		video_frame.p_data = s->video_data;
@@ -120,12 +130,12 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy) {
 	}
 
 	gs_blend_state_pop();
-
-	//obs_source_release(target);
 }
 
-void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
-	struct ndi_filter *s = static_cast<ndi_filter *>(bzalloc(sizeof(struct ndi_filter)));
+void* ndi_filter_create(obs_data_t *settings, obs_source_t *source)
+{
+	struct ndi_filter *s =
+		static_cast<ndi_filter *>(bzalloc(sizeof(struct ndi_filter)));
 	s->context = source;
 
 	s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
@@ -158,7 +168,8 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source) {
 	return s;
 }
 
-void ndi_filter_destroy(void *data) {
+void ndi_filter_destroy(void *data)
+{
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_display_destroy(s->renderer);
@@ -169,7 +180,8 @@ void ndi_filter_destroy(void *data) {
 	gs_texrender_destroy(s->texrender);
 }
 
-void ndi_filter_tick(void *data, float seconds) {
+void ndi_filter_tick(void *data, float seconds)
+{
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_get_video_info(&s->ovi);
@@ -177,14 +189,17 @@ void ndi_filter_tick(void *data, float seconds) {
 	gs_texrender_reset(s->texrender);
 }
 
-void ndi_filter_videorender(void *data, gs_effect_t *effect) {
+void ndi_filter_videorender(void *data, gs_effect_t *effect)
+{
 	UNUSED_PARAMETER(effect);
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	obs_source_skip_video_filter(s->context);
 }
 
-struct obs_audio_data* ndi_filter_audiofilter(void *data, struct obs_audio_data *audio_data) {
+struct obs_audio_data* ndi_filter_audiofilter(void *data,
+	struct obs_audio_data *audio_data)
+{
 	struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
 	NDIlib_audio_frame_t audio_frame = { 0 };
@@ -213,7 +228,8 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data, struct obs_audio_data 
 	return audio_data;
 }
 
-struct obs_source_info create_ndi_filter_info() {
+struct obs_source_info create_ndi_filter_info()
+{
 	struct obs_source_info ndi_filter_info = {};
 	ndi_filter_info.id				= "ndi_filter";
 	ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
@@ -231,4 +247,3 @@ struct obs_source_info create_ndi_filter_info() {
 
 	return ndi_filter_info;
 }
-

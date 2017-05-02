@@ -23,12 +23,13 @@
 #include "obs-ndi.h"
 
 OutputSettings::OutputSettings(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::OutputSettings)
+	QDialog(parent),
+	ui(new Ui::OutputSettings)
 {
-    ui->setupUi(this);
+	ui->setupUi(this);
 
-	connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &OutputSettings::FormAccepted);
+	connect(ui->buttonBox, &QDialogButtonBox::accepted,
+		this, &OutputSettings::FormAccepted);
 }
 
 void OutputSettings::FormAccepted()
@@ -62,16 +63,12 @@ void OutputSettings::showEvent(QShowEvent *event)
 void OutputSettings::ToggleShowHide()
 {
 	if (!isVisible())
-	{
 		setVisible(true);
-	}
 	else
-	{
 		setVisible(false);
-	}
 }
 
 OutputSettings::~OutputSettings()
 {
-    delete ui;
+	delete ui;
 }

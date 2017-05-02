@@ -39,31 +39,47 @@ struct ndi_source {
 	const NDIlib_source_t *ndi_sources;
 };
 
-const char* ndi_source_getname(void *data) {
+const char* ndi_source_getname(void *data)
+{
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
-obs_properties_t* ndi_source_getproperties(void *data) {
+obs_properties_t* ndi_source_getproperties(void *data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source", obs_module_text("NDIPlugin.SourceProps.SourceName"),
+	obs_property_t* source_list = obs_properties_add_list(props, "ndi_source",
+		obs_module_text("NDIPlugin.SourceProps.SourceName"),
 		OBS_COMBO_TYPE_LIST,
 		OBS_COMBO_FORMAT_INT);
 
-	obs_property_set_modified_callback(source_list, [](obs_properties_t *pps, obs_property_t *p, obs_data_t *settings) {
+	obs_property_set_modified_callback(source_list, [](
+		obs_properties_t *pps,
+		obs_property_t *p,
+		obs_data_t *settings)
+	{
 		size_t selected_item = obs_data_get_int(settings, "ndi_source");
-		obs_data_set_string(settings, "ndi_source_name", obs_property_list_item_name(p, selected_item));
-		obs_data_set_string(settings, "ndi_source_ip", obs_property_list_item_string(p, selected_item));
+
+		obs_data_set_string(settings, "ndi_source_name",
+			obs_property_list_item_name(p, selected_item));
+		obs_data_set_string(settings, "ndi_source_ip",
+			obs_property_list_item_string(p, selected_item));
+
 		return true;
 	});
 
-	obs_properties_add_bool(props, "ndi_low_bandwidth", obs_module_text("NDIPlugin.SourceProps.LowBandwidth"));
+	obs_properties_add_bool(props, "ndi_low_bandwidth",
+		obs_module_text("NDIPlugin.SourceProps.LowBandwidth"));
 
-	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](obs_properties_t *pps, obs_property_t *prop, void *private_data) {
+	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
+		obs_properties_t *pps,
+		obs_property_t *prop,
+		void *private_data)
+	{
 		#if defined(_WIN32)
 		ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
 		#elif defined(__linux__) || defined(__APPLE__)
@@ -74,9 +90,11 @@ obs_properties_t* ndi_source_getproperties(void *data) {
 	});
 
 	s->no_sources = 0;
-	s->ndi_sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder, &s->no_sources);
+	s->ndi_sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder,
+		&s->no_sources);
 
-	for (uint32_t i = 0; i < s->no_sources; i++) {
+	for (uint32_t i = 0; i < s->no_sources; i++)
+	{
 		obs_property_list_add_int(source_list, s->ndi_sources[i].p_ndi_name, i);
 	}
 
@@ -91,35 +109,38 @@ void *ndi_source_poll_audio(void *data)
 	obs_source_audio obs_audio_frame = { 0 };
 
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
-	while (s->running) {
-		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver, NULL, &audio_frame, NULL, 1000);
+	while (s->running)
+	{
+		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver,
+			NULL, &audio_frame, NULL, 1000);
 
 		if (frame_received == NDIlib_frame_type_audio)
 		{
-			switch (audio_frame.no_channels) {
-			case 1:
-				obs_audio_frame.speakers = SPEAKERS_MONO;
-				break;
-			case 2:
-				obs_audio_frame.speakers = SPEAKERS_STEREO;
-				break;
-			case 3:
-				obs_audio_frame.speakers = SPEAKERS_2POINT1;
-				break;
-			case 4:
-				obs_audio_frame.speakers = SPEAKERS_QUAD;
-				break;
-			case 5:
-				obs_audio_frame.speakers = SPEAKERS_4POINT1;
-				break;
-			case 6:
-				obs_audio_frame.speakers = SPEAKERS_5POINT1;
-				break;
-			case 8:
-				obs_audio_frame.speakers = SPEAKERS_7POINT1;
-				break;
-			default:
-				obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
+			switch (audio_frame.no_channels)
+			{
+				case 1:
+					obs_audio_frame.speakers = SPEAKERS_MONO;
+					break;
+				case 2:
+					obs_audio_frame.speakers = SPEAKERS_STEREO;
+					break;
+				case 3:
+					obs_audio_frame.speakers = SPEAKERS_2POINT1;
+					break;
+				case 4:
+					obs_audio_frame.speakers = SPEAKERS_QUAD;
+					break;
+				case 5:
+					obs_audio_frame.speakers = SPEAKERS_4POINT1;
+					break;
+				case 6:
+					obs_audio_frame.speakers = SPEAKERS_5POINT1;
+					break;
+				case 8:
+					obs_audio_frame.speakers = SPEAKERS_7POINT1;
+					break;
+				default:
+					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 			}
 
 			obs_audio_frame.timestamp = audio_frame.timecode;
@@ -128,7 +149,10 @@ void *ndi_source_poll_audio(void *data)
 			obs_audio_frame.frames = audio_frame.no_samples;
 
 			for (int i = 0; i < audio_frame.no_channels; i++)
-				obs_audio_frame.data[i] = (uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
+			{
+				obs_audio_frame.data[i] =
+					(uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
+			}
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
 
@@ -139,19 +163,23 @@ void *ndi_source_poll_audio(void *data)
 	return NULL;
 }
 
-void *ndi_source_poll_video(void *data) {
+void *ndi_source_poll_video(void *data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	NDIlib_video_frame_t video_frame;
 	obs_source_frame obs_video_frame = { 0 };
 
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
-	while (s->running) {
-		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver, &video_frame, NULL, NULL, 1000);
+	while (s->running)
+	{
+		frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver,
+			&video_frame, NULL, NULL, 1000);
 
 		if (frame_received == NDIlib_frame_type_video)
 		{
-			switch (video_frame.FourCC) {
+			switch (video_frame.FourCC)
+			{
 				case NDIlib_FourCC_type_BGRA:
 					obs_video_frame.format = VIDEO_FORMAT_BGRA;
 					break;
@@ -190,17 +218,22 @@ void *ndi_source_poll_video(void *data) {
 	return NULL;
 }
 
-void ndi_source_update(void *data, obs_data_t *settings) {
+void ndi_source_update(void *data, obs_data_t *settings)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	NDIlib_source_t selected_source;
-	selected_source.p_ndi_name = obs_data_get_string(settings, "ndi_source_name");
-	selected_source.p_ip_address = obs_data_get_string(settings, "ndi_source_ip");
-	bool lowBandwidth = obs_data_get_bool(settings, "ndi_low_bandwidth");
+	selected_source.p_ndi_name =
+		obs_data_get_string(settings, "ndi_source_name");
+	selected_source.p_ip_address =
+		obs_data_get_string(settings, "ndi_source_ip");
+	bool lowBandwidth =
+		obs_data_get_bool(settings, "ndi_low_bandwidth");
 
 	NDIlib_recv_create_t recv_desc;
 	recv_desc.source_to_connect_to = selected_source;
-	recv_desc.bandwidth = (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
+	recv_desc.bandwidth =
+		(lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
 	recv_desc.allow_video_fields = true;
 	recv_desc.color_format = NDIlib_recv_color_format_e_UYVY_BGRA;
 
@@ -210,17 +243,22 @@ void ndi_source_update(void *data, obs_data_t *settings) {
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 
 	s->ndi_receiver = ndiLib->NDIlib_recv_create2(&recv_desc);
-	if (s->ndi_receiver) {
+	if (s->ndi_receiver)
+	{
 		s->running = true;
 		pthread_create(&s->video_thread, NULL, ndi_source_poll_video, data);
 		pthread_create(&s->audio_thread, NULL, ndi_source_poll_audio, data);
 	}
-	else {
-		blog(LOG_ERROR, "can't create a receiver for NDI source '%s'", recv_desc.source_to_connect_to.p_ndi_name);
+	else
+	{
+		blog(LOG_ERROR,
+			"can't create a receiver for NDI source '%s'",
+			recv_desc.source_to_connect_to.p_ndi_name);
 	}
 }
 
-void ndi_source_shown(void* data) {
+void ndi_source_shown(void* data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	if (s->ndi_receiver)
@@ -230,7 +268,8 @@ void ndi_source_shown(void* data) {
 	}
 }
 
-void ndi_source_hidden(void* data) {
+void ndi_source_hidden(void* data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	if (s->ndi_receiver)
@@ -240,7 +279,8 @@ void ndi_source_hidden(void* data) {
 	}
 }
 
-void ndi_source_activated(void* data) {
+void ndi_source_activated(void* data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	if (s->ndi_receiver)
@@ -250,7 +290,8 @@ void ndi_source_activated(void* data) {
 	}
 }
 
-void ndi_source_deactivated(void* data) {
+void ndi_source_deactivated(void* data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 
 	if (s->ndi_receiver)
@@ -260,7 +301,8 @@ void ndi_source_deactivated(void* data) {
 	}
 }
 
-void* ndi_source_create(obs_data_t *settings, obs_source_t *source) {
+void* ndi_source_create(obs_data_t *settings, obs_source_t *source)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(bzalloc(sizeof(struct ndi_source)));
 	s->source = source;
 	s->running = true;
@@ -269,13 +311,15 @@ void* ndi_source_create(obs_data_t *settings, obs_source_t *source) {
 	return s;
 }
 
-void ndi_source_destroy(void *data) {
+void ndi_source_destroy(void *data)
+{
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 	s->running = false;
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 }
 
-struct obs_source_info create_ndi_source_info() {
+struct obs_source_info create_ndi_source_info()
+{
 	struct obs_source_info ndi_source_info = {};
 	ndi_source_info.id				= "ndi_source";
 	ndi_source_info.type			= OBS_SOURCE_TYPE_INPUT;
@@ -293,4 +337,3 @@ struct obs_source_info create_ndi_source_info() {
 
 	return ndi_source_info;
 }
-

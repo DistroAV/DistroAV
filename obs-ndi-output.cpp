@@ -32,22 +32,27 @@ struct ndi_output {
 	NDIlib_send_instance_t ndi_sender;
 };
 
-const char* ndi_output_getname(void *data) {
+const char* ndi_output_getname(void *data)
+{
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.OutputName");
 }
 
-obs_properties_t* ndi_output_getproperties(void *data) {
+obs_properties_t* ndi_output_getproperties(void *data)
+{
 	UNUSED_PARAMETER(data);
+
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_properties_add_text(props, "ndi_name", obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, "ndi_name",
+		obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
 
 	return props;
 }
 
-bool ndi_output_start(void *data) {
+bool ndi_output_start(void *data)
+{
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 
 	NDIlib_send_create_t send_desc;
@@ -57,29 +62,36 @@ bool ndi_output_start(void *data) {
 	send_desc.clock_audio = false;
 
 	o->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
-	if (o->ndi_sender) {
+
+	if (o->ndi_sender)
+	{
 		o->started = true;
 		obs_output_begin_data_capture(o->output, 0);
 	}
-	else {
+	else
+	{
 		o->started = false;
 	}
 
 	return o->started;
 }
 
-void ndi_output_stop(void *data, uint64_t ts) {
+void ndi_output_stop(void *data, uint64_t ts)
+{
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	o->started = false;
 	obs_output_end_data_capture(o->output);
 	ndiLib->NDIlib_send_destroy(o->ndi_sender);
 }
 
-void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
+void* ndi_output_create(obs_data_t *settings, obs_output_t *output)
+{
 	UNUSED_PARAMETER(settings);
 
-	struct ndi_output *o = static_cast<ndi_output *>(bzalloc(sizeof(struct ndi_output)));
+	struct ndi_output *o =
+		static_cast<ndi_output *>(bzalloc(sizeof(struct ndi_output)));
 	o->output = output;
+
 	o->ndi_name = obs_data_get_string(settings, "ndi_name");
 	o->started = false;
 
@@ -97,14 +109,16 @@ void* ndi_output_create(obs_data_t *settings, obs_output_t *output) {
 	return o;
 }
 
-void ndi_output_destroy(void *data) {
+void ndi_output_destroy(void *data)
+{
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 
 	if (o)
 		bfree(o);
 }
 
-void ndi_output_rawvideo(void *data, struct video_data *frame) {
+void ndi_output_rawvideo(void *data, struct video_data *frame)
+{
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	if (!o->started) return;
 
@@ -130,7 +144,8 @@ void ndi_output_rawvideo(void *data, struct video_data *frame) {
 	ndiLib->NDIlib_send_send_video_async(o->ndi_sender, &video_frame);
 }
 
-void ndi_output_rawaudio(void *data, struct audio_data *frame) {
+void ndi_output_rawaudio(void *data, struct audio_data *frame)
+{
 	struct ndi_output *o = static_cast<ndi_output *>(data);
 	if (!o->started) return;
 
@@ -161,7 +176,8 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame) {
 	bfree(audio_data);
 }
 
-struct obs_output_info create_ndi_output_info() {
+struct obs_output_info create_ndi_output_info()
+{
 	struct obs_output_info ndi_output_info = {};
 	ndi_output_info.id				= "ndi_output";
 	ndi_output_info.flags			= OBS_OUTPUT_AV;
