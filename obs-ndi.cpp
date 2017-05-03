@@ -32,6 +32,7 @@
 #include "forms/output-settings.h"
 
 OBS_DECLARE_MODULE()
+OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
 const NDIlib_v2* ndiLib = NULL;
@@ -138,6 +139,16 @@ void obs_module_unload()
 		os_dlclose(loaded_lib);
 }
 
+const char* obs_module_name()
+{
+	return "obs-ndi";
+}
+
+const char* obs_module_description()
+{
+	return "NDI input/output integration for OBS Studio";
+}
+
 void main_output_start(const char* output_name)
 {
 	if (!main_output_running)
@@ -228,7 +239,8 @@ const NDIlib_v2* load_ndilib()
 
 	if (loaded_lib)
 	{
-		const NDIlib_v2* (*lib_load)(void) = (const NDIlib_v2*(*)())os_dlsym(loaded_lib, "NDIlib_v2_load");
+		const NDIlib_v2* (*lib_load)(void) =
+			(const NDIlib_v2*(*)())os_dlsym(loaded_lib, "NDIlib_v2_load");
 		return lib_load();
 	}
 
