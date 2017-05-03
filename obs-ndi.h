@@ -26,7 +26,7 @@
 	#define PROCESSINGNDILIB_DEPRECATED
 	#define PROCESSINGNDILIB_API extern "C" __attribute((visibility("default")))
 #endif
- 
+
 #include <Processing.NDI.compat.h>
 #include <Processing.NDI.structs.h>
 
@@ -38,7 +38,7 @@
 #include <Processing.NDI.utilities.h>
 #include <Processing.NDI.DynamicLoad.h>
 
-#define OBS_NDI_VERSION "0.4.0"
+#define OBS_NDI_VERSION "4.0.0"
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
 
