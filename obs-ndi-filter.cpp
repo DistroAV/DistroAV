@@ -154,7 +154,7 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source)
 	#ifdef _WIN32
 	display_desc.window.hwnd = obs_frontend_get_main_window_handle();
 	#elif __APPLE__
-	display_desc.window.view = obs_frontend_get_main_window_handle();
+	display_desc.window.view = (id) obs_frontend_get_main_window_handle();
 	#endif
 
 	obs_get_video_info(&s->ovi);

@@ -154,7 +154,7 @@ void main_output_start(const char* output_name)
 	if (!main_output_running)
 	{
 		blog(LOG_INFO, "starting main NDI output with name '%s'",
-			Config::Current()->OutputName);
+			qPrintable(Config::Current()->OutputName));
 
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", output_name);
@@ -220,6 +220,7 @@ const char* GetNDILibPath()
 		path = "/usr/lib/libndi.so.1.0.1";
 	#elif defined(__APPLE__)
 		// TODO : make a redistributable NDI package for macOS / OS X
+		path = "./libndi.dylib";
 	#endif
 
 	blog(LOG_INFO, "Found NDI library at %s", path);
