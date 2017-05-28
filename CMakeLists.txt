@@ -98,7 +98,7 @@ if(APPLE)
 	include_directories(
 		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
-		obs-frontend-api)
+		"${OBS_FRONTEND_LIB}")
 endif()
 
 # Linux
