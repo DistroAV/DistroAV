@@ -22,6 +22,14 @@ matrix:
     - docker exec -it xenial /root/obs-ndi/CI/build-xenial.sh
     after_success:
     - docker exec -it xenial /root/obs-ndi/CI/package-xenial.sh
+  - os: osx
+    env:
+     - CMAKE_PREFIX_PATH=/usr/local/opt/qt5/lib/cmake
+     - CEF_BUILD_VERSION=3.2987.1588.g1952835
+    before_install: "./CI/install-dependencies-osx.sh"
+    before_script: "./CI/before-script-osx.sh"
+    script: cd ./build && make -j4 && cd -
+    before_deploy: "./CI/before-deploy-osx.sh"
 
 deploy:
 - provider: s3
@@ -34,5 +42,4 @@ deploy:
   acl: public_read
   on:
     repo: Palakis/obs-ndi
-    condition: "$TRAVIS_OS_NAME = linux"
     all_branches: true

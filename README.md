@@ -38,7 +38,15 @@ sudo make install
 ```
 
 ### OS X
-*To do*
+```
+git clone https://github.com/Palakis/obs-ndi.git
+cd obs-ndi
+mkdir build && cd build
+cmake -DNDISDK_DIR="<path to the NewTek NDI SDK>" -DLIBOBS_INCLUDE_DIR=<path to the libobs sub-folder in obs-studio's source code> -DLIBOBS_LIB=<path to libobs.0.dylib> -DOBS_FRONTEND_LIB=<path to libobs-frontend-api.dylib> -DQt5Core_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Core -DQt5Widgets_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Widgets ../
+make -j4
+# Copy libobs-ndi.so to the obs-plugins folder
+# Copy libndi.dylib from the NDI SDK to the obs-plugins folder too
+```
 
 ### Automated Builds
 - Windows : [![Automated Build status for Windows](https://ci.appveyor.com/api/projects/status/github/Palakis/obs-ndi)](https://ci.appveyor.com/project/Palakis/obs-ndi/history)
