@@ -37,7 +37,7 @@ deploy:
   bucket: obs-ndi-linux-builds
   access_key_id: "$AWS_ID"
   secret_access_key: "$AWS_SECRET"
-  local_dir: "/home/travis/package"
+  local_dir: "../package"
   skip_cleanup: true
   acl: public_read
   on:
