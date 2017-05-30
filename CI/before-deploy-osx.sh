@@ -2,7 +2,14 @@
 
 export QT_PREFIX="$(brew --prefix qt5)"
 
-mkdir package
+export GIT_HASH=$(git rev-parse --short HEAD)
+
+export VERSION="$GIT_HASH-$TRAVIS_BRANCH"
+if [ -n "${TRAVIS_TAG}" ]; then
+	export VERSION="$TRAVIS_TAG"
+fi
+
+export FILENAME="obs-ndi-$VERSION.pkg"
 
 cd ./installer
 
@@ -15,4 +22,6 @@ install_name_tool \
 # Package app
 echo "Generating .pkg"
 packagesbuild obs-ndi.pkgproj
-mv ./build/obs-ndi.pkg ../package/
+
+mkdir package
+mv ./build/obs-ndi.pkg ../package/$FILENAME
