@@ -46,7 +46,7 @@ deploy:
     all_branches: true
 - provider: s3
   region: eu-central-1
-  bucket: obs-ndi-linux-builds
+  bucket: obs-ndi-osx-builds
   access_key_id: "$AWS_ID"
   secret_access_key: "$AWS_SECRET"
   local_dir: package
