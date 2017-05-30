@@ -23,5 +23,5 @@ install_name_tool \
 echo "Generating .pkg"
 packagesbuild obs-ndi.pkgproj
 
-mkdir package
+mkdir ../package
 mv ./build/obs-ndi.pkg ../package/$FILENAME
