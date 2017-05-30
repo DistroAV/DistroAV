@@ -37,9 +37,22 @@ deploy:
   bucket: obs-ndi-linux-builds
   access_key_id: "$AWS_ID"
   secret_access_key: "$AWS_SECRET"
-  local_dir: "../package"
+  local_dir: "/home/travis/package"
   skip_cleanup: true
   acl: public_read
   on:
+    condition: "$TRAVIS_OS_NAME = linux"
+    repo: Palakis/obs-ndi
+    all_branches: true
+- provider: s3
+  region: eu-central-1
+  bucket: obs-ndi-osx-builds
+  access_key_id: "$AWS_ID"
+  secret_access_key: "$AWS_SECRET"
+  local_dir: package
+  skip_cleanup: true
+  acl: public_read
+  on:
+    condition: "$TRAVIS_OS_NAME = osx"
     repo: Palakis/obs-ndi
     all_branches: true
