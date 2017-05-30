@@ -20,6 +20,8 @@
 #include <Windows.h>
 #endif
 
+#include <sys/stat.h>
+
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
@@ -219,8 +221,13 @@ const char* GetNDILibPath()
 		// TODO : make a redistributable NDI package for Linux x86 and x86_64
 		path = "/usr/lib/libndi.so.1.0.1";
 	#elif defined(__APPLE__)
-		// TODO : make a redistributable NDI package for macOS / OS X
-		path = "./libndi.dylib";
+		struct stat stats;
+		if (os_stat("/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib", &stats) == 0) {
+			path = "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib";
+		}
+		else {
+			path = "./libndi.dylib";
+		}
 	#endif
 
 	blog(LOG_INFO, "Found NDI library at %s", path);
