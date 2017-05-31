@@ -93,8 +93,9 @@ if(WIN32)
 	)
 endif()
 
-# OSX (WARNING : needs testing)
+# OSX
 if(APPLE)
+	set_target_properties(obs-ndi PROPERTIES PREFIX "")
 	include_directories(
 		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
