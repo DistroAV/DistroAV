@@ -50,5 +50,4 @@ make -j4
 
 ### Automated Builds
 - Windows : [![Automated Build status for Windows](https://ci.appveyor.com/api/projects/status/github/Palakis/obs-ndi)](https://ci.appveyor.com/project/Palakis/obs-ndi/history)
-- Linux : [![Automated Build status for Linux](https://travis-ci.org/Palakis/obs-ndi.svg?branch=master)](https://travis-ci.org/Palakis/obs-ndi)
-- OS X / macOS : coming soon
+- Linux & OS X : [![Automated Build status for Linux & OS X](https://travis-ci.org/Palakis/obs-ndi.svg?branch=master)](https://travis-ci.org/Palakis/obs-ndi)
