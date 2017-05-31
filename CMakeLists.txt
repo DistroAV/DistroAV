@@ -23,17 +23,17 @@ else()
 endif()
 
 set(obs-ndi_SOURCES
-	obs-ndi.cpp
-	obs-ndi-source.cpp
-	obs-ndi-output.cpp
-	obs-ndi-filter.cpp
-	Config.cpp
-	forms/output-settings.cpp)
+	src/obs-ndi.cpp
+	src/obs-ndi-source.cpp
+	src/obs-ndi-output.cpp
+	src/obs-ndi-filter.cpp
+	src/Config.cpp
+	src/forms/output-settings.cpp)
 
 set(obs-ndi_HEADERS
-	obs-ndi.h
-	Config.h
-	forms/output-settings.h)
+	src/obs-ndi.h
+	src/Config.h
+	src/forms/output-settings.h)
 
 add_library(obs-ndi MODULE
 	${obs-ndi_SOURCES}

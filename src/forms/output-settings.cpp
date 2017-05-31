@@ -19,8 +19,8 @@
 #include "output-settings.h"
 #include "ui_output-settings.h"
 
-#include "Config.h"
-#include "obs-ndi.h"
+#include "../Config.h"
+#include "../obs-ndi.h"
 
 OutputSettings::OutputSettings(QWidget *parent) :
 	QDialog(parent),
