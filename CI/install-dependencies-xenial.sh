@@ -51,6 +51,7 @@ unzip ./ndi-sdk-slim-linux.zip
 # Build obs-studio
 git clone https://github.com/jp9000/obs-studio ./obs-studio
 cd obs-studio
+git checkout 19.0.2
 mkdir build && cd build
 cmake -DUNIX_STRUCTURE=1 -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j4
