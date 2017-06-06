@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export QT_PREFIX="$(brew --prefix qt5)"
+export QT_PREFIX="/usr/local/opt/qt5"
 
 export GIT_HASH=$(git rev-parse --short HEAD)
 
