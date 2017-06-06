@@ -14,7 +14,7 @@ wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-ni
 sudo installer -pkg ./Packages.pkg -target /
 
 brew update
-brew install qt5
+brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/fdb7c6e960e830b3bf630850c0002c5df9f68ed8/Formula/qt5.rb
 
 # Fetch and untar prebuilt OBS deps that are compatible with older versions of OSX
 wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-nightly/osx-deps.tar.gz
