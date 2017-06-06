@@ -38,7 +38,7 @@
 #include <Processing.NDI.utilities.h>
 #include <Processing.NDI.DynamicLoad.h>
 
-#define OBS_NDI_VERSION "4.0.0"
+#define OBS_NDI_VERSION "4.0.1"
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
 
