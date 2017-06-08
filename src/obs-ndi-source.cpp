@@ -315,6 +315,8 @@ void ndi_source_destroy(void *data)
 {
 	struct ndi_source *s = static_cast<ndi_source *>(data);
 	s->running = false;
+	pthread_cancel(s->video_thread);
+	pthread_cancel(s->audio_thread);
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 }
 
