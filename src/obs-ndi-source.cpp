@@ -116,7 +116,7 @@ void *ndi_source_poll_audio(void *data)
 
 		if (frame_received == NDIlib_frame_type_audio)
 		{
-			switch (audio_frame.no_channels)
+            switch (audio_frame.no_channels)
 			{
 				case 1:
 					obs_audio_frame.speakers = SPEAKERS_MONO;
@@ -143,10 +143,11 @@ void *ndi_source_poll_audio(void *data)
 					obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
 			}
 
-			obs_audio_frame.timestamp = audio_frame.timecode;
-			obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
-			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
-			obs_audio_frame.frames = audio_frame.no_samples;
+            obs_audio_frame.timestamp =
+                os_gettime_ns() - (audio_frame.sample_rate * audio_frame.no_samples);
+            obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
+            obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
+            obs_audio_frame.frames = audio_frame.no_samples;
 
 			for (int i = 0; i < audio_frame.no_channels; i++)
 			{
@@ -155,7 +156,6 @@ void *ndi_source_poll_audio(void *data)
 			}
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
-
 			ndiLib->NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
 		}
 	}
