@@ -135,8 +135,8 @@ void ndi_output_rawvideo(void *data, struct video_data *frame)
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 
 	// TODO : find out which timestamp source is the best : OBS or synthesized
-	video_frame.timecode = NDIlib_send_timecode_synthesize;
-	//video_frame.timecode = frame->timestamp;
+	//video_frame.timecode = NDIlib_send_timecode_synthesize;
+	video_frame.timecode = frame->timestamp;
 
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
@@ -169,8 +169,8 @@ void ndi_output_rawaudio(void *data, struct audio_data *frame)
 	audio_frame.p_data = (float*)audio_data;
 
 	// TODO : find out which timestamp source is the best : OBS or synthesized
-	audio_frame.timecode = NDIlib_send_timecode_synthesize;
-	//audio_frame.timecode = frame->timestamp;
+	//audio_frame.timecode = NDIlib_send_timecode_synthesize;
+	audio_frame.timecode = frame->timestamp;
 
 	ndiLib->NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
 	bfree(audio_data);
