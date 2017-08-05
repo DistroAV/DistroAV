@@ -26,16 +26,13 @@
 #define PARAM_ENABLE "MainOutputEnabled"
 #define PARAM_NAME "MainOutputName"
 
-Config *Config::_instance = new Config();
+Config* Config::_instance = new Config();
 
-Config::Config()
-{
-	OutputEnabled = false;
-	OutputName = "OBS";
-
+Config::Config() :
+    OutputEnabled(false),
+    OutputName("OBS") {
 	config_t* obs_config = obs_frontend_get_global_config();
-	if (obs_config)
-	{
+	if (obs_config) {
 		config_set_default_bool(obs_config,
 			SECTION_NAME, PARAM_ENABLE, OutputEnabled);
 		config_set_default_string(obs_config,
@@ -43,27 +40,21 @@ Config::Config()
 	}
 }
 
-void Config::Load()
-{
+void Config::Load() {
 	config_t* obs_config = obs_frontend_get_global_config();
-
 	OutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_ENABLE);
 	OutputName = config_get_string(obs_config, SECTION_NAME, PARAM_NAME);
 }
 
-void Config::Save()
-{
+void Config::Save() {
 	config_t* obs_config = obs_frontend_get_global_config();
-
 	config_set_bool(obs_config,
 		SECTION_NAME, PARAM_ENABLE, OutputEnabled);
 	config_set_string(obs_config,
 		SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
-
 	config_save(obs_config);
 }
 
-Config* Config::Current()
-{
+Config* Config::Current() {
 	return _instance;
 }

@@ -52,37 +52,31 @@ const NDIlib_v2* load_ndilib();
 void* loaded_lib = NULL;
 
 NDIlib_find_instance_t ndi_finder;
-obs_output_t *main_out;
-bool main_output_running;
+obs_output_t* main_out;
+bool main_output_running = false;
 
 OutputSettings* output_settings;
 
-bool obs_module_load(void)
-{
+bool obs_module_load(void) {
 	blog(LOG_INFO, "hello ! (version %s)", OBS_NDI_VERSION);
 
 	QMainWindow* main_window = (QMainWindow*)obs_frontend_get_main_window();
 
 	ndiLib = load_ndilib();
-	if (!ndiLib)
-	{
+	if (!ndiLib) {
 		QMessageBox::critical(main_window,
 			obs_module_text("NDIPlugin.LibError.Title"),
 			obs_module_text("NDIPlugin.LibError.Message"),
 			QMessageBox::Ok, QMessageBox::NoButton);
-
 		return false;
 	}
 
-	if (!ndiLib->NDIlib_initialize())
-	{
+	if (!ndiLib->NDIlib_initialize()) {
 		blog(LOG_ERROR, "CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
-	main_output_running = false;
-
-	NDIlib_find_create_t find_desc = { 0 };
+	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
 	find_desc.p_groups = NULL;
 	ndi_finder = ndiLib->NDIlib_find_create(&find_desc);
@@ -100,22 +94,21 @@ bool obs_module_load(void)
 	conf->Load();
 
 	// Ui setup
-	QAction *menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
+	QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
 			obs_module_text("NDIPlugin.Menu.OutputSettings"));
 
 	obs_frontend_push_ui_translation(obs_module_get_string);
 	output_settings = new OutputSettings(main_window);
 	obs_frontend_pop_ui_translation();
 
-	auto menu_cb = []
-	{
+	auto menu_cb = [] {
 		output_settings->ToggleShowHide();
 	};
 	menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
 	obs_frontend_add_event_callback([](enum obs_frontend_event event,
 		void *private_data)
-	{
+    {
 		if (event == OBS_FRONTEND_EVENT_EXIT)
 			main_output_stop();
 	}, NULL);
@@ -131,8 +124,7 @@ void obs_module_unload()
 {
 	blog(LOG_INFO, "goodbye !");
 
-	if (ndiLib)
-	{
+	if (ndiLib) {
 		ndiLib->NDIlib_find_destroy(ndi_finder);
 		ndiLib->NDIlib_destroy();
 	}
@@ -141,24 +133,20 @@ void obs_module_unload()
 		os_dlclose(loaded_lib);
 }
 
-const char* obs_module_name()
-{
+const char* obs_module_name() {
 	return "obs-ndi";
 }
 
-const char* obs_module_description()
-{
+const char* obs_module_description() {
 	return "NDI input/output integration for OBS Studio";
 }
 
-void main_output_start(const char* output_name)
-{
-	if (!main_output_running)
-	{
+void main_output_start(const char* output_name) {
+	if (!main_output_running) {
 		blog(LOG_INFO, "starting main NDI output with name '%s'",
 			qPrintable(Config::Current()->OutputName));
 
-		obs_data_t *output_settings = obs_data_create();
+		obs_data_t* output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", output_name);
 
 		main_out = obs_output_create("ndi_output", "main_ndi_output",
@@ -171,10 +159,8 @@ void main_output_start(const char* output_name)
 	}
 }
 
-void main_output_stop()
-{
-	if (main_output_running)
-	{
+void main_output_stop() {
+	if (main_output_running) {
 		blog(LOG_INFO, "stopping main NDI output");
 
 		obs_output_stop(main_out);
@@ -183,19 +169,16 @@ void main_output_stop()
 	}
 }
 
-bool main_output_is_running()
-{
+bool main_output_is_running() {
 	return main_output_running;
 }
 
-const char* GetNDILibPath()
-{
-	char *path = NULL;
+const char* GetNDILibPath() {
+	char* path = NULL;
 
 	#if defined(_WIN32) || defined(_WIN64)
 		const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
-		if (!runtime_dir)
-		{
+		if (!runtime_dir) {
 			blog(LOG_ERROR, "Environment variable NDI_RUNTIME_DIR_V2 not set.");
 			return NULL;
 		}
@@ -203,7 +186,6 @@ const char* GetNDILibPath()
 		blog(LOG_INFO, "Found NDI runtime directory at %s", runtime_dir);
 
 		const char* dll_file;
-
 		#if defined(_WIN64)
 		dll_file = "Processing.NDI.Lib.x64.dll";
 		#elif defined(_WIN32)
@@ -224,8 +206,7 @@ const char* GetNDILibPath()
 		struct stat stats;
 		if (os_stat("/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib", &stats) == 0) {
 			path = "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib";
-		}
-		else {
+		} else {
 			path = "./libndi.dylib";
 		}
 	#endif
@@ -237,16 +218,13 @@ const char* GetNDILibPath()
 const NDIlib_v2* load_ndilib()
 {
 	const char* dll_file = GetNDILibPath();
-	if (!dll_file)
-	{
+	if (!dll_file) {
 		blog(LOG_ERROR, "GetNDILibPath() returned a null pointer");
 		return NULL;
 	}
 
 	loaded_lib = os_dlopen(dll_file);
-
-	if (loaded_lib)
-	{
+	if (loaded_lib) {
 		const NDIlib_v2* (*lib_load)(void) =
 			(const NDIlib_v2*(*)())os_dlsym(loaded_lib, "NDIlib_v2_load");
 		return lib_load();

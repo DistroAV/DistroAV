@@ -25,21 +25,19 @@ namespace Ui {
 class OutputSettings;
 }
 
-class OutputSettings : public QDialog
-{
-	Q_OBJECT
-
-public:
-	explicit OutputSettings(QWidget *parent = 0);
+class OutputSettings : public QDialog {
+  Q_OBJECT
+  public:
+	explicit OutputSettings(QWidget* parent = 0);
 	~OutputSettings();
-	void showEvent(QShowEvent *event);
+	void showEvent(QShowEvent* event);
 	void ToggleShowHide();
 
-private Q_SLOTS:
-	void FormAccepted();
+  private slots:
+	void onFormAccepted();
 
-private:
-	Ui::OutputSettings *ui;
+  private:
+	Ui::OutputSettings* ui;
 };
 
 #endif // OUTPUTSETTINGS_H

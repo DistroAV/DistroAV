@@ -24,51 +24,41 @@
 
 OutputSettings::OutputSettings(QWidget *parent) :
 	QDialog(parent),
-	ui(new Ui::OutputSettings)
-{
+	ui(new Ui::OutputSettings) {
 	ui->setupUi(this);
-
-	connect(ui->buttonBox, &QDialogButtonBox::accepted,
-		this, &OutputSettings::FormAccepted);
+	connect(ui->buttonBox, SIGNAL(accepted()),
+		this, SLOT(onFormAccepted()));
 }
 
-void OutputSettings::FormAccepted()
-{
+void OutputSettings::onFormAccepted() {
 	Config* conf = Config::Current();
 	conf->OutputEnabled = ui->outputEnabled->isChecked();
 	conf->OutputName = ui->outputName->text();
 	conf->Save();
 
-	if (conf->OutputEnabled)
-	{
-		if (main_output_is_running())
-			main_output_stop();
-
+	if (conf->OutputEnabled) {
+        if (main_output_is_running()) {
+            main_output_stop();
+        }
 		main_output_start(ui->outputName->text().toUtf8().constData());
-	}
-	else
-	{
+	} else {
 		main_output_stop();
 	}
 }
 
-void OutputSettings::showEvent(QShowEvent *event)
-{
+void OutputSettings::showEvent(QShowEvent* event) {
 	Config* conf = Config::Current();
-
 	ui->outputEnabled->setChecked(conf->OutputEnabled);
 	ui->outputName->setText(conf->OutputName);
 }
 
-void OutputSettings::ToggleShowHide()
-{
+void OutputSettings::ToggleShowHide() {
 	if (!isVisible())
 		setVisible(true);
 	else
 		setVisible(false);
 }
 
-OutputSettings::~OutputSettings()
-{
+OutputSettings::~OutputSettings() {
 	delete ui;
 }
