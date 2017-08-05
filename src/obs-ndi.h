@@ -1,30 +1,30 @@
 /*
-	obs-ndi (NDI I/O in OBS Studio)
-	Copyright (C) 2016 Stéphane Lepin <stephane.lepin@gmail.com>
+obs-ndi (NDI I/O in OBS Studio)
+Copyright (C) 2016 Stéphane Lepin <stephane.lepin@gmail.com>
 
-	This library is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-	License as published by the Free Software Foundation; either
-	version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-	This library is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-	Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-	You should have received a copy of the GNU Lesser General Public
-	License along with this library. If not, see <https://www.gnu.org/licenses/>
+You should have received a copy of the GNU Lesser General Public
+License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
 #ifndef OBSNDI_H
 #define OBSNDI_H
 
 #ifdef _WIN32
-	#define PROCESSINGNDILIB_DEPRECATED __declspec(deprecated)
-	#define PROCESSINGNDILIB_API extern "C" __declspec(dllimport)
+    #define PROCESSINGNDILIB_DEPRECATED __declspec(deprecated)
+    #define PROCESSINGNDILIB_API extern "C" __declspec(dllimport)
 #else
-	#define PROCESSINGNDILIB_DEPRECATED
-	#define PROCESSINGNDILIB_API extern "C" __attribute((visibility("default")))
+    #define PROCESSINGNDILIB_DEPRECATED
+    #define PROCESSINGNDILIB_API extern "C" __attribute((visibility("default")))
 #endif
 
 #include <Processing.NDI.compat.h>
