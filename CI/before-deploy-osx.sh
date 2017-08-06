@@ -24,7 +24,7 @@ install_name_tool \
 	../build/obs-ndi.so
 
 # Check if replacement worked
-otool -l ../build/obs-ndi.so
+otool -L ../build/obs-ndi.so
 
 # Package app
 echo "Generating .pkg"
