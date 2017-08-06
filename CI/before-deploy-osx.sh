@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 export QT_PREFIX="/usr/local/opt/qt5"
+#export QT_PREFIX="$(find /usr/local/Cellar/qt -d 1 | tail -n 1)"
 
 export GIT_HASH=$(git rev-parse --short HEAD)
 
@@ -21,6 +22,9 @@ install_name_tool \
 	-change "$QT_PREFIX/lib/QtGui.framework/Versions/5/QtGui" @rpath/QtGui \
 	-change "$QT_PREFIX/lib/QtCore.framework/Versions/5/QtCore" @rpath/QtCore \
 	../build/obs-ndi.so
+
+# Check if replacement worked
+otool -l ../build/obs-ndi.so
 
 # Package app
 echo "Generating .pkg"
