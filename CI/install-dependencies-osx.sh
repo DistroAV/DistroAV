@@ -2,7 +2,6 @@
 
 # Exit if something fails
 set -e
-
 # Echo all commands before executing
 set -v
 
@@ -15,7 +14,7 @@ sudo installer -pkg ./Packages.pkg -target /
 
 brew update
 brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/fdb7c6e960e830b3bf630850c0002c5df9f68ed8/Formula/qt5.rb
-echo "Qt path: $(find /usr/local/Cellar/qt -d 1 | tail -n 1)"
+echo "Qt path: $(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
 
 # Fetch and untar prebuilt OBS deps that are compatible with older versions of OSX
 wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-nightly/osx-deps.tar.gz
