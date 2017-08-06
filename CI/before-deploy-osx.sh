@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-export QT_PREFIX="$(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
-
 export GIT_HASH=$(git rev-parse --short HEAD)
 export VERSION="$GIT_HASH-$TRAVIS_BRANCH"
 export LATEST_VERSION="$TRAVIS_BRANCH"
@@ -16,9 +14,9 @@ export LATEST_FILENAME="obs-ndi-latest-$LATEST_VERSION.pkg"
 cd ./installer
 
 install_name_tool \
-	-change "$QT_PREFIX/lib/QtWidgets.framework/Versions/5/QtWidgets" @rpath/QtWidgets \
-	-change "$QT_PREFIX/lib/QtGui.framework/Versions/5/QtGui" @rpath/QtGui \
-	-change "$QT_PREFIX/lib/QtCore.framework/Versions/5/QtCore" @rpath/QtCore \
+	-change "/usr/local/opt/qt5/lib/QtWidgets.framework/Versions/5/QtWidgets" @rpath/QtWidgets \
+	-change "/usr/local/opt/qt5/lib/QtGui.framework/Versions/5/QtGui" @rpath/QtGui \
+	-change "/usr/local/opt/qt5/lib/QtCore.framework/Versions/5/QtCore" @rpath/QtCore \
 	../build/obs-ndi.so
 
 # Check if replacement worked
