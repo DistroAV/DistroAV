@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-export QT_PREFIX="$(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
+#export QT_PREFIX="$(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
+export QT_PREFIX="/usr/local/opt/qt"
 
 mkdir build
 cd build
