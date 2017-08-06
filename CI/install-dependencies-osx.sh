@@ -26,7 +26,7 @@ unzip "./NewTek%20NDI%20SDK%20(Apple).zip"
 
 git clone --recursive https://github.com/jp9000/obs-studio.git
 cd ./obs-studio
-git checkout 19.0.2
+git checkout 19.0.3
 mkdir build
 cd build
 cmake -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DDepsPath=/tmp/obsdeps  ..
