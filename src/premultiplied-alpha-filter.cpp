@@ -66,7 +66,7 @@ void alpha_filter_videorender(void* data, gs_effect_t* effect) {
 
 struct obs_source_info create_alpha_filter_info() {
 	struct obs_source_info alpha_filter_info = {};
-	alpha_filter_info.id = "premultiplied_alpha_filter";
+	alpha_filter_info.id = OBS_NDI_ALPHA_FILTER_ID;
 	alpha_filter_info.type = OBS_SOURCE_TYPE_FILTER;
 	alpha_filter_info.output_flags = OBS_SOURCE_VIDEO;
 	alpha_filter_info.get_name = alpha_filter_getname;
