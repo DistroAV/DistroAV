@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2017 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -50,7 +50,7 @@ void* alpha_filter_create(obs_data_t* settings, obs_source_t* source) {
 }
 
 void alpha_filter_destroy(void* data) {
-	struct alpha_filter* s = static_cast<alpha_filter*>(data);
+	UNUSED_PARAMETER(data);
 }
 
 void alpha_filter_videorender(void* data, gs_effect_t* effect) {
