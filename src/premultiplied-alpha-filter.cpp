@@ -17,43 +17,31 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
 #include <obs-module.h>
-#include <obs-frontend-api.h>
-#include <util/platform.h>
-#include <util/threading.h>
-#include <media-io/video-frame.h>
-#include <media-io/audio-resampler.h>
 
 #include "obs-ndi.h"
-
-#define TEXFORMAT GS_BGRA
 
 struct alpha_filter {
 	obs_source_t* context;
 	gs_effect_t* effect;
 };
 
-const char* alpha_filter_getname(void* data)
-{
+const char* alpha_filter_getname(void* data) {
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.PremultipliedAlphaFilterName");
 }
 
-obs_properties_t* alpha_filter_getproperties(void* data)
-{
+obs_properties_t* alpha_filter_getproperties(void* data) {
 	UNUSED_PARAMETER(data);
-
 	obs_properties_t* props = obs_properties_create();
 	return props;
 }
 
-void alpha_filter_update(void* data, obs_data_t* settings)
-{
+void alpha_filter_update(void* data, obs_data_t* settings) {
 	UNUSED_PARAMETER(settings);
 	struct alpha_filter* s = static_cast<alpha_filter*>(data);
 }
 
-void* alpha_filter_create(obs_data_t* settings, obs_source_t* source)
-{
+void* alpha_filter_create(obs_data_t* settings, obs_source_t* source) {
 	struct alpha_filter* s =
 		static_cast<alpha_filter*>(bzalloc(sizeof(struct alpha_filter)));
 	s->context = source;
@@ -61,13 +49,11 @@ void* alpha_filter_create(obs_data_t* settings, obs_source_t* source)
 	return s;
 }
 
-void alpha_filter_destroy(void* data)
-{
+void alpha_filter_destroy(void* data) {
 	struct alpha_filter* s = static_cast<alpha_filter*>(data);
 }
 
-void alpha_filter_videorender(void* data, gs_effect_t* effect)
-{
+void alpha_filter_videorender(void* data, gs_effect_t* effect) {
 	UNUSED_PARAMETER(effect);
 	struct alpha_filter* s = static_cast<alpha_filter*>(data);
 
@@ -78,8 +64,7 @@ void alpha_filter_videorender(void* data, gs_effect_t* effect)
 	obs_source_process_filter_end(s->context, s->effect, 0, 0);
 }
 
-struct obs_source_info create_alpha_filter_info()
-{
+struct obs_source_info create_alpha_filter_info() {
 	struct obs_source_info alpha_filter_info = {};
 	alpha_filter_info.id = "premultiplied_alpha_filter";
 	alpha_filter_info.type = OBS_SOURCE_TYPE_FILTER;
