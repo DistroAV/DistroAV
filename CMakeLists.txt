@@ -27,6 +27,7 @@ set(obs-ndi_SOURCES
 	src/obs-ndi-source.cpp
 	src/obs-ndi-output.cpp
 	src/obs-ndi-filter.cpp
+	src/premultiplied-alpha-filter.cpp
 	src/Config.cpp
 	src/forms/output-settings.cpp)
 
