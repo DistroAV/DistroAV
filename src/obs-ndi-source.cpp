@@ -72,6 +72,9 @@ obs_properties_t* ndi_source_getproperties(void* data) {
     obs_properties_add_bool(props, "ndi_low_bandwidth",
         obs_module_text("NDIPlugin.SourceProps.LowBandwidth"));
 
+    obs_properties_add_bool(props, "ndi_fix_alpha_blending",
+        obs_module_text("NDIPlugin.SourceProps.AlphaBlendingFix"));
+
     obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
         obs_properties_t *pps,
         obs_property_t *prop,
@@ -213,6 +216,22 @@ void ndi_source_update(void* data, obs_data_t* settings) {
         obs_data_get_string(settings, "ndi_source_ip");
     bool lowBandwidth =
         obs_data_get_bool(settings, "ndi_low_bandwidth");
+    bool fixAlphaBlending =
+        obs_data_get_bool(settings, "ndi_fix_alpha_blending");
+
+    if (fixAlphaBlending) {
+        obs_source_t* existing_filter =
+            obs_source_get_filter_by_name(s->source,
+              obs_module_text("NDIPlugin.PremultipliedAlphaFilterName"));
+        if (!existing_filter) {
+            obs_source_t* new_filter =
+                obs_source_create(OBS_NDI_ALPHA_FILTER_ID,
+                  obs_module_text("NDIPlugin.PremultipliedAlphaFilterName"),
+                  nullptr, nullptr);
+            obs_source_filter_add(s->source, new_filter);
+            obs_source_release(new_filter);
+        }
+    }
 
     NDIlib_recv_create_t recv_desc;
     recv_desc.source_to_connect_to = selected_source;

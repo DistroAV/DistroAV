@@ -48,6 +48,9 @@ struct obs_output_info ndi_output_info;
 extern struct obs_source_info create_ndi_filter_info();
 struct obs_source_info ndi_filter_info;
 
+extern struct obs_source_info create_alpha_filter_info();
+struct obs_source_info alpha_filter_info;
+
 const NDIlib_v2* load_ndilib();
 void* loaded_lib = NULL;
 
@@ -89,6 +92,9 @@ bool obs_module_load(void) {
 
     ndi_filter_info = create_ndi_filter_info();
     obs_register_source(&ndi_filter_info);
+
+    alpha_filter_info = create_alpha_filter_info();
+    obs_register_source(&alpha_filter_info);
 
     Config* conf = Config::Current();
     conf->Load();
