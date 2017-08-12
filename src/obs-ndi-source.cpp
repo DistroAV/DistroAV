@@ -66,6 +66,7 @@ struct ndi_source {
     NDIlib_tally_t tally;
     uint32_t no_sources;
     const NDIlib_source_t* ndi_sources;
+    bool alpha_filter_enabled;
 };
 
 const char* ndi_source_getname(void* data) {
@@ -245,10 +246,13 @@ void ndi_source_update(void* data, obs_data_t* settings) {
         obs_data_get_string(settings, "ndi_source_ip");
     bool lowBandwidth =
         obs_data_get_bool(settings, "ndi_low_bandwidth");
-    bool fixAlphaBlending =
+    
+    s->alpha_filter_enabled =
         obs_data_get_bool(settings, "ndi_fix_alpha_blending");
+    // Don't persist this value in settings
+    obs_data_set_bool(settings, "ndi_fix_alpha_blending", false);
 
-    if (fixAlphaBlending) {
+    if (s->alpha_filter_enabled) {
         obs_source_t* existing_filter =
             find_filter_by_id(s->source, OBS_NDI_ALPHA_FILTER_ID);
 
@@ -259,13 +263,6 @@ void ndi_source_update(void* data, obs_data_t* settings) {
                   nullptr, nullptr);
             obs_source_filter_add(s->source, new_filter);
             obs_source_release(new_filter);
-        }
-    } else {
-        obs_source_t* alpha_filter =
-            find_filter_by_id(s->source, OBS_NDI_ALPHA_FILTER_ID);
-        if (alpha_filter) {
-            obs_source_filter_remove(s->source, alpha_filter);
-            obs_source_release(alpha_filter);
         }
     }
 
