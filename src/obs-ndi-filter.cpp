@@ -1,6 +1,7 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016-2017 Stï¿½phane Lepin <stephane.lepin@gmail.com
+Copyright (C) 2016-2017 Stéphane Lepin <stephane.lepin@gmail.com>
+
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
@@ -27,41 +28,37 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #define TEXFORMAT GS_BGRA
 
 struct ndi_filter {
-    obs_source_t *context;
+    obs_source_t* context;
     NDIlib_send_instance_t ndi_sender;
     struct obs_video_info ovi;
     struct obs_audio_info oai;
-    obs_display_t *renderer;
-    gs_stagesurf_t *stagesurface;
-    gs_texrender_t *texrender;
+    obs_display_t* renderer;
+    gs_stagesurf_t* stagesurface;
+    gs_texrender_t* texrender;
     uint32_t last_width;
     uint32_t last_height;
 
-    uint8_t *video_data;
+    uint8_t* video_data;
     uint32_t video_linesize;
 
     bool audio_initialized;
 };
 
-const char* ndi_filter_getname(void *data)
-{
+const char* ndi_filter_getname(void* data) {
     UNUSED_PARAMETER(data);
     return obs_module_text("NDIPlugin.FilterName");
 }
 
-obs_properties_t* ndi_filter_getproperties(void *data)
-{
+obs_properties_t* ndi_filter_getproperties(void* data) {
     UNUSED_PARAMETER(data);
-
     obs_properties_t* props = obs_properties_create();
     obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
     return props;
 }
 
-void ndi_filter_update(void *data, obs_data_t *settings)
-{
+void ndi_filter_update(void* data, obs_data_t* settings) {
     UNUSED_PARAMETER(settings);
-    struct ndi_filter *s = static_cast<ndi_filter *>(data);
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
     NDIlib_send_create_t send_desc;
     send_desc.p_ndi_name = obs_source_get_name(s->context);
@@ -73,17 +70,15 @@ void ndi_filter_update(void *data, obs_data_t *settings)
     s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
 }
 
-void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy)
-{
-    struct ndi_filter *s = static_cast<ndi_filter *>(data);
+void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
-    obs_source_t *target = obs_filter_get_target(s->context);
+    obs_source_t* target = obs_filter_get_target(s->context);
 
     uint32_t width = obs_source_get_base_width(target);
     uint32_t height = obs_source_get_base_height(target);
 
-    if (s->last_width != width || s->last_height != height)
-    {
+    if (s->last_width != width || s->last_height != height) {
         gs_stagesurface_unmap(s->stagesurface);
         gs_stagesurface_destroy(s->stagesurface);
 
@@ -98,8 +93,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy)
     gs_blend_state_push();
     gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-    if (gs_texrender_begin(s->texrender, width, height))
-    {
+    if (gs_texrender_begin(s->texrender, width, height)) {
         struct vec4 background;
         vec4_zero(&background);
 
@@ -131,10 +125,9 @@ void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy)
     gs_blend_state_pop();
 }
 
-void* ndi_filter_create(obs_data_t *settings, obs_source_t *source)
-{
-    struct ndi_filter *s =
-        static_cast<ndi_filter *>(bzalloc(sizeof(struct ndi_filter)));
+void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
+    struct ndi_filter* s =
+        static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
 
     s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
@@ -167,9 +160,8 @@ void* ndi_filter_create(obs_data_t *settings, obs_source_t *source)
     return s;
 }
 
-void ndi_filter_destroy(void *data)
-{
-    struct ndi_filter *s = static_cast<ndi_filter *>(data);
+void ndi_filter_destroy(void* data) {
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
     obs_display_destroy(s->renderer);
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
@@ -179,26 +171,22 @@ void ndi_filter_destroy(void *data)
     gs_texrender_destroy(s->texrender);
 }
 
-void ndi_filter_tick(void *data, float seconds)
-{
-    struct ndi_filter *s = static_cast<ndi_filter *>(data);
+void ndi_filter_tick(void* data, float seconds) {
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
     obs_get_video_info(&s->ovi);
     obs_get_audio_info(&s->oai);
     gs_texrender_reset(s->texrender);
 }
 
-void ndi_filter_videorender(void *data, gs_effect_t *effect)
-{
+void ndi_filter_videorender(void* data, gs_effect_t* effect) {
     UNUSED_PARAMETER(effect);
-    struct ndi_filter *s = static_cast<ndi_filter *>(data);
-
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
     obs_source_skip_video_filter(s->context);
 }
 
 struct obs_audio_data* ndi_filter_audiofilter(void *data,
-    struct obs_audio_data *audio_data)
-{
+        struct obs_audio_data *audio_data) {
     struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
     NDIlib_audio_frame_t audio_frame = { 0 };
@@ -212,8 +200,7 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data,
         audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
     uint8_t* ndi_data = (uint8_t*)bmalloc(data_size);
 
-    for (int i = 0; i < audio_frame.no_channels; i++)
-    {
+    for (int i = 0; i < audio_frame.no_channels; i++) {
         memcpy(&ndi_data[i * audio_frame.channel_stride_in_bytes],
             audio_data->data[i],
             audio_frame.channel_stride_in_bytes);
@@ -227,8 +214,7 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data,
     return audio_data;
 }
 
-struct obs_source_info create_ndi_filter_info()
-{
+struct obs_source_info create_ndi_filter_info() {
     struct obs_source_info ndi_filter_info = {};
     ndi_filter_info.id				= "ndi_filter";
     ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
