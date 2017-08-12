@@ -26,6 +26,35 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 
 #include "obs-ndi.h"
 
+obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
+    if (!context)
+        return nullptr;
+
+    struct search_context {
+        const char* query;
+        obs_source_t* result;
+    };
+
+    struct search_context filter_search;
+    filter_search.query = id;
+    filter_search.result = nullptr;
+
+    obs_source_enum_filters(context,
+        [](obs_source_t*, obs_source_t* filter, void* param) {
+            struct search_context* filter_search =
+                static_cast<struct search_context*>(param);
+
+            const char* id = obs_source_get_id(filter);
+            if (strcmp(id, filter_search->query) == 0) {
+                obs_source_addref(filter);
+                filter_search->result = filter;
+            }
+        },
+    &filter_search);
+
+    return filter_search.result;
+}
+
 extern NDIlib_find_instance_t ndi_finder;
 
 struct ndi_source {
@@ -221,8 +250,8 @@ void ndi_source_update(void* data, obs_data_t* settings) {
 
     if (fixAlphaBlending) {
         obs_source_t* existing_filter =
-            obs_source_get_filter_by_name(s->source,
-              obs_module_text("NDIPlugin.PremultipliedAlphaFilterName"));
+            find_filter_by_id(s->source, OBS_NDI_ALPHA_FILTER_ID);
+
         if (!existing_filter) {
             obs_source_t* new_filter =
                 obs_source_create(OBS_NDI_ALPHA_FILTER_ID,
@@ -230,6 +259,13 @@ void ndi_source_update(void* data, obs_data_t* settings) {
                   nullptr, nullptr);
             obs_source_filter_add(s->source, new_filter);
             obs_source_release(new_filter);
+        }
+    } else {
+        obs_source_t* alpha_filter =
+            find_filter_by_id(s->source, OBS_NDI_ALPHA_FILTER_ID);
+        if (alpha_filter) {
+            obs_source_filter_remove(s->source, alpha_filter);
+            obs_source_release(alpha_filter);
         }
     }
 
