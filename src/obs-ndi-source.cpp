@@ -99,6 +99,9 @@ obs_properties_t* ndi_source_getproperties(void* data) {
         return true;
     });
 
+    obs_properties_add_bool(props, "ndi_recv_hw_accel",
+        obs_module_text("NDIPlugin.SourceProps.HWAccel"));
+
     obs_properties_add_bool(props, "ndi_low_bandwidth",
         obs_module_text("NDIPlugin.SourceProps.LowBandwidth"));
 
@@ -249,6 +252,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     selected_source.p_ip_address =
         obs_data_get_string(settings, "ndi_source_ip");
 
+    bool hwAccelEnabled = obs_data_get_bool(settings, "ndi_recv_hw_accel");
     bool lowBandwidth =
         obs_data_get_bool(settings, "ndi_low_bandwidth");
     
@@ -286,9 +290,21 @@ void ndi_source_update(void* data, obs_data_t* settings) {
 
     s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
+        if (hwAccelEnabled) {
+            NDIlib_metadata_frame_t hwAccelMetadata;
+            hwAccelMetadata.p_data = "<ndi_hwaccel enabled=\"true\"/>";
+            ndiLib->NDIlib_recv_send_metadata(
+                s->ndi_receiver, &hwAccelMetadata);
+        }
+
         s->running = true;
         pthread_create(&s->video_thread, nullptr, ndi_source_poll_video, data);
         pthread_create(&s->audio_thread, nullptr, ndi_source_poll_audio, data);
+
+        // Update tally status
+        s->tally.on_preview = obs_source_showing(s->source);
+        s->tally.on_program = obs_source_active(s->source);
+        ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &s->tally);
     } else {
         blog(LOG_ERROR,
             "can't create a receiver for NDI source '%s'",
