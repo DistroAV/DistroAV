@@ -199,7 +199,8 @@ const NDIlib_v3* load_ndilib() {
         QString libPath = QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME);
         void* lib = os_dlopen(libPath.toUtf8().constData());
         if (lib) {
-            blog(LOG_INFO, "Found NDI library at '%s'", libPath);
+            blog(LOG_INFO, "Found NDI library at '%s'",
+                libPath.toUtf8().constData());
 
             loaded_lib = lib;
             const NDIlib_v3* (*lib_load)(void) =
