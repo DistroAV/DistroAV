@@ -199,10 +199,13 @@ QString FindNDILib() {
         path = "/usr/lib/libndi.so";
     #elif defined(__APPLE__)
         struct stat stats;
-        if (os_stat("/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.3.dylib", &stats) == 0) {
-            path = "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.3.dylib";
+        QString candidate =
+            "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/"
+            + NDILIB_LIBRARY_NAME;
+        if (os_stat(candidate.toUtf8().constData(), &stats) == 0) {
+            path = candidate;
         } else {
-            path = "./libndi.3.dylib";
+            path = "./" + NDILIB_LIBRARY_NAME;
         }
     #endif
 
