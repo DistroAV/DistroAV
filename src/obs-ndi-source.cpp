@@ -222,9 +222,7 @@ void* ndi_source_poll_video(void* data) {
                     break;
             }
 
-            // New timestamp field should cause less sync issues
-            // because it filled by the SDK independently of the source's timecode
-            obs_video_frame.timestamp = video_frame.timestamp;
+            obs_video_frame.timestamp = video_frame.timecode;
             obs_video_frame.width = video_frame.xres;
             obs_video_frame.height = video_frame.yres;
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
