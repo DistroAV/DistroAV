@@ -4,8 +4,8 @@ environment:
 install:
   - git submodule update --init --recursive
   - cd C:\projects\
-  - if not exist ndi-sdk-slim.zip curl -kLO https://www.slepin.fr/obs-ndi/ci/ndi-sdk-slim.zip -f --retry 5 -C -
-  - 7z x ndi-sdk-slim.zip -o"NDI_SDK"
+  - if not exist ndisdk-slim-v3-win.zip curl -kLO https://www.slepin.fr/obs-ndi/ci/ndisdk-slim-v3-win.zip -f --retry 5 -C -
+  - 7z x ndisdk-slim-v3-win.zip -o"NDI_SDK"
   - if not exist dependencies2013.zip curl -kLO https://obsproject.com/downloads/dependencies2013.zip -f --retry 5 -C -
   - 7z x dependencies2013.zip -odependencies2013
   - if not exist qt570.zip curl -kLO https://www.slepin.fr/obs-websocket/ci/qt570.zip -f --retry 5 -C -
@@ -51,4 +51,4 @@ test: off
 cache:
   - C:\projects\dependencies2013.zip
   - C:\projects\qt570.zip
-  - C:\projects\ndi-sdk-slim.zip
+  - C:\projects\ndisdk-slim-v3-win.zip

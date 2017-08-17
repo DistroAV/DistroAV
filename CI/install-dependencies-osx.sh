@@ -20,9 +20,9 @@ brew install qt5
 wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-nightly/osx-deps.tar.gz
 tar -xf ./osx-deps.tar.gz -C /tmp
 
-curl -kLO "https://obs-nightly.s3-us-west-2.amazonaws.com/NewTek%20NDI%20SDK%20(Apple).zip" -f --retry 5
+curl -kLO "https://www.slepin.fr/obs-ndi/ci/ndisdk-slim-v3-apple.zip" -f --retry 5
 ls
-unzip "./NewTek%20NDI%20SDK%20(Apple).zip"
+unzip "./ndisdk-slim-v3-apple.zip"
 
 git clone --recursive https://github.com/jp9000/obs-studio.git
 cd ./obs-studio

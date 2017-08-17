@@ -53,7 +53,7 @@
 																			<key>GID</key>
 																			<integer>80</integer>
 																			<key>PATH</key>
-																			<string>../../NDI SDK for Apple/lib/x64/libndi.dylib</string>
+																			<string>../../NDI SDK for Apple/lib/x64/libndi.3.dylib</string>
 																			<key>PATH_TYPE</key>
 																			<integer>1</integer>
 																			<key>PERMISSIONS</key>

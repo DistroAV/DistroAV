@@ -17,13 +17,13 @@ PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
 	--pkglicense="LGPLv2.1" --maintainer="stephane.lepin@gmail.com" \
-	--requires="libndi1" --pkggroup="video" \
+	--requires="libndi3" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
 	--pakdir="/package"
 
 PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi1 --pkgversion="2.0" \
+        --pkgname=libndi3 --pkgversion="3.0.1" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
