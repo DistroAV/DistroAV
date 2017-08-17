@@ -192,9 +192,7 @@ QString FindNDILib() {
         }
 
         blog(LOG_INFO, "Found NDI runtime at %s", runtime_dir);
-
-        QString dll_file = NDILIB_LIBRARY_NAME;
-        path = QDir(runtime_dir).absolutePath() + "\\" + dll_file;
+        path = QDir(runtime_dir).absoluteFilePath(NDILIB_LIBRARY_NAME);
     #elif defined(__linux__)
         path = "/usr/lib/libndi.so";
     #elif defined(__APPLE__)
