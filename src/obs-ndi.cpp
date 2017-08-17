@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016-2017 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2017 Stï¿½phane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,11 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
+#include <QDir>
 #include <QMainWindow>
 #include <QAction>
 #include <QMessageBox>
+#include <QString>
 
 #include "obs-ndi.h"
 #include "Config.h"
@@ -37,7 +39,7 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-const NDIlib_v2* ndiLib = NULL;
+const NDIlib_v3* ndiLib = NULL;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -51,7 +53,7 @@ struct obs_source_info ndi_filter_info;
 extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
-const NDIlib_v2* load_ndilib();
+const NDIlib_v3* load_ndilib();
 void* loaded_lib = NULL;
 
 NDIlib_find_instance_t ndi_finder;
@@ -82,7 +84,7 @@ bool obs_module_load(void) {
     NDIlib_find_create_t find_desc = {0};
     find_desc.show_local_sources = true;
     find_desc.p_groups = NULL;
-    ndi_finder = ndiLib->NDIlib_find_create(&find_desc);
+    ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
 
     ndi_source_info = create_ndi_source_info();
     obs_register_source(&ndi_source_info);
@@ -179,41 +181,28 @@ bool main_output_is_running() {
     return main_output_running;
 }
 
-const char* GetNDILibPath() {
-    char* path = NULL;
+QString FindNDILib() {
+    QString path;
 
     #if defined(_WIN32) || defined(_WIN64)
-        const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
-        if (!runtime_dir) {
-            blog(LOG_ERROR, "Environment variable NDI_RUNTIME_DIR_V2 not set.");
+        QString runtime_dir = getenv(NDILIB_REDIST_FOLDER);
+        if (runtime_dir.isEmpty()) {
+            blog(LOG_ERROR, "Runtime environment variable not set.");
             return NULL;
         }
 
-        blog(LOG_INFO, "Found NDI runtime directory at %s", runtime_dir);
+        blog(LOG_INFO, "Found NDI runtime at %s", runtime_dir);
 
-        const char* dll_file;
-        #if defined(_WIN64)
-        dll_file = "Processing.NDI.Lib.x64.dll";
-        #elif defined(_WIN32)
-        dll_file = "Processing.NDI.Lib.x86.dll";
-        #endif
-
-        int buf_size = strlen(runtime_dir) + strlen(dll_file) + 3;
-        path = (char*)bmalloc(buf_size);
-        memset(path, 0, buf_size);
-
-        strcat(path, runtime_dir);
-        strcat(path, "\\");
-        strcat(path, dll_file);
+        QString dll_file = NDILIB_LIBRARY_NAME;
+        path = QDir(runtime_dir).absolutePath() + "\\" + dll_file;
     #elif defined(__linux__)
-        // TODO : make a redistributable NDI package for Linux x86 and x86_64
-        path = "/usr/lib/libndi.so.1.0.1";
+        path = "/usr/lib/libndi.so";
     #elif defined(__APPLE__)
         struct stat stats;
-        if (os_stat("/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib", &stats) == 0) {
-            path = "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib";
+        if (os_stat("/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.3.dylib", &stats) == 0) {
+            path = "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.3.dylib";
         } else {
-            path = "./libndi.dylib";
+            path = "./libndi.3.dylib";
         }
     #endif
 
@@ -223,13 +212,13 @@ const char* GetNDILibPath() {
 
 const NDIlib_v2* load_ndilib()
 {
-    const char* dll_file = GetNDILibPath();
-    if (!dll_file) {
+    QString dll_file = FindNDILib();
+    if (dll_file.isEmpty()) {
         blog(LOG_ERROR, "GetNDILibPath() returned a null pointer");
         return NULL;
     }
 
-    loaded_lib = os_dlopen(dll_file);
+    loaded_lib = os_dlopen(dll_file.toUtf8().constData());
     if (loaded_lib) {
         const NDIlib_v2* (*lib_load)(void) =
             (const NDIlib_v2*(*)())os_dlsym(loaded_lib, "NDIlib_v2_load");

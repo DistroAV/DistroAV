@@ -4,7 +4,7 @@
 #include "C:\Program Files (x86)\Inno Download Plugin\idp.iss"
 
 #define MyAppName "obs-ndi"
-#define MyAppVersion "4.0.2"
+#define MyAppVersion "4.1.0"
 #define MyAppPublisher "St�phane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
@@ -44,7 +44,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 [Code]
 const
-  ndiRedistURL = 'http://new.tk/NDIRedistV2';
+  ndiRedistURL = 'http://new.tk/NDIRedistV3';
 
 procedure InitializeWizard;
 begin

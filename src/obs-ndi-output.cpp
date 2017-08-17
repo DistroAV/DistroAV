@@ -116,7 +116,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
     uint32_t width = o->video_info.output_width;
     uint32_t height = o->video_info.output_height;
 
-    NDIlib_video_frame_t video_frame = {0};
+    NDIlib_video_frame_v2_t video_frame = {0};
     video_frame.xres = width;
     video_frame.yres = height;
     video_frame.FourCC = NDIlib_FourCC_type_UYVY;
@@ -129,14 +129,14 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
     video_frame.p_data = frame->data[0];
     video_frame.line_stride_in_bytes = frame->linesize[0];
 
-    ndiLib->NDIlib_send_send_video_async(o->ndi_sender, &video_frame);
+    ndiLib->NDIlib_send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
 void ndi_output_rawaudio(void* data, struct audio_data* frame) {
     struct ndi_output* o = static_cast<ndi_output*>(data);
     if (!o->started) return;
 
-    NDIlib_audio_frame_t audio_frame = {0};
+    NDIlib_audio_frame_v2_t audio_frame = {0};
     audio_frame.sample_rate = o->audio_info.samples_per_sec;
     audio_frame.no_channels = o->audio_info.speakers;
     audio_frame.no_samples = frame->frames;
@@ -155,7 +155,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame) {
     audio_frame.p_data = (float*)audio_data;
     audio_frame.timecode = frame->timestamp;
 
-    ndiLib->NDIlib_send_send_audio(o->ndi_sender, &audio_frame);
+    ndiLib->NDIlib_send_send_audio_v2(o->ndi_sender, &audio_frame);
     bfree(audio_data);
 }
 

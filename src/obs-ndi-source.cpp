@@ -131,13 +131,13 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 void* ndi_source_poll_audio(void* data) {
     struct ndi_source* s = static_cast<ndi_source*>(data);
 
-    NDIlib_audio_frame_t audio_frame;
+    NDIlib_audio_frame_v2_t audio_frame;
     obs_source_audio obs_audio_frame = {0};
 
     NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
     while (s->running) {
-        frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver,
-            NULL, &audio_frame, NULL, 1000);
+        frame_received = ndiLib->NDIlib_recv_capture_v2(
+            s->ndi_receiver, nullptr, &audio_frame, nullptr, 100);
 
         if (frame_received == NDIlib_frame_type_audio) {
             switch (audio_frame.no_channels) {
@@ -178,7 +178,7 @@ void* ndi_source_poll_audio(void* data) {
             }
 
             obs_source_output_audio(s->source, &obs_audio_frame);
-            ndiLib->NDIlib_recv_free_audio(s->ndi_receiver, &audio_frame);
+            ndiLib->NDIlib_recv_free_audio_v2(s->ndi_receiver, &audio_frame);
         }
     }
 
@@ -188,13 +188,13 @@ void* ndi_source_poll_audio(void* data) {
 void* ndi_source_poll_video(void* data) {
     struct ndi_source* s = static_cast<ndi_source*>(data);
 
-    NDIlib_video_frame_t video_frame;
+    NDIlib_video_frame_v2_t video_frame;
     obs_source_frame obs_video_frame = {0};
 
     NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
     while (s->running) {
-        frame_received = ndiLib->NDIlib_recv_capture(s->ndi_receiver,
-            &video_frame, NULL, NULL, 1000);
+        frame_received = ndiLib->NDIlib_recv_capture_v2(s->ndi_receiver,
+            &video_frame, nullptr, nullptr, 1000);
 
         if (frame_received == NDIlib_frame_type_video) {
             switch (video_frame.FourCC) {
@@ -229,7 +229,7 @@ void* ndi_source_poll_video(void* data) {
 
             obs_source_output_video(s->source, &obs_video_frame);
 
-            ndiLib->NDIlib_recv_free_video(s->ndi_receiver, &video_frame);
+            ndiLib->NDIlib_recv_free_video_v2(s->ndi_receiver, &video_frame);
         }
     }
 
@@ -278,7 +278,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     pthread_cancel(s->audio_thread);
     ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 
-    s->ndi_receiver = ndiLib->NDIlib_recv_create2(&recv_desc);
+    s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
         s->running = true;
         pthread_create(&s->video_thread, NULL, ndi_source_poll_video, data);
