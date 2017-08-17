@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016 Stï¿½phane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <Processing.NDI.utilities.h>
 #include <Processing.NDI.DynamicLoad.h>
 
-#define OBS_NDI_VERSION "4.0.1"
+#define OBS_NDI_VERSION "4.0.2"
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
