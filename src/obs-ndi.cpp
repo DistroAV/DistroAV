@@ -26,10 +26,12 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
 #include <QDir>
+#include <QProcess>
 #include <QMainWindow>
 #include <QAction>
 #include <QMessageBox>
 #include <QString>
+#include <QStringList>
 
 #include "obs-ndi.h"
 #include "Config.h"
@@ -181,51 +183,32 @@ bool main_output_is_running() {
     return main_output_running;
 }
 
-QString FindNDILib() {
-    QString path;
-
-    #if defined(_WIN32) || defined(_WIN64)
-        QString runtime_dir = getenv(NDILIB_REDIST_FOLDER);
-        if (runtime_dir.isEmpty()) {
-            blog(LOG_ERROR, "Runtime environment variable not set.");
-            return NULL;
-        }
-
-        blog(LOG_INFO, "Found NDI runtime at %s", runtime_dir);
-        path = QDir(runtime_dir).absoluteFilePath(NDILIB_LIBRARY_NAME);
-    #elif defined(__linux__)
-        path = "/usr/lib/libndi.so";
-    #elif defined(__APPLE__)
-        struct stat stats;
-        QString candidate =
-            "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/"
-            + NDILIB_LIBRARY_NAME;
-        if (os_stat(candidate.toUtf8().constData(), &stats) == 0) {
-            path = candidate;
-        } else {
-            path = "./" + NDILIB_LIBRARY_NAME;
-        }
-    #endif
-
-    blog(LOG_INFO, "Found NDI library at %s", path);
-    return path;
-}
-
-const NDIlib_v2* load_ndilib()
+const NDIlib_v3* load_ndilib()
 {
-    QString dll_file = FindNDILib();
-    if (dll_file.isEmpty()) {
-        blog(LOG_ERROR, "GetNDILibPath() returned a null pointer");
-        return NULL;
-    }
+    QStringList locations;
+    locations << QProcessEnvironment().value(NDILIB_REDIST_FOLDER);
+#ifdef __linux__
+    locations << "/usr/lib";
+    locations << "/usr/local/lib";
+#endif
+#ifdef __APPLE__
+    locations << "/Library/Application Support/obs-studio/plugins/obs-ndi/bin";
+    locations << "./";
+#endif
 
-    loaded_lib = os_dlopen(dll_file.toUtf8().constData());
-    if (loaded_lib) {
-        const NDIlib_v2* (*lib_load)(void) =
-            (const NDIlib_v2*(*)())os_dlsym(loaded_lib, "NDIlib_v2_load");
-        return lib_load();
+    for (QString path : locations) {
+        QString libPath = QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME);
+        void* lib = os_dlopen(libPath.toUtf8().constData());
+        if (lib) {
+            blog(LOG_INFO, "Found NDI library at %s", libPath);
+
+            loaded_lib = lib;
+            const NDIlib_v3* (*lib_load)(void) =
+                (const NDIlib_v3*(*)())os_dlsym(loaded_lib, "NDIlib_v3_load");
+            return lib_load();
+        }
     }
 
     blog(LOG_ERROR, "Can't find the NDI library");
-    return NULL;
+    return nullptr;    
 }
