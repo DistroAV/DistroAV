@@ -182,7 +182,7 @@ void* ndi_source_poll_audio(void* data) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 void* ndi_source_poll_video(void* data) {
@@ -217,7 +217,8 @@ void* ndi_source_poll_video(void* data) {
                     break;
             }
 
-            obs_video_frame.timestamp = video_frame.timecode;
+            // New timestamp field seems to cause less sync issues
+            obs_video_frame.timestamp = video_frame.timestamp;
             obs_video_frame.width = video_frame.xres;
             obs_video_frame.height = video_frame.yres;
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
@@ -233,7 +234,7 @@ void* ndi_source_poll_video(void* data) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 void ndi_source_update(void* data, obs_data_t* settings) {
@@ -244,6 +245,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
         obs_data_get_string(settings, "ndi_source_name");
     selected_source.p_ip_address =
         obs_data_get_string(settings, "ndi_source_ip");
+
     bool lowBandwidth =
         obs_data_get_bool(settings, "ndi_low_bandwidth");
     
@@ -272,6 +274,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
         (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
     recv_desc.allow_video_fields = true;
     recv_desc.color_format = NDIlib_recv_color_format_e_UYVY_BGRA;
+    //recv_desc.color_format = NDIlib_recv_color_format_fastest;
 
     s->running = false;
     pthread_cancel(s->video_thread);
@@ -281,8 +284,8 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
         s->running = true;
-        pthread_create(&s->video_thread, NULL, ndi_source_poll_video, data);
-        pthread_create(&s->audio_thread, NULL, ndi_source_poll_audio, data);
+        pthread_create(&s->video_thread, nullptr, ndi_source_poll_video, data);
+        pthread_create(&s->audio_thread, nullptr, ndi_source_poll_audio, data);
     } else {
         blog(LOG_ERROR,
             "can't create a receiver for NDI source '%s'",

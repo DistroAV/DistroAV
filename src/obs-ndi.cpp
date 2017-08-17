@@ -130,8 +130,7 @@ bool obs_module_load(void) {
     return true;
 }
 
-void obs_module_unload()
-{
+void obs_module_unload() {
     blog(LOG_INFO, "goodbye !");
 
     if (ndiLib) {
@@ -183,8 +182,7 @@ bool main_output_is_running() {
     return main_output_running;
 }
 
-const NDIlib_v3* load_ndilib()
-{
+const NDIlib_v3* load_ndilib() {
     QStringList locations;
     locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
 #ifdef __linux__
