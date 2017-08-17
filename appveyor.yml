@@ -18,7 +18,7 @@ install:
   - set build_config=Release
   - git clone --recursive https://github.com/jp9000/obs-studio
   - cd C:\projects\obs-studio\
-  - git checkout 19.0.3
+  - git checkout 20.0.1
   - mkdir build
   - mkdir build32
   - mkdir build64
