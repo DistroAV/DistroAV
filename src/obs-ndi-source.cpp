@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016-2017 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2017 StÃ©phane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -134,6 +134,9 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 void* ndi_source_poll_audio(void* data) {
     struct ndi_source* s = static_cast<ndi_source*>(data);
 
+    blog(LOG_INFO, "audio thread for '%s' started",
+                        obs_source_get_name(s->source));
+
     NDIlib_audio_frame_v2_t audio_frame;
     obs_source_audio obs_audio_frame = {0};
 
@@ -186,11 +189,16 @@ void* ndi_source_poll_audio(void* data) {
         }
     }
 
+    blog(LOG_INFO, "audio thread for '%s' completed",
+                obs_source_get_name(s->source));
     return nullptr;
 }
 
 void* ndi_source_poll_video(void* data) {
     struct ndi_source* s = static_cast<ndi_source*>(data);
+
+    blog(LOG_INFO, "video thread for '%s' started",
+                    obs_source_get_name(s->source));
 
     NDIlib_video_frame_v2_t video_frame;
     obs_source_frame obs_video_frame = {0};
@@ -198,7 +206,7 @@ void* ndi_source_poll_video(void* data) {
     NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
     while (s->running) {
         frame_received = ndiLib->NDIlib_recv_capture_v2(s->ndi_receiver,
-            &video_frame, nullptr, nullptr, 1000);
+            &video_frame, nullptr, nullptr, 100);
 
         if (frame_received == NDIlib_frame_type_video) {
             switch (video_frame.FourCC) {
@@ -238,11 +246,21 @@ void* ndi_source_poll_video(void* data) {
         }
     }
 
+    blog(LOG_INFO, "video thread for '%s' completed",
+            obs_source_get_name(s->source));
     return nullptr;
 }
 
 void ndi_source_update(void* data, obs_data_t* settings) {
     struct ndi_source* s = static_cast<ndi_source*>(data);
+
+    if(s->running) {
+        s->running = false;
+        pthread_join(s->video_thread, NULL);
+        pthread_join(s->audio_thread, NULL);
+    }
+    s->running = false;
+    ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 
     NDIlib_source_t selected_source;
     selected_source.p_ndi_name =
@@ -280,11 +298,6 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     recv_desc.allow_video_fields = true;
     recv_desc.color_format = NDIlib_recv_color_format_fastest;
 
-    s->running = false;
-    pthread_cancel(s->video_thread);
-    pthread_cancel(s->audio_thread);
-    ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
-
     s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
         if (hwAccelEnabled) {
@@ -297,6 +310,9 @@ void ndi_source_update(void* data, obs_data_t* settings) {
         s->running = true;
         pthread_create(&s->video_thread, nullptr, ndi_source_poll_video, data);
         pthread_create(&s->audio_thread, nullptr, ndi_source_poll_audio, data);
+
+        blog(LOG_INFO, "started A/V threads for source '%s' at addr '%s'",
+                selected_source.p_ndi_name, selected_source.p_ip_address);
 
         // Update tally status
         s->tally.on_preview = obs_source_showing(s->source);
@@ -349,8 +365,7 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
     struct ndi_source* s =
         static_cast<ndi_source*>(bzalloc(sizeof(struct ndi_source)));
     s->source = source;
-    s->running = true;
-
+    s->running = false;
     ndi_source_update(s, settings);
     return s;
 }
@@ -358,8 +373,8 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
 void ndi_source_destroy(void* data) {
     struct ndi_source* s = static_cast<ndi_source*>(data);
     s->running = false;
-    pthread_cancel(s->video_thread);
-    pthread_cancel(s->audio_thread);
+    pthread_join(s->video_thread, NULL);
+    pthread_join(s->audio_thread, NULL);
     ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 }
 
