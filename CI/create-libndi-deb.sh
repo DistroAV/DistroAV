@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LIB_PATH="/root/ndisdk/lib/x86_64-linux-gnu-4.7/libndi.so.1.0.1"
+LIBS_PATH="/root/ndisdk/lib/x86_64-linux-gnu"
 
-cp $LIB_PATH /usr/lib/
-ln -s /usr/lib/libndi.so.1.0.1 /usr/lib/libndi.so.1
+chmod +x $LIBS_PATH/libndi*
+cp $LIBS_PATH/libndi* /usr/lib/

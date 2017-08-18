@@ -53,7 +53,7 @@
 																			<key>GID</key>
 																			<integer>80</integer>
 																			<key>PATH</key>
-																			<string>../../NDI SDK for Apple/lib/x64/libndi.dylib</string>
+																			<string>../../NDI SDK for Apple/lib/x64/libndi.3.dylib</string>
 																			<key>PATH_TYPE</key>
 																			<integer>1</integer>
 																			<key>PERMISSIONS</key>
@@ -557,7 +557,7 @@
 				<key>RELOCATABLE</key>
 				<false/>
 				<key>VERSION</key>
-				<string>4.0.2</string>
+				<string>4.1.0</string>
 			</dict>
 			<key>UUID</key>
 			<string>B687A502-5EF9-4574-854F-64FE86F50ED6</string>

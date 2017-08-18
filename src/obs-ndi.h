@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016 St�phane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -19,26 +19,9 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #ifndef OBSNDI_H
 #define OBSNDI_H
 
-#ifdef _WIN32
-    #define PROCESSINGNDILIB_DEPRECATED __declspec(deprecated)
-    #define PROCESSINGNDILIB_API extern "C" __declspec(dllimport)
-#else
-    #define PROCESSINGNDILIB_DEPRECATED
-    #define PROCESSINGNDILIB_API extern "C" __attribute((visibility("default")))
-#endif
+#include <Processing.NDI.Lib.h>
 
-#include <Processing.NDI.compat.h>
-#include <Processing.NDI.structs.h>
-
-#include <Processing.NDI.Find.h>
-#include <Processing.NDI.Recv.h>
-#include <Processing.NDI.Send.h>
-#include <Processing.NDI.Routing.h>
-
-#include <Processing.NDI.utilities.h>
-#include <Processing.NDI.DynamicLoad.h>
-
-#define OBS_NDI_VERSION "4.0.2"
+#define OBS_NDI_VERSION "4.1.0"
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
@@ -47,6 +30,6 @@ void main_output_start(const char* output_name);
 void main_output_stop();
 bool main_output_is_running();
 
-extern const NDIlib_v2* ndiLib;
+extern const NDIlib_v3* ndiLib;
 
 #endif // OBSNDI_H

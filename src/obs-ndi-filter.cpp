@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016-2017 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2017 StÃ©phane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -106,7 +106,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
         gs_stage_texture(s->stagesurface,
             gs_texrender_get_texture(s->texrender));
 
-        NDIlib_video_frame_t video_frame = { 0 };
+        NDIlib_video_frame_v2_t video_frame = { 0 };
         video_frame.xres = s->last_width;
         video_frame.yres = s->last_height;
         video_frame.FourCC = NDIlib_FourCC_type_BGRA;
@@ -119,7 +119,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
         video_frame.p_data = s->video_data;
         video_frame.line_stride_in_bytes = s->video_linesize;
 
-        ndiLib->NDIlib_send_send_video_async(s->ndi_sender, &video_frame);
+        ndiLib->NDIlib_send_send_video_async_v2(s->ndi_sender, &video_frame);
     }
 
     gs_blend_state_pop();
@@ -189,7 +189,7 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data,
         struct obs_audio_data *audio_data) {
     struct ndi_filter *s = static_cast<ndi_filter *>(data);
 
-    NDIlib_audio_frame_t audio_frame = { 0 };
+    NDIlib_audio_frame_v2_t audio_frame = { 0 };
     audio_frame.sample_rate = s->oai.samples_per_sec;
     audio_frame.no_channels = s->oai.speakers;
     audio_frame.timecode = audio_data->timestamp;
@@ -208,7 +208,7 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data,
 
     audio_frame.p_data = (float*)ndi_data;
 
-    ndiLib->NDIlib_send_send_audio(s->ndi_sender, &audio_frame);
+    ndiLib->NDIlib_send_send_audio_v2(s->ndi_sender, &audio_frame);
     bfree(ndi_data);
 
     return audio_data;

@@ -1,6 +1,6 @@
 /*
 obs-ndi (NDI I/O in OBS Studio)
-Copyright (C) 2016-2017 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2017 StÃ©phane Lepin <stephane.lepin@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,15 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
+#include <QDir>
+#include <QFileInfo>
+#include <QProcess>
+#include <QLibrary>
 #include <QMainWindow>
 #include <QAction>
 #include <QMessageBox>
+#include <QString>
+#include <QStringList>
 
 #include "obs-ndi.h"
 #include "Config.h"
@@ -37,7 +43,7 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-const NDIlib_v2* ndiLib = NULL;
+const NDIlib_v3* ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -51,8 +57,10 @@ struct obs_source_info ndi_filter_info;
 extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
-const NDIlib_v2* load_ndilib();
-void* loaded_lib = NULL;
+const NDIlib_v3* load_ndilib();
+
+typedef const NDIlib_v3* (*NDIlib_v3_load_)(void);
+QLibrary* loaded_lib = nullptr;
 
 NDIlib_find_instance_t ndi_finder;
 obs_output_t* main_out;
@@ -79,10 +87,12 @@ bool obs_module_load(void) {
         return false;
     }
 
+    blog(LOG_INFO, "NDI library initialized successfully");
+
     NDIlib_find_create_t find_desc = {0};
     find_desc.show_local_sources = true;
     find_desc.p_groups = NULL;
-    ndi_finder = ndiLib->NDIlib_find_create(&find_desc);
+    ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
 
     ndi_source_info = create_ndi_source_info();
     obs_register_source(&ndi_source_info);
@@ -126,8 +136,7 @@ bool obs_module_load(void) {
     return true;
 }
 
-void obs_module_unload()
-{
+void obs_module_unload() {
     blog(LOG_INFO, "goodbye !");
 
     if (ndiLib) {
@@ -179,63 +188,48 @@ bool main_output_is_running() {
     return main_output_running;
 }
 
-const char* GetNDILibPath() {
-    char* path = NULL;
+const NDIlib_v3* load_ndilib() {
+    QStringList locations;
+    locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
+#ifdef __linux__
+    locations << "/usr/lib";
+    locations << "/usr/local/lib";
+#endif
+#ifdef __APPLE__
+    locations << "/Library/Application Support/obs-studio/plugins/obs-ndi/bin";
+    locations << "./";
+#endif
 
-    #if defined(_WIN32) || defined(_WIN64)
-        const char* runtime_dir = getenv("NDI_RUNTIME_DIR_V2");
-        if (!runtime_dir) {
-            blog(LOG_ERROR, "Environment variable NDI_RUNTIME_DIR_V2 not set.");
-            return NULL;
+    for (QString path : locations) {
+        blog(LOG_INFO, "Trying '%s'", path.toUtf8().constData());
+        QFileInfo libPath(QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME));
+
+        if (libPath.exists() && libPath.isFile()) {
+            QString libFilePath = libPath.absoluteFilePath();
+            blog(LOG_INFO, "Found NDI library at '%s'",
+                libFilePath.toUtf8().constData());
+
+            loaded_lib = new QLibrary(libFilePath, nullptr);
+            if (loaded_lib->load()) {
+                blog(LOG_INFO, "NDI runtime loaded successfully");
+
+                NDIlib_v3_load_ lib_load =
+                    (NDIlib_v3_load_)loaded_lib->resolve("NDIlib_v3_load");
+
+                if (lib_load != nullptr) {
+                    return lib_load();
+                }
+                else {
+                    blog(LOG_INFO, "ERROR: NDIlib_v3_load not found in loaded library");
+                }
+            }
+            else {
+                delete loaded_lib;
+                loaded_lib = nullptr;
+            }
         }
-
-        blog(LOG_INFO, "Found NDI runtime directory at %s", runtime_dir);
-
-        const char* dll_file;
-        #if defined(_WIN64)
-        dll_file = "Processing.NDI.Lib.x64.dll";
-        #elif defined(_WIN32)
-        dll_file = "Processing.NDI.Lib.x86.dll";
-        #endif
-
-        int buf_size = strlen(runtime_dir) + strlen(dll_file) + 3;
-        path = (char*)bmalloc(buf_size);
-        memset(path, 0, buf_size);
-
-        strcat(path, runtime_dir);
-        strcat(path, "\\");
-        strcat(path, dll_file);
-    #elif defined(__linux__)
-        // TODO : make a redistributable NDI package for Linux x86 and x86_64
-        path = "/usr/lib/libndi.so.1.0.1";
-    #elif defined(__APPLE__)
-        struct stat stats;
-        if (os_stat("/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib", &stats) == 0) {
-            path = "/Library/Application Support/obs-studio/plugins/obs-ndi/bin/libndi.dylib";
-        } else {
-            path = "./libndi.dylib";
-        }
-    #endif
-
-    blog(LOG_INFO, "Found NDI library at %s", path);
-    return path;
-}
-
-const NDIlib_v2* load_ndilib()
-{
-    const char* dll_file = GetNDILibPath();
-    if (!dll_file) {
-        blog(LOG_ERROR, "GetNDILibPath() returned a null pointer");
-        return NULL;
-    }
-
-    loaded_lib = os_dlopen(dll_file);
-    if (loaded_lib) {
-        const NDIlib_v2* (*lib_load)(void) =
-            (const NDIlib_v2*(*)())os_dlsym(loaded_lib, "NDIlib_v2_load");
-        return lib_load();
     }
 
     blog(LOG_ERROR, "Can't find the NDI library");
-    return NULL;
+    return nullptr;    
 }
