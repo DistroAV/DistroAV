@@ -26,7 +26,9 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
 #include <QDir>
+#include <QFileInfo>
 #include <QProcess>
+#include <QLibrary>
 #include <QMainWindow>
 #include <QAction>
 #include <QMessageBox>
@@ -41,7 +43,7 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-const NDIlib_v3* ndiLib = NULL;
+const NDIlib_v3* ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -56,7 +58,9 @@ extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
 const NDIlib_v3* load_ndilib();
-void* loaded_lib = NULL;
+
+typedef const NDIlib_v3* (*NDIlib_v3_load_)(void);
+QLibrary* loaded_lib = nullptr;
 
 NDIlib_find_instance_t ndi_finder;
 obs_output_t* main_out;
@@ -196,16 +200,31 @@ const NDIlib_v3* load_ndilib() {
 
     for (QString path : locations) {
         blog(LOG_INFO, "Trying '%s'", path.toUtf8().constData());
-        QString libPath = QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME);
-        void* lib = os_dlopen(libPath.toUtf8().constData());
-        if (lib) {
-            blog(LOG_INFO, "Found NDI library at '%s'",
-                libPath.toUtf8().constData());
+        QFileInfo libPath(QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME));
 
-            loaded_lib = lib;
-            const NDIlib_v3* (*lib_load)(void) =
-                (const NDIlib_v3*(*)())os_dlsym(loaded_lib, "NDIlib_v3_load");
-            return lib_load();
+        if (libPath.exists() && libPath.isFile()) {
+            QString libFilePath = libPath.absoluteFilePath();
+            blog(LOG_INFO, "Found NDI library at '%s'",
+                libFilePath.toUtf8().constData());
+
+            loaded_lib = new QLibrary(libFilePath, nullptr);
+            if (loaded_lib->load()) {
+                blog(LOG_INFO, "NDI runtime loaded successfully");
+
+                NDIlib_v3_load_ lib_load =
+                    (NDIlib_v3_load_)loaded_lib->resolve("NDIlib_v3_load");
+
+                if (lib_load != nullptr) {
+                    return lib_load();
+                }
+                else {
+                    blog(LOG_INFO, "ERROR: NDIlib_v3_load not found in loaded library");
+                }
+            }
+            else {
+                delete loaded_lib;
+                loaded_lib = nullptr;
+            }
         }
     }
 
