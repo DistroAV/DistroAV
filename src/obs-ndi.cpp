@@ -87,6 +87,8 @@ bool obs_module_load(void) {
         return false;
     }
 
+    blog(LOG_INFO, "NDI library initialized successfully");
+
     NDIlib_find_create_t find_desc = {0};
     find_desc.show_local_sources = true;
     find_desc.p_groups = NULL;
