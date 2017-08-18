@@ -37,8 +37,8 @@ obs_properties_t* alpha_filter_getproperties(void* data) {
 }
 
 void alpha_filter_update(void* data, obs_data_t* settings) {
+	UNUSED_PARAMETER(data);
 	UNUSED_PARAMETER(settings);
-	struct alpha_filter* s = static_cast<alpha_filter*>(data);
 }
 
 void* alpha_filter_create(obs_data_t* settings, obs_source_t* source) {
@@ -66,15 +66,15 @@ void alpha_filter_videorender(void* data, gs_effect_t* effect) {
 
 struct obs_source_info create_alpha_filter_info() {
 	struct obs_source_info alpha_filter_info = {};
-	alpha_filter_info.id = OBS_NDI_ALPHA_FILTER_ID;
-	alpha_filter_info.type = OBS_SOURCE_TYPE_FILTER;
-	alpha_filter_info.output_flags = OBS_SOURCE_VIDEO;
-	alpha_filter_info.get_name = alpha_filter_getname;
-	alpha_filter_info.get_properties = alpha_filter_getproperties;
-	alpha_filter_info.create = alpha_filter_create;
-	alpha_filter_info.destroy = alpha_filter_destroy;
-	alpha_filter_info.update = alpha_filter_update;
-	alpha_filter_info.video_render = alpha_filter_videorender;
+	alpha_filter_info.id				= OBS_NDI_ALPHA_FILTER_ID;
+	alpha_filter_info.type				= OBS_SOURCE_TYPE_FILTER;
+	alpha_filter_info.output_flags		= OBS_SOURCE_VIDEO;
+	alpha_filter_info.get_name			= alpha_filter_getname;
+	alpha_filter_info.get_properties	= alpha_filter_getproperties;
+	alpha_filter_info.create			= alpha_filter_create;
+	alpha_filter_info.destroy			= alpha_filter_destroy;
+	alpha_filter_info.update			= alpha_filter_update;
+	alpha_filter_info.video_render		= alpha_filter_videorender;
 
 	return alpha_filter_info;
 }
