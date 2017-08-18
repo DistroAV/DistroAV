@@ -171,8 +171,7 @@ void* ndi_source_poll_audio(void* data) {
 
             // Timestamps provided by the SDK cause issues with OBS' audio engine.
             // Instead, generate it manually.
-            obs_audio_frame.timestamp =
-                os_gettime_ns() - (audio_frame.sample_rate * audio_frame.no_samples);
+            obs_audio_frame.timestamp = os_gettime_ns();
             obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
             obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
             obs_audio_frame.frames = audio_frame.no_samples;
@@ -222,7 +221,9 @@ void* ndi_source_poll_video(void* data) {
                     break;
             }
 
-            obs_video_frame.timestamp = video_frame.timecode;
+            // Using timestamp instead of timecode is better for
+            // inter-stream synchronization
+            obs_video_frame.timestamp = video_frame.timestamp;
             obs_video_frame.width = video_frame.xres;
             obs_video_frame.height = video_frame.yres;
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
@@ -233,7 +234,6 @@ void* ndi_source_poll_video(void* data) {
                 obs_video_frame.color_range_max);
 
             obs_source_output_video(s->source, &obs_video_frame);
-
             ndiLib->NDIlib_recv_free_video_v2(s->ndi_receiver, &video_frame);
         }
     }
