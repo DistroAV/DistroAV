@@ -278,8 +278,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     recv_desc.bandwidth =
         (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
     recv_desc.allow_video_fields = true;
-    recv_desc.color_format = NDIlib_recv_color_format_e_UYVY_BGRA;
-    //recv_desc.color_format = NDIlib_recv_color_format_fastest;
+    recv_desc.color_format = NDIlib_recv_color_format_fastest;
 
     s->running = false;
     pthread_cancel(s->video_thread);
