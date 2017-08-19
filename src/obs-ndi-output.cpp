@@ -22,6 +22,11 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 
 #include "obs-ndi.h"
 
+static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
+{
+    return a < b ? a : b;
+}
+
 struct ndi_output {
     obs_output_t *output;
     const char* ndi_name;
@@ -29,7 +34,11 @@ struct ndi_output {
     obs_audio_info audio_info;
 
     bool started;
+    NDIlib_FourCC_type_e frame_format;
     NDIlib_send_instance_t ndi_sender;
+
+    uint8_t* conv_buffer;
+    uint32_t conv_linesize;
 };
 
 const char* ndi_output_getname(void* data) {
@@ -51,6 +60,8 @@ obs_properties_t* ndi_output_getproperties(void* data) {
 
 bool ndi_output_start(void* data) {
     struct ndi_output* o = static_cast<ndi_output*>(data);
+
+    ndiLib->NDIlib_send_destroy(o->ndi_sender);
 
     NDIlib_send_create_t send_desc;
     send_desc.p_ndi_name = o->ndi_name;
@@ -74,7 +85,6 @@ void ndi_output_stop(void* data, uint64_t ts) {
     struct ndi_output* o = static_cast<ndi_output*>(data);
     o->started = false;
     obs_output_end_data_capture(o->output);
-    ndiLib->NDIlib_send_destroy(o->ndi_sender);
 }
 
 void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
@@ -90,22 +100,116 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
     obs_get_video_info(&o->video_info);
     obs_get_audio_info(&o->audio_info);
 
-    struct video_scale_info vconv = {};
-    vconv.format = VIDEO_FORMAT_UYVY;
-    vconv.width = o->video_info.output_width;
-    vconv.height = o->video_info.output_height;
-    vconv.colorspace = VIDEO_CS_DEFAULT;
-    vconv.range = VIDEO_RANGE_DEFAULT;
-    obs_output_set_video_conversion(o->output, &vconv);
+    switch (o->video_info.output_format) {
+        case VIDEO_FORMAT_NV12:
+        case VIDEO_FORMAT_I420:
+        case VIDEO_FORMAT_I444:
+            o->frame_format = NDIlib_FourCC_type_UYVY;
+            o->conv_linesize = o->video_info.output_width * 2;
+            o->conv_buffer =
+                new uint8_t[o->video_info.output_height * o->conv_linesize * 2]();
+            break;
+
+        case VIDEO_FORMAT_RGBA:
+            // There won't be transparency in the output data, so
+            // ignore the alpha channel
+            o->frame_format = NDIlib_FourCC_type_RGBX;
+            break;
+
+        case VIDEO_FORMAT_BGRA:
+            o->frame_format = NDIlib_FourCC_type_BGRA;
+            break;
+
+        case VIDEO_FORMAT_BGRX:
+            o->frame_format = NDIlib_FourCC_type_BGRX;
+            break;
+    }
 
     return o;
 }
 
 void ndi_output_destroy(void* data) {
     struct ndi_output* o = static_cast<ndi_output*>(data);
+    ndiLib->NDIlib_send_destroy(o->ndi_sender);
+    if (o->conv_buffer) {
+        delete o->conv_buffer;
+    }
+}
 
-    if (o)
-        bfree(o);
+void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
+    uint32_t start_y, uint32_t end_y,
+    uint8_t* output, uint32_t out_linesize)
+{
+    uint8_t* _Y;
+    uint8_t* _U;
+    uint8_t* _V;
+    uint8_t* _out;
+    uint32_t width = min_uint32(in_linesize[0], out_linesize);
+    for (uint32_t y = start_y; y < end_y; y++) {
+        _Y = input[0] + (y * in_linesize[0]);
+        _U = input[1] + ((y/2) * in_linesize[1]);
+        _V = _U + 1;
+
+        _out = output + (y * out_linesize);
+        
+        for (uint32_t x = 0; x < width; x+=2) {
+            *(_out++) = *(_U++); _U++;
+            *(_out++) = *(_Y++);
+            *(_out++) = *(_V++); _V++;
+            *(_out++) = *(_Y++);
+        }
+    }
+}
+
+void convert_i420_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
+    uint32_t start_y, uint32_t end_y,
+    uint8_t* output, uint32_t out_linesize)
+{
+    uint8_t* _Y;
+    uint8_t* _U;
+    uint8_t* _V;
+    uint8_t* _out;
+    uint32_t width = min_uint32(in_linesize[0], out_linesize);
+    for (uint32_t y = start_y; y < end_y; y++) {
+        _Y = input[0] + (y * in_linesize[0]);
+        _U = input[1] + ((y/2) * in_linesize[1]);
+        _V = input[2] + ((y/2) * in_linesize[2]);
+
+        _out = output + (y * out_linesize);
+
+        for (uint32_t x = 0; x < width; x += 2) {
+            *(_out++) = *(_U++);
+            *(_out++) = *(_Y++);
+            *(_out++) = *(_V++);
+            *(_out++) = *(_Y++);
+        }
+    }
+}
+
+void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
+    uint32_t start_y, uint32_t end_y,
+    uint8_t* output, uint32_t out_linesize)
+{
+    uint8_t* _Y;
+    uint8_t* _U;
+    uint8_t* _V;
+    uint8_t* _out;
+    uint32_t width = min_uint32(in_linesize[0], out_linesize);
+    for (uint32_t y = start_y; y < end_y; y++) {
+        _Y = input[0] + (y * in_linesize[0]);
+        _U = input[1] + (y * in_linesize[1]);
+        _V = input[2] + (y * in_linesize[2]);
+
+        _out = output + (y * out_linesize);
+
+        for (uint32_t x = 0; x < width; x += 2) {
+            // Quality loss here. Some chroma samples are ignored.
+            *(_out++) = *(_U++); _U++;
+            *(_out++) = *(_Y++);
+            *(_out++) = *(_V++); _V++;
+            *(_out++) = *(_Y++);
+        }
+    }
 }
 
 void ndi_output_rawvideo(void* data, struct video_data* frame) {
@@ -119,15 +223,38 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
     NDIlib_video_frame_v2_t video_frame = {0};
     video_frame.xres = width;
     video_frame.yres = height;
-    video_frame.FourCC = NDIlib_FourCC_type_UYVY;
     video_frame.frame_rate_N = o->video_info.fps_num;
     video_frame.frame_rate_D = o->video_info.fps_den;
     video_frame.picture_aspect_ratio = (float)width / (float)height;
     video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-    
     video_frame.timecode = frame->timestamp;
-    video_frame.p_data = frame->data[0];
-    video_frame.line_stride_in_bytes = frame->linesize[0];
+
+    video_frame.FourCC = o->frame_format;
+    if (video_frame.FourCC = NDIlib_FourCC_type_UYVY) {
+        video_format source_f = o->video_info.output_format;
+        if (source_f == VIDEO_FORMAT_NV12) {
+            convert_nv12_to_uyvy(frame->data, frame->linesize,
+                0, height,
+                o->conv_buffer, o->conv_linesize);
+        }
+        else if (source_f == VIDEO_FORMAT_I420) {
+            convert_i420_to_uyvy(frame->data, frame->linesize,
+                0, height,
+                o->conv_buffer, o->conv_linesize);
+        }
+        else if (source_f == VIDEO_FORMAT_I444) {
+            convert_i444_to_uyvy(frame->data, frame->linesize,
+                0, height,
+                o->conv_buffer, o->conv_linesize);
+        }
+
+        video_frame.p_data = o->conv_buffer;
+        video_frame.line_stride_in_bytes = o->conv_linesize;
+    }
+    else {
+        video_frame.p_data = frame->data[0];
+        video_frame.line_stride_in_bytes = frame->linesize[0];
+    }
 
     ndiLib->NDIlib_send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
