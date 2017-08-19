@@ -61,12 +61,17 @@ if(WIN32)
 	string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 	message("${CMAKE_CXX_FLAGS_RELEASE}")
 
+	
 	if(ARCH EQUAL 64)
 		set(OBS_ARCH_NAME "64bit")
+		set(OBS_BUILDDIR_ARCH "build64")
 	else()
 		set(OBS_ARCH_NAME "32bit")
+		set(OBS_BUILDDIR_ARCH "build32")
 		add_definitions(/arch:SSE2)
 	endif()
+
+	set(DEBUG_RUNDIR "${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/Debug")
 
 	find_package(w32-pthreads REQUIRED)
 
@@ -81,16 +86,33 @@ if(WIN32)
 	add_custom_command(TARGET obs-ndi POST_BUILD
 		COMMAND if $<CONFIG:Release>==1 (
 			"${CMAKE_COMMAND}" -E make_directory
-			"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
-			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+				"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
+				"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
 
-		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy_directory
-			"${PROJECT_SOURCE_DIR}/data"
-			"${RELEASE_DIR}/data/obs-plugins/obs-ndi")
+		COMMAND if $<CONFIG:Release>==1 (
+			"${CMAKE_COMMAND}" -E copy_directory
+				"${PROJECT_SOURCE_DIR}/data"
+				"${RELEASE_DIR}/data/obs-plugins/obs-ndi")
 
-		COMMAND if $<CONFIG:Release>==1 ("${CMAKE_COMMAND}" -E copy
-			"$<TARGET_FILE:obs-ndi>"
-			"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+		COMMAND if $<CONFIG:Release>==1 (
+			"${CMAKE_COMMAND}" -E copy
+				"$<TARGET_FILE:obs-ndi>"
+				"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+			
+		# Copy to obs-studio dev environment for immediate testing
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E copy
+				"$<TARGET_FILE:obs-ndi>"
+				"${DEBUG_RUNDIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E make_directory
+				"${DEBUG_RUNDIR}/data/obs-plugins/obs-ndi")
+
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E copy_directory
+				"${PROJECT_SOURCE_DIR}/data"
+				"${DEBUG_RUNDIR}/data/obs-plugins/obs-ndi")
 	)
 endif()
 
