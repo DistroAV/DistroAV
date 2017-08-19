@@ -71,8 +71,6 @@ if(WIN32)
 		add_definitions(/arch:SSE2)
 	endif()
 
-	set(DEBUG_RUNDIR "${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/Debug")
-
 	find_package(w32-pthreads REQUIRED)
 
 	include_directories(
@@ -103,16 +101,16 @@ if(WIN32)
 		COMMAND if $<CONFIG:Debug>==1 (
 			"${CMAKE_COMMAND}" -E copy
 				"$<TARGET_FILE:obs-ndi>"
-				"${DEBUG_RUNDIR}/obs-plugins/${OBS_ARCH_NAME}")
+				"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/obs-plugins/${OBS_ARCH_NAME}")
 
 		COMMAND if $<CONFIG:Debug>==1 (
 			"${CMAKE_COMMAND}" -E make_directory
-				"${DEBUG_RUNDIR}/data/obs-plugins/obs-ndi")
+				"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/data/obs-plugins/obs-ndi")
 
 		COMMAND if $<CONFIG:Debug>==1 (
 			"${CMAKE_COMMAND}" -E copy_directory
 				"${PROJECT_SOURCE_DIR}/data"
-				"${DEBUG_RUNDIR}/data/obs-plugins/obs-ndi")
+				"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/data/obs-plugins/obs-ndi")
 	)
 endif()
 
