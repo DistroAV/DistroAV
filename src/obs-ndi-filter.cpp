@@ -25,6 +25,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 
 #include "obs-ndi.h"
 
+#define NUM_BUFFERS 4
 #define TEXFORMAT GS_BGRA
 
 struct ndi_filter {
@@ -33,11 +34,15 @@ struct ndi_filter {
     struct obs_video_info ovi;
     struct obs_audio_info oai;
     obs_display_t* renderer;
-    gs_stagesurf_t* stagesurface;
-    gs_texrender_t* texrender;
+
     uint32_t known_width;
     uint32_t known_height;
 
+    uint8_t write_tex;
+    uint8_t read_tex;
+    gs_texrender_t* tex[NUM_BUFFERS];
+
+    gs_stagesurf_t* stagesurface;
     uint8_t* video_data;
     uint32_t video_linesize;
 
@@ -68,26 +73,17 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
     }
 
     obs_source_t* target = obs_filter_get_target(s->context);
-
     uint32_t width = obs_source_get_base_width(target);
     uint32_t height = obs_source_get_base_height(target);
-
-    if (s->known_width != width || s->known_height != height) {
-        gs_stagesurface_unmap(s->stagesurface);
-        gs_stagesurface_destroy(s->stagesurface);
-
-        s->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
-        gs_stagesurface_map(s->stagesurface,
-            &s->video_data, &s->video_linesize);
-
-        s->known_width = width;
-        s->known_height = height;
-    }
 
     gs_blend_state_push();
     gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-    if (gs_texrender_begin(s->texrender, width, height)) {
+    gs_texrender_t* current_texture = s->tex[s->write_tex];
+    s->write_tex = (s->write_tex >= (NUM_BUFFERS - 1) ? 0 : s->write_tex + 1);
+
+    gs_texrender_reset(current_texture);
+    if (gs_texrender_begin(current_texture, width, height)) {
         struct vec4 background;
         vec4_zero(&background);
 
@@ -96,9 +92,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
 
         obs_source_video_render(target);
 
-        gs_texrender_end(s->texrender);
-        gs_stage_texture(s->stagesurface,
-            gs_texrender_get_texture(s->texrender));
+        gs_texrender_end(current_texture);
         os_sem_post(s->frame_semaphore);
     }
 
@@ -114,8 +108,31 @@ void* ndi_filter_send_thread(void* data) {
     obs_source_t* target = obs_filter_get_target(s->context);
     while (s->send_running) {
         os_sem_wait(s->frame_semaphore);
-        blog(LOG_INFO, "filter '%s': new frame",
-            obs_source_get_name(s->context));
+        if (s->read_tex == s->write_tex) {
+            continue;
+        }
+
+        uint32_t width = obs_source_get_base_width(target);
+        uint32_t height = obs_source_get_base_height(target);
+
+        obs_enter_graphics();
+        if (s->known_width != width || s->known_height != height) {
+            gs_stagesurface_unmap(s->stagesurface);
+            gs_stagesurface_destroy(s->stagesurface);
+
+            s->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
+            gs_stagesurface_map(s->stagesurface,
+                &s->video_data, &s->video_linesize);
+
+            s->known_width = width;
+            s->known_height = height;
+        }
+
+        gs_stage_texture(s->stagesurface,
+            gs_texrender_get_texture(s->tex[s->read_tex]));
+        obs_leave_graphics();
+
+        s->read_tex = (s->read_tex >= (NUM_BUFFERS - 1) ? 0 : s->read_tex + 1);
 
         NDIlib_video_frame_v2_t video_frame = { 0 };
         video_frame.xres = s->known_width;
@@ -167,7 +184,11 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
 
-    s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+    s->write_tex = 0;
+    s->read_tex = 0;
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+        s->tex[i] = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+    }
 
     s->known_width = 0;
     s->known_height = 0;
@@ -214,7 +235,10 @@ void ndi_filter_destroy(void* data) {
 
     gs_stagesurface_unmap(s->stagesurface);
     gs_stagesurface_destroy(s->stagesurface);
-    gs_texrender_destroy(s->texrender);
+
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+        gs_texrender_destroy(s->tex[i]);
+    }
 
     os_sem_destroy(s->frame_semaphore);
 }
@@ -224,7 +248,6 @@ void ndi_filter_tick(void* data, float seconds) {
 
     obs_get_video_info(&s->ovi);
     obs_get_audio_info(&s->oai);
-    gs_texrender_reset(s->texrender);
 }
 
 void ndi_filter_videorender(void* data, gs_effect_t* effect) {
