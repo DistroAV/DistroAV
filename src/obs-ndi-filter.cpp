@@ -129,6 +129,10 @@ void* ndi_filter_send_thread(void* data) {
             s->known_height = height;
         }
 
+        if (s->read_tex == s->write_tex) {
+            obs_leave_graphics();
+            continue;
+        }
         gs_stage_texture(s->stagesurface,
             gs_texrender_get_texture(s->tex[s->read_tex]));
         obs_leave_graphics();
