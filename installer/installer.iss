@@ -5,7 +5,7 @@
 
 #define MyAppName "obs-ndi"
 #define MyAppVersion "4.1.0"
-#define MyAppPublisher "St�phane Lepin"
+#define MyAppPublisher "Stéphane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
 [Setup]
