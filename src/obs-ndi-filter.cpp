@@ -76,13 +76,14 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
     uint32_t width = obs_source_get_base_width(target);
     uint32_t height = obs_source_get_base_height(target);
 
-    gs_blend_state_push();
-    gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
-
     gs_texrender_t* current_texture = s->tex[s->write_tex];
     s->write_tex = (s->write_tex >= (NUM_BUFFERS - 1) ? 0 : s->write_tex + 1);
 
     gs_texrender_reset(current_texture);
+
+    gs_blend_state_push();
+    gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+
     if (gs_texrender_begin(current_texture, width, height)) {
         struct vec4 background;
         vec4_zero(&background);
