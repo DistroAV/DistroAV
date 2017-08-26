@@ -21,7 +21,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 
 #include <Processing.NDI.Lib.h>
 
-#define OBS_NDI_VERSION "4.1.1"
+#define OBS_NDI_VERSION "4.1.2"
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
