@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>307</width>
-    <height>92</height>
+    <width>368</width>
+    <height>115</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,6 +40,13 @@
       <widget class="QCheckBox" name="outputEnabled">
        <property name="text">
         <string>NDIPlugin.OutputSettings.Enabled</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QCheckBox" name="asyncSendingEnabled">
+       <property name="text">
+        <string>NDIPlugin.OutputSettings.AsyncEnabled</string>
        </property>
       </widget>
      </item>
