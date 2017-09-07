@@ -20,12 +20,12 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
 #include <util/threading.h>
+#include <media-io/video-io.h>
 #include <media-io/video-frame.h>
 #include <media-io/audio-resampler.h>
 
 #include "obs-ndi.h"
 
-#define NUM_BUFFERS 4
 #define TEXFORMAT GS_BGRA
 
 struct ndi_filter {
@@ -38,19 +38,14 @@ struct ndi_filter {
     uint32_t known_width;
     uint32_t known_height;
 
-    uint8_t write_tex;
-    uint8_t read_tex;
-    gs_texrender_t* tex[NUM_BUFFERS];
-
+    gs_texrender_t* texrender;
     gs_stagesurf_t* stagesurface;
     uint8_t* video_data;
     uint32_t video_linesize;
 
+    video_t* video_output;
+
     bool audio_initialized;
-    
-    bool send_running;
-    pthread_t send_thread;
-    os_sem_t* frame_semaphore;
 };
 
 const char* ndi_filter_getname(void* data) {
@@ -65,26 +60,41 @@ obs_properties_t* ndi_filter_getproperties(void* data) {
     return props;
 }
 
-void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
+void ndi_filter_raw_video(void* data, video_data* frame) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
-    if (!s->send_running) {
+    if (!frame || !frame->data[0])
         return;
-    }
+
+    NDIlib_video_frame_v2_t video_frame = { 0 };
+    video_frame.xres = s->known_width;
+    video_frame.yres = s->known_height;
+    video_frame.FourCC = NDIlib_FourCC_type_BGRA;
+    video_frame.frame_rate_N = s->ovi.fps_num;
+    video_frame.frame_rate_D = s->ovi.fps_den;
+    video_frame.picture_aspect_ratio =
+        (float)video_frame.xres / (float)video_frame.yres;
+    video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+    video_frame.timecode = NDIlib_send_timecode_synthesize;
+    video_frame.p_data = frame->data[0];
+    video_frame.line_stride_in_bytes = frame->linesize[0];
+
+    ndiLib->NDIlib_send_send_video_v2(s->ndi_sender, &video_frame);
+}
+
+void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
     obs_source_t* target = obs_filter_get_target(s->context);
     uint32_t width = obs_source_get_base_width(target);
     uint32_t height = obs_source_get_base_height(target);
 
-    gs_texrender_t* current_texture = s->tex[s->write_tex];
-    s->write_tex = (s->write_tex >= (NUM_BUFFERS - 1) ? 0 : s->write_tex + 1);
-
-    gs_texrender_reset(current_texture);
+    gs_texrender_reset(s->texrender);
 
     gs_blend_state_push();
     gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-    if (gs_texrender_begin(current_texture, width, height)) {
+    if (gs_texrender_begin(s->texrender, width, height)) {
         struct vec4 background;
         vec4_zero(&background);
 
@@ -92,119 +102,79 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
         gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
 
         obs_source_video_render(target);
+        gs_texrender_end(s->texrender);
 
-        gs_texrender_end(current_texture);
-        os_sem_post(s->frame_semaphore);
-    }
-
-    gs_blend_state_pop();
-}
-
-void* ndi_filter_send_thread(void* data) {
-    struct ndi_filter* s = static_cast<ndi_filter*>(data);
-
-    blog(LOG_INFO, "filter '%s': send thread started",
-        obs_source_get_name(s->context));
-
-    obs_source_t* target = obs_filter_get_target(s->context);
-    while (s->send_running) {
-        os_sem_wait(s->frame_semaphore);
-        if (s->read_tex == s->write_tex) {
-            continue;
-        }
-
-        uint32_t width = obs_source_get_base_width(target);
-        uint32_t height = obs_source_get_base_height(target);
-
-        obs_enter_graphics();
         if (s->known_width != width || s->known_height != height) {
             gs_stagesurface_unmap(s->stagesurface);
             gs_stagesurface_destroy(s->stagesurface);
 
-            s->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
+            s->stagesurface =
+                gs_stagesurface_create(width, height, TEXFORMAT);
             gs_stagesurface_map(s->stagesurface,
                 &s->video_data, &s->video_linesize);
+
+            video_output_info vi;
+            vi.format = VIDEO_FORMAT_BGRA;
+            vi.width = width;
+            vi.height = height;
+            vi.fps_den = s->ovi.fps_den;
+            vi.fps_num = s->ovi.fps_num;
+            vi.cache_size = 16;
+            vi.colorspace = VIDEO_CS_DEFAULT;
+            vi.range = VIDEO_RANGE_DEFAULT;
+            vi.name = obs_source_get_name(s->context);
+
+            video_output_close(s->video_output);
+            video_output_open(&s->video_output, &vi);
+            video_output_connect(s->video_output,
+                nullptr, ndi_filter_raw_video, s);
 
             s->known_width = width;
             s->known_height = height;
         }
 
-        if (s->read_tex == s->write_tex) {
-            obs_leave_graphics();
-            continue;
+        struct video_frame output_frame;
+        if (video_output_lock_frame(s->video_output,
+            &output_frame, 1, os_gettime_ns()))
+        {
+            gs_stage_texture(s->stagesurface,
+                gs_texrender_get_texture(s->texrender));
+
+            memcpy(output_frame.data[0], s->video_data,
+                s->video_linesize * s->known_height);
+            output_frame.linesize[0] = s->video_linesize;
+
+            video_output_unlock_frame(s->video_output);
         }
-        gs_stage_texture(s->stagesurface,
-            gs_texrender_get_texture(s->tex[s->read_tex]));
-        obs_leave_graphics();
-
-        s->read_tex = (s->read_tex >= (NUM_BUFFERS - 1) ? 0 : s->read_tex + 1);
-
-        NDIlib_video_frame_v2_t video_frame = { 0 };
-        video_frame.xres = s->known_width;
-        video_frame.yres = s->known_height;
-        video_frame.FourCC = NDIlib_FourCC_type_BGRA;
-        video_frame.frame_rate_N = s->ovi.fps_num;
-        video_frame.frame_rate_D = s->ovi.fps_den;
-        video_frame.picture_aspect_ratio =
-                (float)video_frame.xres / (float)video_frame.yres;
-        video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-        video_frame.timecode = NDIlib_send_timecode_synthesize;
-        video_frame.p_data = s->video_data;
-        video_frame.line_stride_in_bytes = s->video_linesize;
-
-        ndiLib->NDIlib_send_send_video_async_v2(s->ndi_sender, &video_frame);
     }
 
-    blog(LOG_INFO, "filter '%s': send thread stopped",
-        obs_source_get_name(s->context));
-    return nullptr;
+    gs_blend_state_pop();
 }
 
 void ndi_filter_update(void* data, obs_data_t* settings) {
     UNUSED_PARAMETER(settings);
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
-    if (s->send_running) {
-        s->send_running = false;
-        os_sem_post(s->frame_semaphore);
-        pthread_join(s->send_thread, NULL);
-    }
-    s->send_running = false;
-
     NDIlib_send_create_t send_desc;
     send_desc.p_ndi_name = obs_source_get_name(s->context);
-    send_desc.p_groups = NULL;
+    send_desc.p_groups = nullptr;
     send_desc.clock_video = false;
     send_desc.clock_audio = false;
 
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
     s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
-
-    s->send_running = true;
-    pthread_create(&s->send_thread, nullptr, ndi_filter_send_thread, data);
 }
 
 void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
     struct ndi_filter* s =
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
-
-    s->write_tex = 0;
-    s->read_tex = 0;
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-        s->tex[i] = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
-    }
-
-    s->known_width = 0;
-    s->known_height = 0;
+    s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
     s->audio_initialized = false;
-
-    s->send_running = false;
-    os_sem_init(&s->frame_semaphore, 0);
 
     gs_init_data display_desc = {};
     display_desc.adapter = 0;
-    display_desc.format = GS_BGRA;
+    display_desc.format = TEXFORMAT;
     display_desc.zsformat = GS_ZS_NONE;
     display_desc.cx = 0;
     display_desc.cy = 0;
@@ -222,30 +192,19 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
     obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
 
     ndi_filter_update(s, settings);
-
     return s;
 }
 
 void ndi_filter_destroy(void* data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
-    if (s->send_running) {
-        s->send_running = false;
-        os_sem_post(s->frame_semaphore);
-        pthread_join(s->send_thread, NULL);
-    }
-
+    video_output_close(s->video_output);
     obs_display_destroy(s->renderer);
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
 
     gs_stagesurface_unmap(s->stagesurface);
     gs_stagesurface_destroy(s->stagesurface);
-
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-        gs_texrender_destroy(s->tex[i]);
-    }
-
-    os_sem_destroy(s->frame_semaphore);
+    gs_texrender_destroy(s->texrender);
 }
 
 void ndi_filter_tick(void* data, float seconds) {
@@ -262,8 +221,8 @@ void ndi_filter_videorender(void* data, gs_effect_t* effect) {
 }
 
 struct obs_audio_data* ndi_filter_audiofilter(void *data,
-        struct obs_audio_data *audio_data) {
-    struct ndi_filter *s = static_cast<ndi_filter *>(data);
+        struct obs_audio_data* audio_data) {
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
     NDIlib_audio_frame_v2_t audio_frame = { 0 };
     audio_frame.sample_rate = s->oai.samples_per_sec;
@@ -281,7 +240,6 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data,
             audio_data->data[i],
             audio_frame.channel_stride_in_bytes);
     }
-
     audio_frame.p_data = (float*)ndi_data;
 
     ndiLib->NDIlib_send_send_audio_v2(s->ndi_sender, &audio_frame);
