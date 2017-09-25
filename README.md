@@ -29,7 +29,6 @@ On Debian/Ubuntu :
 ```
 git clone https://github.com/Palakis/obs-ndi.git
 cd obs-ndi
-git checkout 0.3.2
 mkdir build && cd build
 cmake -DLIBOBS_INCLUDE_DIR="<path to the libobs sub-folder in obs-studio's source code>" -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j4
