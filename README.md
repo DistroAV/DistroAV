@@ -31,7 +31,7 @@ git clone https://github.com/Palakis/obs-ndi.git
 cd obs-ndi
 git checkout 0.3.2
 mkdir build && cd build
-cmake -DLIBOBS_INCLUDE_DIR="<path to the libobs sub-folder in obs-studio's source code>" -DNDISDK_DIR="<root dir of the NDI SDK>" -DCMAKE_INSTALL_PREFIX=/usr ..
+cmake -DLIBOBS_INCLUDE_DIR="<path to the libobs sub-folder in obs-studio's source code>" -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j4
 sudo make install
 ```
@@ -41,7 +41,7 @@ sudo make install
 git clone https://github.com/Palakis/obs-ndi.git
 cd obs-ndi
 mkdir build && cd build
-cmake -DNDISDK_DIR="<path to the NewTek NDI SDK>" -DLIBOBS_INCLUDE_DIR=<path to the libobs sub-folder in obs-studio's source code> -DLIBOBS_LIB=<path to libobs.0.dylib> -DOBS_FRONTEND_LIB=<path to libobs-frontend-api.dylib> -DQt5Core_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Core -DQt5Widgets_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Widgets ../
+cmake -DLIBOBS_INCLUDE_DIR=<path to the libobs sub-folder in obs-studio's source code> -DLIBOBS_LIB=<path to libobs.0.dylib> -DOBS_FRONTEND_LIB=<path to libobs-frontend-api.dylib> -DQt5Core_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Core -DQt5Widgets_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Widgets ../
 make -j4
 # Copy libobs-ndi.so to the obs-plugins folder
 # Copy libndi.dylib from the NDI SDK to the obs-plugins folder too
