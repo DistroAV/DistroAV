@@ -11,11 +11,6 @@ find_package(LibObs REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
-set(NDISDK_DIR "NDISDK_DIR-NOTFOUND" CACHE PATH "NewTek NDI SDK")
-if(NDISDK_DIR EQUAL "NDISDK_DIR-NOTFOUND")
-	message(FATAL_ERROR "Could not find NewTek's NDI SDK !")
-endif()
-
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(ARCH 64)
 else()
@@ -41,6 +36,7 @@ add_library(obs-ndi MODULE
 	${obs-ndi_HEADERS})
 
 include_directories(
+	"lib/ndi/Include"
 	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
 	${Qt5Core_INCLUDES}
 	${Qt5Widgets_INCLUDES})
@@ -61,7 +57,6 @@ if(WIN32)
 	string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 	message("${CMAKE_CXX_FLAGS_RELEASE}")
 
-	
 	if(ARCH EQUAL 64)
 		set(OBS_ARCH_NAME "64bit")
 		set(OBS_BUILDDIR_ARCH "build64")
@@ -72,9 +67,6 @@ if(WIN32)
 	endif()
 
 	find_package(w32-pthreads REQUIRED)
-
-	include_directories(
-		"${NDISDK_DIR}/Include")
 
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}"
@@ -117,8 +109,6 @@ endif()
 # OSX
 if(APPLE)
 	set_target_properties(obs-ndi PROPERTIES PREFIX "")
-	include_directories(
-		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}")
 endif()
