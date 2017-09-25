@@ -4,11 +4,11 @@ environment:
 install:
   - git submodule update --init --recursive
   - cd C:\projects\
-  - if not exist ndisdk-slim-v3-win.zip curl -kLO https://www.slepin.fr/obs-ndi/ci/ndisdk-slim-v3-win.zip -f --retry 5 -C -
+  - if not exist ndisdk-slim-v3-win.zip curl -kLO https://slepin.fr/obs-ndi/ci/ndisdk-slim-v3-win.zip -f --retry 5 -C -
   - 7z x ndisdk-slim-v3-win.zip -o"NDI_SDK"
   - if not exist dependencies2013.zip curl -kLO https://obsproject.com/downloads/dependencies2013.zip -f --retry 5 -C -
   - 7z x dependencies2013.zip -odependencies2013
-  - if not exist qt570.zip curl -kLO https://www.slepin.fr/obs-websocket/ci/qt570.zip -f --retry 5 -C -
+  - if not exist qt570.zip curl -kLO https://slepin.fr/obs-websocket/ci/qt570.zip -f --retry 5 -C -
   - 7z x qt570.zip -o"Qt5.7.0"
   - set DepsPath32=%CD%\dependencies2013\win32
   - set DepsPath64=%CD%\dependencies2013\win64
