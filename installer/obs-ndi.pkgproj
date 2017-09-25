@@ -646,6 +646,11 @@
 				<key>LOCALIZATIONS</key>
 				<array/>
 			</dict>
+			<key>SUMMARY</key>
+			<dict>
+				<key>LOCALIZATIONS</key>
+				<array/>
+			</dict>
 			<key>TITLE</key>
 			<dict>
 				<key>LOCALIZATIONS</key>
@@ -662,7 +667,52 @@
 		<key>PROJECT_REQUIREMENTS</key>
 		<dict>
 			<key>LIST</key>
-			<array/>
+			<array>
+				<dict>
+					<key>BEHAVIOR</key>
+					<integer>3</integer>
+					<key>DICTIONARY</key>
+					<dict>
+						<key>IC_REQUIREMENT_CPU_ARCHITECTURE_FAMILY</key>
+						<integer>2</integer>
+						<key>IC_REQUIREMENT_CPU_INTEL_ARCHITECTURE_TYPE</key>
+						<integer>2</integer>
+						<key>IC_REQUIREMENT_CPU_MINIMUM_CPU_CORES_COUNT</key>
+						<integer>1</integer>
+						<key>IC_REQUIREMENT_CPU_MINIMUM_FREQUENCY</key>
+						<integer>866666</integer>
+						<key>IC_REQUIREMENT_CPU_POWERPC_ARCHITECTURE_TYPE</key>
+						<integer>0</integer>
+					</dict>
+					<key>IC_REQUIREMENT_CHECK_TYPE</key>
+					<integer>0</integer>
+					<key>IDENTIFIER</key>
+					<string>fr.whitebox.Packages.requirement.cpu</string>
+					<key>MESSAGE</key>
+					<array>
+						<dict>
+							<key>LANGUAGE</key>
+							<string>English</string>
+							<key>SECONDARY_VALUE</key>
+							<string></string>
+							<key>VALUE</key>
+							<string>Your processor is not supported by the NDI library required for obs-ndi to function.</string>
+						</dict>
+						<dict>
+							<key>LANGUAGE</key>
+							<string>French</string>
+							<key>SECONDARY_VALUE</key>
+							<string></string>
+							<key>VALUE</key>
+							<string>Votre processeur n'est pas supporté par la bibliothèque NDI, nécessaire au fonctionnement du plugin obs-ndi.</string>
+						</dict>
+					</array>
+					<key>NAME</key>
+					<string>Processor</string>
+					<key>STATE</key>
+					<true/>
+				</dict>
+			</array>
 			<key>POSTINSTALL_PATH</key>
 			<dict/>
 			<key>PREINSTALL_PATH</key>
