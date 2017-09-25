@@ -125,8 +125,6 @@ if(UNIX AND NOT APPLE)
 
 	set_target_properties(obs-ndi PROPERTIES PREFIX "")
 
-	include_directories(
-		"${NDISDK_DIR}/include")
 	target_link_libraries(obs-ndi
 		obs-frontend-api)
 
