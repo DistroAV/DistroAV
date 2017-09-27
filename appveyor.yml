@@ -4,11 +4,9 @@ environment:
 install:
   - git submodule update --init --recursive
   - cd C:\projects\
-  - if not exist ndisdk-slim-v3-win.zip curl -kLO https://www.slepin.fr/obs-ndi/ci/ndisdk-slim-v3-win.zip -f --retry 5 -C -
-  - 7z x ndisdk-slim-v3-win.zip -o"NDI_SDK"
   - if not exist dependencies2013.zip curl -kLO https://obsproject.com/downloads/dependencies2013.zip -f --retry 5 -C -
   - 7z x dependencies2013.zip -odependencies2013
-  - if not exist qt570.zip curl -kLO https://www.slepin.fr/obs-websocket/ci/qt570.zip -f --retry 5 -C -
+  - if not exist qt570.zip curl -kLO https://slepin.fr/obs-websocket/ci/qt570.zip -f --retry 5 -C -
   - 7z x qt570.zip -o"Qt5.7.0"
   - set DepsPath32=%CD%\dependencies2013\win32
   - set DepsPath64=%CD%\dependencies2013\win64
@@ -32,9 +30,9 @@ install:
   - mkdir build32
   - mkdir build64
   - cd ./build32
-  - cmake -G "Visual Studio 12 2013" -DNDISDK_DIR="%NDI_DIR%" -DW32_PTHREADS_LIB="C:\projects\obs-studio\build32\deps\w32-pthreads\%build_config%\w32-pthreads.lib" -Dw32-pthreads_DIR="C:\projects\obs-studio\build32\deps\w32-pthreads" -DQTDIR="%QTDIR32%" -DLibObs_DIR="C:\projects\obs-studio\build32\libobs" -DLIBOBS_INCLUDE_DIR="C:\projects\obs-studio\libobs" -DLIBOBS_LIB="C:\projects\obs-studio\build32\libobs\%build_config%\obs.lib" -DOBS_FRONTEND_LIB="C:\projects\obs-studio\build32\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib" ..
+  - cmake -G "Visual Studio 12 2013" -DW32_PTHREADS_LIB="C:\projects\obs-studio\build32\deps\w32-pthreads\%build_config%\w32-pthreads.lib" -Dw32-pthreads_DIR="C:\projects\obs-studio\build32\deps\w32-pthreads" -DQTDIR="%QTDIR32%" -DLibObs_DIR="C:\projects\obs-studio\build32\libobs" -DLIBOBS_INCLUDE_DIR="C:\projects\obs-studio\libobs" -DLIBOBS_LIB="C:\projects\obs-studio\build32\libobs\%build_config%\obs.lib" -DOBS_FRONTEND_LIB="C:\projects\obs-studio\build32\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib" ..
   - cd ../build64
-  - cmake -G "Visual Studio 12 2013 Win64" -DNDISDK_DIR="%NDI_DIR%" -DW32_PTHREADS_LIB="C:\projects\obs-studio\build64\deps\w32-pthreads\%build_config%\w32-pthreads.lib" -Dw32-pthreads_DIR="C:\projects\obs-studio\build64\deps\w32-pthreads" -DQTDIR="%QTDIR64%" -DLibObs_DIR="C:\projects\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="C:\projects\obs-studio\libobs" -DLIBOBS_LIB="C:\projects\obs-studio\build64\libobs\%build_config%\obs.lib" -DOBS_FRONTEND_LIB="C:\projects\obs-studio\build64\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib" ..
+  - cmake -G "Visual Studio 12 2013 Win64" -DW32_PTHREADS_LIB="C:\projects\obs-studio\build64\deps\w32-pthreads\%build_config%\w32-pthreads.lib" -Dw32-pthreads_DIR="C:\projects\obs-studio\build64\deps\w32-pthreads" -DQTDIR="%QTDIR64%" -DLibObs_DIR="C:\projects\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="C:\projects\obs-studio\libobs" -DLIBOBS_LIB="C:\projects\obs-studio\build64\libobs\%build_config%\obs.lib" -DOBS_FRONTEND_LIB="C:\projects\obs-studio\build64\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib" ..
 
 build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-ndi\build32\obs-ndi.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
