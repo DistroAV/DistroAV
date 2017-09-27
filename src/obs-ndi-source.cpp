@@ -174,7 +174,7 @@ void* ndi_source_poll_audio(void* data) {
 
             // Timestamps provided by the SDK cause issues with OBS' audio engine.
             // Instead, generate it manually.
-            obs_audio_frame.timestamp = os_gettime_ns();
+            obs_audio_frame.timestamp = audio_frame.timestamp * 100.0;
             obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
             obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
             obs_audio_frame.frames = audio_frame.no_samples;
@@ -231,7 +231,7 @@ void* ndi_source_poll_video(void* data) {
 
             // Using timestamp instead of timecode is better for
             // inter-stream synchronization
-            obs_video_frame.timestamp = video_frame.timestamp;
+            obs_video_frame.timestamp = video_frame.timestamp * 100.0;
             obs_video_frame.width = video_frame.xres;
             obs_video_frame.height = video_frame.yres;
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
