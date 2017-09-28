@@ -977,7 +977,7 @@
 				<key>AUTHENTICATION</key>
 				<integer>1</integer>
 				<key>CONCLUSION_ACTION</key>
-				<integer>2</integer>
+				<integer>0</integer>
 				<key>IDENTIFIER</key>
 				<string>com.newtek.ndi.runtime</string>
 				<key>LOCATION</key>
