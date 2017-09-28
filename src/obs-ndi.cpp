@@ -75,9 +75,23 @@ bool obs_module_load(void) {
 
     ndiLib = load_ndilib();
     if (!ndiLib) {
+        const char* msg_string_name = "";
+#ifdef _MSC_VER
+        // Windows
+        msg_string_name = "NDIPlugin.LibError.Message.Win";
+#else
+#ifdef __APPLE__
+        // macOS / OS X
+        msg_string_name = "NDIPlugin.LibError.Message.macOS";
+#else
+        // Linux
+        msg_string_name = "NDIPlugin.LibError.Message.Linux";
+#endif
+#endif
+
         QMessageBox::critical(main_window,
             obs_module_text("NDIPlugin.LibError.Title"),
-            obs_module_text("NDIPlugin.LibError.Message"),
+            obs_module_text(msg_string_name),
             QMessageBox::Ok, QMessageBox::NoButton);
         return false;
     }
@@ -196,10 +210,6 @@ const NDIlib_v3* load_ndilib() {
 #ifdef __linux__
     locations << "/usr/lib";
     locations << "/usr/local/lib";
-#endif
-#ifdef __APPLE__
-    locations << "/Library/Application Support/obs-studio/plugins/obs-ndi/bin";
-    locations << "./";
 #endif
 
     for (QString path : locations) {
