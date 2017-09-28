@@ -207,7 +207,7 @@ bool main_output_is_running() {
 const NDIlib_v3* load_ndilib() {
     QStringList locations;
     locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
     locations << "/usr/lib";
     locations << "/usr/local/lib";
 #endif
