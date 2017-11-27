@@ -176,8 +176,6 @@ void* ndi_source_poll_audio(void* data) {
                     obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
             }
 
-            // Timestamps provided by the SDK cause issues with OBS' audio engine.
-            // Instead, generate it manually.
             obs_audio_frame.timestamp = (uint64_t)(audio_frame.timestamp * 100.0);
             obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
             obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
