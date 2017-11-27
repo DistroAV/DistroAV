@@ -53,6 +53,11 @@ const char* ndi_filter_getname(void* data) {
     return obs_module_text("NDIPlugin.FilterName");
 }
 
+const char* ndi_audiofilter_getname(void* data) {
+    UNUSED_PARAMETER(data);
+    return obs_module_text("NDIPlugin.AudioFilterName");
+}
+
 obs_properties_t* ndi_filter_getproperties(void* data) {
     UNUSED_PARAMETER(data);
     obs_properties_t* props = obs_properties_create();
@@ -195,6 +200,15 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
     return s;
 }
 
+void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
+    struct ndi_filter* s =
+        static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
+    s->context = source;
+    obs_get_audio_info(&s->oai);
+    ndi_filter_update(s, settings);
+    return s;
+}
+
 void ndi_filter_destroy(void* data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
@@ -207,11 +221,14 @@ void ndi_filter_destroy(void* data) {
     gs_texrender_destroy(s->texrender);
 }
 
+void ndi_filter_destroy_audioonly(void* data) {
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
+    ndiLib->NDIlib_send_destroy(s->ndi_sender);
+}
+
 void ndi_filter_tick(void* data, float seconds) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
-
     obs_get_video_info(&s->ovi);
-    obs_get_audio_info(&s->oai);
 }
 
 void ndi_filter_videorender(void* data, gs_effect_t* effect) {
@@ -223,6 +240,8 @@ void ndi_filter_videorender(void* data, gs_effect_t* effect) {
 struct obs_audio_data* ndi_filter_audiofilter(void *data,
         struct obs_audio_data* audio_data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
+
+    obs_get_audio_info(&s->oai);
 
     NDIlib_audio_frame_v2_t audio_frame = { 0 };
     audio_frame.sample_rate = s->oai.samples_per_sec;
@@ -252,16 +271,37 @@ struct obs_source_info create_ndi_filter_info() {
     struct obs_source_info ndi_filter_info = {};
     ndi_filter_info.id				= "ndi_filter";
     ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
-    ndi_filter_info.output_flags	= OBS_SOURCE_VIDEO;
+    ndi_filter_info.output_flags	= OBS_SOURCE_VIDEO | OBS_SOURCE_AUDIO;
+
     ndi_filter_info.get_name		= ndi_filter_getname;
     ndi_filter_info.get_properties	= ndi_filter_getproperties;
+
     ndi_filter_info.create			= ndi_filter_create;
     ndi_filter_info.destroy			= ndi_filter_destroy;
     ndi_filter_info.update			= ndi_filter_update;
+
     ndi_filter_info.video_tick		= ndi_filter_tick;
     ndi_filter_info.video_render	= ndi_filter_videorender;
 
     // Audio is available only with async sources
+    ndi_filter_info.filter_audio	= ndi_filter_audiofilter;
+
+    return ndi_filter_info;
+}
+
+struct obs_source_info create_ndi_audiofilter_info() {
+    struct obs_source_info ndi_filter_info = {};
+    ndi_filter_info.id				= "ndi_audiofilter";
+    ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
+    ndi_filter_info.output_flags	= OBS_SOURCE_AUDIO;
+
+    ndi_filter_info.get_name		= ndi_audiofilter_getname;
+    ndi_filter_info.get_properties	= ndi_filter_getproperties;
+
+    ndi_filter_info.create			= ndi_filter_create_audioonly;
+    ndi_filter_info.destroy			= ndi_filter_destroy_audioonly;
+    ndi_filter_info.update			= ndi_filter_update;
+
     ndi_filter_info.filter_audio	= ndi_filter_audiofilter;
 
     return ndi_filter_info;
