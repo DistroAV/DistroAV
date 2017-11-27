@@ -26,6 +26,15 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 
 #include "obs-ndi.h"
 
+#define PROP_SOURCE "ndi_source_name"
+#define PROP_HW_ACCEL "ndi_recv_hw_accel"
+#define PROP_BANDWIDTH "ndi_bw_mode"
+#define PROP_FIX_ALPHA "ndi_fix_alpha_blending"
+
+#define PROP_BW_HIGHEST 0
+#define PROP_BW_LOWEST 1
+#define PROP_BW_AUDIO_ONLY 2
+
 obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
     if (!context)
         return nullptr;
@@ -64,8 +73,6 @@ struct ndi_source {
     pthread_t audio_thread;
     bool running;
     NDIlib_tally_t tally;
-    uint32_t no_sources;
-    const NDIlib_source_t* ndi_sources;
     bool alpha_filter_enabled;
 };
 
@@ -80,32 +87,36 @@ obs_properties_t* ndi_source_getproperties(void* data) {
     obs_properties_t* props = obs_properties_create();
     obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-    obs_property_t* source_list = obs_properties_add_list(props, "ndi_source",
+    obs_property_t* source_list = obs_properties_add_list(props, PROP_SOURCE,
         obs_module_text("NDIPlugin.SourceProps.SourceName"),
+        OBS_COMBO_TYPE_LIST,
+        OBS_COMBO_FORMAT_STRING);
+
+    uint32_t nbSources = 0;
+    const NDIlib_source_t* sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder,
+        &nbSources);
+
+    for (uint32_t i = 0; i < nbSources; i++) {
+        obs_property_list_add_string(source_list,
+            sources[i].p_ndi_name, sources[i].p_ndi_name);
+    }
+
+    obs_property_t* bwModes = obs_properties_add_list(props, PROP_BANDWIDTH,
+        obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
         OBS_COMBO_TYPE_LIST,
         OBS_COMBO_FORMAT_INT);
 
-    obs_property_set_modified_callback(source_list, [](
-        obs_properties_t* pps,
-        obs_property_t* p,
-        obs_data_t* settings) {
-        size_t selected_item = obs_data_get_int(settings, "ndi_source");
+    obs_property_list_add_int(bwModes,
+        obs_module_text("NDIPlugin.BWMode.Highest"), PROP_BW_HIGHEST);
+    obs_property_list_add_int(bwModes,
+        obs_module_text("NDIPlugin.BWMode.Lowest"), PROP_BW_LOWEST);
+    obs_property_list_add_int(bwModes,
+        obs_module_text("NDIPlugin.BWMode.AudioOnly"), PROP_BW_AUDIO_ONLY);
 
-        obs_data_set_string(settings, "ndi_source_name",
-            obs_property_list_item_name(p, selected_item));
-        obs_data_set_string(settings, "ndi_source_ip",
-            obs_property_list_item_string(p, selected_item));
-
-        return true;
-    });
-
-    obs_properties_add_bool(props, "ndi_recv_hw_accel",
+    obs_properties_add_bool(props, PROP_HW_ACCEL,
         obs_module_text("NDIPlugin.SourceProps.HWAccel"));
 
-    obs_properties_add_bool(props, "ndi_low_bandwidth",
-        obs_module_text("NDIPlugin.SourceProps.LowBandwidth"));
-
-    obs_properties_add_bool(props, "ndi_fix_alpha_blending",
+    obs_properties_add_bool(props, PROP_FIX_ALPHA,
         obs_module_text("NDIPlugin.SourceProps.AlphaBlendingFix"));
 
     obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
@@ -120,13 +131,6 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 
         return true;
     });
-
-    s->no_sources = 0;
-    s->ndi_sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder,
-        &s->no_sources);
-
-    for (uint32_t i = 0; i < s->no_sources; i++)
-        obs_property_list_add_int(source_list, s->ndi_sources[i].p_ndi_name, i);
 
     return props;
 }
@@ -143,7 +147,7 @@ void* ndi_source_poll_audio(void* data) {
     NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
     while (s->running) {
         frame_received = ndiLib->NDIlib_recv_capture_v2(
-            s->ndi_receiver, nullptr, &audio_frame, nullptr, 100);
+            s->ndi_receiver, nullptr, &audio_frame, nullptr, 1);
 
         if (frame_received == NDIlib_frame_type_audio) {
             switch (audio_frame.no_channels) {
@@ -174,7 +178,7 @@ void* ndi_source_poll_audio(void* data) {
 
             // Timestamps provided by the SDK cause issues with OBS' audio engine.
             // Instead, generate it manually.
-            obs_audio_frame.timestamp = audio_frame.timestamp * 100.0;
+            obs_audio_frame.timestamp = (uint64_t)(audio_frame.timestamp * 100.0);
             obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
             obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
             obs_audio_frame.frames = audio_frame.no_samples;
@@ -206,7 +210,7 @@ void* ndi_source_poll_video(void* data) {
     NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
     while (s->running) {
         frame_received = ndiLib->NDIlib_recv_capture_v2(s->ndi_receiver,
-            &video_frame, nullptr, nullptr, 100);
+            &video_frame, nullptr, nullptr, 1);
 
         if (frame_received == NDIlib_frame_type_video) {
             switch (video_frame.FourCC) {
@@ -231,7 +235,7 @@ void* ndi_source_poll_video(void* data) {
 
             // Using timestamp instead of timecode is better for
             // inter-stream synchronization
-            obs_video_frame.timestamp = video_frame.timestamp * 100.0;
+            obs_video_frame.timestamp = (uint64_t)(video_frame.timestamp * 100.0);
             obs_video_frame.width = video_frame.xres;
             obs_video_frame.height = video_frame.yres;
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
@@ -262,20 +266,12 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     s->running = false;
     ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 
-    NDIlib_source_t selected_source;
-    selected_source.p_ndi_name =
-        obs_data_get_string(settings, "ndi_source_name");
-    selected_source.p_ip_address =
-        obs_data_get_string(settings, "ndi_source_ip");
+    bool hwAccelEnabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
 
-    bool hwAccelEnabled = obs_data_get_bool(settings, "ndi_recv_hw_accel");
-    bool lowBandwidth =
-        obs_data_get_bool(settings, "ndi_low_bandwidth");
-    
     s->alpha_filter_enabled =
-        obs_data_get_bool(settings, "ndi_fix_alpha_blending");
+        obs_data_get_bool(settings, PROP_FIX_ALPHA);
     // Don't persist this value in settings
-    obs_data_set_bool(settings, "ndi_fix_alpha_blending", false);
+    obs_data_set_bool(settings, PROP_FIX_ALPHA, false);
 
     if (s->alpha_filter_enabled) {
         obs_source_t* existing_filter =
@@ -292,11 +288,22 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     }
 
     NDIlib_recv_create_t recv_desc;
-    recv_desc.source_to_connect_to = selected_source;
-    recv_desc.bandwidth =
-        (lowBandwidth ? NDIlib_recv_bandwidth_lowest : NDIlib_recv_bandwidth_highest);
+    recv_desc.source_to_connect_to.p_ndi_name =
+        obs_data_get_string(settings, PROP_SOURCE);
     recv_desc.allow_video_fields = true;
     recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
+
+    switch (obs_data_get_int(settings, PROP_BANDWIDTH)) {
+        case PROP_BW_HIGHEST:
+            recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
+            break;
+        case PROP_BW_LOWEST:
+            recv_desc.bandwidth = NDIlib_recv_bandwidth_lowest;
+            break;
+        case PROP_BW_AUDIO_ONLY:
+            recv_desc.bandwidth = NDIlib_recv_bandwidth_audio_only;
+            break;
+    }
 
     s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
@@ -311,8 +318,8 @@ void ndi_source_update(void* data, obs_data_t* settings) {
         pthread_create(&s->video_thread, nullptr, ndi_source_poll_video, data);
         pthread_create(&s->audio_thread, nullptr, ndi_source_poll_audio, data);
 
-        blog(LOG_INFO, "started A/V threads for source '%s' at addr '%s'",
-                selected_source.p_ndi_name, selected_source.p_ip_address);
+        blog(LOG_INFO, "started A/V threads for source '%s'",
+            recv_desc.source_to_connect_to.p_ndi_name);
 
         // Update tally status
         s->tally.on_preview = obs_source_showing(s->source);
