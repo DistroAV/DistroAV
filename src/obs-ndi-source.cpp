@@ -271,7 +271,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     bool hwAccelEnabled = obs_data_get_bool(settings, "ndi_recv_hw_accel");
     bool lowBandwidth =
         obs_data_get_bool(settings, "ndi_low_bandwidth");
-    
+
     s->alpha_filter_enabled =
         obs_data_get_bool(settings, "ndi_fix_alpha_blending");
     // Don't persist this value in settings
@@ -306,6 +306,9 @@ void ndi_source_update(void* data, obs_data_t* settings) {
             ndiLib->NDIlib_recv_send_metadata(
                 s->ndi_receiver, &hwAccelMetadata);
         }
+
+        // Important for low latency receiving
+        obs_source_set_async_unbuffered(s->source, true);
 
         s->running = true;
         pthread_create(&s->video_thread, nullptr, ndi_source_poll_video, data);
