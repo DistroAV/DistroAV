@@ -124,7 +124,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
             vi.height = height;
             vi.fps_den = s->ovi.fps_den;
             vi.fps_num = s->ovi.fps_num;
-            vi.cache_size = 16;
+            vi.cache_size = 1;
             vi.colorspace = VIDEO_CS_DEFAULT;
             vi.range = VIDEO_RANGE_DEFAULT;
             vi.name = obs_source_get_name(s->context);
@@ -271,7 +271,7 @@ struct obs_source_info create_ndi_filter_info() {
     struct obs_source_info ndi_filter_info = {};
     ndi_filter_info.id				= "ndi_filter";
     ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
-    ndi_filter_info.output_flags	= OBS_SOURCE_VIDEO | OBS_SOURCE_AUDIO;
+    ndi_filter_info.output_flags	= OBS_SOURCE_VIDEO;
 
     ndi_filter_info.get_name		= ndi_filter_getname;
     ndi_filter_info.get_properties	= ndi_filter_getproperties;
