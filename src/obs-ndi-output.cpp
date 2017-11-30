@@ -165,7 +165,7 @@ void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
         _V = _U + 1;
 
         _out = output + (y * out_linesize);
-        
+
         for (uint32_t x = 0; x < width; x+=2) {
             *(_out++) = *(_U++); _U++;
             *(_out++) = *(_Y++);
@@ -241,7 +241,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
     video_frame.frame_rate_D = o->video_info.fps_den;
     video_frame.picture_aspect_ratio = (float)width / (float)height;
     video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-    video_frame.timecode = frame->timestamp / 100.0;
+    video_frame.timecode = (int64_t)(frame->timestamp / 100.0);
 
     video_frame.FourCC = o->frame_format;
     if (video_frame.FourCC = NDIlib_FourCC_type_UYVY) {
@@ -297,7 +297,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame) {
     }
 
     audio_frame.p_data = (float*)audio_data;
-    audio_frame.timecode = frame->timestamp / 100.0;
+    audio_frame.timecode = (int64_t)(frame->timestamp / 100.0);
 
     ndiLib->NDIlib_send_send_audio_v2(o->ndi_sender, &audio_frame);
     bfree(audio_data);
