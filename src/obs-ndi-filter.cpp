@@ -267,8 +267,11 @@ void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
 void ndi_filter_destroy(void* data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
+    if (s->renderer) {
+        obs_display_remove_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
+        obs_display_destroy(s->renderer);
+    }
     video_output_close(s->video_output);
-    obs_display_destroy(s->renderer);
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
 
     gs_stagesurface_unmap(s->stagesurface);
