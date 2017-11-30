@@ -19,6 +19,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <util/platform.h>
 #include <util/threading.h>
+#include <util/profiler.h>
 
 #include "obs-ndi.h"
 
@@ -246,20 +247,27 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
     video_frame.FourCC = o->frame_format;
     if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
         video_format source_f = o->video_info.output_format;
+
         if (source_f == VIDEO_FORMAT_NV12) {
+            profile_start("convert_nv12_to_uyvy");
             convert_nv12_to_uyvy(frame->data, frame->linesize,
                 0, height,
                 o->conv_buffer, o->conv_linesize);
+            profile_end("convert_nv12_to_uyvy");
         }
         else if (source_f == VIDEO_FORMAT_I420) {
+            profile_start("convert_i420_to_uyvy");
             convert_i420_to_uyvy(frame->data, frame->linesize,
                 0, height,
                 o->conv_buffer, o->conv_linesize);
+            profile_end("convert_i420_to_uyvy");
         }
         else if (source_f == VIDEO_FORMAT_I444) {
+            profile_start("convert_i444_to_uyvy");
             convert_i444_to_uyvy(frame->data, frame->linesize,
                 0, height,
                 o->conv_buffer, o->conv_linesize);
+            profile_end("convert_i444_to_uyvy");
         }
 
         video_frame.p_data = o->conv_buffer;
