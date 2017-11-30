@@ -27,13 +27,17 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include "obs-ndi.h"
 
 #define PROP_SOURCE "ndi_source_name"
-#define PROP_HW_ACCEL "ndi_recv_hw_accel"
 #define PROP_BANDWIDTH "ndi_bw_mode"
+#define PROP_HW_ACCEL "ndi_recv_hw_accel"
+#define PROP_SYNC "ndi_sync"
 #define PROP_FIX_ALPHA "ndi_fix_alpha_blending"
 
 #define PROP_BW_HIGHEST 0
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
+
+#define PROP_SYNC_INTERNAL 0
+#define PROP_SYNC_NDI_TIMESTAMP 1
 
 obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
     if (!context)
@@ -69,6 +73,7 @@ extern NDIlib_find_instance_t ndi_finder;
 struct ndi_source {
     obs_source_t* source;
     NDIlib_recv_instance_t ndi_receiver;
+    int sync_mode;
     pthread_t video_thread;
     pthread_t audio_thread;
     bool running;
@@ -112,6 +117,16 @@ obs_properties_t* ndi_source_getproperties(void* data) {
         obs_module_text("NDIPlugin.BWMode.Lowest"), PROP_BW_LOWEST);
     obs_property_list_add_int(bwModes,
         obs_module_text("NDIPlugin.BWMode.AudioOnly"), PROP_BW_AUDIO_ONLY);
+
+    obs_property_t* syncModes = obs_properties_add_list(props, PROP_SYNC,
+        obs_module_text("NDIPlugin.SourceProps.Sync"),
+        OBS_COMBO_TYPE_LIST,
+        OBS_COMBO_FORMAT_INT);
+
+    obs_property_list_add_int(syncModes,
+        obs_module_text("NDIPlugin.SyncMode.Internal"), PROP_SYNC_INTERNAL);
+    obs_property_list_add_int(syncModes,
+        obs_module_text("NDIPlugin.SyncMode.NDITimestamp"), PROP_SYNC_NDI_TIMESTAMP);
 
     obs_properties_add_bool(props, PROP_HW_ACCEL,
         obs_module_text("NDIPlugin.SourceProps.HWAccel"));
@@ -176,7 +191,21 @@ void* ndi_source_poll_audio(void* data) {
                     obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
             }
 
-            obs_audio_frame.timestamp = (uint64_t)(audio_frame.timestamp * 100.0);
+            switch (s->sync_mode) {
+                case PROP_SYNC_INTERNAL:
+                default:
+                    obs_audio_frame.timestamp = os_gettime_ns();
+                    obs_audio_frame.timestamp +=
+                        (audio_frame.no_samples * 1000000000ULL /
+                            audio_frame.sample_rate);
+                    break;
+
+                case PROP_SYNC_NDI_TIMESTAMP:
+                    obs_audio_frame.timestamp =
+                        (uint64_t)(audio_frame.timestamp * 100.0);
+                    break;
+            }
+
             obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
             obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
             obs_audio_frame.frames = audio_frame.no_samples;
@@ -231,9 +260,18 @@ void* ndi_source_poll_video(void* data) {
                     break;
             }
 
-            // Using timestamp instead of timecode is better for
-            // inter-stream synchronization
-            obs_video_frame.timestamp = (uint64_t)(video_frame.timestamp * 100.0);
+            switch (s->sync_mode) {
+                case PROP_SYNC_INTERNAL:
+                default:
+                    obs_video_frame.timestamp = os_gettime_ns();
+                    break;
+
+                case PROP_SYNC_NDI_TIMESTAMP:
+                    obs_video_frame.timestamp =
+                        (uint64_t)(video_frame.timestamp * 100.0);
+                    break;
+            }
+
             obs_video_frame.width = video_frame.xres;
             obs_video_frame.height = video_frame.yres;
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
@@ -303,6 +341,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
             break;
     }
 
+    s->sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
     s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
         if (hwAccelEnabled) {
@@ -374,6 +413,7 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
         static_cast<ndi_source*>(bzalloc(sizeof(struct ndi_source)));
     s->source = source;
     s->running = false;
+    s->sync_mode = PROP_SYNC_INTERNAL;
     ndi_source_update(s, settings);
     return s;
 }
