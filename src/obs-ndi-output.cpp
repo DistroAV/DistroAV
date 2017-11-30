@@ -244,7 +244,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
     video_frame.timecode = (int64_t)(frame->timestamp / 100.0);
 
     video_frame.FourCC = o->frame_format;
-    if (video_frame.FourCC = NDIlib_FourCC_type_UYVY) {
+    if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
         video_format source_f = o->video_info.output_format;
         if (source_f == VIDEO_FORMAT_NV12) {
             convert_nv12_to_uyvy(frame->data, frame->linesize,
