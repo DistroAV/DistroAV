@@ -16,6 +16,10 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library. If not, see <https://www.gnu.org/licenses/>
 */
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
@@ -27,6 +31,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include "obs-ndi.h"
 
 #define TEXFORMAT GS_BGRA
+#define FLT_PROP_NAME "ndi_filter_ndiname"
 
 struct ndi_filter {
     obs_source_t* context;
@@ -58,11 +63,50 @@ const char* ndi_audiofilter_getname(void* data) {
     return obs_module_text("NDIPlugin.AudioFilterName");
 }
 
+void ndi_filter_update(void* data, obs_data_t* settings);
+
 obs_properties_t* ndi_filter_getproperties(void* data) {
-    UNUSED_PARAMETER(data);
+    struct ndi_filter* s = static_cast<ndi_filter*>(data);
+
     obs_properties_t* props = obs_properties_create();
     obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
+
+    obs_properties_add_text(props, FLT_PROP_NAME,
+        obs_module_text("NDIPlugin.FilterProps.NDIName"), OBS_TEXT_DEFAULT);
+
+    obs_properties_add_button(props, "ndi_apply",
+        obs_module_text("NDIPlugin.FilterProps.ApplySettings"), [](
+        obs_properties_t* pps,
+        obs_property_t* prop,
+        void* private_data)
+    {
+        struct ndi_filter* s = static_cast<ndi_filter*>(private_data);
+        obs_data_t* settings = obs_source_get_settings(s->context);
+        ndi_filter_update(s, settings);
+        obs_data_release(settings);
+        return true;
+    });
+
+    obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
+        obs_properties_t* pps,
+        obs_property_t* prop,
+        void* private_data)
+    {
+        #if defined(_WIN32)
+            ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
+        #elif defined(__linux__) || defined(__APPLE__)
+            system("open http://ndi.newtek.com");
+#		endif
+
+        return true;
+    });
+
     return props;
+}
+
+void ndi_filter_getdefaults(obs_data_t* defaults) {
+    obs_data_set_string(defaults, FLT_PROP_NAME,
+        obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
 }
 
 void ndi_filter_raw_video(void* data, video_data* frame) {
@@ -160,22 +204,20 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
     UNUSED_PARAMETER(settings);
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
+    if (s->renderer) {
+        obs_display_remove_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
+        obs_display_destroy(s->renderer);
+    }
+
+    ndiLib->NDIlib_send_destroy(s->ndi_sender);
+
     NDIlib_send_create_t send_desc;
-    send_desc.p_ndi_name = obs_source_get_name(s->context);
+    send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
     send_desc.p_groups = nullptr;
     send_desc.clock_video = false;
     send_desc.clock_audio = false;
 
-    ndiLib->NDIlib_send_destroy(s->ndi_sender);
     s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
-}
-
-void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
-    struct ndi_filter* s =
-        static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
-    s->context = source;
-    s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
-    s->audio_initialized = false;
 
     gs_init_data display_desc = {};
     display_desc.adapter = 0;
@@ -185,16 +227,29 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
     display_desc.cy = 0;
 
     #ifdef _WIN32
-    display_desc.window.hwnd = obs_frontend_get_main_window_handle();
+        display_desc.window.hwnd = obs_frontend_get_main_window_handle();
     #elif __APPLE__
-    display_desc.window.view = (id) obs_frontend_get_main_window_handle();
+        display_desc.window.view = (id)obs_frontend_get_main_window_handle();
     #endif
-
-    obs_get_video_info(&s->ovi);
-    obs_get_audio_info(&s->oai);
 
     s->renderer = obs_display_create(&display_desc);
     obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
+}
+
+void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
+    struct ndi_filter* s =
+        static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
+    s->context = source;
+    s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+    s->audio_initialized = false;
+
+    if (!obs_data_has_user_value(settings, FLT_PROP_NAME)) {
+        obs_data_set_string(settings,
+            FLT_PROP_NAME, obs_source_get_name(s->context));
+    }
+
+    obs_get_video_info(&s->ovi);
+    obs_get_audio_info(&s->oai);
 
     ndi_filter_update(s, settings);
     return s;
@@ -297,6 +352,7 @@ struct obs_source_info create_ndi_audiofilter_info() {
 
     ndi_filter_info.get_name		= ndi_audiofilter_getname;
     ndi_filter_info.get_properties	= ndi_filter_getproperties;
+    ndi_filter_info.get_defaults	= ndi_filter_getdefaults;
 
     ndi_filter_info.create			= ndi_filter_create_audioonly;
     ndi_filter_info.destroy			= ndi_filter_destroy_audioonly;
