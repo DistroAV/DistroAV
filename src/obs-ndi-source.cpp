@@ -192,17 +192,13 @@ void* ndi_source_poll_audio(void* data) {
                     obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
             }
 
-            obs_audio_info oai;
-
             switch (s->sync_mode) {
                 case PROP_SYNC_INTERNAL:
                 default:
-                    obs_get_audio_info(&oai);
-                    // Use current time and advance by one audio tick
                     obs_audio_frame.timestamp = os_gettime_ns();
-                    obs_audio_frame.timestamp += 
-                        (((uint64_t)AUDIO_OUTPUT_FRAMES * 1000000000ULL /
-                            (uint64_t)oai.samples_per_sec));
+                    obs_audio_frame.timestamp +=
+                        ((uint64_t)audio_frame.no_samples * 1000000000ULL /
+                            (uint64_t)audio_frame.sample_rate);
                     break;
 
                 case PROP_SYNC_NDI_TIMESTAMP:
