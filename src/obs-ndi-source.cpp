@@ -197,8 +197,8 @@ void* ndi_source_poll_audio(void* data) {
                 default:
                     obs_audio_frame.timestamp = os_gettime_ns();
                     obs_audio_frame.timestamp +=
-                        (audio_frame.no_samples * 1000000000ULL /
-                            audio_frame.sample_rate);
+                        ((uint64_t)audio_frame.no_samples * 1000000000ULL /
+                            (uint64_t)audio_frame.sample_rate);
                     break;
 
                 case PROP_SYNC_NDI_TIMESTAMP:
