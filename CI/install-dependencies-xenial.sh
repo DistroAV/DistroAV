@@ -51,7 +51,7 @@ unzip ./ndisdk-slim-v3-linux.zip
 # Build obs-studio
 git clone https://github.com/jp9000/obs-studio ./obs-studio
 cd obs-studio
-git checkout 20.1.0
+git checkout 20.1.3
 mkdir build && cd build
 cmake -DUNIX_STRUCTURE=1 -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j4
