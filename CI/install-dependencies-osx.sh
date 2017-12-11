@@ -13,19 +13,20 @@ wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-ni
 sudo installer -pkg ./Packages.pkg -target /
 
 brew update
-brew install qt5
+# OBS Studio deps
+brew install ffmpeg libav
+# OBS and obs-websocket common dependancy
+brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/2b121c9a96e58a5da14228630cb71d5bead7137e/Formula/qt.rb
+
 #echo "Qt path: $(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
 
-# Fetch and untar prebuilt OBS deps that are compatible with older versions of OSX
-wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-nightly/osx-deps.tar.gz
-tar -xf ./osx-deps.tar.gz -C /tmp
-
+# Build OBS Studio
 git clone --recursive https://github.com/jp9000/obs-studio.git
 cd ./obs-studio
-git checkout 20.0.1
-mkdir build
-cd build
-cmake -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 -DDepsPath=/tmp/obsdeps  ..
-make -j4
+git checkout 20.1.0
+mkdir build && cd build
+cmake .. \
+    -DCMAKE_PREFIX_PATH=/usr/local/opt/qt/lib/cmake \
+&& make -j4
 
 cd ../../obs-ndi

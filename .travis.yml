@@ -10,6 +10,7 @@ env:
 matrix:
   include:
   - os: linux
+    env: _linux_build
     dist: trusty
     sudo: required
     services:
@@ -22,10 +23,13 @@ matrix:
     - docker exec -it xenial /root/obs-ndi/CI/build-xenial.sh
     after_success:
     - docker exec -it xenial /root/obs-ndi/CI/package-xenial.sh
+
   - os: osx
     env:
+     - _macos_build
      - CMAKE_PREFIX_PATH=/usr/local/opt/qt5/lib/cmake
      - CEF_BUILD_VERSION=3.2987.1588.g1952835
+    osx_image: xcode8.3
     before_install: "./CI/install-dependencies-osx.sh"
     before_script: "./CI/before-script-osx.sh"
     script: cd ./build && make -j4 && cd -
@@ -44,6 +48,7 @@ deploy:
     condition: "$TRAVIS_OS_NAME = linux"
     repo: Palakis/obs-ndi
     all_branches: true
+
 - provider: s3
   region: eu-central-1
   bucket: obs-ndi-osx-builds
