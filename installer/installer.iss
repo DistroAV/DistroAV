@@ -4,8 +4,8 @@
 #include "C:\Program Files (x86)\Inno Download Plugin\idp.iss"
 
 #define MyAppName "obs-ndi"
-#define MyAppVersion "4.1.4"
-#define MyAppPublisher "StÃ©phane Lepin"
+#define MyAppVersion "4.2"
+#define MyAppPublisher "Stéphane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
 [Setup]
