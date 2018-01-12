@@ -177,7 +177,7 @@ void* ndi_source_poll_audio(void* data) {
                     obs_audio_frame.speakers = SPEAKERS_2POINT1;
                     break;
                 case 4:
-                    obs_audio_frame.speakers = SPEAKERS_4POINT0;
+                    obs_audio_frame.speakers = SPEAKERS_QUAD;
                     break;
                 case 5:
                     obs_audio_frame.speakers = SPEAKERS_4POINT1;
