@@ -126,10 +126,10 @@ bool obs_module_load(void) {
     alpha_filter_info = create_alpha_filter_info();
     obs_register_source(&alpha_filter_info);
 
-    Config* conf = Config::Current();
-    conf->Load();
-
     if (main_window) {
+        Config* conf = Config::Current();
+        conf->Load();
+
         // Ui setup
         QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
             obs_module_text("NDIPlugin.Menu.OutputSettings"));
