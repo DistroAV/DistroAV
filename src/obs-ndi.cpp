@@ -129,29 +129,31 @@ bool obs_module_load(void) {
     Config* conf = Config::Current();
     conf->Load();
 
-    // Ui setup
-    QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
+    if (main_window) {
+        // Ui setup
+        QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
             obs_module_text("NDIPlugin.Menu.OutputSettings"));
 
-    obs_frontend_push_ui_translation(obs_module_get_string);
-    output_settings = new OutputSettings(main_window);
-    obs_frontend_pop_ui_translation();
+        obs_frontend_push_ui_translation(obs_module_get_string);
+        output_settings = new OutputSettings(main_window);
+        obs_frontend_pop_ui_translation();
 
-    auto menu_cb = [] {
-        output_settings->ToggleShowHide();
-    };
-    menu_action->connect(menu_action, &QAction::triggered, menu_cb);
+        auto menu_cb = [] {
+            output_settings->ToggleShowHide();
+        };
+        menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-    obs_frontend_add_event_callback([](enum obs_frontend_event event,
-        void *private_data)
-    {
-        if (event == OBS_FRONTEND_EVENT_EXIT)
-            main_output_stop();
-    }, NULL);
+        obs_frontend_add_event_callback([](enum obs_frontend_event event,
+            void *private_data)
+        {
+            if (event == OBS_FRONTEND_EVENT_EXIT)
+                main_output_stop();
+        }, NULL);
 
-    // Run the server if configured
-    if (conf->OutputEnabled)
-        main_output_start(conf->OutputName.toUtf8().constData());
+        // Run the server if configured
+        if (conf->OutputEnabled)
+            main_output_start(conf->OutputName.toUtf8().constData());
+    }
 
     return true;
 }
@@ -249,5 +251,5 @@ const NDIlib_v3* load_ndilib() {
     }
 
     blog(LOG_ERROR, "Can't find the NDI library");
-    return nullptr;    
+    return nullptr;
 }
