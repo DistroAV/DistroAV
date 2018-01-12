@@ -32,7 +32,8 @@ Config* Config::_instance = nullptr;
 Config::Config() :
     OutputEnabled(false),
     OutputName("OBS"),
-    OutputAsyncEnabled(false) {
+    OutputAsyncEnabled(false)
+{
     config_t* obs_config = obs_frontend_get_global_config();
     if (obs_config) {
         config_set_default_bool(obs_config,
