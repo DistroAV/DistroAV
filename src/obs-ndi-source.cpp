@@ -177,11 +177,7 @@ void* ndi_source_poll_audio(void* data) {
                     obs_audio_frame.speakers = SPEAKERS_2POINT1;
                     break;
                 case 4:
-#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(20, 1, 3)
-                    obs_audio_frame.speakers = SPEAKERS_4POINT0;
-#else
                     obs_audio_frame.speakers = SPEAKERS_QUAD;
-#endif
                     break;
                 case 5:
                     obs_audio_frame.speakers = SPEAKERS_4POINT1;
