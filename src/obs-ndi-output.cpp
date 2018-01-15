@@ -82,9 +82,7 @@ bool ndi_output_start(void* data) {
             break;
 
         case VIDEO_FORMAT_RGBA:
-            // There won't be transparency in the output data, so
-            // ignore the alpha channel
-            o->frame_format = NDIlib_FourCC_type_RGBX;
+            o->frame_format = NDIlib_FourCC_type_RGBA;
             break;
 
         case VIDEO_FORMAT_BGRA:
@@ -104,18 +102,16 @@ bool ndi_output_start(void* data) {
     send_desc.clock_audio = false;
 
     o->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
-
     if (o->ndi_sender) {
-        o->started = true;
-        obs_output_begin_data_capture(o->output, 0);
-
-        if (o->async_sending) {
-            blog(LOG_INFO, "asynchronous video sending enabled");
-        } else {
-            blog(LOG_INFO, "asynchronous video sending disabled");
+        o->started = obs_output_begin_data_capture(o->output, 0);
+        if (o->started) {
+            if (o->async_sending) {
+                blog(LOG_INFO, "asynchronous video sending enabled");
+            }
+            else {
+                blog(LOG_INFO, "asynchronous video sending disabled");
+            }
         }
-    } else {
-        o->started = false;
     }
 
     return o->started;
@@ -123,8 +119,12 @@ bool ndi_output_start(void* data) {
 
 void ndi_output_stop(void* data, uint64_t ts) {
     struct ndi_output* o = static_cast<ndi_output*>(data);
+
     o->started = false;
     obs_output_end_data_capture(o->output);
+
+    ndiLib->NDIlib_send_destroy(o->ndi_sender);
+    delete o->conv_buffer;
 }
 
 void ndi_output_update(void* data, obs_data_t* settings) {
