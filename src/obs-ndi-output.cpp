@@ -125,6 +125,7 @@ void ndi_output_stop(void* data, uint64_t ts) {
 
     ndiLib->NDIlib_send_destroy(o->ndi_sender);
     delete o->conv_buffer;
+    o->conv_buffer = nullptr;
 }
 
 void ndi_output_update(void* data, obs_data_t* settings) {
@@ -134,8 +135,6 @@ void ndi_output_update(void* data, obs_data_t* settings) {
 }
 
 void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
-    UNUSED_PARAMETER(settings);
-
     struct ndi_output* o =
         static_cast<ndi_output*>(bzalloc(sizeof(struct ndi_output)));
     o->output = output;
@@ -146,9 +145,7 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
 }
 
 void ndi_output_destroy(void* data) {
-    struct ndi_output* o = static_cast<ndi_output*>(data);
-    ndiLib->NDIlib_send_destroy(o->ndi_sender);
-    delete o->conv_buffer;
+    UNUSED_PARAMETER(data);
 }
 
 void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
