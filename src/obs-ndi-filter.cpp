@@ -228,8 +228,6 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
 
     #ifdef _WIN32
         display_desc.window.hwnd = obs_frontend_get_main_window_handle();
-    #elif __APPLE__
-        display_desc.window.view = (id)obs_frontend_get_main_window_handle();
     #endif
 
     s->renderer = obs_display_create(&display_desc);
