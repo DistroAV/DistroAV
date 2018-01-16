@@ -20,6 +20,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #include <util/platform.h>
 #include <util/threading.h>
 #include <util/profiler.h>
+#include <util/circlebuf.h>
 
 #include "obs-ndi.h"
 
@@ -139,6 +140,7 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
         static_cast<ndi_output*>(bzalloc(sizeof(struct ndi_output)));
     o->output = output;
     o->started = false;
+
     ndi_output_update(o, settings);
 
     return o;
@@ -296,7 +298,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame) {
     }
 
     audio_frame.p_data = (float*)audio_data;
-    audio_frame.timecode = (int64_t)(frame->timestamp / 100.0);
+    audio_frame.timecode = (int64_t)(frame->timestamp / 100);
 
     ndiLib->NDIlib_send_send_audio_v2(o->ndi_sender, &audio_frame);
     bfree(audio_data);

@@ -49,8 +49,6 @@ struct ndi_filter {
     uint32_t video_linesize;
 
     video_t* video_output;
-
-    bool audio_initialized;
 };
 
 const char* ndi_filter_getname(void* data) {
@@ -241,12 +239,6 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
     s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
-    s->audio_initialized = false;
-
-    if (!obs_data_has_user_value(settings, FLT_PROP_NAME)) {
-        obs_data_set_string(settings,
-            FLT_PROP_NAME, obs_source_get_name(s->context));
-    }
 
     obs_get_video_info(&s->ovi);
     obs_get_audio_info(&s->oai);
@@ -295,7 +287,7 @@ void ndi_filter_videorender(void* data, gs_effect_t* effect) {
     obs_source_skip_video_filter(s->context);
 }
 
-struct obs_audio_data* ndi_filter_audiofilter(void *data,
+struct obs_audio_data* ndi_filter_asyncaudio(void *data,
         struct obs_audio_data* audio_data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
@@ -304,7 +296,7 @@ struct obs_audio_data* ndi_filter_audiofilter(void *data,
     NDIlib_audio_frame_v2_t audio_frame = { 0 };
     audio_frame.sample_rate = s->oai.samples_per_sec;
     audio_frame.no_channels = s->oai.speakers;
-    audio_frame.timecode = audio_data->timestamp;
+    audio_frame.timecode = (int64_t)(audio_data->timestamp / 100);
     audio_frame.no_samples = audio_data->frames;
     audio_frame.channel_stride_in_bytes = audio_frame.no_samples * 4;
 
@@ -341,8 +333,9 @@ struct obs_source_info create_ndi_filter_info() {
     ndi_filter_info.video_tick		= ndi_filter_tick;
     ndi_filter_info.video_render	= ndi_filter_videorender;
 
+    ndi_filter_info.filter_video;
     // Audio is available only with async sources
-    ndi_filter_info.filter_audio	= ndi_filter_audiofilter;
+    ndi_filter_info.filter_audio	= ndi_filter_asyncaudio;
 
     return ndi_filter_info;
 }
@@ -361,7 +354,7 @@ struct obs_source_info create_ndi_audiofilter_info() {
     ndi_filter_info.destroy			= ndi_filter_destroy_audioonly;
     ndi_filter_info.update			= ndi_filter_update;
 
-    ndi_filter_info.filter_audio	= ndi_filter_audiofilter;
+    ndi_filter_info.filter_audio	= ndi_filter_asyncaudio;
 
     return ndi_filter_info;
 }
