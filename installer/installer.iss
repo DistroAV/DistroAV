@@ -4,7 +4,7 @@
 #include "C:\Program Files (x86)\Inno Download Plugin\idp.iss"
 
 #define MyAppName "obs-ndi"
-#define MyAppVersion "4.2"
+#define MyAppVersion "4.2.1"
 #define MyAppPublisher "Stéphane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
@@ -52,7 +52,7 @@ begin
   idpDownloadAfter(wpReady);
 end;
 
-// credit where it's due : 
+// credit where it's due :
 // following function come from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
 function GetDirName(Value: string): string;
 var
