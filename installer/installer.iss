@@ -5,7 +5,7 @@
 
 #define MyAppName "obs-ndi"
 #define MyAppVersion "4.2.1"
-#define MyAppPublisher "Stéphane Lepin"
+#define MyAppPublisher "Stephane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
 [Setup]
@@ -53,14 +53,14 @@ begin
 end;
 
 // credit where it's due :
-// following function come from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
+// following function comes from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
 function GetDirName(Value: string): string;
 var
   InstallPath: string;
 begin
   // initialize default path, which will be returned when the following registry
   // key queries fail due to missing keys or for some different reason
-  Result := '{pf}\obs-studio';
+  Result := '{pf32}\obs-studio';
   // query the first registry value; if this succeeds, return the obtained value
   if RegQueryStringValue(HKLM32, 'SOFTWARE\OBS Studio', '', InstallPath) then
     Result := InstallPath
