@@ -36,6 +36,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 struct ndi_filter {
     obs_source_t* context;
     NDIlib_send_instance_t ndi_sender;
+    pthread_mutex_t	ndi_sender_mutex;
     struct obs_video_info ovi;
     struct obs_audio_info oai;
     obs_display_t* renderer;
@@ -207,15 +208,16 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
         obs_display_destroy(s->renderer);
     }
 
-    ndiLib->NDIlib_send_destroy(s->ndi_sender);
-
     NDIlib_send_create_t send_desc;
     send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
     send_desc.p_groups = nullptr;
     send_desc.clock_video = false;
     send_desc.clock_audio = false;
 
+	pthread_mutex_lock(&s->ndi_sender_mutex);
+	ndiLib->NDIlib_send_destroy(s->ndi_sender);
     s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
+	pthread_mutex_unlock(&s->ndi_sender_mutex);
 
     gs_init_data display_desc = {};
     display_desc.adapter = 0;
@@ -239,6 +241,7 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
     s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+    pthread_mutex_init(&s->ndi_sender_mutex, NULL);
 
     obs_get_video_info(&s->ovi);
     obs_get_audio_info(&s->oai);
@@ -251,8 +254,11 @@ void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
     struct ndi_filter* s =
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
+	pthread_mutex_init(&s->ndi_sender_mutex, NULL);
+
     obs_get_audio_info(&s->oai);
-    ndi_filter_update(s, settings);
+
+	ndi_filter_update(s, settings);
     return s;
 }
 
@@ -264,7 +270,10 @@ void ndi_filter_destroy(void* data) {
         obs_display_destroy(s->renderer);
     }
     video_output_close(s->video_output);
+
+	pthread_mutex_lock(&s->ndi_sender_mutex);
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
+	pthread_mutex_unlock(&s->ndi_sender_mutex);
 
     gs_stagesurface_unmap(s->stagesurface);
     gs_stagesurface_destroy(s->stagesurface);
@@ -273,7 +282,9 @@ void ndi_filter_destroy(void* data) {
 
 void ndi_filter_destroy_audioonly(void* data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
+	pthread_mutex_lock(&s->ndi_sender_mutex);
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
+	pthread_mutex_unlock(&s->ndi_sender_mutex);
 }
 
 void ndi_filter_tick(void* data, float seconds) {
@@ -311,7 +322,9 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
     }
     audio_frame.p_data = (float*)ndi_data;
 
+	pthread_mutex_lock(&s->ndi_sender_mutex);
     ndiLib->NDIlib_send_send_audio_v2(s->ndi_sender, &audio_frame);
+	pthread_mutex_unlock(&s->ndi_sender_mutex);
     bfree(ndi_data);
 
     return audio_data;
