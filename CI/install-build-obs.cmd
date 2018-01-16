@@ -79,13 +79,15 @@ if defined BuildOBS (
 ) else (
   echo BuildOBS: false
 )
+
+echo   git checkout %OBSLatestTag%
+git checkout %OBSLatestTag%
+
 echo:
 
 REM If the build flag is set, build obs-studio.
 if defined BuildOBS (
   echo Building obs-studio...
-  echo   git checkout %OBSLatestTag%
-  git checkout %OBSLatestTag%
   echo:
   echo   Removing previous build dirs...
   if exist build rmdir /s /q C:\projects\obs-studio\build
