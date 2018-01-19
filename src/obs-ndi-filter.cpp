@@ -349,6 +349,7 @@ struct obs_source_info create_ndi_filter_info() {
 
     ndi_filter_info.get_name		= ndi_filter_getname;
     ndi_filter_info.get_properties	= ndi_filter_getproperties;
+    ndi_filter_info.get_defaults	= ndi_filter_getdefaults;
 
     ndi_filter_info.create			= ndi_filter_create;
     ndi_filter_info.destroy			= ndi_filter_destroy;
