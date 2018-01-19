@@ -106,7 +106,7 @@ obs_properties_t* ndi_filter_getproperties(void* data) {
 }
 
 void ndi_filter_getdefaults(obs_data_t* defaults) {
-    obs_data_set_string(defaults, FLT_PROP_NAME,
+    obs_data_set_default_string(defaults, FLT_PROP_NAME,
         obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
 }
 
