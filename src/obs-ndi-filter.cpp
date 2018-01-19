@@ -51,6 +51,7 @@ struct ndi_filter {
     uint32_t video_linesize;
 
     video_t* video_output;
+    bool is_audioonly;
 };
 
 const char* ndi_filter_getname(void* data) {
@@ -137,6 +138,10 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
 
     obs_source_t* target = obs_filter_get_target(s->context);
+    if (!target) {
+        return;
+    }
+
     uint32_t width = obs_source_get_base_width(target);
     uint32_t height = obs_source_get_base_height(target);
 
@@ -233,17 +238,20 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
     display_desc.cx = 0;
     display_desc.cy = 0;
 
-    #ifdef _WIN32
+#ifdef _WIN32
         display_desc.window.hwnd = obs_frontend_get_main_window_handle();
-    #endif
+#endif
 
-    s->renderer = obs_display_create(&display_desc);
-    obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
+    if (!s->is_audioonly) {
+        s->renderer = obs_display_create(&display_desc);
+        obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
+    }
 }
 
 void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
     struct ndi_filter* s =
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
+    s->is_audioonly = false;
     s->context = source;
     s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
     pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
@@ -259,6 +267,7 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
 void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
     struct ndi_filter* s =
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
+    s->is_audioonly = true;
     s->context = source;
     pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
     pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
