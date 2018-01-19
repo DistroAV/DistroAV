@@ -36,7 +36,8 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 struct ndi_filter {
     obs_source_t* context;
     NDIlib_send_instance_t ndi_sender;
-    pthread_mutex_t	ndi_sender_mutex;
+    pthread_mutex_t	ndi_sender_video_mutex;
+    pthread_mutex_t ndi_sender_audio_mutex;
     struct obs_video_info ovi;
     struct obs_audio_info oai;
     obs_display_t* renderer;
@@ -127,7 +128,9 @@ void ndi_filter_raw_video(void* data, video_data* frame) {
     video_frame.p_data = frame->data[0];
     video_frame.line_stride_in_bytes = frame->linesize[0];
 
+    pthread_mutex_lock(&s->ndi_sender_video_mutex);
     ndiLib->NDIlib_send_send_video_v2(s->ndi_sender, &video_frame);
+    pthread_mutex_unlock(&s->ndi_sender_video_mutex);
 }
 
 void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
@@ -214,10 +217,14 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
     send_desc.clock_video = false;
     send_desc.clock_audio = false;
 
-	pthread_mutex_lock(&s->ndi_sender_mutex);
-	ndiLib->NDIlib_send_destroy(s->ndi_sender);
+    pthread_mutex_lock(&s->ndi_sender_video_mutex);
+    pthread_mutex_lock(&s->ndi_sender_audio_mutex);
+
+    ndiLib->NDIlib_send_destroy(s->ndi_sender);
     s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
-	pthread_mutex_unlock(&s->ndi_sender_mutex);
+
+    pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
+    pthread_mutex_unlock(&s->ndi_sender_video_mutex);
 
     gs_init_data display_desc = {};
     display_desc.adapter = 0;
@@ -239,7 +246,8 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
     s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
-    pthread_mutex_init(&s->ndi_sender_mutex, NULL);
+    pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
+    pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
 
     obs_get_video_info(&s->ovi);
     obs_get_audio_info(&s->oai);
@@ -252,11 +260,12 @@ void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
     struct ndi_filter* s =
         static_cast<ndi_filter*>(bzalloc(sizeof(struct ndi_filter)));
     s->context = source;
-	pthread_mutex_init(&s->ndi_sender_mutex, NULL);
+    pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
+    pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
 
     obs_get_audio_info(&s->oai);
 
-	ndi_filter_update(s, settings);
+    ndi_filter_update(s, settings);
     return s;
 }
 
@@ -269,9 +278,13 @@ void ndi_filter_destroy(void* data) {
     }
     video_output_close(s->video_output);
 
-	pthread_mutex_lock(&s->ndi_sender_mutex);
+    pthread_mutex_lock(&s->ndi_sender_video_mutex);
+    pthread_mutex_lock(&s->ndi_sender_audio_mutex);
+
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
-	pthread_mutex_unlock(&s->ndi_sender_mutex);
+
+    pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
+    pthread_mutex_unlock(&s->ndi_sender_video_mutex);
 
     gs_stagesurface_unmap(s->stagesurface);
     gs_stagesurface_destroy(s->stagesurface);
@@ -280,9 +293,9 @@ void ndi_filter_destroy(void* data) {
 
 void ndi_filter_destroy_audioonly(void* data) {
     struct ndi_filter* s = static_cast<ndi_filter*>(data);
-	pthread_mutex_lock(&s->ndi_sender_mutex);
+    pthread_mutex_lock(&s->ndi_sender_audio_mutex);
     ndiLib->NDIlib_send_destroy(s->ndi_sender);
-	pthread_mutex_unlock(&s->ndi_sender_mutex);
+    pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 }
 
 void ndi_filter_tick(void* data, float seconds) {
@@ -320,11 +333,11 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
     }
     audio_frame.p_data = (float*)ndi_data;
 
-	pthread_mutex_lock(&s->ndi_sender_mutex);
+    pthread_mutex_lock(&s->ndi_sender_audio_mutex);
     ndiLib->NDIlib_send_send_audio_v2(s->ndi_sender, &audio_frame);
-	pthread_mutex_unlock(&s->ndi_sender_mutex);
-    bfree(ndi_data);
+    pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 
+    bfree(ndi_data);
     return audio_data;
 }
 
@@ -344,7 +357,6 @@ struct obs_source_info create_ndi_filter_info() {
     ndi_filter_info.video_tick		= ndi_filter_tick;
     ndi_filter_info.video_render	= ndi_filter_videorender;
 
-    ndi_filter_info.filter_video;
     // Audio is available only with async sources
     ndi_filter_info.filter_audio	= ndi_filter_asyncaudio;
 
