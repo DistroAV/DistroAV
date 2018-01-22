@@ -23,7 +23,7 @@ brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/2b121c9a96
 # Build OBS Studio
 git clone --recursive https://github.com/jp9000/obs-studio.git
 cd ./obs-studio
-git checkout 20.1.3
+git checkout 21.0.0
 mkdir build && cd build
 cmake .. \
     -DCMAKE_PREFIX_PATH=/usr/local/opt/qt/lib/cmake \
