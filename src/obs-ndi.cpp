@@ -166,8 +166,9 @@ void obs_module_unload() {
         ndiLib->NDIlib_destroy();
     }
 
-    if (loaded_lib)
-        os_dlclose(loaded_lib);
+    if (loaded_lib) {
+        delete loaded_lib;
+    }
 }
 
 const char* obs_module_name() {

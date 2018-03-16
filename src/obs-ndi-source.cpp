@@ -48,14 +48,14 @@ obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
         obs_source_t* result;
     };
 
-    struct search_context filter_search;
+    struct search_context filter_search = {};
     filter_search.query = id;
     filter_search.result = nullptr;
 
     obs_source_enum_filters(context,
         [](obs_source_t*, obs_source_t* filter, void* param) {
             struct search_context* filter_search =
-                static_cast<struct search_context*>(param);
+                (struct search_context*)param;
 
             const char* id = obs_source_get_id(filter);
             if (strcmp(id, filter_search->query) == 0) {
@@ -87,7 +87,7 @@ const char* ndi_source_getname(void* data) {
 }
 
 obs_properties_t* ndi_source_getproperties(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     obs_properties_t* props = obs_properties_create();
     obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
@@ -152,7 +152,7 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 }
 
 void* ndi_source_poll_audio(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     blog(LOG_INFO, "audio thread for '%s' started",
                         obs_source_get_name(s->source));
@@ -231,7 +231,7 @@ void* ndi_source_poll_audio(void* data) {
 }
 
 void* ndi_source_poll_video(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     blog(LOG_INFO, "video thread for '%s' started",
                     obs_source_get_name(s->source));
@@ -297,7 +297,7 @@ void* ndi_source_poll_video(void* data) {
 }
 
 void ndi_source_update(void* data, obs_data_t* settings) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     if(s->running) {
         s->running = false;
@@ -378,7 +378,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
 }
 
 void ndi_source_shown(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     if (s->ndi_receiver) {
         s->tally.on_preview = true;
@@ -387,7 +387,7 @@ void ndi_source_shown(void* data) {
 }
 
 void ndi_source_hidden(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     if (s->ndi_receiver) {
         s->tally.on_preview = false;
@@ -396,7 +396,7 @@ void ndi_source_hidden(void* data) {
 }
 
 void ndi_source_activated(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     if (s->ndi_receiver) {
         s->tally.on_program = true;
@@ -405,7 +405,7 @@ void ndi_source_activated(void* data) {
 }
 
 void ndi_source_deactivated(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
 
     if (s->ndi_receiver) {
         s->tally.on_program = false;
@@ -415,7 +415,7 @@ void ndi_source_deactivated(void* data) {
 
 void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
     struct ndi_source* s =
-        static_cast<ndi_source*>(bzalloc(sizeof(struct ndi_source)));
+            (struct ndi_source*)bzalloc(sizeof(struct ndi_source));
     s->source = source;
     s->running = false;
     s->sync_mode = PROP_SYNC_INTERNAL;
@@ -424,11 +424,12 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
 }
 
 void ndi_source_destroy(void* data) {
-    struct ndi_source* s = static_cast<ndi_source*>(data);
+    struct ndi_source* s = (struct ndi_source*)data;
     s->running = false;
     pthread_join(s->video_thread, NULL);
     pthread_join(s->audio_thread, NULL);
     ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
+    bfree(s);
 }
 
 struct obs_source_info create_ndi_source_info() {
