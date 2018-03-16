@@ -64,7 +64,7 @@ obs_properties_t* ndi_output_getproperties(void* data) {
 }
 
 bool ndi_output_start(void* data) {
-    struct ndi_output* o = static_cast<ndi_output*>(data);
+    struct ndi_output* o = (struct ndi_output*)data;
 
     ndiLib->NDIlib_send_destroy(o->ndi_sender);
     delete o->conv_buffer;
@@ -119,7 +119,7 @@ bool ndi_output_start(void* data) {
 }
 
 void ndi_output_stop(void* data, uint64_t ts) {
-    struct ndi_output* o = static_cast<ndi_output*>(data);
+    struct ndi_output* o = (struct ndi_output*)data;
 
     o->started = false;
     obs_output_end_data_capture(o->output);
@@ -130,24 +130,23 @@ void ndi_output_stop(void* data, uint64_t ts) {
 }
 
 void ndi_output_update(void* data, obs_data_t* settings) {
-    struct ndi_output* o = static_cast<ndi_output*>(data);
+    struct ndi_output* o = (struct ndi_output*)data;
     o->ndi_name = obs_data_get_string(settings, "ndi_name");
     o->async_sending = obs_data_get_bool(settings, "ndi_async_sending");
 }
 
 void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
     struct ndi_output* o =
-        static_cast<ndi_output*>(bzalloc(sizeof(struct ndi_output)));
+            (struct ndi_output*)bzalloc(sizeof(struct ndi_output));
     o->output = output;
     o->started = false;
-
     ndi_output_update(o, settings);
-
     return o;
 }
 
 void ndi_output_destroy(void* data) {
-    UNUSED_PARAMETER(data);
+    struct ndi_output* o = (struct ndi_output*)data;
+    bfree(o);
 }
 
 void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
@@ -227,7 +226,7 @@ void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 }
 
 void ndi_output_rawvideo(void* data, struct video_data* frame) {
-    struct ndi_output* o = static_cast<ndi_output*>(data);
+    struct ndi_output* o = (struct ndi_output*)data;
     if (!o->started)
         return;
 
@@ -278,7 +277,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
 }
 
 void ndi_output_rawaudio(void* data, struct audio_data* frame) {
-    struct ndi_output* o = static_cast<ndi_output*>(data);
+    struct ndi_output* o = (struct ndi_output*)data;
     if (!o->started) return;
 
     NDIlib_audio_frame_v2_t audio_frame = {0};
