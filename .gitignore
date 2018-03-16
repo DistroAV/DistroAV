@@ -4,3 +4,4 @@
 /release/
 /installer/Output/
 .DS_Store
+.idea
