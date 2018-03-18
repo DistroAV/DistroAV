@@ -36,5 +36,5 @@ test: off
 
 cache:
   - C:\projects\dependencies2015.zip
-  - C:\projects\obs-studio-last-tag-built.txt
+#  - C:\projects\obs-studio-last-tag-built.txt
   - C:\projects\obs-studio
