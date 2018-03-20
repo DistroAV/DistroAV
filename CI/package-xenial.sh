@@ -29,4 +29,12 @@ PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
         --pkgsource="http://ndi.newtek.com" \
         --pakdir="/package" ../CI/create-libndi-deb.sh
 
+PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
+        --backup=no --deldoc=yes --install=no \
+        --pkgname=libndi3-dev --pkgversion="3.0.1" --requires="libndi3 (>= 3.0.1)" \
+        --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
+        --pkggroup="video" \
+        --pkgsource="http://ndi.newtek.com" \
+        --pakdir="/package" ../CI/create-libndi-dev-deb.sh
+
 chmod ao+r /package/*
