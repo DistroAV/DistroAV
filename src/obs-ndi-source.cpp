@@ -142,7 +142,7 @@ obs_properties_t* ndi_source_getproperties(void* data) {
         #if defined(_WIN32)
             ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
         #elif defined(__linux__) || defined(__APPLE__)
-            system("open http://ndi.newtek.com");
+            int suppresswarning = system("open http://ndi.newtek.com");
         #endif
 
         return true;
@@ -351,7 +351,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     if (s->ndi_receiver) {
         if (hwAccelEnabled) {
             NDIlib_metadata_frame_t hwAccelMetadata;
-            hwAccelMetadata.p_data = "<ndi_hwaccel enabled=\"true\"/>";
+            hwAccelMetadata.p_data = (char*)"<ndi_hwaccel enabled=\"true\"/>";
             ndiLib->NDIlib_recv_send_metadata(
                 s->ndi_receiver, &hwAccelMetadata);
         }
