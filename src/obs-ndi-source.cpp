@@ -182,6 +182,24 @@ obs_properties_t* ndi_source_getproperties(void* data) {
     obs_property_list_add_int(bw_modes,
         obs_module_text("NDIPlugin.BWMode.AudioOnly"), PROP_BW_AUDIO_ONLY);
 
+    obs_property_set_modified_callback(bw_modes, [](
+        obs_properties_t *props,
+        obs_property_t *property,
+        obs_data_t *settings)
+    {
+        bool is_audio_only =
+            (obs_data_get_int(settings, PROP_BANDWIDTH) == PROP_BW_AUDIO_ONLY);
+
+        obs_property_t* yuv_range = obs_properties_get(props, PROP_YUV_RANGE);
+        obs_property_t* yuv_colorspace =
+            obs_properties_get(props, PROP_YUV_COLORSPACE);
+
+        obs_property_set_visible(yuv_range, !is_audio_only);
+        obs_property_set_visible(yuv_colorspace, !is_audio_only);
+
+        return true;
+    });
+
     obs_property_t* sync_modes = obs_properties_add_list(props, PROP_SYNC,
         obs_module_text("NDIPlugin.SourceProps.Sync"),
         OBS_COMBO_TYPE_LIST,
