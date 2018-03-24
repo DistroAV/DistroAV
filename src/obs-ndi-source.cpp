@@ -50,86 +50,6 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
 
-obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
-    if (!context)
-        return nullptr;
-
-    struct search_context {
-        const char* query;
-        obs_source_t* result;
-    };
-
-    struct search_context filter_search = {};
-    filter_search.query = id;
-    filter_search.result = nullptr;
-
-    obs_source_enum_filters(context,
-        [](obs_source_t*, obs_source_t* filter, void* param) {
-            struct search_context* filter_search =
-                (struct search_context*)param;
-
-            const char* id = obs_source_get_id(filter);
-            if (strcmp(id, filter_search->query) == 0) {
-                obs_source_addref(filter);
-                filter_search->result = filter;
-            }
-        },
-    &filter_search);
-
-    return filter_search.result;
-}
-
-speaker_layout channel_count_to_layout(int channels) {
-    switch (channels) {
-        case 1:
-            return SPEAKERS_MONO;
-        case 2:
-            return SPEAKERS_STEREO;
-        case 3:
-            return SPEAKERS_2POINT1;
-        case 4:
-#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(21, 0, 0)
-            return SPEAKERS_4POINT0;
-#else
-            return SPEAKERS_QUAD;
-#endif
-        case 5:
-            return SPEAKERS_4POINT1;
-        case 6:
-            return SPEAKERS_5POINT1;
-        case 8:
-            return SPEAKERS_7POINT1;
-        default:
-            return SPEAKERS_UNKNOWN;
-    }
-}
-
-video_colorspace prop_to_colorspace(int index) {
-    switch (index) {
-        case PROP_YUV_SPACE_BT601:
-            return VIDEO_CS_601;
-        case PROP_YUV_SPACE_BT709:
-            return VIDEO_CS_709;
-
-        case PROP_YUV_SPACE_DEFAULT:
-        default:
-            return VIDEO_CS_DEFAULT;
-    }
-}
-
-video_range_type prop_to_range_type(int index) {
-    switch (index) {
-        case PROP_YUV_RANGE_PARTIAL:
-            return VIDEO_RANGE_PARTIAL;
-        case PROP_YUV_RANGE_FULL:
-            return VIDEO_RANGE_FULL;
-
-        case PROP_YUV_RANGE_DEFAULT:
-        default:
-            return VIDEO_RANGE_DEFAULT;
-    }
-}
-
 extern NDIlib_find_instance_t ndi_finder;
 
 struct ndi_source {
@@ -144,6 +64,93 @@ struct ndi_source {
     NDIlib_tally_t tally;
     bool alpha_filter_enabled;
 };
+
+static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
+    if (!context)
+        return nullptr;
+
+    struct search_context {
+        const char* query;
+        obs_source_t* result;
+    };
+
+    struct search_context filter_search = {};
+    filter_search.query = id;
+    filter_search.result = nullptr;
+
+    obs_source_enum_filters(context,
+        [](obs_source_t*, obs_source_t* filter, void* param) {
+        struct search_context* filter_search =
+            (struct search_context*)param;
+
+        const char* id = obs_source_get_id(filter);
+        if (strcmp(id, filter_search->query) == 0) {
+            obs_source_addref(filter);
+            filter_search->result = filter;
+        }
+    },
+        &filter_search);
+
+    return filter_search.result;
+}
+
+static speaker_layout channel_count_to_layout(int channels) {
+    switch (channels) {
+    case 1:
+        return SPEAKERS_MONO;
+    case 2:
+        return SPEAKERS_STEREO;
+    case 3:
+        return SPEAKERS_2POINT1;
+    case 4:
+#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(21, 0, 0)
+        return SPEAKERS_4POINT0;
+#else
+        return SPEAKERS_QUAD;
+#endif
+    case 5:
+        return SPEAKERS_4POINT1;
+    case 6:
+        return SPEAKERS_5POINT1;
+    case 8:
+        return SPEAKERS_7POINT1;
+    default:
+        return SPEAKERS_UNKNOWN;
+    }
+}
+
+static video_colorspace prop_to_colorspace(int index) {
+    switch (index) {
+    case PROP_YUV_SPACE_BT601:
+        return VIDEO_CS_601;
+    case PROP_YUV_SPACE_BT709:
+        return VIDEO_CS_709;
+
+    case PROP_YUV_SPACE_DEFAULT:
+    default:
+        return VIDEO_CS_DEFAULT;
+    }
+}
+
+static video_range_type prop_to_range_type(int index) {
+    switch (index) {
+    case PROP_YUV_RANGE_PARTIAL:
+        return VIDEO_RANGE_PARTIAL;
+    case PROP_YUV_RANGE_FULL:
+        return VIDEO_RANGE_FULL;
+
+    case PROP_YUV_RANGE_DEFAULT:
+    default:
+        return VIDEO_RANGE_DEFAULT;
+    }
+}
+
+static obs_source_frame* blank_video_frame()
+{
+    obs_source_frame* frame = obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
+    frame->timestamp = os_gettime_ns();
+    return frame;
+}
 
 const char* ndi_source_getname(void* data) {
     UNUSED_PARAMETER(data);
@@ -436,6 +443,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
             break;
         case PROP_BW_AUDIO_ONLY:
             recv_desc.bandwidth = NDIlib_recv_bandwidth_audio_only;
+            obs_source_output_video(s->source, blank_video_frame());
             break;
     }
 
