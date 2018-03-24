@@ -43,19 +43,20 @@ void alpha_filter_update(void* data, obs_data_t* settings) {
 
 void* alpha_filter_create(obs_data_t* settings, obs_source_t* source) {
 	struct alpha_filter* s =
-		static_cast<alpha_filter*>(bzalloc(sizeof(struct alpha_filter)));
+		(struct alpha_filter*)bzalloc(sizeof(struct alpha_filter));
 	s->context = source;
 	s->effect = obs_get_base_effect(OBS_EFFECT_PREMULTIPLIED_ALPHA);
 	return s;
 }
 
 void alpha_filter_destroy(void* data) {
-	UNUSED_PARAMETER(data);
+	struct alpha_filter* s = (struct alpha_filter*)data;
+	bfree(s);
 }
 
 void alpha_filter_videorender(void* data, gs_effect_t* effect) {
 	UNUSED_PARAMETER(effect);
-	struct alpha_filter* s = static_cast<alpha_filter*>(data);
+	struct alpha_filter* s = (struct alpha_filter*)data;
 
 	if (!obs_source_process_filter_begin(s->context, GS_RGBA,
 		OBS_ALLOW_DIRECT_RENDERING))
