@@ -38,6 +38,7 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 
 #define PROP_SYNC_INTERNAL 0
 #define PROP_SYNC_NDI_TIMESTAMP 1
+#define PROP_SYNC_NDI_SOURCE_TIMECODE 2
 
 obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
     if (!context)
@@ -124,9 +125,14 @@ obs_properties_t* ndi_source_getproperties(void* data) {
         OBS_COMBO_FORMAT_INT);
 
     obs_property_list_add_int(syncModes,
-        obs_module_text("NDIPlugin.SyncMode.Internal"), PROP_SYNC_INTERNAL);
+        obs_module_text("NDIPlugin.SyncMode.Internal"),
+        PROP_SYNC_INTERNAL);
     obs_property_list_add_int(syncModes,
-        obs_module_text("NDIPlugin.SyncMode.NDITimestamp"), PROP_SYNC_NDI_TIMESTAMP);
+        obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
+        PROP_SYNC_NDI_TIMESTAMP);
+    obs_property_list_add_int(syncModes,
+        obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
+        PROP_SYNC_NDI_SOURCE_TIMECODE);
 
     obs_properties_add_bool(props, PROP_HW_ACCEL,
         obs_module_text("NDIPlugin.SourceProps.HWAccel"));
@@ -209,6 +215,11 @@ void* ndi_source_poll_audio(void* data) {
                     obs_audio_frame.timestamp =
                         (uint64_t)(audio_frame.timestamp * 100.0);
                     break;
+
+                case PROP_SYNC_NDI_SOURCE_TIMECODE:
+                    obs_audio_frame.timestamp =
+                        (uint64_t)(audio_frame.timecode * 100.0);
+                    break;
             }
 
             obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
@@ -274,6 +285,11 @@ void* ndi_source_poll_video(void* data) {
                 case PROP_SYNC_NDI_TIMESTAMP:
                     obs_video_frame.timestamp =
                         (uint64_t)(video_frame.timestamp * 100.0);
+                    break;
+
+                case PROP_SYNC_NDI_SOURCE_TIMECODE:
+                    obs_video_frame.timestamp =
+                        (uint64_t)(video_frame.timecode * 100.0);
                     break;
             }
 
