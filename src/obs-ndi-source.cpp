@@ -31,6 +31,8 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #define PROP_HW_ACCEL "ndi_recv_hw_accel"
 #define PROP_SYNC "ndi_sync"
 #define PROP_FIX_ALPHA "ndi_fix_alpha_blending"
+#define PROP_YUV_RANGE "yuv_range"
+#define PROP_YUV_COLORSPACE "yuv_colorspace"
 
 #define PROP_BW_HIGHEST 0
 #define PROP_BW_LOWEST 1
@@ -39,6 +41,12 @@ License along with this library. If not, see <https://www.gnu.org/licenses/>
 #define PROP_SYNC_INTERNAL 0
 #define PROP_SYNC_NDI_TIMESTAMP 1
 #define PROP_SYNC_NDI_SOURCE_TIMECODE 2
+
+#define PROP_YUV_RANGE_PARTIAL 0
+#define PROP_YUV_RANGE_FULL 1
+
+#define PROP_YUV_SPACE_BT601 0
+#define PROP_YUV_SPACE_BT709 1
 
 obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
     if (!context)
@@ -69,12 +77,61 @@ obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
     return filter_search.result;
 }
 
+speaker_layout channel_count_to_layout(int channels) {
+    switch (channels) {
+        case 1:
+            return SPEAKERS_MONO;
+        case 2:
+            return SPEAKERS_STEREO;
+        case 3:
+            return SPEAKERS_2POINT1;
+        case 4:
+#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(21, 0, 0)
+            return SPEAKERS_4POINT0;
+#else
+            return SPEAKERS_QUAD;
+#endif
+        case 5:
+            return SPEAKERS_4POINT1;
+        case 6:
+            return SPEAKERS_5POINT1;
+        case 8:
+            return SPEAKERS_7POINT1;
+        default:
+            return SPEAKERS_UNKNOWN;
+    }
+}
+
+video_colorspace prop_to_colorspace(int index) {
+    switch (index) {
+        case PROP_YUV_SPACE_BT601:
+            return VIDEO_CS_601;
+        case PROP_YUV_SPACE_BT709:
+            return VIDEO_CS_709;
+        default:
+            return VIDEO_CS_DEFAULT;
+    }
+}
+
+video_range_type prop_to_range_type(int index) {
+    switch (index) {
+        case PROP_YUV_RANGE_PARTIAL:
+            return VIDEO_RANGE_PARTIAL;
+        case PROP_YUV_RANGE_FULL:
+            return VIDEO_RANGE_FULL;
+        default:
+            return VIDEO_RANGE_DEFAULT;
+    }
+}
+
 extern NDIlib_find_instance_t ndi_finder;
 
 struct ndi_source {
     obs_source_t* source;
     NDIlib_recv_instance_t ndi_receiver;
     int sync_mode;
+    video_range_type yuv_range;
+    video_colorspace yuv_colorspace;
     pthread_t video_thread;
     pthread_t audio_thread;
     bool running;
@@ -107,30 +164,30 @@ obs_properties_t* ndi_source_getproperties(void* data) {
             sources[i].p_ndi_name, sources[i].p_ndi_name);
     }
 
-    obs_property_t* bwModes = obs_properties_add_list(props, PROP_BANDWIDTH,
+    obs_property_t* bw_modes = obs_properties_add_list(props, PROP_BANDWIDTH,
         obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
         OBS_COMBO_TYPE_LIST,
         OBS_COMBO_FORMAT_INT);
 
-    obs_property_list_add_int(bwModes,
+    obs_property_list_add_int(bw_modes,
         obs_module_text("NDIPlugin.BWMode.Highest"), PROP_BW_HIGHEST);
-    obs_property_list_add_int(bwModes,
+    obs_property_list_add_int(bw_modes,
         obs_module_text("NDIPlugin.BWMode.Lowest"), PROP_BW_LOWEST);
-    obs_property_list_add_int(bwModes,
+    obs_property_list_add_int(bw_modes,
         obs_module_text("NDIPlugin.BWMode.AudioOnly"), PROP_BW_AUDIO_ONLY);
 
-    obs_property_t* syncModes = obs_properties_add_list(props, PROP_SYNC,
+    obs_property_t* sync_modes = obs_properties_add_list(props, PROP_SYNC,
         obs_module_text("NDIPlugin.SourceProps.Sync"),
         OBS_COMBO_TYPE_LIST,
         OBS_COMBO_FORMAT_INT);
 
-    obs_property_list_add_int(syncModes,
+    obs_property_list_add_int(sync_modes,
         obs_module_text("NDIPlugin.SyncMode.Internal"),
         PROP_SYNC_INTERNAL);
-    obs_property_list_add_int(syncModes,
+    obs_property_list_add_int(sync_modes,
         obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
         PROP_SYNC_NDI_TIMESTAMP);
-    obs_property_list_add_int(syncModes,
+    obs_property_list_add_int(sync_modes,
         obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
         PROP_SYNC_NDI_SOURCE_TIMECODE);
 
@@ -139,6 +196,24 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 
     obs_properties_add_bool(props, PROP_FIX_ALPHA,
         obs_module_text("NDIPlugin.SourceProps.AlphaBlendingFix"));
+
+    obs_property_t* yuv_ranges = obs_properties_add_list(props, PROP_YUV_RANGE,
+        obs_module_text("NDIPlugin.SourceProps.ColorRange"),
+        OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+
+    obs_property_list_add_int(yuv_ranges,
+        obs_module_text("NDIPlugin.SourceProps.ColorRange.Partial"),
+        PROP_YUV_RANGE_PARTIAL);
+    obs_property_list_add_int(yuv_ranges,
+        obs_module_text("NDIPlugin.SourceProps.ColorRange.Full"),
+        PROP_YUV_RANGE_FULL);
+
+    obs_property_t* yuv_spaces = obs_properties_add_list(props, PROP_YUV_COLORSPACE,
+        obs_module_text("NDIPlugin.SourceProps.ColorSpace"),
+        OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+
+    obs_property_list_add_int(yuv_spaces, "601", PROP_YUV_SPACE_BT601);
+    obs_property_list_add_int(yuv_spaces, "709", PROP_YUV_SPACE_BT709);
 
     obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
         obs_properties_t *pps,
@@ -172,35 +247,8 @@ void* ndi_source_poll_audio(void* data) {
             s->ndi_receiver, nullptr, &audio_frame, nullptr, 1);
 
         if (frame_received == NDIlib_frame_type_audio) {
-            switch (audio_frame.no_channels) {
-                case 1:
-                    obs_audio_frame.speakers = SPEAKERS_MONO;
-                    break;
-                case 2:
-                    obs_audio_frame.speakers = SPEAKERS_STEREO;
-                    break;
-                case 3:
-                    obs_audio_frame.speakers = SPEAKERS_2POINT1;
-                    break;
-                case 4:
-#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(21, 0, 0)
-                    obs_audio_frame.speakers = SPEAKERS_4POINT0;
-#else
-                    obs_audio_frame.speakers = SPEAKERS_QUAD;
-#endif
-                    break;
-                case 5:
-                    obs_audio_frame.speakers = SPEAKERS_4POINT1;
-                    break;
-                case 6:
-                    obs_audio_frame.speakers = SPEAKERS_5POINT1;
-                    break;
-                case 8:
-                    obs_audio_frame.speakers = SPEAKERS_7POINT1;
-                    break;
-                default:
-                    obs_audio_frame.speakers = SPEAKERS_UNKNOWN;
-            }
+            obs_audio_frame.speakers =
+                channel_count_to_layout(audio_frame.no_channels);
 
             switch (s->sync_mode) {
                 case PROP_SYNC_INTERNAL:
@@ -298,7 +346,7 @@ void* ndi_source_poll_video(void* data) {
             obs_video_frame.linesize[0] = video_frame.line_stride_in_bytes;
             obs_video_frame.data[0] = video_frame.p_data;
 
-            video_format_get_parameters(VIDEO_CS_DEFAULT, VIDEO_RANGE_DEFAULT,
+            video_format_get_parameters(s->yuv_colorspace, s->yuv_range,
                 obs_video_frame.color_matrix, obs_video_frame.color_range_min,
                 obs_video_frame.color_range_max);
 
@@ -363,6 +411,11 @@ void ndi_source_update(void* data, obs_data_t* settings) {
     }
 
     s->sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
+    s->yuv_range =
+        prop_to_range_type((int)obs_data_get_int(settings, PROP_YUV_RANGE));
+    s->yuv_colorspace =
+        prop_to_colorspace((int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
+
     s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
     if (s->ndi_receiver) {
         if (hwAccelEnabled) {
