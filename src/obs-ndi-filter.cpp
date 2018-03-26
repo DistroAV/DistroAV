@@ -147,9 +147,6 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
 
     gs_texrender_reset(s->texrender);
 
-    gs_blend_state_push();
-    gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
-
     if (gs_texrender_begin(s->texrender, width, height)) {
         struct vec4 background;
         vec4_zero(&background);
@@ -157,7 +154,12 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
         gs_clear(GS_CLEAR_COLOR, &background, 0.0f, 0);
         gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
 
+        gs_blend_state_push();
+        gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+
         obs_source_video_render(target);
+
+        gs_blend_state_pop();
         gs_texrender_end(s->texrender);
 
         if (s->known_width != width || s->known_height != height) {
@@ -197,14 +199,11 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
                 gs_texrender_get_texture(s->texrender));
 
             memcpy(output_frame.data[0], s->video_data,
-                s->video_linesize * s->known_height);
-            output_frame.linesize[0] = s->video_linesize;
+                (output_frame.linesize[0]) * (s->known_height));
 
             video_output_unlock_frame(s->video_output);
         }
     }
-
-    gs_blend_state_pop();
 }
 
 void ndi_filter_update(void* data, obs_data_t* settings) {
