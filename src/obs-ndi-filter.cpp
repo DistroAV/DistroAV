@@ -122,10 +122,9 @@ void ndi_filter_raw_video(void* data, video_data* frame) {
     video_frame.FourCC = NDIlib_FourCC_type_BGRA;
     video_frame.frame_rate_N = s->ovi.fps_num;
     video_frame.frame_rate_D = s->ovi.fps_den;
-    video_frame.picture_aspect_ratio =
-        (float)video_frame.xres / (float)video_frame.yres;
+    video_frame.picture_aspect_ratio = 0; // square pixels
     video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-    video_frame.timecode = NDIlib_send_timecode_synthesize;
+    video_frame.timecode = (frame->timestamp / 100);
     video_frame.p_data = frame->data[0];
     video_frame.line_stride_in_bytes = frame->linesize[0];
 
@@ -171,7 +170,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
             gs_stagesurface_map(s->stagesurface,
                 &s->video_data, &s->video_linesize);
 
-            video_output_info vi;
+            video_output_info vi = {0};
             vi.format = VIDEO_FORMAT_BGRA;
             vi.width = width;
             vi.height = height;
@@ -198,8 +197,14 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
             gs_stage_texture(s->stagesurface,
                 gs_texrender_get_texture(s->texrender));
 
-            memcpy(output_frame.data[0], s->video_data,
-                (output_frame.linesize[0]) * (s->known_height));
+            uint32_t linesize = output_frame.linesize[0];
+            for (int i = 0; i < s->known_height; i++) {
+                uint32_t dst_offset = linesize * i;
+                uint32_t src_offset = s->video_linesize * i;
+                memcpy(output_frame.data[0] + dst_offset,
+                    s->video_data + src_offset,
+                    linesize);
+            }
 
             video_output_unlock_frame(s->video_output);
         }
@@ -238,7 +243,7 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
     display_desc.cy = 0;
 
 #ifdef _WIN32
-        display_desc.window.hwnd = obs_frontend_get_main_window_handle();
+    display_desc.window.hwnd = obs_frontend_get_main_window_handle();
 #endif
 
     if (!s->is_audioonly) {
