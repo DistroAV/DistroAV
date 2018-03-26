@@ -198,7 +198,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
                 gs_texrender_get_texture(s->texrender));
 
             uint32_t linesize = output_frame.linesize[0];
-            for (int i = 0; i < s->known_height; i++) {
+            for (uint32_t i = 0; i < s->known_height; i++) {
                 uint32_t dst_offset = linesize * i;
                 uint32_t src_offset = s->video_linesize * i;
                 memcpy(output_frame.data[0] + dst_offset,
