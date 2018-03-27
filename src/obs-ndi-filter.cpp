@@ -40,7 +40,6 @@ struct ndi_filter {
     pthread_mutex_t ndi_sender_audio_mutex;
     struct obs_video_info ovi;
     struct obs_audio_info oai;
-    obs_display_t* renderer;
 
     uint32_t known_width;
     uint32_t known_height;
@@ -162,13 +161,10 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
         gs_texrender_end(s->texrender);
 
         if (s->known_width != width || s->known_height != height) {
-            gs_stagesurface_unmap(s->stagesurface);
-            gs_stagesurface_destroy(s->stagesurface);
 
+            gs_stagesurface_destroy(s->stagesurface);
             s->stagesurface =
                 gs_stagesurface_create(width, height, TEXFORMAT);
-            gs_stagesurface_map(s->stagesurface,
-                &s->video_data, &s->video_linesize);
 
             video_output_info vi = {0};
             vi.format = VIDEO_FORMAT_BGRA;
@@ -176,7 +172,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
             vi.height = height;
             vi.fps_den = s->ovi.fps_den;
             vi.fps_num = s->ovi.fps_num;
-            vi.cache_size = 1;
+            vi.cache_size = 16;
             vi.colorspace = VIDEO_CS_DEFAULT;
             vi.range = VIDEO_RANGE_DEFAULT;
             vi.name = obs_source_get_name(s->context);
@@ -194,8 +190,15 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
         if (video_output_lock_frame(s->video_output,
             &output_frame, 1, os_gettime_ns()))
         {
+            if (s->video_data) {
+                gs_stagesurface_unmap(s->stagesurface);
+                s->video_data = nullptr;
+            }
+
             gs_stage_texture(s->stagesurface,
-                gs_texrender_get_texture(s->texrender));
+                             gs_texrender_get_texture(s->texrender));
+            gs_stagesurface_map(s->stagesurface,
+                                &s->video_data, &s->video_linesize);
 
             uint32_t linesize = output_frame.linesize[0];
             for (uint32_t i = 0; i < s->known_height; i++) {
@@ -215,10 +218,7 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
     UNUSED_PARAMETER(settings);
     struct ndi_filter* s = (struct ndi_filter*)data;
 
-    if (s->renderer) {
-        obs_display_remove_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
-        obs_display_destroy(s->renderer);
-    }
+    obs_remove_main_render_callback(ndi_filter_offscreen_render, s);
 
     NDIlib_send_create_t send_desc;
     send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
@@ -235,20 +235,8 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
     pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
     pthread_mutex_unlock(&s->ndi_sender_video_mutex);
 
-    gs_init_data display_desc = {};
-    display_desc.adapter = 0;
-    display_desc.format = TEXFORMAT;
-    display_desc.zsformat = GS_ZS_NONE;
-    display_desc.cx = 0;
-    display_desc.cy = 0;
-
-#ifdef _WIN32
-    display_desc.window.hwnd = obs_frontend_get_main_window_handle();
-#endif
-
     if (!s->is_audioonly) {
-        s->renderer = obs_display_create(&display_desc);
-        obs_display_add_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
+        obs_add_main_render_callback(ndi_filter_offscreen_render, s);
     }
 }
 
@@ -258,6 +246,7 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
     s->is_audioonly = false;
     s->context = source;
     s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+    s->video_data = nullptr;
     pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
     pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
 
@@ -285,10 +274,7 @@ void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
 void ndi_filter_destroy(void* data) {
     struct ndi_filter* s = (struct ndi_filter*)data;
 
-    if (s->renderer) {
-        obs_display_remove_draw_callback(s->renderer, ndi_filter_offscreen_render, s);
-        obs_display_destroy(s->renderer);
-    }
+    obs_remove_main_render_callback(ndi_filter_offscreen_render, s);
     video_output_close(s->video_output);
 
     pthread_mutex_lock(&s->ndi_sender_video_mutex);
