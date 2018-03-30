@@ -95,7 +95,7 @@ obs_properties_t* ndi_filter_getproperties(void* data) {
         #if defined(_WIN32)
             ShellExecute(NULL, "open", "http://ndi.newtek.com", NULL, NULL, SW_SHOWNORMAL);
         #elif defined(__linux__) || defined(__APPLE__)
-            system("open http://ndi.newtek.com");
+            int suppresswarning = system("open http://ndi.newtek.com");
         #endif
 
         return true;
