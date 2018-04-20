@@ -1,10 +1,7 @@
 obs-ndi
 ==============
 
-Network A/V in OBS Studio with NewTek's NDI technology.  
-
-[![Gitter chat](https://badges.gitter.im/obs-ndi/obs-ndi.png)](https://gitter.im/obs-ndi/obs-ndi)
-
+Network A/V in OBS Studio with NewTek's NDI technology.
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
@@ -12,11 +9,11 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single source or scene to NDI
 
 ## Downloads
-Binaries for Windows are available in the [Releases](https://github.com/Palakis/obs-ndi/releases) section. Linux and OS X versions are not yet available, as compatibility with these systems is under development.
+Binaries for Windows, macOS and Linux are available in the [Releases](https://github.com/Palakis/obs-ndi/releases) section.
 
 ## Compiling
 ### Prerequisites
-You'll need CMake, the NewTek NDI SDK 3.0 and a working development environment for OBS Studio installed on your computer.
+You'll need CMake and a working development environment for OBS Studio installed on your computer.
 
 ### Windows
 In cmake-gui, you'll have to set these CMake variables :
