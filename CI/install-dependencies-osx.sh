@@ -13,10 +13,8 @@ wget --retry-connrefused --waitretry=1 https://s3-us-west-2.amazonaws.com/obs-ni
 sudo installer -pkg ./Packages.pkg -target /
 
 brew update
-# OBS Studio deps
-brew install ffmpeg libav
-# OBS and obs-websocket common dependancy
-brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/2b121c9a96e58a5da14228630cb71d5bead7137e/Formula/qt.rb
+# OBS Studio + obs-websocket deps
+brew install qt5 ffmpeg libav
 
 #echo "Qt path: $(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
 
