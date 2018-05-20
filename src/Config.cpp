@@ -23,29 +23,45 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <util/config-file.h>
 
 #define SECTION_NAME "NDIPlugin"
-#define PARAM_ENABLE "MainOutputEnabled"
-#define PARAM_NAME "MainOutputName"
+#define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
+#define PARAM_MAIN_OUTPUT_NAME "MainOutputName"
+#define PARAM_PREVIEW_OUTPUT_ENABLED "PreviewOutputEnabled"
+#define PARAM_PREVIEW_OUTPUT_NAME "PreviewOutputName"
 
 Config* Config::_instance = nullptr;
 
 Config::Config() :
     OutputEnabled(false),
-    OutputName("OBS")
+    OutputName("OBS"),
+	PreviewOutputEnabled(false),
+	PreviewOutputName("OBS Preview")
 {
     config_t* obs_config = obs_frontend_get_global_config();
     if (obs_config) {
         config_set_default_bool(obs_config,
-            SECTION_NAME, PARAM_ENABLE, OutputEnabled);
+            SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
         config_set_default_string(obs_config,
-            SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
+            SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, OutputName.toUtf8().constData());
+
+		config_set_default_bool(obs_config,
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
+		config_set_default_string(obs_config,
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, PreviewOutputName.toUtf8().constData());
     }
 }
 
 void Config::Load() {
     config_t* obs_config = obs_frontend_get_global_config();
     if (obs_config) {
-        OutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_ENABLE);
-        OutputName = config_get_string(obs_config, SECTION_NAME, PARAM_NAME);
+        OutputEnabled = config_get_bool(obs_config,
+			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
+        OutputName = config_get_string(obs_config,
+			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
+
+		PreviewOutputEnabled = config_get_bool(obs_config,
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
+		PreviewOutputName = config_get_string(obs_config,
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
     }
 }
 
@@ -53,10 +69,16 @@ void Config::Save() {
     config_t* obs_config = obs_frontend_get_global_config();
     if (obs_config) {
         config_set_bool(obs_config,
-            SECTION_NAME, PARAM_ENABLE, OutputEnabled);
+            SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
         config_set_string(obs_config,
-            SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
-        config_save(obs_config);
+            SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, OutputName.toUtf8().constData());
+
+		config_set_bool(obs_config,
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
+		config_set_string(obs_config,
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, PreviewOutputName.toUtf8().constData());
+        
+		config_save(obs_config);
     }
 }
 

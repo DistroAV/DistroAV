@@ -23,13 +23,19 @@ set(obs-ndi_SOURCES
 	src/obs-ndi-output.cpp
 	src/obs-ndi-filter.cpp
 	src/premultiplied-alpha-filter.cpp
+	src/main-output.cpp
+	src/preview-output.cpp
 	src/Config.cpp
-	src/forms/output-settings.cpp)
+	src/forms/output-settings.cpp
+	src/PreviewSceneChangedWatcher.cpp)
 
 set(obs-ndi_HEADERS
 	src/obs-ndi.h
+	src/main-output.h
+	src/preview-output.h
 	src/Config.h
-	src/forms/output-settings.h)
+	src/forms/output-settings.h
+	src/PreviewSceneChangedWatcher.h)
 
 add_library(obs-ndi MODULE
 	${obs-ndi_SOURCES}
@@ -88,7 +94,7 @@ if(WIN32)
 			"${CMAKE_COMMAND}" -E copy
 				"$<TARGET_FILE:obs-ndi>"
 				"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
-			
+
 		# Copy to obs-studio dev environment for immediate testing
 		COMMAND if $<CONFIG:Debug>==1 (
 			"${CMAKE_COMMAND}" -E copy

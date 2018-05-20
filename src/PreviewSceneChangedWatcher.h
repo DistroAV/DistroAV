@@ -16,26 +16,23 @@ You should have received a copy of the GNU General Public License
 along with this program; If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef OUTPUTSETTINGS_H
-#define OUTPUTSETTINGS_H
+#pragma once
 
-#include <QDialog>
+#include <obs-frontend-api.h>
+#include <QObject>
+#include <QListWidget>
 
-#include "ui_output-settings.h"
-
-class OutputSettings : public QDialog {
-  Q_OBJECT
-  public:
-    explicit OutputSettings(QWidget* parent = 0);
-    ~OutputSettings();
-    void showEvent(QShowEvent* event);
-    void ToggleShowHide();
-
-  private slots:
-    void onFormAccepted();
-
-  private:
-    Ui::OutputSettings* ui;
+class PreviewSceneChangedWatcher : public QObject
+{
+Q_OBJECT
+public:
+	explicit PreviewSceneChangedWatcher(void(*func)(enum obs_frontend_event event, void* param), void* param, QObject* parent = Q_NULLPTR);
+	~PreviewSceneChangedWatcher();
+	static void onFrontendEvent(enum obs_frontend_event event, void* param);
+private slots:
+	void onCurrentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+private:
+	QListWidget * _pScenesList;
+	void (*_pHandlerFunc)(enum obs_frontend_event event, void* param);
+	void* _pFuncParam;
 };
-
-#endif // OUTPUTSETTINGS_H
