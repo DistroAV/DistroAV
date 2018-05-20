@@ -25,14 +25,12 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define SECTION_NAME "NDIPlugin"
 #define PARAM_ENABLE "MainOutputEnabled"
 #define PARAM_NAME "MainOutputName"
-#define PARAM_ASYNC_SENDING "MainOutputAsyncEnabled"
 
 Config* Config::_instance = nullptr;
 
 Config::Config() :
     OutputEnabled(false),
-    OutputName("OBS"),
-    OutputAsyncEnabled(false)
+    OutputName("OBS")
 {
     config_t* obs_config = obs_frontend_get_global_config();
     if (obs_config) {
@@ -40,8 +38,6 @@ Config::Config() :
             SECTION_NAME, PARAM_ENABLE, OutputEnabled);
         config_set_default_string(obs_config,
             SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
-        config_set_default_bool(obs_config,
-            SECTION_NAME, PARAM_ASYNC_SENDING, OutputAsyncEnabled);
     }
 }
 
@@ -50,8 +46,6 @@ void Config::Load() {
     if (obs_config) {
         OutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_ENABLE);
         OutputName = config_get_string(obs_config, SECTION_NAME, PARAM_NAME);
-        OutputAsyncEnabled = config_get_bool(obs_config,
-            SECTION_NAME, PARAM_ASYNC_SENDING);
     }
 }
 
@@ -62,8 +56,6 @@ void Config::Save() {
             SECTION_NAME, PARAM_ENABLE, OutputEnabled);
         config_set_string(obs_config,
             SECTION_NAME, PARAM_NAME, OutputName.toUtf8().constData());
-        config_set_bool(obs_config,
-            SECTION_NAME, PARAM_ASYNC_SENDING, OutputAsyncEnabled);
         config_save(obs_config);
     }
 }

@@ -32,7 +32,6 @@ static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
 struct ndi_output {
     obs_output_t *output;
     const char* ndi_name;
-    bool async_sending;
     obs_video_info video_info;
     obs_audio_info audio_info;
 
@@ -57,8 +56,6 @@ obs_properties_t* ndi_output_getproperties(void* data) {
 
     obs_properties_add_text(props, "ndi_name",
         obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
-
-    obs_properties_add_bool(props, "ndi_async_sending", "");
 
     return props;
 }
@@ -106,12 +103,7 @@ bool ndi_output_start(void* data) {
     if (o->ndi_sender) {
         o->started = obs_output_begin_data_capture(o->output, 0);
         if (o->started) {
-            if (o->async_sending) {
-                blog(LOG_INFO, "asynchronous video sending enabled");
-            }
-            else {
-                blog(LOG_INFO, "asynchronous video sending disabled");
-            }
+			blog(LOG_INFO, "ndi output '%s' started", o->ndi_name);
         }
     }
 
@@ -132,7 +124,6 @@ void ndi_output_stop(void* data, uint64_t ts) {
 void ndi_output_update(void* data, obs_data_t* settings) {
     struct ndi_output* o = (struct ndi_output*)data;
     o->ndi_name = obs_data_get_string(settings, "ndi_name");
-    o->async_sending = obs_data_get_bool(settings, "ndi_async_sending");
 }
 
 void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
@@ -270,10 +261,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame) {
         video_frame.line_stride_in_bytes = frame->linesize[0];
     }
 
-    if (o->async_sending)
-        ndiLib->NDIlib_send_send_video_async_v2(o->ndi_sender, &video_frame);
-    else
-        ndiLib->NDIlib_send_send_video_v2(o->ndi_sender, &video_frame);
+    ndiLib->NDIlib_send_send_video_v2(o->ndi_sender, &video_frame);
 }
 
 void ndi_output_rawaudio(void* data, struct audio_data* frame) {

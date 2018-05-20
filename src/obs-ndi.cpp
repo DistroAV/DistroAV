@@ -186,8 +186,6 @@ void main_output_start(const char* output_name) {
 
         obs_data_t* output_settings = obs_data_create();
         obs_data_set_string(output_settings, "ndi_name", output_name);
-        obs_data_set_bool(output_settings,
-            "ndi_async_sending", Config::Current()->OutputAsyncEnabled);
 
         main_out = obs_output_create("ndi_output", "main_ndi_output",
             output_settings, NULL);

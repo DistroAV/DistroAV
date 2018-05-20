@@ -34,7 +34,6 @@ void OutputSettings::onFormAccepted() {
     Config* conf = Config::Current();
     conf->OutputEnabled = ui->outputEnabled->isChecked();
     conf->OutputName = ui->outputName->text();
-    conf->OutputAsyncEnabled = ui->asyncSendingEnabled->isChecked();
     conf->Save();
 
     if (conf->OutputEnabled) {
@@ -51,7 +50,6 @@ void OutputSettings::showEvent(QShowEvent* event) {
     Config* conf = Config::Current();
     ui->outputEnabled->setChecked(conf->OutputEnabled);
     ui->outputName->setText(conf->OutputName);
-    ui->asyncSendingEnabled->setChecked(conf->OutputAsyncEnabled);
 }
 
 void OutputSettings::ToggleShowHide() {

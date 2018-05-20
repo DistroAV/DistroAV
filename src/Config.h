@@ -33,7 +33,6 @@ class Config {
 
     bool OutputEnabled;
     QString OutputName;
-    bool OutputAsyncEnabled;
 
   private:
     static Config* _instance;
