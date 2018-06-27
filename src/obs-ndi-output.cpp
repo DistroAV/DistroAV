@@ -173,7 +173,7 @@ void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _V;
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; y++) {
+	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + (y * in_linesize[0]);
 		_U = input[1] + ((y/2) * in_linesize[1]);
 		_V = _U + 1;
@@ -198,7 +198,7 @@ void convert_i420_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _V;
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; y++) {
+	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + (y * in_linesize[0]);
 		_U = input[1] + ((y/2) * in_linesize[1]);
 		_V = input[2] + ((y/2) * in_linesize[2]);
@@ -223,7 +223,7 @@ void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _V;
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; y++) {
+	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + (y * in_linesize[0]);
 		_U = input[1] + (y * in_linesize[1]);
 		_V = input[2] + (y * in_linesize[2]);

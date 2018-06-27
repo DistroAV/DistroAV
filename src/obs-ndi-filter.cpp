@@ -201,7 +201,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
 								&s->video_data, &s->video_linesize);
 
 			uint32_t linesize = output_frame.linesize[0];
-			for (uint32_t i = 0; i < s->known_height; i++) {
+			for (uint32_t i = 0; i < s->known_height; ++i) {
 				uint32_t dst_offset = linesize * i;
 				uint32_t src_offset = s->video_linesize * i;
 				memcpy(output_frame.data[0] + dst_offset,
@@ -329,7 +329,7 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
 	uint8_t* ndi_data = (uint8_t*)bmalloc(data_size);
 
-	for (int i = 0; i < audio_frame.no_channels; i++) {
+	for (int i = 0; i < audio_frame.no_channels; ++i) {
 		memcpy(&ndi_data[i * audio_frame.channel_stride_in_bytes],
 			audio_data->data[i],
 			audio_frame.channel_stride_in_bytes
