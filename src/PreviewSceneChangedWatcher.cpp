@@ -38,10 +38,6 @@ PreviewSceneChangedWatcher::PreviewSceneChangedWatcher(void(*func)(enum obs_fron
 
 PreviewSceneChangedWatcher::~PreviewSceneChangedWatcher()
 {
-	disconnect(
-		_pScenesList, SIGNAL(currentItemChanged(QListWidgetItem*, QListWidgetItem*)),
-		this, SLOT(onCurrentItemChanged(QListWidgetItem*, QListWidgetItem*))
-	);
 	obs_frontend_remove_event_callback(PreviewSceneChangedWatcher::onFrontendEvent, this);
 }
 
