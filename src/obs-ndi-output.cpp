@@ -59,26 +59,23 @@ obs_properties_t* ndi_output_getproperties(void* data) {
 	obs_properties_add_text(props, "ndi_name",
 		obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
 
-	obs_properties_add_int(props, "ndi_output_flags", "", 0, 10, 1);
+	obs_property_t* output_flags = obs_properties_add_int(props, "ndi_output_flags", "Output Flags", 0, 10, 1);
+	obs_property_set_visible(output_flags, false);
 
-	obs_property_t* is_bgra_prop = obs_properties_add_bool(props, "ndi_is_bgra", "");
-	obs_property_set_visible(is_bgra_prop, false);
+	obs_property_t* is_bgra = obs_properties_add_bool(props, "ndi_is_bgra", "BGRA");
+	obs_property_set_visible(is_bgra, false);
 
 	return props;
 }
 
 void ndi_output_getdefaults(obs_data_t* settings) {
 	obs_data_set_default_string(settings, "ndi_name", "obs-ndi output (changeme)");
-	obs_data_set_default_bool(settings, "ndi_async_sending", false);
 	obs_data_set_default_int(settings, "ndi_output_flags", 0);
 	obs_data_set_default_bool(settings, "ndi_is_bgra", false);
 }
 
 bool ndi_output_start(void* data) {
 	struct ndi_output* o = (struct ndi_output*)data;
-
-	ndiLib->NDIlib_send_destroy(o->ndi_sender);
-	delete o->conv_buffer;
 
 	obs_get_video_info(&o->video_info);
 	obs_get_audio_info(&o->audio_info);
@@ -109,6 +106,10 @@ bool ndi_output_start(void* data) {
 			case VIDEO_FORMAT_BGRX:
 				o->frame_format = NDIlib_FourCC_type_BGRX;
 				break;
+
+			default:
+				blog(LOG_WARNING, "unknown pixel format %d", o->video_info.output_format);
+				return false;
 		}
 	}
 
@@ -134,6 +135,9 @@ void ndi_output_stop(void* data, uint64_t ts) {
 
 	o->started = false;
 	obs_output_end_data_capture(o->output);
+
+	ndiLib->NDIlib_send_destroy(o->ndi_sender);
+	delete o->conv_buffer;
 }
 
 void ndi_output_update(void* data, obs_data_t* settings) {
@@ -154,8 +158,6 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
 
 void ndi_output_destroy(void* data) {
 	struct ndi_output* o = (struct ndi_output*)data;
-	ndiLib->NDIlib_send_destroy(o->ndi_sender);
-	delete o->conv_buffer;
 	bfree(o);
 }
 
@@ -168,7 +170,7 @@ void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _V;
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; y++) {
+	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + (y * in_linesize[0]);
 		_U = input[1] + ((y/2) * in_linesize[1]);
 		_V = _U + 1;
@@ -193,7 +195,7 @@ void convert_i420_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _V;
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; y++) {
+	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + (y * in_linesize[0]);
 		_U = input[1] + ((y/2) * in_linesize[1]);
 		_V = input[2] + ((y/2) * in_linesize[2]);
@@ -218,7 +220,7 @@ void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _V;
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; y++) {
+	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + (y * in_linesize[0]);
 		_U = input[1] + (y * in_linesize[1]);
 		_V = input[2] + (y * in_linesize[2]);

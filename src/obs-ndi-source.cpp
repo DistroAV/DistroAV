@@ -172,7 +172,7 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 	const NDIlib_source_t* sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder,
 		&nbSources);
 
-	for (uint32_t i = 0; i < nbSources; i++) {
+	for (uint32_t i = 0; i < nbSources; ++i) {
 		obs_property_list_add_string(source_list,
 			sources[i].p_ndi_name, sources[i].p_ndi_name);
 	}
@@ -310,7 +310,7 @@ void* ndi_source_poll_audio(void* data) {
 			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
 			obs_audio_frame.frames = audio_frame.no_samples;
 
-			for (int i = 0; i < audio_frame.no_channels; i++) {
+			for (int i = 0; i < audio_frame.no_channels; ++i) {
 				obs_audio_frame.data[i] =
 					(uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
 			}
