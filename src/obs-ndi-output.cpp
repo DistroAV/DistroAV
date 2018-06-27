@@ -77,9 +77,6 @@ void ndi_output_getdefaults(obs_data_t* settings) {
 bool ndi_output_start(void* data) {
 	struct ndi_output* o = (struct ndi_output*)data;
 
-	ndiLib->NDIlib_send_destroy(o->ndi_sender);
-	delete o->conv_buffer;
-
 	obs_get_video_info(&o->video_info);
 	obs_get_audio_info(&o->audio_info);
 

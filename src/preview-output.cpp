@@ -50,10 +50,6 @@ void render_preview_source(void* param, uint32_t cx, uint32_t cy);
 
 void preview_output_init(const char* default_name)
 {
-	obs_enter_graphics();
-	context.texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
-	obs_leave_graphics();
-
 	obs_data_t* output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
 	obs_data_set_int(output_settings, "ndi_output_flags", OBS_OUTPUT_VIDEO);
@@ -71,6 +67,7 @@ void preview_output_start(const char* output_name)
 	uint32_t height = context.ovi.base_height;
 
 	obs_enter_graphics();
+	context.texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
 	context.stagesurface = gs_stagesurface_create(width, height, GS_BGRA);
 	obs_leave_graphics();
 
@@ -121,6 +118,7 @@ void preview_output_stop()
 
 	obs_enter_graphics();
 	gs_stagesurface_destroy(context.stagesurface);
+	gs_texrender_destroy(context.texrender);
 	obs_leave_graphics();
 
 	video_output_close(context.video_queue);
@@ -131,10 +129,6 @@ void preview_output_stop()
 void preview_output_deinit()
 {
 	obs_output_release(context.output);
-
-	obs_enter_graphics();
-	gs_texrender_destroy(context.texrender);
-	obs_leave_graphics();
 
 	context.output = nullptr;
 	context.enabled = false;
