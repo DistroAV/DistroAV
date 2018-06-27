@@ -36,6 +36,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <QStringList>
 
 #include "obs-ndi.h"
+#include "main-output.h"
+#include "preview-output.h"
 #include "Config.h"
 #include "forms/output-settings.h"
 
@@ -66,8 +68,6 @@ typedef const NDIlib_v3* (*NDIlib_v3_load_)(void);
 QLibrary* loaded_lib = nullptr;
 
 NDIlib_find_instance_t ndi_finder;
-obs_output_t* main_out;
-bool main_output_running = false;
 
 OutputSettings* output_settings;
 
@@ -146,13 +146,18 @@ bool obs_module_load(void) {
         obs_frontend_add_event_callback([](enum obs_frontend_event event,
             void *private_data)
         {
-            if (event == OBS_FRONTEND_EVENT_EXIT)
-                main_output_stop();
+			if (event == OBS_FRONTEND_EVENT_EXIT) {
+				main_output_stop();
+				preview_output_stop();
+			}
         }, NULL);
 
-        // Run the server if configured
-        if (conf->OutputEnabled)
+        if (conf->OutputEnabled) {
             main_output_start(conf->OutputName.toUtf8().constData());
+        }
+        if (conf->PreviewOutputEnabled) {
+            preview_output_start(conf->PreviewOutputName.toUtf8().constData());
+        }
     }
 
     return true;
@@ -160,6 +165,9 @@ bool obs_module_load(void) {
 
 void obs_module_unload() {
     blog(LOG_INFO, "goodbye !");
+
+	preview_output_stop();
+	main_output_stop();
 
     if (ndiLib) {
         ndiLib->NDIlib_find_destroy(ndi_finder);
@@ -177,38 +185,6 @@ const char* obs_module_name() {
 
 const char* obs_module_description() {
     return "NDI input/output integration for OBS Studio";
-}
-
-void main_output_start(const char* output_name) {
-    if (!main_output_running) {
-        blog(LOG_INFO, "starting main NDI output with name '%s'",
-            qPrintable(Config::Current()->OutputName));
-
-        obs_data_t* output_settings = obs_data_create();
-        obs_data_set_string(output_settings, "ndi_name", output_name);
-
-        main_out = obs_output_create("ndi_output", "main_ndi_output",
-            output_settings, NULL);
-
-        obs_output_start(main_out);
-        obs_data_release(output_settings);
-
-        main_output_running = true;
-    }
-}
-
-void main_output_stop() {
-    if (main_output_running) {
-        blog(LOG_INFO, "stopping main NDI output");
-
-        obs_output_stop(main_out);
-        obs_output_release(main_out);
-        main_output_running = false;
-    }
-}
-
-bool main_output_is_running() {
-    return main_output_running;
 }
 
 const NDIlib_v3* load_ndilib() {

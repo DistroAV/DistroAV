@@ -34,6 +34,8 @@ struct ndi_output {
     const char* ndi_name;
     obs_video_info video_info;
     obs_audio_info audio_info;
+	uint32_t output_flags;
+	bool is_bgra;
 
     bool started;
     NDIlib_FourCC_type_e frame_format;
@@ -57,7 +59,19 @@ obs_properties_t* ndi_output_getproperties(void* data) {
     obs_properties_add_text(props, "ndi_name",
         obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
 
+	obs_properties_add_int(props, "ndi_output_flags", "", 0, 10, 1);
+
+	obs_property_t* is_bgra_prop = obs_properties_add_bool(props, "ndi_is_bgra", "");
+	obs_property_set_visible(is_bgra_prop, false);
+
     return props;
+}
+
+void ndi_output_getdefaults(obs_data_t* settings) {
+	obs_data_set_default_string(settings, "ndi_name", "obs-ndi output (changeme)");
+	obs_data_set_default_bool(settings, "ndi_async_sending", false);
+	obs_data_set_default_int(settings, "ndi_output_flags", 0);
+	obs_data_set_default_bool(settings, "ndi_is_bgra", false);
 }
 
 bool ndi_output_start(void* data) {
@@ -69,29 +83,34 @@ bool ndi_output_start(void* data) {
     obs_get_video_info(&o->video_info);
     obs_get_audio_info(&o->audio_info);
 
-    switch (o->video_info.output_format) {
-        case VIDEO_FORMAT_NV12:
-        case VIDEO_FORMAT_I420:
-        case VIDEO_FORMAT_I444:
-            o->frame_format = NDIlib_FourCC_type_UYVY;
-            o->conv_linesize = o->video_info.output_width * 2;
-            o->conv_buffer =
-                new uint8_t[o->video_info.output_height * o->conv_linesize * 2]();
-            break;
+	// if BGRA enabled : override default output format
+	if (o->is_bgra) {
+		o->frame_format = NDIlib_FourCC_type_BGRA;
+	}
+	else {
+		switch (o->video_info.output_format) {
+			case VIDEO_FORMAT_NV12:
+			case VIDEO_FORMAT_I420:
+			case VIDEO_FORMAT_I444:
+				o->frame_format = NDIlib_FourCC_type_UYVY;
+				o->conv_linesize = o->video_info.output_width * 2;
+				o->conv_buffer =
+					new uint8_t[o->video_info.output_height * o->conv_linesize * 2]();
+				break;
 
-        case VIDEO_FORMAT_RGBA:
-            o->frame_format = NDIlib_FourCC_type_RGBA;
-            break;
+			case VIDEO_FORMAT_RGBA:
+				o->frame_format = NDIlib_FourCC_type_RGBA;
+				break;
 
-        case VIDEO_FORMAT_BGRA:
-            o->frame_format = NDIlib_FourCC_type_BGRA;
-            break;
+			case VIDEO_FORMAT_BGRA:
+				o->frame_format = NDIlib_FourCC_type_BGRA;
+				break;
 
-        case VIDEO_FORMAT_BGRX:
-            o->frame_format = NDIlib_FourCC_type_BGRX;
-            break;
-    }
-
+			case VIDEO_FORMAT_BGRX:
+				o->frame_format = NDIlib_FourCC_type_BGRX;
+				break;
+		}
+	}
 
     NDIlib_send_create_t send_desc;
     send_desc.p_ndi_name = o->ndi_name;
@@ -101,7 +120,7 @@ bool ndi_output_start(void* data) {
 
     o->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
     if (o->ndi_sender) {
-        o->started = obs_output_begin_data_capture(o->output, 0);
+        o->started = obs_output_begin_data_capture(o->output, o->output_flags);
         if (o->started) {
 			blog(LOG_INFO, "ndi output '%s' started", o->ndi_name);
         }
@@ -115,15 +134,13 @@ void ndi_output_stop(void* data, uint64_t ts) {
 
     o->started = false;
     obs_output_end_data_capture(o->output);
-
-    ndiLib->NDIlib_send_destroy(o->ndi_sender);
-    delete o->conv_buffer;
-    o->conv_buffer = nullptr;
 }
 
 void ndi_output_update(void* data, obs_data_t* settings) {
     struct ndi_output* o = (struct ndi_output*)data;
     o->ndi_name = obs_data_get_string(settings, "ndi_name");
+	o->output_flags = obs_data_get_int(settings, "ndi_output_flags");
+	o->is_bgra = obs_data_get_bool(settings, "ndi_is_bgra");
 }
 
 void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
@@ -137,6 +154,8 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output) {
 
 void ndi_output_destroy(void* data) {
     struct ndi_output* o = (struct ndi_output*)data;
+	ndiLib->NDIlib_send_destroy(o->ndi_sender);
+	delete o->conv_buffer;
     bfree(o);
 }
 
@@ -297,6 +316,7 @@ struct obs_output_info create_ndi_output_info() {
     ndi_output_info.flags			= OBS_OUTPUT_AV;
     ndi_output_info.get_name		= ndi_output_getname;
     ndi_output_info.get_properties	= ndi_output_getproperties;
+	ndi_output_info.get_defaults	= ndi_output_getdefaults;
     ndi_output_info.create			= ndi_output_create;
     ndi_output_info.destroy			= ndi_output_destroy;
     ndi_output_info.update			= ndi_output_update;

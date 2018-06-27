@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 St√©phane Lepin <steph  name of author
+Copyright (C) 2016-2018 StÈphane Lepin <steph  name of author
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -16,28 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program; If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
-#include <QString>
-#include <obs-module.h>
-
-class Config {
-  public:
-    Config();
-    static void OBSSaveCallback(obs_data_t* save_data,
-        bool saving, void* private_data);
-    static Config* Current();
-    void Load();
-    void Save();
-
-    bool OutputEnabled;
-    QString OutputName;
-	QString PreviewOutputName;
-	bool PreviewOutputEnabled;
-
-  private:
-    static Config* _instance;
-};
-
-#endif // CONFIG_H
+void preview_output_start(const char* output_name);
+void preview_output_stop();
+bool preview_output_is_enabled();

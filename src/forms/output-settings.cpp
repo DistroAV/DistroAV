@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 Stéphane Lepin <steph  name of author
+Copyright (C) 2016-2018 Stï¿½phane Lepin <steph  name of author
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -17,14 +17,15 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 */
 
 #include "output-settings.h"
-#include "ui_output-settings.h"
 
 #include "../Config.h"
 #include "../obs-ndi.h"
+#include "../preview-output.h"
 
 OutputSettings::OutputSettings(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::OutputSettings) {
+    ui(new Ui::OutputSettings)
+{
     ui->setupUi(this);
     connect(ui->buttonBox, SIGNAL(accepted()),
         this, SLOT(onFormAccepted()));
@@ -32,24 +33,43 @@ OutputSettings::OutputSettings(QWidget *parent) :
 
 void OutputSettings::onFormAccepted() {
     Config* conf = Config::Current();
-    conf->OutputEnabled = ui->outputEnabled->isChecked();
-    conf->OutputName = ui->outputName->text();
+
+    conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
+    conf->OutputName = ui->mainOutputName->text();
+
+	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
+	conf->PreviewOutputName = ui->previewOutputName->text();
+
     conf->Save();
 
     if (conf->OutputEnabled) {
         if (main_output_is_running()) {
             main_output_stop();
         }
-        main_output_start(ui->outputName->text().toUtf8().constData());
+        main_output_start(ui->mainOutputName->text().toUtf8().constData());
     } else {
         main_output_stop();
     }
+
+	if (conf->PreviewOutputEnabled) {
+		if (preview_output_is_enabled()) {
+			preview_output_stop();
+		}
+		preview_output_start(ui->previewOutputName->text().toUtf8().constData());
+	}
+	else {
+		preview_output_stop();
+	}
 }
 
 void OutputSettings::showEvent(QShowEvent* event) {
     Config* conf = Config::Current();
-    ui->outputEnabled->setChecked(conf->OutputEnabled);
-    ui->outputName->setText(conf->OutputName);
+
+    ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
+    ui->mainOutputName->setText(conf->OutputName);
+
+	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
+	ui->previewOutputName->setText(conf->PreviewOutputName);
 }
 
 void OutputSettings::ToggleShowHide() {
