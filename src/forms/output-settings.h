@@ -26,16 +26,16 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 class OutputSettings : public QDialog {
   Q_OBJECT
   public:
-    explicit OutputSettings(QWidget* parent = 0);
-    ~OutputSettings();
-    void showEvent(QShowEvent* event);
-    void ToggleShowHide();
+	explicit OutputSettings(QWidget* parent = 0);
+	~OutputSettings();
+	void showEvent(QShowEvent* event);
+	void ToggleShowHide();
 
   private slots:
-    void onFormAccepted();
+	void onFormAccepted();
 
   private:
-    Ui::OutputSettings* ui;
+	Ui::OutputSettings* ui;
 };
 
 #endif // OUTPUTSETTINGS_H

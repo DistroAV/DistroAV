@@ -24,20 +24,20 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 class Config {
   public:
-    Config();
-    static void OBSSaveCallback(obs_data_t* save_data,
-        bool saving, void* private_data);
-    static Config* Current();
-    void Load();
-    void Save();
+	Config();
+	static void OBSSaveCallback(obs_data_t* save_data,
+		bool saving, void* private_data);
+	static Config* Current();
+	void Load();
+	void Save();
 
-    bool OutputEnabled;
-    QString OutputName;
+	bool OutputEnabled;
+	QString OutputName;
 	QString PreviewOutputName;
 	bool PreviewOutputEnabled;
 
   private:
-    static Config* _instance;
+	static Config* _instance;
 };
 
 #endif // CONFIG_H
