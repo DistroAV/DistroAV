@@ -48,16 +48,29 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void* param);
 void render_preview_source(void* param, uint32_t cx, uint32_t cy);
 
+void preview_output_init(const char* default_name)
+{
+	obs_enter_graphics();
+	context.texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
+	obs_leave_graphics();
+
+	obs_data_t* output_settings = obs_data_create();
+	obs_data_set_string(output_settings, "ndi_name", default_name);
+	obs_data_set_int(output_settings, "ndi_output_flags", OBS_OUTPUT_VIDEO);
+	obs_data_set_bool(output_settings, "ndi_is_bgra", true);
+	context.output = obs_output_create("ndi_output", "main_preview_output", output_settings, nullptr);
+	obs_data_release(output_settings);
+}
+
 void preview_output_start(const char* output_name)
 {
-	if (context.enabled) return;
+	if (context.enabled || !context.output) return;
 	obs_get_video_info(&context.ovi);
 
 	uint32_t width = context.ovi.base_width;
 	uint32_t height = context.ovi.base_height;
 
 	obs_enter_graphics();
-	context.texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
 	context.stagesurface = gs_stagesurface_create(width, height, GS_BGRA);
 	obs_leave_graphics();
 
@@ -83,17 +96,12 @@ void preview_output_start(const char* output_name)
 	}
 	obs_add_main_render_callback(render_preview_source, &context);
 
-	obs_output_release(context.output);
+	obs_data_t* settings = obs_output_get_settings(context.output);
+	obs_data_set_string(settings, "ndi_name", output_name);
+	obs_output_update(context.output, settings);
+	obs_data_release(settings);
 
-	obs_data_t* output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", output_name);
-	obs_data_set_int(output_settings, "ndi_output_flags", OBS_OUTPUT_VIDEO);
-	obs_data_set_bool(output_settings, "ndi_is_bgra", true);
-
-	context.output = obs_output_create("ndi_output", "main_preview_output", output_settings, nullptr);
 	obs_output_set_media(context.output, context.video_queue, nullptr);
-	obs_data_release(output_settings);
-
 	obs_output_start(context.output);
 	context.enabled = true;
 }
@@ -113,12 +121,22 @@ void preview_output_stop()
 
 	obs_enter_graphics();
 	gs_stagesurface_destroy(context.stagesurface);
+	obs_leave_graphics();
+
+	video_output_close(context.video_queue);
+
+	context.enabled = false;
+}
+
+void preview_output_deinit()
+{
+	obs_output_release(context.output);
+
+	obs_enter_graphics();
 	gs_texrender_destroy(context.texrender);
 	obs_leave_graphics();
 
-	obs_output_release(context.output);
-	video_output_close(context.video_queue);
-
+	context.output = nullptr;
 	context.enabled = false;
 }
 

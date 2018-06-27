@@ -71,7 +71,8 @@ NDIlib_find_instance_t ndi_finder;
 
 OutputSettings* output_settings;
 
-bool obs_module_load(void) {
+bool obs_module_load(void)
+{
 	blog(LOG_INFO, "hello ! (version %s)", OBS_NDI_VERSION);
 
 	QMainWindow* main_window = (QMainWindow*)obs_frontend_get_main_window();
@@ -130,6 +131,9 @@ bool obs_module_load(void) {
 		Config* conf = Config::Current();
 		conf->Load();
 
+		main_output_init(conf->OutputName.toUtf8().constData());
+		preview_output_init(conf->PreviewOutputName.toUtf8().constData());
+
 		// Ui setup
 		QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
 			obs_module_text("NDIPlugin.Menu.OutputSettings"));
@@ -163,11 +167,12 @@ bool obs_module_load(void) {
 	return true;
 }
 
-void obs_module_unload() {
+void obs_module_unload()
+{
 	blog(LOG_INFO, "goodbye !");
 
-	preview_output_stop();
-	main_output_stop();
+	preview_output_deinit();
+	main_output_deinit();
 
 	if (ndiLib) {
 		ndiLib->NDIlib_find_destroy(ndi_finder);
@@ -179,15 +184,18 @@ void obs_module_unload() {
 	}
 }
 
-const char* obs_module_name() {
+const char* obs_module_name()
+{
 	return "obs-ndi";
 }
 
-const char* obs_module_description() {
+const char* obs_module_description()
+{
 	return "NDI input/output integration for OBS Studio";
 }
 
-const NDIlib_v3* load_ndilib() {
+const NDIlib_v3* load_ndilib()
+{
 	QStringList locations;
 	locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
 #if defined(__linux__) || defined(__APPLE__)
