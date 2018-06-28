@@ -145,7 +145,7 @@ bool preview_output_is_enabled()
 
 void on_preview_scene_changed(enum obs_frontend_event event, void* param)
 {
-	struct preview_output* ctx = (struct preview_output*)param;
+	auto ctx = (struct preview_output*)param;
 	switch (event) {
 		case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:
 		case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
@@ -169,7 +169,7 @@ void on_preview_scene_changed(enum obs_frontend_event event, void* param)
 
 void render_preview_source(void* param, uint32_t cx, uint32_t cy)
 {
-	struct preview_output* ctx = (struct preview_output*)param;
+	auto ctx = (struct preview_output*)param;
 
 	if (!ctx->current_source) return;
 
