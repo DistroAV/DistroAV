@@ -153,6 +153,9 @@ bool obs_module_load(void)
 			if (event == OBS_FRONTEND_EVENT_EXIT) {
 				preview_output_stop();
 				main_output_stop();
+
+				preview_output_deinit();
+				main_output_deinit();
 			}
 		}, NULL);
 
@@ -170,9 +173,6 @@ bool obs_module_load(void)
 void obs_module_unload()
 {
 	blog(LOG_INFO, "goodbye !");
-	
-	preview_output_deinit();
-	main_output_deinit();
 
 	if (ndiLib) {
 		ndiLib->NDIlib_find_destroy(ndi_finder);
