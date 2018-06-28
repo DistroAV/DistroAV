@@ -45,8 +45,8 @@ apt-get install -y \
 
 cd /root
 
-curl -kLO https://slepin.fr/obs-ndi/ci/ndisdk-slim-v3-linux.zip -f --retry 5
-unzip ./ndisdk-slim-v3-linux.zip
+curl -kLO https://slepin.fr/obs-ndi/ci/ndisdk-slim-v3.5-linux.zip -f --retry 5
+unzip ./ndisdk-slim-v3.5-linux.zip
 
 # Build obs-studio
 git clone https://github.com/jp9000/obs-studio ./obs-studio

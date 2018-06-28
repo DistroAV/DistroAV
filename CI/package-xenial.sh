@@ -16,14 +16,14 @@ cd /root/obs-ndi/build
 PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
-	--pkglicense="LGPLv2.1" --maintainer="stephane.lepin@gmail.com" \
-	--requires="libndi3" --pkggroup="video" \
+	--pkglicense="GPLv2" --maintainer="stephane.lepin@gmail.com" \
+	--requires="libndi3 (>= 3.5.1)" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
 	--pakdir="/package"
 
 PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi3 --pkgversion="3.0.1" \
+        --pkgname=libndi3 --pkgversion="3.5.1" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
@@ -31,7 +31,7 @@ PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
 
 PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi3-dev --pkgversion="3.0.1" --requires="libndi3 (>= 3.0.1)" \
+        --pkgname=libndi3-dev --pkgversion="3.5.1" --requires="libndi3 (>= 3.5.1)" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
         --pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
