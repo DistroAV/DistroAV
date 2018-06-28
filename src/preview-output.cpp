@@ -24,7 +24,6 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <media-io/video-frame.h>
 
 #include "obs-ndi.h"
-#include "Config.h"
 #include "PreviewSceneChangedWatcher.h"
 
 struct preview_output {
@@ -52,15 +51,18 @@ void preview_output_init(const char* default_name)
 {
 	obs_data_t* output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
-	obs_data_set_int(output_settings, "ndi_output_flags", OBS_OUTPUT_VIDEO);
-	obs_data_set_bool(output_settings, "ndi_is_bgra", true);
-	context.output = obs_output_create("ndi_output", "main_preview_output", output_settings, nullptr);
+	context.output = obs_output_create(
+			"ndi_output", "NDI Preview Output", output_settings, nullptr
+	);
 	obs_data_release(output_settings);
 }
 
 void preview_output_start(const char* output_name)
 {
 	if (context.enabled || !context.output) return;
+
+	blog(LOG_INFO, "starting NDI preview output with name '%s'", output_name);
+
 	obs_get_video_info(&context.ovi);
 
 	uint32_t width = context.ovi.base_width;
@@ -106,6 +108,8 @@ void preview_output_start(const char* output_name)
 void preview_output_stop()
 {	
 	if (!context.enabled) return;
+
+	blog(LOG_INFO, "stopping NDI preview output");
 
 	obs_output_stop(context.output);
 	video_output_stop(context.video_queue);

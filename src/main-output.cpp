@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 Stéphane Lepin <steph  name of author
+Copyright (C) 2016-2018 Stï¿½phane Lepin <steph  name of author
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -22,7 +22,6 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <util/platform.h>
 
 #include "obs-ndi.h"
-#include "Config.h"
 
 static obs_output_t* main_out = nullptr;
 static bool main_output_running = false;
@@ -33,7 +32,9 @@ void main_output_init(const char* default_name)
 
 	obs_data_t* settings = obs_data_create();
 	obs_data_set_string(settings, "ndi_name", default_name);
-	main_out = obs_output_create("ndi_output", "NDI Main Output", settings, NULL);
+	main_out = obs_output_create(
+			"ndi_output", "NDI Main Output", settings, nullptr
+	);
 	obs_data_release(settings);
 }
 
@@ -41,8 +42,7 @@ void main_output_start(const char* output_name)
 {
 	if (main_output_running || !main_out) return;
 
-	blog(LOG_INFO, "starting main NDI output with name '%s'",
-		qPrintable(Config::Current()->OutputName));
+	blog(LOG_INFO, "starting NDI main output with name '%s'", output_name);
 
 	obs_data_t* settings = obs_output_get_settings(main_out);
 	obs_data_set_string(settings, "ndi_name", output_name);
@@ -57,7 +57,7 @@ void main_output_stop()
 {
 	if (!main_output_running) return;
 
-	blog(LOG_INFO, "stopping main NDI output");
+	blog(LOG_INFO, "stopping NDI main output");
 
 	obs_output_stop(main_out);
 	main_output_running = false;

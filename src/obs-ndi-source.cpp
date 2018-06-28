@@ -52,7 +52,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 extern NDIlib_find_instance_t ndi_finder;
 
-struct ndi_source {
+struct ndi_source
+{
 	obs_source_t* source;
 	NDIlib_recv_instance_t ndi_receiver;
 	int sync_mode;
@@ -65,7 +66,8 @@ struct ndi_source {
 	bool alpha_filter_enabled;
 };
 
-static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
+static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id)
+{
 	if (!context)
 		return nullptr;
 
@@ -94,7 +96,8 @@ static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id) {
 	return filter_search.result;
 }
 
-static speaker_layout channel_count_to_layout(int channels) {
+static speaker_layout channel_count_to_layout(int channels)
+{
 	switch (channels) {
 	case 1:
 		return SPEAKERS_MONO;
@@ -119,7 +122,8 @@ static speaker_layout channel_count_to_layout(int channels) {
 	}
 }
 
-static video_colorspace prop_to_colorspace(int index) {
+static video_colorspace prop_to_colorspace(int index)
+{
 	switch (index) {
 	case PROP_YUV_SPACE_BT601:
 		return VIDEO_CS_601;
@@ -152,13 +156,15 @@ static obs_source_frame* blank_video_frame()
 	return frame;
 }
 
-const char* ndi_source_getname(void* data) {
+const char* ndi_source_getname(void* data)
+{
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
-obs_properties_t* ndi_source_getproperties(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+obs_properties_t* ndi_source_getproperties(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
@@ -268,8 +274,9 @@ obs_properties_t* ndi_source_getproperties(void* data) {
 	return props;
 }
 
-void* ndi_source_poll_audio(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void* ndi_source_poll_audio(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	blog(LOG_INFO, "audio thread for '%s' started",
 						obs_source_get_name(s->source));
@@ -325,8 +332,9 @@ void* ndi_source_poll_audio(void* data) {
 	return nullptr;
 }
 
-void* ndi_source_poll_video(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void* ndi_source_poll_video(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	blog(LOG_INFO, "video thread for '%s' started",
 					obs_source_get_name(s->source));
@@ -396,8 +404,9 @@ void* ndi_source_poll_video(void* data) {
 	return nullptr;
 }
 
-void ndi_source_update(void* data, obs_data_t* settings) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void ndi_source_update(void* data, obs_data_t* settings)
+{
+	auto s = (struct ndi_source*)data;
 
 	if(s->running) {
 		s->running = false;
@@ -483,8 +492,9 @@ void ndi_source_update(void* data, obs_data_t* settings) {
 	}
 }
 
-void ndi_source_shown(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void ndi_source_shown(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	if (s->ndi_receiver) {
 		s->tally.on_preview = true;
@@ -492,8 +502,9 @@ void ndi_source_shown(void* data) {
 	}
 }
 
-void ndi_source_hidden(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void ndi_source_hidden(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	if (s->ndi_receiver) {
 		s->tally.on_preview = false;
@@ -501,8 +512,9 @@ void ndi_source_hidden(void* data) {
 	}
 }
 
-void ndi_source_activated(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void ndi_source_activated(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	if (s->ndi_receiver) {
 		s->tally.on_program = true;
@@ -510,8 +522,9 @@ void ndi_source_activated(void* data) {
 	}
 }
 
-void ndi_source_deactivated(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void ndi_source_deactivated(void* data)
+{
+	auto s = (struct ndi_source*)data;
 
 	if (s->ndi_receiver) {
 		s->tally.on_program = false;
@@ -519,9 +532,9 @@ void ndi_source_deactivated(void* data) {
 	}
 }
 
-void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
-	struct ndi_source* s =
-			(struct ndi_source*)bzalloc(sizeof(struct ndi_source));
+void* ndi_source_create(obs_data_t* settings, obs_source_t* source)
+{
+	auto s = (struct ndi_source*)bzalloc(sizeof(struct ndi_source));
 	s->source = source;
 	s->running = false;
 	s->sync_mode = PROP_SYNC_INTERNAL;
@@ -529,8 +542,9 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source) {
 	return s;
 }
 
-void ndi_source_destroy(void* data) {
-	struct ndi_source* s = (struct ndi_source*)data;
+void ndi_source_destroy(void* data)
+{
+	auto s = (struct ndi_source*)data;
 	s->running = false;
 	pthread_join(s->video_thread, NULL);
 	pthread_join(s->audio_thread, NULL);
@@ -538,7 +552,8 @@ void ndi_source_destroy(void* data) {
 	bfree(s);
 }
 
-struct obs_source_info create_ndi_source_info() {
+struct obs_source_info create_ndi_source_info()
+{
 	struct obs_source_info ndi_source_info = {};
 	ndi_source_info.id				= "ndi_source";
 	ndi_source_info.type			= OBS_SOURCE_TYPE_INPUT;
