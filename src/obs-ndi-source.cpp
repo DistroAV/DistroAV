@@ -438,7 +438,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	}
 
 	NDIlib_recv_create_v3_t recv_desc;
-	recv_desc.p_ndi_name = obs_data_get_string(settings, PROP_SOURCE);
+	recv_desc.source_to_connect_to.p_ndi_name = obs_data_get_string(settings, PROP_SOURCE);
 	recv_desc.allow_video_fields = true;
 	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
 
@@ -537,7 +537,6 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source)
 	auto s = (struct ndi_source*)bzalloc(sizeof(struct ndi_source));
 	s->source = source;
 	s->running = false;
-	s->sync_mode = PROP_SYNC_INTERNAL;
 	ndi_source_update(s, settings);
 	return s;
 }
