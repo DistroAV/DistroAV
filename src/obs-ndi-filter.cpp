@@ -33,7 +33,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define TEXFORMAT GS_BGRA
 #define FLT_PROP_NAME "ndi_filter_ndiname"
 
-struct ndi_filter {
+struct ndi_filter
+{
 	obs_source_t* context;
 	NDIlib_send_instance_t ndi_sender;
 	pthread_mutex_t	ndi_sender_video_mutex;
@@ -53,20 +54,23 @@ struct ndi_filter {
 	bool is_audioonly;
 };
 
-const char* ndi_filter_getname(void* data) {
+const char* ndi_filter_getname(void* data)
+{
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.FilterName");
 }
 
-const char* ndi_audiofilter_getname(void* data) {
+const char* ndi_audiofilter_getname(void* data)
+{
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.AudioFilterName");
 }
 
 void ndi_filter_update(void* data, obs_data_t* settings);
 
-obs_properties_t* ndi_filter_getproperties(void* data) {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+obs_properties_t* ndi_filter_getproperties(void* data)
+{
+	auto s = (struct ndi_filter*)data;
 
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
@@ -104,13 +108,15 @@ obs_properties_t* ndi_filter_getproperties(void* data) {
 	return props;
 }
 
-void ndi_filter_getdefaults(obs_data_t* defaults) {
+void ndi_filter_getdefaults(obs_data_t* defaults)
+{
 	obs_data_set_default_string(defaults, FLT_PROP_NAME,
 		obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
 }
 
-void ndi_filter_raw_video(void* data, video_data* frame) {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+void ndi_filter_raw_video(void* data, video_data* frame)
+{
+	auto s = (struct ndi_filter*)data;
 
 	if (!frame || !frame->data[0])
 		return;
@@ -132,8 +138,9 @@ void ndi_filter_raw_video(void* data, video_data* frame) {
 	pthread_mutex_unlock(&s->ndi_sender_video_mutex);
 }
 
-void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy)
+{
+	auto s = (struct ndi_filter*)data;
 
 	obs_source_t* target = obs_filter_get_target(s->context);
 	if (!target) {
@@ -214,9 +221,10 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy) {
 	}
 }
 
-void ndi_filter_update(void* data, obs_data_t* settings) {
+void ndi_filter_update(void* data, obs_data_t* settings)
+{
 	UNUSED_PARAMETER(settings);
-	struct ndi_filter* s = (struct ndi_filter*)data;
+	auto s = (struct ndi_filter*)data;
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, s);
 
@@ -240,9 +248,9 @@ void ndi_filter_update(void* data, obs_data_t* settings) {
 	}
 }
 
-void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
-	struct ndi_filter* s =
-			(struct ndi_filter*)bzalloc(sizeof(struct ndi_filter));
+void* ndi_filter_create(obs_data_t* settings, obs_source_t* source)
+{
+	auto s = (struct ndi_filter*)bzalloc(sizeof(struct ndi_filter));
 	s->is_audioonly = false;
 	s->context = source;
 	s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
@@ -257,9 +265,9 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source) {
 	return s;
 }
 
-void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
-	struct ndi_filter* s =
-			(struct ndi_filter*)bzalloc(sizeof(struct ndi_filter));
+void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source)
+{
+	auto s = (struct ndi_filter*)bzalloc(sizeof(struct ndi_filter));
 	s->is_audioonly = true;
 	s->context = source;
 	pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
@@ -271,8 +279,9 @@ void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source) {
 	return s;
 }
 
-void ndi_filter_destroy(void* data) {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+void ndi_filter_destroy(void* data)
+{
+	auto s = (struct ndi_filter*)data;
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, s);
 	video_output_close(s->video_output);
@@ -292,29 +301,32 @@ void ndi_filter_destroy(void* data) {
 	bfree(s);
 }
 
-void ndi_filter_destroy_audioonly(void* data) {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+void ndi_filter_destroy_audioonly(void* data)
+{
+	auto s = (struct ndi_filter*)data;
 	pthread_mutex_lock(&s->ndi_sender_audio_mutex);
 	ndiLib->NDIlib_send_destroy(s->ndi_sender);
 	pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 	bfree(s);
 }
 
-void ndi_filter_tick(void* data, float seconds) {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+void ndi_filter_tick(void* data, float seconds)
+{
+	auto s = (struct ndi_filter*)data;
 	obs_get_video_info(&s->ovi);
 }
 
-void ndi_filter_videorender(void* data, gs_effect_t* effect) {
+void ndi_filter_videorender(void* data, gs_effect_t* effect)
+{
 	UNUSED_PARAMETER(effect);
-	struct ndi_filter* s = (struct ndi_filter*)data;
+	auto s = (struct ndi_filter*)data;
 	obs_source_skip_video_filter(s->context);
 }
 
 struct obs_audio_data* ndi_filter_asyncaudio(void *data,
 		struct obs_audio_data* audio_data)
 {
-	struct ndi_filter* s = (struct ndi_filter*)data;
+	auto s = (struct ndi_filter*)data;
 
 	obs_get_audio_info(&s->oai);
 
@@ -345,7 +357,8 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
 	return audio_data;
 }
 
-struct obs_source_info create_ndi_filter_info() {
+struct obs_source_info create_ndi_filter_info()
+{
 	struct obs_source_info ndi_filter_info = {};
 	ndi_filter_info.id				= "ndi_filter";
 	ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
@@ -368,7 +381,8 @@ struct obs_source_info create_ndi_filter_info() {
 	return ndi_filter_info;
 }
 
-struct obs_source_info create_ndi_audiofilter_info() {
+struct obs_source_info create_ndi_audiofilter_info()
+{
 	struct obs_source_info ndi_filter_info = {};
 	ndi_filter_info.id				= "ndi_audiofilter";
 	ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
