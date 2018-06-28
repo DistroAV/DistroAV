@@ -3,11 +3,11 @@
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
 // for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
 // online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. THe full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
+// terms. The full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
 //
 //***********************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2017 NewTek, inc
+// Copyright(c) 2014-2018 NewTek, inc
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -30,10 +30,10 @@ typedef void* NDIlib_send_instance_t;
 
 // The creation structure that is used when you are creating a sender
 typedef struct NDIlib_send_create_t
-{	// The name of the NDI source to create. This is a NULL terminated UTF8 string.
+{	// The name of the NDI source to create. This is a nullptr terminated UTF8 string.
 	const char* p_ndi_name;
 
-	// What groups should this source be part of. NULL means default.
+	// What groups should this source be part of. nullptr means default.
 	const char* p_groups;
 
 	// Do you want audio and video to "clock" themselves. When they are clocked then 
@@ -45,29 +45,27 @@ typedef struct NDIlib_send_create_t
 	bool clock_video, clock_audio;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
-	NDIlib_send_create_t(const char* p_ndi_name_ = NULL, const char* p_groups_ = NULL, bool clock_video_ = true, bool clock_audio_ = false);
+	NDIlib_send_create_t(const char* p_ndi_name_ = nullptr, const char* p_groups_ = nullptr, bool clock_video_ = true, bool clock_audio_ = true);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
-}	NDIlib_send_create_t;
+} NDIlib_send_create_t;
 
-// Create a new sender instance. This will return NULL if it fails.
+// Create a new sender instance. This will return nullptr if it fails. If you specify leave p_create_settings null then 
+// the sender will be created with default settings. 
 PROCESSINGNDILIB_API
-NDIlib_send_instance_t NDIlib_send_create(const NDIlib_send_create_t* p_create_settings);
+NDIlib_send_instance_t NDIlib_send_create(const NDIlib_send_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr) );
 
 // This will destroy an existing finder instance.
 PROCESSINGNDILIB_API
 void NDIlib_send_destroy(NDIlib_send_instance_t p_instance);
 
 // This will add a video frame
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_send_send_video(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_t* p_video_data);
-
 PROCESSINGNDILIB_API 
 void NDIlib_send_send_video_v2(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_v2_t* p_video_data);
 
 // This will add a video frame and will return immediately, having scheduled the frame to be displayed. 
 // All processing and sending of the video will occur asynchronously. The memory accessed by NDIlib_video_frame_t 
-// cannot be freed or re-used by the caller until a synchronizing event has occured. In general the API is better
+// cannot be freed or re-used by the caller until a synchronizing event has occurred. In general the API is better
 // able to take advantage of asynchronous processing than you might be able to by simple having a separate thread
 // to submit frames. 
 //
@@ -75,20 +73,14 @@ void NDIlib_send_send_video_v2(NDIlib_send_instance_t p_instance, const NDIlib_v
 // and network sending to all be done on separate threads from your main rendering thread. 
 //
 // Synchronozing events are :
-//		- a call to NDIlib_send_send_video
-//		- a call to NDIlib_send_send_video_async with another frame to be sent
-//		- a call to NDIlib_send_send_video with p_video_data=NULL
-//		- a call to NDIlib_send_destroy
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_send_send_video_async(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_t* p_video_data);
-
+// - a call to NDIlib_send_send_video
+// - a call to NDIlib_send_send_video_async with another frame to be sent
+// - a call to NDIlib_send_send_video with p_video_data=nullptr
+// - a call to NDIlib_send_destroy
 PROCESSINGNDILIB_API
 void NDIlib_send_send_video_async_v2(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_v2_t* p_video_data);
 
 // This will add an audio frame
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_send_send_audio(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_t* p_audio_data);
-
 PROCESSINGNDILIB_API
 void NDIlib_send_send_audio_v2(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_v2_t* p_audio_data);
 
@@ -100,7 +92,7 @@ void NDIlib_send_send_metadata(NDIlib_send_instance_t p_instance, const NDIlib_m
 PROCESSINGNDILIB_API
 NDIlib_frame_type_e NDIlib_send_capture(
 	NDIlib_send_instance_t p_instance,   // The instance data
-	NDIlib_metadata_frame_t* p_metadata, // The metadata received (can be NULL)
+	NDIlib_metadata_frame_t* p_metadata, // The metadata received (can be nullptr)
 	uint32_t timeout_in_ms);             // The amount of time in milliseconds to wait for data.
 
 // Free the buffers returned by capture for metadata
@@ -130,6 +122,6 @@ void NDIlib_send_add_connection_metadata(NDIlib_send_instance_t p_instance, cons
 
 // This will assign a new fail-over source for this video source. What this means is that if this video source was to fail
 // any receivers would automatically switch over to use this source, unless this source then came back online. You can specify
-// NULL to clear the source.
+// nullptr to clear the source.
 PROCESSINGNDILIB_API
 void NDIlib_send_set_failover(NDIlib_send_instance_t p_instance, const NDIlib_source_t* p_failover_source);

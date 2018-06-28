@@ -3,11 +3,11 @@
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review the SDK documentation 
 // for the description of the full license terms, which are also provided in the file "NDI License Agreement.pdf" within the SDK or 
 // online at http://new.tk/ndisdk_license/. Your use of any part of this SDK is acknowledgment that you agree to the SDK license 
-// terms. THe full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
+// terms. The full NDI SDK may be downloaded at https://www.newtek.com/ndi/sdk/
 //
 //***********************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2017 NewTek, inc
+// Copyright(c) 2014-2018 NewTek, inc
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -48,9 +48,9 @@ typedef struct NDIlib_audio_frame_interleaved_16s_t
 
 	// The audio reference level in dB. This specifies how many dB above the reference level (+4dBU) is the full range of 16 bit audio. 
 	// If you do not understand this and want to just use numbers :
-	//		-	If you are sending audio, specify +0dB. Most common applications produce audio at reference level.
-	//		-	If receiving audio, specify +20dB. This means that the full 16 bit range corresponds to professional level audio with 20dB of headroom. Note that
-	//			if you are writing it into a file it might sound soft because you have 20dB of headroom before clipping.
+	// - If you are sending audio, specify +0dB. Most common applications produce audio at reference level.
+	// - If receiving audio, specify +20dB. This means that the full 16 bit range corresponds to professional level audio with 20dB of headroom. Note that
+	//   if you are writing it into a file it might sound soft because you have 20dB of headroom before clipping.
 	int reference_level;
 
 	// The audio data, interleaved 16bpp
@@ -58,7 +58,7 @@ typedef struct NDIlib_audio_frame_interleaved_16s_t
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_audio_frame_interleaved_16s_t(int sample_rate_ = 48000, int no_channels_ = 2, int no_samples_ = 0, int64_t timecode_ = NDIlib_send_timecode_synthesize,
-										 int reference_level_ = 0, short* p_data_ = NULL);
+	                                     int reference_level_ = 0, short* p_data_ = nullptr);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_audio_frame_interleaved_16s_t;
@@ -82,7 +82,7 @@ typedef struct NDIlib_audio_frame_interleaved_32f_t
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_audio_frame_interleaved_32f_t(int sample_rate_ = 48000, int no_channels_ = 2, int no_samples_ = 0, int64_t timecode_ = NDIlib_send_timecode_synthesize,
-										 float* p_data_ = NULL);
+	                                     float* p_data_ = nullptr);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_audio_frame_interleaved_32f_t;
@@ -95,34 +95,14 @@ void NDIlib_util_send_send_audio_interleaved_16s(NDIlib_send_instance_t p_instan
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_32f(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_32f_t* p_audio_data);
 
-// Convert an planar floating point audio buffer into a interleaved short audio buffer. 
-// IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_util_audio_to_interleaved_16s(const NDIlib_audio_frame_t* p_src, NDIlib_audio_frame_interleaved_16s_t* p_dst);
-
 PROCESSINGNDILIB_API 
 void NDIlib_util_audio_to_interleaved_16s_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_16s_t* p_dst);
-
-// Convert an interleaved short audio buffer audio buffer into a planar floating point one. 
-// IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_util_audio_from_interleaved_16s(const NDIlib_audio_frame_interleaved_16s_t* p_src, NDIlib_audio_frame_t* p_dst);
 
 PROCESSINGNDILIB_API 
 void NDIlib_util_audio_from_interleaved_16s_v2(const NDIlib_audio_frame_interleaved_16s_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
 
-// Convert an planar floating point audio buffer into a interleaved floating point audio buffer. 
-// IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_util_audio_to_interleaved_32f(const NDIlib_audio_frame_t* p_src, NDIlib_audio_frame_interleaved_32f_t* p_dst);
-
 PROCESSINGNDILIB_API 
 void NDIlib_util_audio_to_interleaved_32f_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_32f_t* p_dst);
-
-// Convert an interleaved floating point audio buffer into a planar floating point one. 
-// IMPORTANT : You must allocate the space for the samples in the destination to allow for your own memory management.
-PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-void NDIlib_util_audio_from_interleaved_32f(const NDIlib_audio_frame_interleaved_32f_t* p_src, NDIlib_audio_frame_t* p_dst);
 
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_32f_v2(const NDIlib_audio_frame_interleaved_32f_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
