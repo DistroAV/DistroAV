@@ -428,14 +428,14 @@ void ndi_source_update(void* data, obs_data_t* settings) {
 		}
 	}
 
-	NDIlib_recv_create_t recv_desc;
-	recv_desc.source_to_connect_to.p_ndi_name =
-		obs_data_get_string(settings, PROP_SOURCE);
+	NDIlib_recv_create_v3_t recv_desc;
+	recv_desc.p_ndi_name = obs_data_get_string(settings, PROP_SOURCE);
 	recv_desc.allow_video_fields = true;
 	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
 
 	switch (obs_data_get_int(settings, PROP_BANDWIDTH)) {
 		case PROP_BW_HIGHEST:
+		default:
 			recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
 			break;
 		case PROP_BW_LOWEST:
@@ -453,7 +453,7 @@ void ndi_source_update(void* data, obs_data_t* settings) {
 	s->yuv_colorspace =
 		prop_to_colorspace((int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
-	s->ndi_receiver = ndiLib->NDIlib_recv_create_v2(&recv_desc);
+	s->ndi_receiver = ndiLib->NDIlib_recv_create_v3(&recv_desc);
 	if (s->ndi_receiver) {
 		if (hwAccelEnabled) {
 			NDIlib_metadata_frame_t hwAccelMetadata;
