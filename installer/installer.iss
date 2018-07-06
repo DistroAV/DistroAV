@@ -4,6 +4,7 @@
 #include "idp\idp.iss"
 
 #define MyAppName "obs-ndi"
+#define MyAppVersion "4.5.0"
 #define MyAppPublisher "Stephane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
@@ -13,7 +14,7 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{69FA0C71-8BEB-4E0D-B5D2-53BFF9192EE2}
 AppName={#MyAppName}
-AppVersion={%APPVEYOR_REPO_TAG_NAME|git}
+AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
@@ -21,7 +22,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={code:GetDirName}
 DefaultGroupName={#MyAppName}
-OutputBaseFilename=obs-ndi-Windows-Installer
+OutputBaseFilename=obs-ndi-{#MyAppVersion}-Windows-Installer
 Compression=lzma
 SolidCompression=yes
 LicenseFile=..\LICENSE
