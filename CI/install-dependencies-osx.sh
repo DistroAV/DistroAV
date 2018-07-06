@@ -14,7 +14,8 @@ sudo installer -pkg ./Packages.pkg -target /
 
 brew update
 # OBS Studio + obs-websocket deps
-brew install qt5 ffmpeg libav
+brew install ffmpeg libav
+brew install https://github.com/Homebrew/homebrew-core/blob/3f205f8d84fb93e5d143866545ddef825b074e01/Formula/qt.rb # Qt 5.10.0
 
 #echo "Qt path: $(find /usr/local/Cellar/qt5 -d 1 | tail -n 1)"
 
