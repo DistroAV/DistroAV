@@ -73,6 +73,8 @@ void preview_output_start(const char* output_name)
 	context.stagesurface = gs_stagesurface_create(width, height, GS_BGRA);
 	obs_leave_graphics();
 
+	const video_output_info* mainVOI = video_output_get_info(obs_get_video());
+
 	video_output_info vi = { 0 };
 	vi.format = VIDEO_FORMAT_BGRA;
 	vi.width = width;
@@ -80,8 +82,8 @@ void preview_output_start(const char* output_name)
 	vi.fps_den = context.ovi.fps_den;
 	vi.fps_num = context.ovi.fps_num;
 	vi.cache_size = 16;
-	vi.colorspace = VIDEO_CS_DEFAULT;
-	vi.range = VIDEO_RANGE_DEFAULT;
+	vi.colorspace = mainVOI->colorspace;
+	vi.range = mainVOI->range;
 	vi.name = output_name;
 
 	video_output_open(&context.video_queue, &vi);
