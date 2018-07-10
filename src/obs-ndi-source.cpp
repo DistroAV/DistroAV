@@ -163,7 +163,7 @@ obs_properties_t* ndi_source_getproperties(void* data)
 
 	obs_property_t* source_list = obs_properties_add_list(props, PROP_SOURCE,
 		obs_module_text("NDIPlugin.SourceProps.SourceName"),
-		OBS_COMBO_TYPE_LIST,
+		OBS_COMBO_TYPE_EDITABLE,
 		OBS_COMBO_FORMAT_STRING);
 
 	uint32_t nbSources = 0;
