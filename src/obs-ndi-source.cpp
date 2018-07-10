@@ -42,11 +42,9 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PROP_SYNC_NDI_TIMESTAMP 1
 #define PROP_SYNC_NDI_SOURCE_TIMECODE 2
 
-#define PROP_YUV_RANGE_DEFAULT 0
 #define PROP_YUV_RANGE_PARTIAL 1
 #define PROP_YUV_RANGE_FULL 2
 
-#define PROP_YUV_SPACE_DEFAULT 0
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
 
@@ -125,27 +123,21 @@ static speaker_layout channel_count_to_layout(int channels)
 static video_colorspace prop_to_colorspace(int index)
 {
 	switch (index) {
-	case PROP_YUV_SPACE_BT601:
-		return VIDEO_CS_601;
-	case PROP_YUV_SPACE_BT709:
-		return VIDEO_CS_709;
-
-	case PROP_YUV_SPACE_DEFAULT:
-	default:
-		return VIDEO_CS_DEFAULT;
+		case PROP_YUV_SPACE_BT601:
+			return VIDEO_CS_601;
+		default:
+		case PROP_YUV_SPACE_BT709:
+			return VIDEO_CS_709;
 	}
 }
 
 static video_range_type prop_to_range_type(int index) {
 	switch (index) {
-	case PROP_YUV_RANGE_PARTIAL:
-		return VIDEO_RANGE_PARTIAL;
-	case PROP_YUV_RANGE_FULL:
-		return VIDEO_RANGE_FULL;
-
-	case PROP_YUV_RANGE_DEFAULT:
-	default:
-		return VIDEO_RANGE_DEFAULT;
+		case PROP_YUV_RANGE_FULL:
+			return VIDEO_RANGE_FULL;
+		default:
+		case PROP_YUV_RANGE_PARTIAL:
+			return VIDEO_RANGE_PARTIAL;
 	}
 }
 
@@ -239,9 +231,6 @@ obs_properties_t* ndi_source_getproperties(void* data)
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 
 	obs_property_list_add_int(yuv_ranges,
-		obs_module_text("NDIPlugin.Default"),
-		PROP_YUV_RANGE_DEFAULT);
-	obs_property_list_add_int(yuv_ranges,
 		obs_module_text("NDIPlugin.SourceProps.ColorRange.Partial"),
 		PROP_YUV_RANGE_PARTIAL);
 	obs_property_list_add_int(yuv_ranges,
@@ -252,10 +241,8 @@ obs_properties_t* ndi_source_getproperties(void* data)
 		obs_module_text("NDIPlugin.SourceProps.ColorSpace"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 
-	obs_property_list_add_int(yuv_spaces,
-		obs_module_text("NDIPlugin.Default"), PROP_YUV_SPACE_DEFAULT);
-	obs_property_list_add_int(yuv_spaces, "601", PROP_YUV_SPACE_BT601);
-	obs_property_list_add_int(yuv_spaces, "709", PROP_YUV_SPACE_BT709);
+	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
+	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
 
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
 		obs_properties_t *pps,
@@ -272,6 +259,14 @@ obs_properties_t* ndi_source_getproperties(void* data)
 	});
 
 	return props;
+}
+
+void ndi_source_getdefaults(obs_data_t* settings)
+{
+	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
+	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_TIMESTAMP);
+	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
+	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 }
 
 void* ndi_source_poll_audio(void* data)
@@ -560,6 +555,7 @@ struct obs_source_info create_ndi_source_info()
 									  OBS_SOURCE_DO_NOT_DUPLICATE;
 	ndi_source_info.get_name		= ndi_source_getname;
 	ndi_source_info.get_properties	= ndi_source_getproperties;
+	ndi_source_info.get_defaults	= ndi_source_getdefaults;
 	ndi_source_info.update			= ndi_source_update;
 	ndi_source_info.show			= ndi_source_shown;
 	ndi_source_info.hide			= ndi_source_hidden;
