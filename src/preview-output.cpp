@@ -24,7 +24,6 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <media-io/video-frame.h>
 
 #include "obs-ndi.h"
-#include "PreviewSceneChangedWatcher.h"
 
 struct preview_output {
 	bool enabled;
@@ -38,8 +37,6 @@ struct preview_output {
 	uint32_t video_linesize;
 
 	obs_video_info ovi;
-
-	PreviewSceneChangedWatcher* dirtyHack;
 };
 
 static struct preview_output context = {0};
@@ -89,7 +86,6 @@ void preview_output_start(const char* output_name)
 	video_output_open(&context.video_queue, &vi);
 
 	obs_frontend_add_event_callback(on_preview_scene_changed, &context);
-	context.dirtyHack = new PreviewSceneChangedWatcher(on_preview_scene_changed, &context);
 	if (obs_frontend_preview_program_mode_active()) {
 		context.current_source = obs_frontend_get_current_preview_scene();
 	} else {
@@ -118,7 +114,6 @@ void preview_output_stop()
 
 	obs_remove_main_render_callback(render_preview_source, &context);
 	obs_frontend_remove_event_callback(on_preview_scene_changed, &context);
-	delete context.dirtyHack;
 
 	obs_source_release(context.current_source);
 

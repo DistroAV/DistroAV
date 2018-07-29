@@ -26,16 +26,14 @@ set(obs-ndi_SOURCES
 	src/main-output.cpp
 	src/preview-output.cpp
 	src/Config.cpp
-	src/forms/output-settings.cpp
-	src/PreviewSceneChangedWatcher.cpp)
+	src/forms/output-settings.cpp)
 
 set(obs-ndi_HEADERS
 	src/obs-ndi.h
 	src/main-output.h
 	src/preview-output.h
 	src/Config.h
-	src/forms/output-settings.h
-	src/PreviewSceneChangedWatcher.h)
+	src/forms/output-settings.h)
 
 add_library(obs-ndi MODULE
 	${obs-ndi_SOURCES}
