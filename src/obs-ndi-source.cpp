@@ -23,6 +23,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <util/platform.h>
 #include <util/threading.h>
+#include <chrono>
+#include <thread>
 
 #include "obs-ndi.h"
 
@@ -319,6 +321,9 @@ void* ndi_source_poll_audio(void* data)
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
 			ndiLib->NDIlib_recv_free_audio_v2(s->ndi_receiver, &audio_frame);
+		} else if (ndiLib->NDIlib_recv_get_no_connections(s->ndi_receiver) == 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
 		}
 	}
 
@@ -391,6 +396,9 @@ void* ndi_source_poll_video(void* data)
 
 			obs_source_output_video(s->source, &obs_video_frame);
 			ndiLib->NDIlib_recv_free_video_v2(s->ndi_receiver, &video_frame);
+		} else if (ndiLib->NDIlib_recv_get_no_connections(s->ndi_receiver) == 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
 		}
 	}
 
