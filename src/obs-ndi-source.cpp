@@ -59,8 +59,7 @@ struct ndi_source
 	int sync_mode;
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
-	pthread_t video_thread;
-	pthread_t audio_thread;
+	pthread_t av_thread;
 	bool running;
 	NDIlib_tally_t tally;
 	bool alpha_filter_enabled;
@@ -271,20 +270,22 @@ void ndi_source_getdefaults(obs_data_t* settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 }
 
-void* ndi_source_poll_audio(void* data)
+void* ndi_source_poll_audio_video(void* data)
 {
 	auto s = (struct ndi_source*)data;
 
-	blog(LOG_INFO, "audio thread for '%s' started",
+	blog(LOG_INFO, "A/V thread for '%s' started",
 						obs_source_get_name(s->source));
 
 	NDIlib_audio_frame_v2_t audio_frame;
 	obs_source_audio obs_audio_frame = {0};
+	NDIlib_video_frame_v2_t video_frame;
+	obs_source_frame obs_video_frame = {0};
 
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 	while (s->running) {
 		frame_received = ndiLib->NDIlib_recv_capture_v2(
-			s->ndi_receiver, nullptr, &audio_frame, nullptr, 1);
+			s->ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
 		if (frame_received == NDIlib_frame_type_audio) {
 			obs_audio_frame.speakers =
@@ -321,31 +322,8 @@ void* ndi_source_poll_audio(void* data)
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
 			ndiLib->NDIlib_recv_free_audio_v2(s->ndi_receiver, &audio_frame);
-		} else if (ndiLib->NDIlib_recv_get_no_connections(s->ndi_receiver) == 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
-	}
-
-	blog(LOG_INFO, "audio thread for '%s' completed",
-				obs_source_get_name(s->source));
-	return nullptr;
-}
-
-void* ndi_source_poll_video(void* data)
-{
-	auto s = (struct ndi_source*)data;
-
-	blog(LOG_INFO, "video thread for '%s' started",
-					obs_source_get_name(s->source));
-
-	NDIlib_video_frame_v2_t video_frame;
-	obs_source_frame obs_video_frame = {0};
-
-	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
-	while (s->running) {
-		frame_received = ndiLib->NDIlib_recv_capture_v2(s->ndi_receiver,
-			&video_frame, nullptr, nullptr, 1);
 
 		if (frame_received == NDIlib_frame_type_video) {
 			switch (video_frame.FourCC) {
@@ -396,14 +374,17 @@ void* ndi_source_poll_video(void* data)
 
 			obs_source_output_video(s->source, &obs_video_frame);
 			ndiLib->NDIlib_recv_free_video_v2(s->ndi_receiver, &video_frame);
-		} else if (ndiLib->NDIlib_recv_get_no_connections(s->ndi_receiver) == 0) {
+			continue;
+		}
+
+		if (ndiLib->NDIlib_recv_get_no_connections(s->ndi_receiver) == 0) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
 	}
 
-	blog(LOG_INFO, "video thread for '%s' completed",
-			obs_source_get_name(s->source));
+	blog(LOG_INFO, "audio thread for '%s' completed",
+				obs_source_get_name(s->source));
 	return nullptr;
 }
 
@@ -413,8 +394,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 
 	if(s->running) {
 		s->running = false;
-		pthread_join(s->video_thread, NULL);
-		pthread_join(s->audio_thread, NULL);
+		pthread_join(s->av_thread, NULL);
 	}
 	s->running = false;
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
@@ -478,8 +458,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 		obs_source_set_async_unbuffered(s->source, true);
 
 		s->running = true;
-		pthread_create(&s->video_thread, nullptr, ndi_source_poll_video, data);
-		pthread_create(&s->audio_thread, nullptr, ndi_source_poll_audio, data);
+		pthread_create(&s->av_thread, nullptr, ndi_source_poll_audio_video, data);
 
 		blog(LOG_INFO, "started A/V threads for source '%s'",
 			recv_desc.source_to_connect_to.p_ndi_name);
@@ -548,8 +527,7 @@ void ndi_source_destroy(void* data)
 {
 	auto s = (struct ndi_source*)data;
 	s->running = false;
-	pthread_join(s->video_thread, NULL);
-	pthread_join(s->audio_thread, NULL);
+	pthread_join(s->av_thread, NULL);
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 	bfree(s);
 }
