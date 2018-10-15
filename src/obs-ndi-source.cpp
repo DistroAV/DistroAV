@@ -344,6 +344,14 @@ void* ndi_source_poll_audio_video(void* data)
 				case NDIlib_FourCC_type_UYVA:
 					obs_video_frame.format = VIDEO_FORMAT_UYVY;
 					break;
+
+				case NDIlib_FourCC_type_I420:
+					obs_video_frame.format = VIDEO_FORMAT_I420;
+					break;
+
+				case NDIlib_FourCC_type_NV12:
+					obs_video_frame.format = VIDEO_FORMAT_NV12;
+					break;
 			}
 
 			switch (s->sync_mode) {

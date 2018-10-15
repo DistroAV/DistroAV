@@ -55,7 +55,7 @@ PROCESSINGNDILIB_API
 bool NDIlib_recv_ptz_pan_tilt(NDIlib_recv_instance_t p_instance, const float pan_value, const float tilt_value);
 
 // Set the pan and tilt direction and speed
-// pan_speed = -1.0 (moving left) ... 0.0 (stopped) ... +1.0 (moving right)
+// pan_speed = -1.0 (moving right) ... 0.0 (stopped) ... +1.0 (moving left)
 // tilt_speed = -1.0 (down) ... 0.0 (stopped) ... +1.0 (moving up)
 PROCESSINGNDILIB_API
 bool NDIlib_recv_ptz_pan_tilt_speed(NDIlib_recv_instance_t p_instance, const float pan_speed, const float tilt_speed);

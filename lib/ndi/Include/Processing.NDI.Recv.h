@@ -88,7 +88,7 @@ typedef struct NDIlib_recv_create_v3_t
 	// senders, so this might be "Channel 1" on your system. If this is nullptr then it will use the 
 	// filename of your application indexed with the number of the instance number of this receiver.
 	// If your applicaiton is My
-	const char* p_ndi_name;
+	const char* p_ndi_recv_name;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_recv_create_v3_t(const NDIlib_source_t source_to_connect_to_ = NDIlib_source_t(), NDIlib_recv_color_format_e color_format_ = NDIlib_recv_color_format_UYVY_BGRA,

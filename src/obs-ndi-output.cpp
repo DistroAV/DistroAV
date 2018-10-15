@@ -33,56 +33,6 @@ typedef void (*uyvy_conv_function)(uint8_t* input[], uint32_t in_linesize[],
 							  uint32_t start_y, uint32_t end_y,
 							  uint8_t* output, uint32_t out_linesize);
 
-static void convert_nv12_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
-						  uint32_t start_y, uint32_t end_y,
-						  uint8_t* output, uint32_t out_linesize)
-{
-	uint8_t* _Y;
-	uint8_t* _U;
-	uint8_t* _V;
-	uint8_t* _out;
-	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; ++y) {
-		_Y = input[0] + (y * in_linesize[0]);
-		_U = input[1] + ((y/2) * in_linesize[1]);
-		_V = _U + 1;
-
-		_out = output + (y * out_linesize);
-
-		for (uint32_t x = 0; x < width; x+=2) {
-			*(_out++) = *(_U++); _U++;
-			*(_out++) = *(_Y++);
-			*(_out++) = *(_V++); _V++;
-			*(_out++) = *(_Y++);
-		}
-	}
-}
-
-static void convert_i420_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
-						  uint32_t start_y, uint32_t end_y,
-						  uint8_t* output, uint32_t out_linesize)
-{
-	uint8_t* _Y;
-	uint8_t* _U;
-	uint8_t* _V;
-	uint8_t* _out;
-	uint32_t width = min_uint32(in_linesize[0], out_linesize);
-	for (uint32_t y = start_y; y < end_y; ++y) {
-		_Y = input[0] + (y * in_linesize[0]);
-		_U = input[1] + ((y/2) * in_linesize[1]);
-		_V = input[2] + ((y/2) * in_linesize[2]);
-
-		_out = output + (y * out_linesize);
-
-		for (uint32_t x = 0; x < width; x += 2) {
-			*(_out++) = *(_U++);
-			*(_out++) = *(_Y++);
-			*(_out++) = *(_V++);
-			*(_out++) = *(_Y++);
-		}
-	}
-}
-
 static void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 						  uint32_t start_y, uint32_t end_y,
 						  uint8_t* output, uint32_t out_linesize)
@@ -107,20 +57,6 @@ static void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 			*(_out++) = *(_Y++);
 		}
 	}
-}
-
-static uyvy_conv_function get_convert_function(video_format format)
-{
-	if (format == VIDEO_FORMAT_NV12)
-		return convert_nv12_to_uyvy;
-
-	if (format == VIDEO_FORMAT_I420)
-		return convert_i420_to_uyvy;
-
-	if (format == VIDEO_FORMAT_I444)
-		return convert_i444_to_uyvy;
-
-	return nullptr;
 }
 
 struct ndi_output
@@ -188,16 +124,22 @@ bool ndi_output_start(void* data)
 		uint32_t height = video_output_get_height(video);
 
 		switch (format) {
-			case VIDEO_FORMAT_NV12:
-			case VIDEO_FORMAT_I420:
 			case VIDEO_FORMAT_I444:
-				o->conv_function = get_convert_function(format);
+				o->conv_function = convert_i444_to_uyvy;
 				if (!o->conv_function) {
 					return false;
 				}
 				o->frame_fourcc = NDIlib_FourCC_type_UYVY;
 				o->conv_linesize = width * 2;
 				o->conv_buffer = new uint8_t[height * o->conv_linesize * 2]();
+				break;
+
+			case VIDEO_FORMAT_NV12:
+				o->frame_fourcc = NDIlib_FourCC_type_NV12;
+				break;
+
+			case VIDEO_FORMAT_I420:
+				o->frame_fourcc = NDIlib_FourCC_type_I420;
 				break;
 
 			case VIDEO_FORMAT_RGBA:
