@@ -111,6 +111,7 @@ bool NDIlib_is_supported_CPU(void);
 
 // The receiving video and audio API
 #include "Processing.NDI.Recv.h"
+
 // Extensions to support PTZ control, etc...
 #include "Processing.NDI.Recv.ex.h"
 
@@ -128,6 +129,9 @@ bool NDIlib_is_supported_CPU(void);
 
 // Dynamic loading used for OSS libraries
 #include "Processing.NDI.DynamicLoad.h"
+
+// The frame synchronizer
+#include "Processing.NDI.FrameSync.h"
 
 // The C++ implementations
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
