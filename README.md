@@ -17,6 +17,7 @@ You'll need CMake and a working development environment for OBS Studio installed
 
 ### Windows
 In cmake-gui, you'll have to set these CMake variables :
+- **QTDIR** (path) : location of the Qt environment suited for your compiler and architecture
 - **LIBOBS_INCLUDE_DIR** (path) : location of the libobs subfolder in the source code of OBS Studio
 - **LIBOBS_LIB** (filepath) : location of the obs.lib file
 - **OBS_FRONTEND_LIB** (filepath) : location of the obs-frontend-api.lib file
