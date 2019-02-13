@@ -282,19 +282,18 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 
 	size_t data_size =
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
-	uint8_t* audio_data = (uint8_t*)bmalloc(data_size);
+	uint8_t conv_buffer[data_size];
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(&audio_data[i * audio_frame.channel_stride_in_bytes],
+		memcpy((&conv_buffer) + (i * audio_frame.channel_stride_in_bytes),
 			frame->data[i],
 			audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = (float*)audio_data;
+	audio_frame.p_data = (float*)(&conv_buffer);
 	audio_frame.timecode = (int64_t)(frame->timestamp / 100);
 
 	ndiLib->NDIlib_send_send_audio_v2(o->ndi_sender, &audio_frame);
-	bfree(audio_data);
 }
 
 struct obs_output_info create_ndi_output_info()
