@@ -280,9 +280,9 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 
-	size_t data_size =
+	const size_t data_size =
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
-	uint8_t conv_buffer[data_size];
+	const uint8_t conv_buffer[data_size];
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
 		memcpy((&conv_buffer) + (i * audio_frame.channel_stride_in_bytes),
