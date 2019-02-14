@@ -78,6 +78,9 @@ struct ndi_output
 	uint8_t* conv_buffer;
 	uint32_t conv_linesize;
 	uyvy_conv_function conv_function;
+
+	uint8_t* audio_conv_buffer;
+	size_t audio_conv_buffer_size;
 };
 
 const char* ndi_output_getname(void* data)
@@ -222,6 +225,8 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output)
 	auto o = (struct ndi_output*)bzalloc(sizeof(struct ndi_output));
 	o->output = output;
 	o->started = false;
+	o->audio_conv_buffer = nullptr;
+	o->audio_conv_buffer_size = 0;
 	ndi_output_update(o, settings);
 	return o;
 }
@@ -229,6 +234,9 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output)
 void ndi_output_destroy(void* data)
 {
 	auto o = (struct ndi_output*)data;
+	if (o->audio_conv_buffer) {
+		bfree(o->audio_conv_buffer);
+	}
 	bfree(o);
 }
 
@@ -280,21 +288,26 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 
-	size_t data_size =
+	const size_t data_size =
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
-	uint8_t* audio_data = (uint8_t*)bmalloc(data_size);
+	if (data_size > o->audio_conv_buffer_size) {
+		if (o->audio_conv_buffer) {
+			bfree(o->audio_conv_buffer);
+		}
+		o->audio_conv_buffer = (uint8_t*)bmalloc(data_size);
+		o->audio_conv_buffer_size = data_size;
+	}
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(&audio_data[i * audio_frame.channel_stride_in_bytes],
+		memcpy(o->audio_conv_buffer + (i * audio_frame.channel_stride_in_bytes),
 			frame->data[i],
 			audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = (float*)audio_data;
+	audio_frame.p_data = (float*)o->audio_conv_buffer;
 	audio_frame.timecode = (int64_t)(frame->timestamp / 100);
 
 	ndiLib->NDIlib_send_send_audio_v2(o->ndi_sender, &audio_frame);
-	bfree(audio_data);
 }
 
 struct obs_output_info create_ndi_output_info()
