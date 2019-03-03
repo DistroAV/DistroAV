@@ -1,0 +1,23 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'macOS-10.13'
+
+steps:
+- script: ./ci/install-dependencies-osx.sh
+  displayName: 'Install Dependencies'
+
+- script: ./ci/before-script-osx.sh
+  displayName: 'CMake'
+
+- bash: |
+     cd ./build
+     make -j4
+     cd -
+  displayName: 'Build'
