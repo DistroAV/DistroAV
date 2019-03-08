@@ -19,5 +19,5 @@ steps:
 
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: '/package'
+    pathtoPublish: './package'
     artifactName: 'build'
