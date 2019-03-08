@@ -469,6 +469,10 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	s->yuv_colorspace =
 		prop_to_colorspace((int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
+	const bool is_unbuffered =
+		(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOW);
+	obs_source_set_async_unbuffered(s->source, is_unbuffered);
+
 	s->ndi_receiver = ndiLib->NDIlib_recv_create_v3(&recv_desc);
 	if (s->ndi_receiver) {
 		if (hwAccelEnabled) {
@@ -477,10 +481,6 @@ void ndi_source_update(void* data, obs_data_t* settings)
 			ndiLib->NDIlib_recv_send_metadata(
 				s->ndi_receiver, &hwAccelMetadata);
 		}
-
-		const bool is_unbuffered =
-			(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOW);
-		obs_source_set_async_unbuffered(s->source, is_unbuffered);
 
 		s->running = true;
 		pthread_create(&s->av_thread, nullptr, ndi_source_poll_audio_video, data);
