@@ -127,11 +127,11 @@ bool NDIlib_is_supported_CPU(void);
 // Deprecated structures and functions
 #include "Processing.NDI.deprecated.h"
 
-// Dynamic loading used for OSS libraries
-#include "Processing.NDI.DynamicLoad.h"
-
 // The frame synchronizer
 #include "Processing.NDI.FrameSync.h"
+
+// Dynamic loading used for OSS libraries
+#include "Processing.NDI.DynamicLoad.h"
 
 // The C++ implementations
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS

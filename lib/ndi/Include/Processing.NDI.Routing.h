@@ -23,21 +23,20 @@
 //
 //***********************************************************************************************************************************************
 
-//**************************************************************************************************************************
 // Structures and type definitions required by NDI sending
 // The reference to an instance of the sender
 typedef void* NDIlib_routing_instance_t;
 
 // The creation structure that is used when you are creating a sender
 typedef struct NDIlib_routing_create_t
-{	// The name of the NDI source to create. This is a nullptr terminated UTF8 string.
+{	// The name of the NDI source to create. This is a NULL terminated UTF8 string.
 	const char* p_ndi_name;
 
 	// What groups should this source be part of
 	const char* p_groups;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
-	NDIlib_routing_create_t(const char* p_ndi_name_ = nullptr, const char* p_groups_ = nullptr);
+	NDIlib_routing_create_t(const char* p_ndi_name_ = NULL, const char* p_groups_ = NULL);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_routing_create_t;

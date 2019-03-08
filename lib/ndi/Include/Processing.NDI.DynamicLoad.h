@@ -23,7 +23,6 @@
 //
 //***********************************************************************************************************************************************
 
-//****************************************************************************************************************
 typedef struct NDIlib_v3
 {	// V1.5
 	bool(*NDIlib_initialize)(void);
@@ -113,10 +112,22 @@ typedef struct NDIlib_v3
 	const char*(*NDIlib_recv_recording_get_filename)(NDIlib_recv_instance_t p_instance);
 	const char*(*NDIlib_recv_recording_get_error)(NDIlib_recv_instance_t p_instance);
 	bool(*NDIlib_recv_recording_get_times)(NDIlib_recv_instance_t p_instance, NDIlib_recv_recording_time_t* p_times);
-	// V3.10
+	// V3.1
 	NDIlib_recv_instance_t(*NDIlib_recv_create_v3)(const NDIlib_recv_create_v3_t* p_create_settings);
 	// V3.5
 	void(*NDIlib_recv_connect)(NDIlib_recv_instance_t p_instance, const NDIlib_source_t* p_src);
+	// V3.6
+	NDIlib_framesync_instance_t(*NDIlib_framesync_create)(NDIlib_recv_instance_t p_receiver);
+	void(*NDIlib_framesync_destroy)(NDIlib_framesync_instance_t p_instance);
+	void(*NDIlib_framesync_capture_audio)(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v2_t* p_audio_data, int sample_rate, int no_channels, int no_samples);
+	void(*NDIlib_framesync_free_audio)(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v2_t* p_audio_data);
+	void(*NDIlib_framesync_capture_video)(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data, NDIlib_frame_format_type_e field_type);
+	void(*NDIlib_framesync_free_video)(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data);
+	void(*NDIlib_util_send_send_audio_interleaved_32s)(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_32s_t* p_audio_data);
+	void(*NDIlib_util_audio_to_interleaved_32s_v2)(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_32s_t* p_dst);
+	void(*NDIlib_util_audio_from_interleaved_32s_v2)(const NDIlib_audio_frame_interleaved_32s_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
+	// V3.8
+	const NDIlib_source_t* (*NDIlib_send_get_source_name)(NDIlib_send_instance_t p_instance);
 
 } NDIlib_v3;
 
