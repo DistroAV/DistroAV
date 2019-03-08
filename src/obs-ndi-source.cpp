@@ -462,9 +462,6 @@ void ndi_source_update(void* data, obs_data_t* settings)
 				s->ndi_receiver, &hwAccelMetadata);
 		}
 
-		// Important for low latency receiving
-		obs_source_set_async_unbuffered(s->source, true);
-
 		s->running = true;
 		pthread_create(&s->av_thread, nullptr, ndi_source_poll_audio_video, data);
 
