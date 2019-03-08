@@ -35,6 +35,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PROP_FIX_ALPHA "ndi_fix_alpha_blending"
 #define PROP_YUV_RANGE "yuv_range"
 #define PROP_YUV_COLORSPACE "yuv_colorspace"
+#define PROP_LATENCY "latency"
 
 #define PROP_BW_HIGHEST 0
 #define PROP_BW_LOWEST 1
@@ -49,6 +50,9 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
+
+#define PROP_LATENCY_NORMAL 0
+#define PROP_LATENCY_LOW 1
 
 extern NDIlib_find_instance_t ndi_finder;
 
@@ -244,6 +248,17 @@ obs_properties_t* ndi_source_getproperties(void* data)
 
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
+
+	obs_property_t* latency_modes = obs_properties_add_list(props, PROP_LATENCY,
+		obs_module_text("NDIPlugin.SourceProps.Latency"),
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+
+	obs_property_list_add_int(latency_modes,
+		obs_module_text("NDIPlugin.SourceProps.Latency.Normal"),
+		PROP_LATENCY_NORMAL);
+	obs_property_list_add_int(latency_modes,
+		obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
+		PROP_LATENCY_LOW);
 
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
 		obs_properties_t *pps,
@@ -461,6 +476,10 @@ void ndi_source_update(void* data, obs_data_t* settings)
 			ndiLib->NDIlib_recv_send_metadata(
 				s->ndi_receiver, &hwAccelMetadata);
 		}
+
+		const bool is_unbuffered =
+			(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOW);
+		obs_source_set_async_unbuffered(s->source, is_unbuffered);
 
 		s->running = true;
 		pthread_create(&s->av_thread, nullptr, ndi_source_poll_audio_video, data);
