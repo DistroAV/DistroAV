@@ -2,6 +2,16 @@
 
 set -e
 
+NDILIB_VERSION="3.8.0"
+NDILIB_INSTALLER_SHA256="8face05e356ffed5de9660ba4a5232699faa2bf0c9858d5ed88fac6d138c23a0"
+NDILIB_INSTALLER="/tmp/libndi-install.sh"
+
+cd /tmp
+curl -kL -o NDILIB_INSTALLER_LOCATION https://slepin.fr/obs-ndi/ci/libndi-linux-v$NDILIB_VERSION-install.sh -f --retry 5
+echo "$NDILIB_INSTALLER_SHA256 $NDILIB_INSTALLER" | shasum -c
+chmod +x $NDILIB_INSTALLER
+yes | PAGER="cat" sh $NDILIB_INSTALLER
+
 cd /root/obs-ndi
 
 export GIT_HASH=$(git rev-parse --short HEAD)
@@ -13,25 +23,25 @@ fi
 
 cd /root/obs-ndi/build
 
-PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
+PAGER="cat" checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
 	--pkglicense="GPLv2" --maintainer="stephane.lepin@gmail.com" \
-	--requires="libndi3 (>= 3.5.1)" --pkggroup="video" \
+	--requires="libndi3 (>= $NDILIB_VERSION)" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
 	--pakdir="/package"
 
-PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
+PAGER="cat" checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi3 --pkgversion="3.5.1" \
+        --pkgname=libndi3 --pkgversion="$NDILIB_VERSION" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
         --pakdir="/package" ../CI/create-libndi-deb.sh
 
-PAGER=cat checkinstall -y --type=debian --fstrans=no --nodoc \
+PAGER="cat" checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi3-dev --pkgversion="3.5.1" --requires="libndi3 (>= 3.5.1)" \
+        --pkgname=libndi3-dev --pkgversion="$NDILIB_VERSION" --requires="libndi3 (>= $NDILIB_VERSION)" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
         --pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
