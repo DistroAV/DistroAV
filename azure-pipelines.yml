@@ -1,0 +1,23 @@
+pool:
+  vmImage: 'macOS-10.13'
+
+steps:
+- script: ./CI/install-dependencies-osx.sh
+  displayName: 'Install Dependencies'
+
+- script: ./CI/before-script-osx.sh
+  displayName: 'CMake'
+
+- bash: |
+     cd ./build
+     make -j4
+     cd -
+  displayName: 'Build'
+
+- script: ./CI/before-deploy-osx.sh
+  displayName: 'Before Deploy'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: './package'
+    artifactName: 'build'
