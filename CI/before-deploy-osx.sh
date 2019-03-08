@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export GIT_HASH=$(git rev-parse --short HEAD)
-export GIT_BRANCH_OR_TAG=$(git name-rev --name-only HEAD | sed 's/tags\///g')
+export GIT_BRANCH_OR_TAG=$(git name-rev --name-only HEAD | awk -F\/ '{print $NF}')
 
 export VERSION="$GIT_HASH-$GIT_BRANCH_OR_TAG"
 export LATEST_VERSION="$GIT_BRANCH_OR_TAG"
