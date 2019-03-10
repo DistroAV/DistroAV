@@ -142,7 +142,7 @@ void ndi_filter_offscreen_render(void* data, uint32_t cx, uint32_t cy)
 {
 	auto s = (struct ndi_filter*)data;
 
-	obs_source_t* target = obs_filter_get_target(s->context);
+	obs_source_t* target = obs_filter_get_parent(s->context);
 	if (!target) {
 		return;
 	}
