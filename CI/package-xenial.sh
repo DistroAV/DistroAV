@@ -8,7 +8,7 @@ NDILIB_INSTALLER="/tmp/libndi-install.sh"
 
 cd /tmp
 curl -kL -o NDILIB_INSTALLER_LOCATION https://slepin.fr/obs-ndi/ci/libndi-linux-v$NDILIB_VERSION-install.sh -f --retry 5
-echo "$NDILIB_INSTALLER_SHA256 $NDILIB_INSTALLER" | shasum -c
+echo "$NDILIB_INSTALLER_SHA256 $NDILIB_INSTALLER" | sha256sum -c
 chmod +x $NDILIB_INSTALLER
 yes | PAGER="cat" sh $NDILIB_INSTALLER
 
