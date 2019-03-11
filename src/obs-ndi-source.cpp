@@ -67,6 +67,7 @@ struct ndi_source
 	bool running;
 	NDIlib_tally_t tally;
 	bool alpha_filter_enabled;
+	os_performance_token_t* perf_token;
 };
 
 static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id)
@@ -298,6 +299,11 @@ void* ndi_source_poll_audio_video(void* data)
 	NDIlib_video_frame_v2_t video_frame;
 	obs_source_frame obs_video_frame = {0};
 
+	if (s->perf_token) {
+		os_end_high_performance(s->perf_token);
+	}
+	s->perf_token = os_request_high_performance("NDI Receiver Thread");
+
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 	while (s->running) {
 		frame_received = ndiLib->NDIlib_recv_capture_v2(
@@ -406,6 +412,9 @@ void* ndi_source_poll_audio_video(void* data)
 			continue;
 		}
 	}
+
+	os_end_high_performance(s->perf_token);
+	s->perf_token = NULL;
 
 	blog(LOG_INFO, "audio thread for '%s' completed",
 				obs_source_get_name(s->source));
@@ -544,6 +553,7 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source)
 	auto s = (struct ndi_source*)bzalloc(sizeof(struct ndi_source));
 	s->source = source;
 	s->running = false;
+	s->perf_token = NULL;
 	ndi_source_update(s, settings);
 	return s;
 }
