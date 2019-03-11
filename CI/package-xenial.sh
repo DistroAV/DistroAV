@@ -11,6 +11,7 @@ curl -kL -o $NDILIB_INSTALLER https://slepin.fr/obs-ndi/ci/libndi-linux-v$NDILIB
 echo "$NDILIB_INSTALLER_SHA256 $NDILIB_INSTALLER" | sha256sum -c
 chmod +x $NDILIB_INSTALLER
 yes | PAGER="cat" sh $NDILIB_INSTALLER
+mv "/tmp/NDI SDK for Linux" /tmp/ndisdk
 
 cd /root/obs-ndi
 
