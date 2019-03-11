@@ -45,5 +45,6 @@ make -j4
 ```
 
 ### Automated Builds
-- Windows : [![Automated Build status for Windows](https://ci.appveyor.com/api/projects/status/github/Palakis/obs-ndi)](https://ci.appveyor.com/project/Palakis/obs-ndi/history)
-- Linux & OS X : [![Automated Build status for Linux & OS X](https://travis-ci.org/Palakis/obs-ndi.svg?branch=master)](https://travis-ci.org/Palakis/obs-ndi)
+- Windows: [![Automated Build status for Windows](https://ci.appveyor.com/api/projects/status/github/Palakis/obs-ndi)](https://ci.appveyor.com/project/Palakis/obs-ndi/history)
+- Linux: [![Automated Build status for Linux](https://travis-ci.org/Palakis/obs-ndi.svg?branch=master)](https://travis-ci.org/Palakis/obs-ndi)
+- macOS: [![Automated Build status for macOS](https://img.shields.io/azure-devops/build/Palakis/obs-ndi/Palakis.obs-ndi.svg)](https://dev.azure.com/Palakis/obs-ndi/_build)
