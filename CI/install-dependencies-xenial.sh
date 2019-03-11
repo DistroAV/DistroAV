@@ -5,7 +5,7 @@ set -ex
 apt-get -qq update
 apt-get install -y \
         libc-dev-bin libc6-dev \
-        git \
+        git curl \
         build-essential \
         unzip
 

@@ -12,7 +12,7 @@ echo "$NDILIB_INSTALLER_SHA256 $NDILIB_INSTALLER" | sha256sum -c
 chmod +x $NDILIB_INSTALLER
 yes | PAGER="cat" sh $NDILIB_INSTALLER
 
-rm -r /tmp/ndisdk
+rm -rf /tmp/ndisdk
 mv "/tmp/NDI SDK for Linux" /tmp/ndisdk
 
 cd /root/obs-ndi
