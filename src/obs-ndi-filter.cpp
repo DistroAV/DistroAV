@@ -52,6 +52,8 @@ struct ndi_filter
 
 	video_t* video_output;
 	bool is_audioonly;
+
+	os_performance_token_t* perf_token;
 };
 
 const char* ndi_filter_getname(void* data)
@@ -255,6 +257,7 @@ void* ndi_filter_create(obs_data_t* settings, obs_source_t* source)
 	s->context = source;
 	s->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
 	s->video_data = nullptr;
+	s->perf_token = os_request_high_performance("NDI Filter");
 	pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
 	pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
 
@@ -270,6 +273,7 @@ void* ndi_filter_create_audioonly(obs_data_t* settings, obs_source_t* source)
 	auto s = (struct ndi_filter*)bzalloc(sizeof(struct ndi_filter));
 	s->is_audioonly = true;
 	s->context = source;
+	s->perf_token = os_request_high_performance("NDI Filter (Audio Only)");
 	pthread_mutex_init(&s->ndi_sender_audio_mutex, NULL);
 	pthread_mutex_init(&s->ndi_sender_video_mutex, NULL);
 
@@ -298,15 +302,25 @@ void ndi_filter_destroy(void* data)
 	gs_stagesurface_destroy(s->stagesurface);
 	gs_texrender_destroy(s->texrender);
 
+	if (s->perf_token) {
+		os_end_high_performance(s->perf_token);
+	}
+
 	bfree(s);
 }
 
 void ndi_filter_destroy_audioonly(void* data)
 {
 	auto s = (struct ndi_filter*)data;
+
 	pthread_mutex_lock(&s->ndi_sender_audio_mutex);
 	ndiLib->NDIlib_send_destroy(s->ndi_sender);
 	pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
+
+	if (s->perf_token) {
+		os_end_high_performance(s->perf_token);
+	}
+
 	bfree(s);
 }
 
