@@ -81,6 +81,8 @@ struct ndi_output
 
 	uint8_t* audio_conv_buffer;
 	size_t audio_conv_buffer_size;
+
+	os_performance_token_t* perf_token;
 };
 
 const char* ndi_output_getname(void* data)
@@ -182,6 +184,11 @@ bool ndi_output_start(void* data)
 
 	o->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
 	if (o->ndi_sender) {
+		if (o->perf_token) {
+			os_end_high_performance(o->perf_token);
+		}
+		o->perf_token = os_request_high_performance("NDI Output");
+
 		o->started = obs_output_begin_data_capture(o->output, flags);
 		if (o->started) {
 			blog(LOG_INFO, "'%s': ndi output started", o->ndi_name);
@@ -201,6 +208,9 @@ void ndi_output_stop(void* data, uint64_t ts)
 
 	o->started = false;
 	obs_output_end_data_capture(o->output);
+
+	os_end_high_performance(o->perf_token);
+	o->perf_token = NULL;
 
 	ndiLib->NDIlib_send_destroy(o->ndi_sender);
 	delete o->conv_buffer;
@@ -227,6 +237,7 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output)
 	o->started = false;
 	o->audio_conv_buffer = nullptr;
 	o->audio_conv_buffer_size = 0;
+	o->perf_token = NULL;
 	ndi_output_update(o, settings);
 	return o;
 }
