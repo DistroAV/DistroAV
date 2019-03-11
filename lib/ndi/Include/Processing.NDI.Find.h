@@ -23,14 +23,13 @@
 //
 //***********************************************************************************************************************************************
 
-//**************************************************************************************************************************
 // Structures and type definitions required by NDI finding
 // The reference to an instance of the finder
 typedef void* NDIlib_find_instance_t;
 
 // The creation structure that is used when you are creating a finder
 typedef struct NDIlib_find_create_t
-{	// Do we want to incluide the list of NDI sources that are running
+{	// Do we want to include the list of NDI sources that are running
 	// on the local machine ?
 	// If TRUE then local sources will be visible, if FALSE then they
 	// will not.
@@ -41,25 +40,23 @@ typedef struct NDIlib_find_create_t
 
 	// The list of additional IP addresses that exist that we should query for 
 	// sources on. For instance, if you want to find the sources on a remote machine
-	// that is not on your local sub-net then you can put a comma seperated list of 
+	// that is not on your local sub-net then you can put a comma separated list of 
 	// those IP addresses here and those sources will be available locally even though
 	// they are not mDNS discoverable. An example might be "12.0.0.8,13.0.12.8".
 	// When none is specified the registry is used.
-	// Default = nullptr;
+	// Default = NULL;
 	const char* p_extra_ips;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
-	NDIlib_find_create_t(bool show_local_sources_ = true, const char* p_groups_ = nullptr, const char* p_extra_ips_ = nullptr);
+	NDIlib_find_create_t(bool show_local_sources_ = true, const char* p_groups_ = NULL, const char* p_extra_ips_ = NULL);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_find_create_t;
 
 //**************************************************************************************************************************
-// Create a new finder instance. This will return nullptr if it fails.
-// This function is deprecated, please use NDIlib_find_create_v2 if you can. This function
-// ignores the p_extra_ips member and sets it to the default.
+// Create a new finder instance. This will return NULL if it fails.
 PROCESSINGNDILIB_API
-NDIlib_find_instance_t NDIlib_find_create_v2(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr));
+NDIlib_find_instance_t NDIlib_find_create_v2(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 // This will destroy an existing finder instance.
 PROCESSINGNDILIB_API

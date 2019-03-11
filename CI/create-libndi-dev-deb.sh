@@ -1,5 +1,5 @@
 #!/bin/sh
 
-INCLUDES_PATH="/root/ndisdk/include"
+INCLUDES_PATH="/tmp/ndisdk/include"
 
 cp $INCLUDES_PATH/Processing.NDI.* /usr/include/

@@ -23,23 +23,21 @@
 //
 //***********************************************************************************************************************************************
 
-//**************************************************************************************************************************
 // Structures and type definitions required by NDI finding
 // The reference to an instance of the receiver
 typedef void* NDIlib_recv_instance_t;
 
-typedef enum NDIlib_recv_bandwidth_e
-{
-	NDIlib_recv_bandwidth_metadata_only = -10, // Receive metadata.
+enum
+{	NDIlib_recv_bandwidth_metadata_only = -10, // Receive metadata.
 	NDIlib_recv_bandwidth_audio_only    =  10, // Receive metadata, audio.
 	NDIlib_recv_bandwidth_lowest        =  0,  // Receive metadata, audio, video at a lower bandwidth and resolution.
 	NDIlib_recv_bandwidth_highest       =  100 // Receive metadata, audio, video at full resolution.
+};
 
-} NDIlib_recv_bandwidth_e;
+typedef int32_t NDIlib_recv_bandwidth_e;
 
-typedef enum NDIlib_recv_color_format_e
-{	
-	NDIlib_recv_color_format_BGRX_BGRA = 0, // No alpha channel: BGRX, Alpha channel: BGRA
+enum
+{	NDIlib_recv_color_format_BGRX_BGRA = 0, // No alpha channel: BGRX, Alpha channel: BGRA
 	NDIlib_recv_color_format_UYVY_BGRA = 1, // No alpha channel: UYVY, Alpha channel: BGRA
 	NDIlib_recv_color_format_RGBX_RGBA = 2, // No alpha channel: RGBX, Alpha channel: RGBA
 	NDIlib_recv_color_format_UYVY_RGBA = 3, // No alpha channel: UYVY, Alpha channel: RGBA
@@ -47,7 +45,7 @@ typedef enum NDIlib_recv_color_format_e
 #ifdef _WIN32
 	// On Windows there are some APIs that require bottom to top images in RGBA format. Specifying
 	// this format will return images in this format. The image data pointer will still point to the
-	// "top" of the image, althought he stride will be negative. You can get the "bottom" line of the image
+	// "top" of the image, although he stride will be negative. You can get the "bottom" line of the image
 	// using : video_data.p_data + (video_data.yres - 1)*video_data.line_stride_in_bytes
 	NDIlib_recv_color_format_BGRX_BGRA_flipped = 200,
 #endif
@@ -60,8 +58,9 @@ typedef enum NDIlib_recv_color_format_e
 	NDIlib_recv_color_format_e_UYVY_BGRA = NDIlib_recv_color_format_UYVY_BGRA,
 	NDIlib_recv_color_format_e_RGBX_RGBA = NDIlib_recv_color_format_RGBX_RGBA,
 	NDIlib_recv_color_format_e_UYVY_RGBA = NDIlib_recv_color_format_UYVY_RGBA
-	
-} NDIlib_recv_color_format_e;
+};
+
+typedef uint32_t NDIlib_recv_color_format_e;
 
 // The creation structure that is used when you are creating a receiver
 typedef struct NDIlib_recv_create_v3_t
@@ -83,16 +82,15 @@ typedef struct NDIlib_recv_create_v3_t
 	// performance impact of using this function.
 	bool allow_video_fields;
 
-	// The name of the NDI receiver to create. This is a nullptr terminated UTF8 string and should be 
-	// the name of receive channel that you have. This is in many ways symettric with the name of
-	// senders, so this might be "Channel 1" on your system. If this is nullptr then it will use the 
+	// The name of the NDI receiver to create. This is a NULL terminated UTF8 string and should be 
+	// the name of receive channel that you have. This is in many ways symmetric with the name of
+	// senders, so this might be "Channel 1" on your system. If this is NULL then it will use the 
 	// filename of your application indexed with the number of the instance number of this receiver.
-	// If your applicaiton is My
 	const char* p_ndi_recv_name;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_recv_create_v3_t(const NDIlib_source_t source_to_connect_to_ = NDIlib_source_t(), NDIlib_recv_color_format_e color_format_ = NDIlib_recv_color_format_UYVY_BGRA,
-	                        NDIlib_recv_bandwidth_e bandwidth_ = NDIlib_recv_bandwidth_highest, bool allow_video_fields_ = true, const char* p_ndi_name_ = nullptr);
+	                        NDIlib_recv_bandwidth_e bandwidth_ = NDIlib_recv_bandwidth_highest, bool allow_video_fields_ = true, const char* p_ndi_name_ = NULL);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_recv_create_v3_t;
@@ -133,22 +131,22 @@ typedef struct NDIlib_recv_queue_t
 } NDIlib_recv_queue_t;
 
 //**************************************************************************************************************************
-// Create a new receiver instance. This will return nullptr if it fails. If you create this with the default settings (nullptr)
+// Create a new receiver instance. This will return NULL if it fails. If you create this with the default settings (NULL)
 // then it will automatically determine a receiver name.
 PROCESSINGNDILIB_API
-NDIlib_recv_instance_t NDIlib_recv_create_v3(const NDIlib_recv_create_v3_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr));
+NDIlib_recv_instance_t NDIlib_recv_create_v3(const NDIlib_recv_create_v3_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 // This will destroy an existing receiver instance.
 PROCESSINGNDILIB_API
 void NDIlib_recv_destroy(NDIlib_recv_instance_t p_instance);
 
-// This function allows you to change the connection to another video source, you can also disconnect it by specifying a nullptr here. 
+// This function allows you to change the connection to another video source, you can also disconnect it by specifying a NULL here. 
 // This allows you to preserve a receiver without needing to 
 PROCESSINGNDILIB_API
-void NDIlib_recv_connect(NDIlib_recv_instance_t p_instance, const NDIlib_source_t* p_src NDILIB_CPP_DEFAULT_VALUE(nullptr));
+void NDIlib_recv_connect(NDIlib_recv_instance_t p_instance, const NDIlib_source_t* p_src NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 // This will allow you to receive video, audio and metadata frames.
-// Any of the buffers can be nullptr, in which case data of that type
+// Any of the buffers can be NULL, in which case data of that type
 // will not be captured in this call. This call can be called simultaneously
 // on separate threads, so it is entirely possible to receive audio, video, metadata
 // all on separate threads. This function will return NDIlib_frame_type_none if no
@@ -157,9 +155,9 @@ void NDIlib_recv_connect(NDIlib_recv_instance_t p_instance, const NDIlib_source_
 PROCESSINGNDILIB_API
 NDIlib_frame_type_e NDIlib_recv_capture_v2(
 	NDIlib_recv_instance_t p_instance,      // The library instance
-	NDIlib_video_frame_v2_t* p_video_data,  // The video data received (can be nullptr)
-	NDIlib_audio_frame_v2_t* p_audio_data,  // The audio data received (can be nullptr)
-	NDIlib_metadata_frame_t* p_metadata,    // The metadata received (can be nullptr)
+	NDIlib_video_frame_v2_t* p_video_data,  // The video data received (can be NULL)
+	NDIlib_audio_frame_v2_t* p_audio_data,  // The audio data received (can be NULL)
+	NDIlib_metadata_frame_t* p_metadata,    // The metadata received (can be NULL)
 	uint32_t timeout_in_ms);                // The amount of time in milliseconds to wait for data.
 
 // Free the buffers returned by capture for video
@@ -190,7 +188,7 @@ bool NDIlib_recv_set_tally(NDIlib_recv_instance_t p_instance, const NDIlib_tally
 
 // Get the current performance structures. This can be used to determine if you have been calling NDIlib_recv_capture fast
 // enough, or if your processing of data is not keeping up with real-time. The total structure will give you the total frame
-// counts received, the dropped structure will tell you how many frames have been dropped. Either of these could be nullptr.
+// counts received, the dropped structure will tell you how many frames have been dropped. Either of these could be NULL.
 PROCESSINGNDILIB_API
 void NDIlib_recv_get_performance(NDIlib_recv_instance_t p_instance, NDIlib_recv_performance_t* p_total, NDIlib_recv_performance_t* p_dropped);
 
@@ -214,8 +212,8 @@ PROCESSINGNDILIB_API
 int NDIlib_recv_get_no_connections(NDIlib_recv_instance_t p_instance);
 
 // Get the URL that might be used for configuration of this input. Note that it might take a second or two after the connection for 
-// this value to be set. This function will return nullptr if there is no web control user interface. You should call NDIlib_recv_free_string
-// to free the string that is returned by this function. The returned value will be a fully formed URL, for instamce "http://10.28.1.192/configuration/"
+// this value to be set. This function will return NULL if there is no web control user interface. You should call NDIlib_recv_free_string
+// to free the string that is returned by this function. The returned value will be a fully formed URL, for instance "http://10.28.1.192/configuration/"
 // To avoid the need to poll this function, you can know when the value of this function might have changed when the 
 // NDILib_recv_capture* call would return NDIlib_frame_type_status_change
 PROCESSINGNDILIB_API

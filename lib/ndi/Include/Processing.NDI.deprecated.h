@@ -55,7 +55,7 @@ typedef struct NDIlib_video_frame_t
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_video_frame_t(int xres_ = 0, int yres_ = 0, NDIlib_FourCC_type_e FourCC_ = NDIlib_FourCC_type_UYVY, int frame_rate_N_ = 30000, int frame_rate_D_ = 1001,
 	                     float picture_aspect_ratio_ = 0.0f, NDIlib_frame_format_type_e frame_format_type_ = NDIlib_frame_format_type_progressive, 
-	                     int64_t timecode_ = NDIlib_send_timecode_synthesize, uint8_t* p_data_ = nullptr, int line_stride_in_bytes_ = 0);
+	                     int64_t timecode_ = NDIlib_send_timecode_synthesize, uint8_t* p_data_ = NULL, int line_stride_in_bytes_ = 0);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_video_frame_t;
@@ -83,22 +83,22 @@ typedef struct NDIlib_audio_frame_t
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 	NDIlib_audio_frame_t(int sample_rate_ = 48000, int no_channels_ = 2, int no_samples_ = 0, int64_t timecode_ = NDIlib_send_timecode_synthesize,
-	                     float* p_data_ = nullptr, int channel_stride_in_bytes_ = 0);
+	                     float* p_data_ = NULL, int channel_stride_in_bytes_ = 0);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 
 } NDIlib_audio_frame_t;
 
 // For legacy reasons I called this the wrong thing. For backwards compatibility.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-NDIlib_find_instance_t NDIlib_find_create2(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr));
+NDIlib_find_instance_t NDIlib_find_create2(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-NDIlib_find_instance_t NDIlib_find_create(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr));
+NDIlib_find_instance_t NDIlib_find_create(const NDIlib_find_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 // DEPRECATED. This function is basically exactly the following and was confusing to use.
 //    if ((!timeout_in_ms) || (NDIlib_find_wait_for_sources(timeout_in_ms))) 
 //        return NDIlib_find_get_current_sources(p_instance, p_no_sources);
-//    return nullptr;
+//    return NULL;
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 const NDIlib_source_t* NDIlib_find_get_sources(NDIlib_find_instance_t p_instance, uint32_t* p_no_sources, uint32_t timeout_in_ms);
 
@@ -131,24 +131,24 @@ typedef struct NDIlib_recv_create_t
 } NDIlib_recv_create_t;
 
 // This function is deprecated, please use NDIlib_recv_create_v3 if you can. Using this function will continue to work, and be
-// supported for backwards compatibility. If the input parameter is nullptr it will be created with default settings and an automatically
+// supported for backwards compatibility. If the input parameter is NULL it will be created with default settings and an automatically
 // determined receiver name,
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-NDIlib_recv_instance_t NDIlib_recv_create_v2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr) );
+NDIlib_recv_instance_t NDIlib_recv_create_v2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL) );
 
-// For legacy reasons I called this the wrong thing. For backwards compatibility. If the input parameter is nullptr it will be created with 
+// For legacy reasons I called this the wrong thing. For backwards compatibility. If the input parameter is NULL it will be created with 
 // default settings and an automatically determined receiver name.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
-NDIlib_recv_instance_t NDIlib_recv_create2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(nullptr));
+NDIlib_recv_instance_t NDIlib_recv_create2(const NDIlib_recv_create_t* p_create_settings NDILIB_CPP_DEFAULT_VALUE(NULL));
 
 // This function is deprecated, please use NDIlib_recv_create_v3 if you can. Using this function will continue to work, and be
-// supported for backwards compatibility. This version sets bandwidth to highest and allow fields to true. If the input parameter is nullptr it 
+// supported for backwards compatibility. This version sets bandwidth to highest and allow fields to true. If the input parameter is NULL it 
 // will be created with default settings and an automatically determined receiver name.
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 NDIlib_recv_instance_t NDIlib_recv_create(const NDIlib_recv_create_t* p_create_settings);
 
 // This will allow you to receive video, audio and metadata frames.
-// Any of the buffers can be nullptr, in which case data of that type
+// Any of the buffers can be NULL, in which case data of that type
 // will not be captured in this call. This call can be called simultaneously
 // on separate threads, so it is entirely possible to receive audio, video, metadata
 // all on separate threads. This function will return NDIlib_frame_type_none if no
@@ -157,9 +157,9 @@ NDIlib_recv_instance_t NDIlib_recv_create(const NDIlib_recv_create_t* p_create_s
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 NDIlib_frame_type_e NDIlib_recv_capture(
 NDIlib_recv_instance_t p_instance,   // The library instance
-NDIlib_video_frame_t* p_video_data,  // The video data received (can be nullptr)
-NDIlib_audio_frame_t* p_audio_data,  // The audio data received (can be nullptr)
-NDIlib_metadata_frame_t* p_metadata, // The metadata received (can be nullptr)
+NDIlib_video_frame_t* p_video_data,  // The video data received (can be NULL)
+NDIlib_audio_frame_t* p_audio_data,  // The audio data received (can be NULL)
+NDIlib_metadata_frame_t* p_metadata, // The metadata received (can be NULL)
 uint32_t timeout_in_ms);             // The amount of time in milliseconds to wait for data.
 
 // Free the buffers returned by capture for video
@@ -186,7 +186,7 @@ void NDIlib_send_send_video(NDIlib_send_instance_t p_instance, const NDIlib_vide
 // Synchronizing events are :
 // - a call to NDIlib_send_send_video
 // - a call to NDIlib_send_send_video_async with another frame to be sent
-// - a call to NDIlib_send_send_video with p_video_data=nullptr
+// - a call to NDIlib_send_send_video with p_video_data=NULL
 // - a call to NDIlib_send_destroy
 PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 void NDIlib_send_send_video_async(NDIlib_send_instance_t p_instance, const NDIlib_video_frame_t* p_video_data);

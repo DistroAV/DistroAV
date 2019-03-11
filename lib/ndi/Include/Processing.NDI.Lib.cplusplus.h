@@ -87,7 +87,11 @@ inline NDIlib_send_create_t::NDIlib_send_create_t(const char* p_ndi_name_, const
 inline NDIlib_find_create_t::NDIlib_find_create_t(bool show_local_sources_, const char* p_groups_, const char* p_extra_ips_)
 	: show_local_sources(show_local_sources_), p_groups(p_groups_), p_extra_ips(p_extra_ips_) {}
 
-inline NDIlib_audio_frame_interleaved_16s_t::NDIlib_audio_frame_interleaved_16s_t(int sample_rate_, int no_channels_, int no_samples_, int64_t timecode_, int reference_level_, short* p_data_)
+inline NDIlib_audio_frame_interleaved_16s_t::NDIlib_audio_frame_interleaved_16s_t(int sample_rate_, int no_channels_, int no_samples_, int64_t timecode_, int reference_level_, int16_t* p_data_)
+	: sample_rate(sample_rate_), no_channels(no_channels_), no_samples(no_samples_), timecode(timecode_),
+	  reference_level(reference_level_), p_data(p_data_) {}
+
+inline NDIlib_audio_frame_interleaved_32s_t::NDIlib_audio_frame_interleaved_32s_t(int sample_rate_, int no_channels_, int no_samples_, int64_t timecode_, int reference_level_, int32_t* p_data_)
 	: sample_rate(sample_rate_), no_channels(no_channels_), no_samples(no_samples_), timecode(timecode_),
 	  reference_level(reference_level_), p_data(p_data_) {}
 

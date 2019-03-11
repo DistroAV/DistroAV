@@ -23,16 +23,11 @@
 //
 //***********************************************************************************************************************************************
 
-#ifdef __cplusplus
-
-#include <cstdint>
-
-#else
-
+#ifndef __cplusplus
 #include <stdbool.h>
-#include <stdint.h>
-
 #endif
+
+#include <stdint.h>
 
 #ifndef INFINITE
 #define INFINITE 0xFFFFFFFF
