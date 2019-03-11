@@ -384,12 +384,13 @@ void* ndi_source_poll_audio_video(void* data)
 
 				case PROP_SYNC_NDI_TIMESTAMP:
 					obs_video_frame.timestamp =
-						(uint64_t)(video_frame.timestamp * 100.0);
+						(uint64_t)(video_frame.timestamp * 100);
+					blog(LOG_INFO, "ndi video timestamp -- obs: %llu - ndi: %llu", obs_video_frame.timestamp, video_frame.timestamp);
 					break;
 
 				case PROP_SYNC_NDI_SOURCE_TIMECODE:
 					obs_video_frame.timestamp =
-						(uint64_t)(video_frame.timecode * 100.0);
+						(uint64_t)(video_frame.timecode * 100);
 					break;
 			}
 

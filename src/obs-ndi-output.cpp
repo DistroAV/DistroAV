@@ -268,7 +268,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame)
 	video_frame.frame_rate_D = 100;
 	video_frame.picture_aspect_ratio = (float)width / (float)height;
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = (int64_t)(frame->timestamp / 100.0);
+	video_frame.timecode = (int64_t)(frame->timestamp / 100);
 
 	video_frame.FourCC = o->frame_fourcc;
 	if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
