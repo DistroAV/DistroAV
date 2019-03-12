@@ -2,40 +2,33 @@
 <ui version="4.0">
  <class>OutputSettings</class>
  <widget class="QDialog" name="OutputSettings">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>470</width>
-    <height>220</height>
+    <height>200</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>179</height>
+    <height>200</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>16777215</width>
-    <height>300</height>
+    <height>220</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>NDIPlugin.OutputSettings.DialogTitle</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="0">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0">
     <widget class="QGroupBox" name="previewOutputGroupBox">
      <property name="title">
@@ -56,11 +49,20 @@
      <layout class="QFormLayout" name="formLayout_5">
       <item row="0" column="0" colspan="2">
        <layout class="QFormLayout" name="formLayout_4">
-        <property name="sizeConstraint">
-         <enum>QLayout::SetMaximumSize</enum>
-        </property>
         <item row="0" column="0">
          <widget class="QLabel" name="previewOutputNameLabel">
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <property name="text">
            <string>NDIPlugin.OutputSettings.Preview.Name</string>
           </property>
@@ -88,11 +90,14 @@
      <layout class="QFormLayout" name="formLayout_3">
       <item row="0" column="0" colspan="2">
        <layout class="QFormLayout" name="formLayout_2">
-        <property name="sizeConstraint">
-         <enum>QLayout::SetMaximumSize</enum>
-        </property>
         <item row="0" column="0">
          <widget class="QLabel" name="mainOutputNameLabel">
+          <property name="minimumSize">
+           <size>
+            <width>200</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="text">
            <string>NDIPlugin.OutputSettings.Main.Name</string>
           </property>
@@ -104,6 +109,16 @@
        </layout>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
     </widget>
    </item>
   </layout>
