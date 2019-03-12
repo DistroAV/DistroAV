@@ -29,6 +29,8 @@ OutputSettings::OutputSettings(QWidget *parent) :
 	ui->setupUi(this);
 	connect(ui->buttonBox, SIGNAL(accepted()),
 		this, SLOT(onFormAccepted()));
+
+	ui->ndiVersionLabel->setText(ndiLib->NDIlib_version());
 }
 
 void OutputSettings::onFormAccepted() {
