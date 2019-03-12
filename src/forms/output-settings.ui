@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>470</width>
-    <height>207</height>
+    <height>220</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -56,6 +56,9 @@
      <layout class="QFormLayout" name="formLayout_5">
       <item row="0" column="0" colspan="2">
        <layout class="QFormLayout" name="formLayout_4">
+        <property name="sizeConstraint">
+         <enum>QLayout::SetMaximumSize</enum>
+        </property>
         <item row="0" column="0">
          <widget class="QLabel" name="previewOutputNameLabel">
           <property name="text">
@@ -85,6 +88,9 @@
      <layout class="QFormLayout" name="formLayout_3">
       <item row="0" column="0" colspan="2">
        <layout class="QFormLayout" name="formLayout_2">
+        <property name="sizeConstraint">
+         <enum>QLayout::SetMaximumSize</enum>
+        </property>
         <item row="0" column="0">
          <widget class="QLabel" name="mainOutputNameLabel">
           <property name="text">
