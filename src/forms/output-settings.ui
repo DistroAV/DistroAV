@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>470</width>
-    <height>230</height>
+    <height>207</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -54,31 +54,19 @@
       <bool>false</bool>
      </property>
      <layout class="QFormLayout" name="formLayout_5">
-      <item row="0" column="0">
-       <layout class="QFormLayout" name="formLayout_4"/>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="previewOutputNameLabel">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>15</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.Preview.Name</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="previewOutputName">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>15</height>
-         </size>
-        </property>
-       </widget>
+      <item row="0" column="0" colspan="2">
+       <layout class="QFormLayout" name="formLayout_4">
+        <item row="0" column="0">
+         <widget class="QLabel" name="previewOutputNameLabel">
+          <property name="text">
+           <string>NDIPlugin.OutputSettings.Preview.Name</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="previewOutputName"/>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -95,31 +83,19 @@
       <bool>false</bool>
      </property>
      <layout class="QFormLayout" name="formLayout_3">
-      <item row="0" column="0">
-       <layout class="QFormLayout" name="formLayout_2"/>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="mainOutputName">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>15</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="mainOutputNameLabel">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>15</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.Main.Name</string>
-        </property>
-       </widget>
+      <item row="0" column="0" colspan="2">
+       <layout class="QFormLayout" name="formLayout_2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="mainOutputNameLabel">
+          <property name="text">
+           <string>NDIPlugin.OutputSettings.Main.Name</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="mainOutputName"/>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
