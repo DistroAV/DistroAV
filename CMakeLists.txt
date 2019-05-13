@@ -41,12 +41,12 @@ add_library(obs-ndi MODULE
 
 include_directories(
 	"lib/ndi/Include"
+	"${LIBOBS_INCLUDE_DIR}"
 	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
 	${Qt5Core_INCLUDES}
 	${Qt5Widgets_INCLUDES})
 
 target_link_libraries(obs-ndi
-	libobs
 	Qt5::Core
 	Qt5::Widgets)
 
@@ -73,6 +73,7 @@ if(WIN32)
 	find_package(w32-pthreads REQUIRED)
 
 	target_link_libraries(obs-ndi
+		"${LIBOBS_LIB}"
 		"${OBS_FRONTEND_LIB}"
 		w32-pthreads)
 
