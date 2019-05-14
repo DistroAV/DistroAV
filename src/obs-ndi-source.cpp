@@ -548,7 +548,6 @@ void ndi_source_update(void* data, obs_data_t* settings)
 			"can't create a receiver for NDI source '%s'",
 			recv_desc.source_to_connect_to.p_ndi_name);
 	}
-
 }
 
 void ndi_source_shown(void* data)

@@ -87,7 +87,6 @@ void destroy_ndi_finder() {
     pthread_mutex_lock(&ndi_finder.mutex);
     destroy_current_ndi_finder();
     pthread_mutex_unlock(&ndi_finder.mutex);
-
 }
 
 void update_ndi_finder(const char *extraIps) {
@@ -101,7 +100,6 @@ void update_ndi_finder(const char *extraIps) {
     }
 
     pthread_mutex_unlock(&ndi_finder.mutex);
-
 }
 
 void foreach_current_ndi_source(ndi_source_consumer_t consumer, void* private_data) {
