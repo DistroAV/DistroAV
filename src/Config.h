@@ -32,6 +32,7 @@ class Config {
 	void Save();
 
 	bool OutputEnabled;
+	QString FinderExtraIps;
 	QString OutputName;
 	QString PreviewOutputName;
 	bool PreviewOutputEnabled;

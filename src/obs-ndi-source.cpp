@@ -27,6 +27,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <thread>
 
 #include "obs-ndi.h"
+#include "ndi-source-finder.h"
+#include "obs-ndi-source-helpers.h"
 
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BANDWIDTH "ndi_bw_mode"
@@ -54,7 +56,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PROP_LATENCY_NORMAL 0
 #define PROP_LATENCY_LOW 1
 
-extern NDIlib_find_instance_t ndi_finder;
+
 
 struct ndi_source
 {
@@ -67,6 +69,9 @@ struct ndi_source
 	bool running;
 	NDIlib_tally_t tally;
 	bool alpha_filter_enabled;
+	char* serialized;
+	char* dni_name;
+	char* source_url;
 	os_performance_token_t* perf_token;
 };
 
@@ -86,7 +91,7 @@ static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id)
 
 	obs_source_enum_filters(context,
 		[](obs_source_t*, obs_source_t* filter, void* param) {
-		struct search_context* filter_search =
+		auto* filter_search =
 			(struct search_context*)param;
 
 		const char* id = obs_source_get_id(filter);
@@ -160,26 +165,47 @@ const char* ndi_source_getname(void* data)
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
+typedef struct {
+    obs_property_t* source_list;
+    const char* current_serialized;
+    bool current_not_found;
+} source_list_creation_context_t;
+
+static void add_ndi_source(const NDIlib_source_t* ndi_source, void* private_data) {
+    auto ctx = (source_list_creation_context_t*)private_data;
+    struct dstr serialized = {nullptr,0,0};
+    serialize_ndi_source(ndi_source, &serialized);
+
+    obs_property_list_add_string(ctx->source_list, ndi_source->p_ndi_name, serialized.array);
+
+    if (ctx->current_serialized && 0 == dstr_cmp(&serialized,ctx->current_serialized)) {
+        ctx->current_not_found = false;
+    }
+
+    dstr_free(&serialized);
+}
+
+
 obs_properties_t* ndi_source_getproperties(void* data)
 {
-	auto s = (struct ndi_source*)data;
+    auto s = (struct ndi_source*)data;
 
 	obs_properties_t* props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
 	obs_property_t* source_list = obs_properties_add_list(props, PROP_SOURCE,
 		obs_module_text("NDIPlugin.SourceProps.SourceName"),
-		OBS_COMBO_TYPE_EDITABLE,
+		OBS_COMBO_TYPE_LIST,
 		OBS_COMBO_FORMAT_STRING);
 
-	uint32_t nbSources = 0;
-	const NDIlib_source_t* sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder,
-		&nbSources);
+	source_list_creation_context_t context = {source_list,s->serialized,true};
 
-	for (uint32_t i = 0; i < nbSources; ++i) {
-		obs_property_list_add_string(source_list,
-			sources[i].p_ndi_name, sources[i].p_ndi_name);
-	}
+    foreach_current_ndi_source(add_ndi_source,&context);
+
+    if (s->serialized && context.current_not_found) {
+        ndiblog(LOG_INFO,"Current NDI source not found adding it %s / %s",s->dni_name, s->serialized);
+        obs_property_list_add_string(source_list, s->dni_name, s->serialized);
+    }
 
 	obs_property_t* bw_modes = obs_properties_add_list(props, PROP_BANDWIDTH,
 		obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
@@ -291,7 +317,7 @@ void* ndi_source_poll_audio_video(void* data)
 {
 	auto s = (struct ndi_source*)data;
 
-	blog(LOG_INFO, "A/V thread for '%s' started",
+	ndiblog(LOG_INFO, "A/V thread for '%s' started",
 						obs_source_get_name(s->source));
 
 	NDIlib_audio_frame_v2_t audio_frame;
@@ -416,13 +442,14 @@ void* ndi_source_poll_audio_video(void* data)
 	os_end_high_performance(s->perf_token);
 	s->perf_token = NULL;
 
-	blog(LOG_INFO, "audio thread for '%s' completed",
+	ndiblog(LOG_INFO, "audio thread for '%s' completed",
 				obs_source_get_name(s->source));
 	return nullptr;
 }
 
 void ndi_source_update(void* data, obs_data_t* settings)
 {
+    ndiblog(LOG_INFO, "SOURCE_UPDATE");
 	auto s = (struct ndi_source*)data;
 
 	if(s->running) {
@@ -432,7 +459,20 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	s->running = false;
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
 
-	bool hwAccelEnabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
+    bfree(s->serialized);
+    bfree(s->dni_name);
+    bfree(s->source_url);
+
+    {
+        struct dstr prop_src = {0};
+        dstr_init_copy(&prop_src, obs_data_get_string(settings, PROP_SOURCE));
+        s->serialized = prop_src.array;
+        deserialize_ndi_source(s->serialized, &s->dni_name, &s->source_url);
+        ndiblog(LOG_INFO, "s->serialized = %s, dni_name=%s  url=%s",s->serialized, s->dni_name, s->source_url);
+    }
+
+
+    bool hwAccelEnabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
 
 	s->alpha_filter_enabled =
 		obs_data_get_bool(settings, PROP_FIX_ALPHA);
@@ -453,8 +493,10 @@ void ndi_source_update(void* data, obs_data_t* settings)
 		}
 	}
 
+
 	NDIlib_recv_create_v3_t recv_desc;
-	recv_desc.source_to_connect_to.p_ndi_name = obs_data_get_string(settings, PROP_SOURCE);
+	recv_desc.source_to_connect_to.p_ndi_name = s->dni_name;
+	recv_desc.source_to_connect_to.p_url_address = s->source_url;
 	recv_desc.allow_video_fields = true;
 	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
 
@@ -494,7 +536,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 		s->running = true;
 		pthread_create(&s->av_thread, nullptr, ndi_source_poll_audio_video, data);
 
-		blog(LOG_INFO, "started A/V threads for source '%s'",
+		ndiblog(LOG_INFO, "started A/V threads for source '%s'",
 			recv_desc.source_to_connect_to.p_ndi_name);
 
 		// Update tally status
@@ -502,10 +544,11 @@ void ndi_source_update(void* data, obs_data_t* settings)
 		s->tally.on_program = obs_source_active(s->source);
 		ndiLib->NDIlib_recv_set_tally(s->ndi_receiver, &s->tally);
 	} else {
-		blog(LOG_ERROR,
+		ndiblog(LOG_ERROR,
 			"can't create a receiver for NDI source '%s'",
 			recv_desc.source_to_connect_to.p_ndi_name);
 	}
+
 }
 
 void ndi_source_shown(void* data)
@@ -554,6 +597,9 @@ void* ndi_source_create(obs_data_t* settings, obs_source_t* source)
 	s->source = source;
 	s->running = false;
 	s->perf_token = NULL;
+	s->serialized = NULL;
+	s->dni_name = NULL;
+	s->source_url = NULL;
 	ndi_source_update(s, settings);
 	return s;
 }
@@ -564,6 +610,9 @@ void ndi_source_destroy(void* data)
 	s->running = false;
 	pthread_join(s->av_thread, NULL);
 	ndiLib->NDIlib_recv_destroy(s->ndi_receiver);
+	bfree(s->serialized);
+	bfree(s->dni_name);
+	bfree(s->source_url);
 	bfree(s);
 }
 

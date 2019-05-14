@@ -119,7 +119,7 @@ bool ndi_output_start(void* data)
 	audio_t* audio = obs_output_audio(o->output);
 
 	if (!video && !audio) {
-		blog(LOG_ERROR, "'%s': no video and audio available", o->ndi_name);
+		ndiblog(LOG_ERROR, "'%s': no video and audio available", o->ndi_name);
 		return false;
 	}
 
@@ -160,7 +160,7 @@ bool ndi_output_start(void* data)
 				break;
 
 			default:
-				blog(LOG_WARNING, "unsupported pixel format %d", format);
+				ndiblog(LOG_WARNING, "unsupported pixel format %d", format);
 				return false;
 		}
 
@@ -191,12 +191,12 @@ bool ndi_output_start(void* data)
 
 		o->started = obs_output_begin_data_capture(o->output, flags);
 		if (o->started) {
-			blog(LOG_INFO, "'%s': ndi output started", o->ndi_name);
+			ndiblog(LOG_INFO, "'%s': ndi output started", o->ndi_name);
 		} else {
-			blog(LOG_ERROR, "'%s': data capture start failed", o->ndi_name);
+			ndiblog(LOG_ERROR, "'%s': data capture start failed", o->ndi_name);
 		}
 	} else {
-		blog(LOG_ERROR, "'%s': ndi sender init failed", o->ndi_name);
+		ndiblog(LOG_ERROR, "'%s': ndi sender init failed", o->ndi_name);
 	}
 
 	return o->started;

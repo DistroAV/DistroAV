@@ -16,18 +16,18 @@ You should have received a copy of the GNU General Public License
 along with this program; If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef OUTPUTSETTINGS_H
-#define OUTPUTSETTINGS_H
+#ifndef NDISETTINGS_H
+#define NDISETTINGS_H
 
 #include <QDialog>
 
-#include "ui_output-settings.h"
+#include "ui_ndi-settings.h"
 
-class OutputSettings : public QDialog {
+class NDISettings : public QDialog {
   Q_OBJECT
   public:
-	explicit OutputSettings(QWidget* parent = 0);
-	~OutputSettings();
+	explicit NDISettings(QWidget* parent = 0);
+	~NDISettings();
 	void showEvent(QShowEvent* event);
 	void ToggleShowHide();
 
@@ -35,7 +35,7 @@ class OutputSettings : public QDialog {
 	void onFormAccepted();
 
   private:
-	Ui::OutputSettings* ui;
+	Ui::NDISettings* ui;
 };
 
-#endif // OUTPUTSETTINGS_H
+#endif // NDISETTINGS_H

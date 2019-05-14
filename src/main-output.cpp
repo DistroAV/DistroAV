@@ -42,7 +42,7 @@ void main_output_start(const char* output_name)
 {
 	if (main_output_running || !main_out) return;
 
-	blog(LOG_INFO, "starting NDI main output with name '%s'", output_name);
+	ndiblog(LOG_INFO, "starting NDI main output with name '%s'", output_name);
 
 	obs_data_t* settings = obs_output_get_settings(main_out);
 	obs_data_set_string(settings, "ndi_name", output_name);
@@ -57,7 +57,7 @@ void main_output_stop()
 {
 	if (!main_output_running) return;
 
-	blog(LOG_INFO, "stopping NDI main output");
+	ndiblog(LOG_INFO, "stopping NDI main output");
 
 	obs_output_stop(main_out);
 	main_output_running = false;
