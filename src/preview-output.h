@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 Stéphane Lepin <steph  name of author
+Copyright (C) 2016-2018 StÃ©phane Lepin <steph  name of author
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
