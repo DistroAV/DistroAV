@@ -147,24 +147,24 @@ bool obs_module_load(void)
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-		obs_frontend_add_event_callback([](enum obs_frontend_event event,
-			void *private_data)
-		{
-			if (event == OBS_FRONTEND_EVENT_EXIT) {
+		obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
+			Config* conf = (Config*)private_data;
+
+			if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+				if (conf->OutputEnabled) {
+					main_output_start(conf->OutputName.toUtf8().constData());
+				}
+				if (conf->PreviewOutputEnabled) {
+					preview_output_start(conf->PreviewOutputName.toUtf8().constData());
+				}
+			} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 				preview_output_stop();
 				main_output_stop();
 
 				preview_output_deinit();
 				main_output_deinit();
 			}
-		}, NULL);
-
-		if (conf->OutputEnabled) {
-			main_output_start(conf->OutputName.toUtf8().constData());
-		}
-		if (conf->PreviewOutputEnabled) {
-			preview_output_start(conf->PreviewOutputName.toUtf8().constData());
-		}
+		}, (void*)conf);
 	}
 
 	return true;
