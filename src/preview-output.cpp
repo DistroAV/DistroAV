@@ -31,6 +31,7 @@ struct preview_output {
 	obs_output_t* output;
 
 	video_t* video_queue;
+	audio_t* audio_queue; // unused for now
 	gs_texrender_t* texrender;
 	gs_stagesurf_t* stagesurface;
 	uint8_t* video_data;
@@ -71,8 +72,10 @@ void preview_output_start(const char* output_name)
 	obs_leave_graphics();
 
 	const video_output_info* mainVOI = video_output_get_info(obs_get_video());
+	const audio_output_info* mainAOI = audio_output_get_info(obs_get_audio());
 
 	video_output_info vi = { 0 };
+	vi.name = output_name;
 	vi.format = VIDEO_FORMAT_BGRA;
 	vi.width = width;
 	vi.height = height;
@@ -81,9 +84,20 @@ void preview_output_start(const char* output_name)
 	vi.cache_size = 16;
 	vi.colorspace = mainVOI->colorspace;
 	vi.range = mainVOI->range;
-	vi.name = output_name;
 
 	video_output_open(&context.video_queue, &vi);
+
+	audio_output_info ai = { 0 };
+	ai.name = output_name;
+	ai.format = mainAOI->format;
+	ai.samples_per_sec = mainAOI->samples_per_sec;
+	ai.speakers = mainAOI->speakers;
+	ai.input_callback = [](void* param, uint64_t start_ts, uint64_t end_ts, uint64_t* new_ts, uint32_t active_mixers, struct audio_output_data* mixes) {
+		return false;
+	};
+	ai.input_param = nullptr;
+
+	audio_output_open(&context.audio_queue, &ai);
 
 	obs_frontend_add_event_callback(on_preview_scene_changed, &context);
 	if (obs_frontend_preview_program_mode_active()) {
@@ -98,7 +112,7 @@ void preview_output_start(const char* output_name)
 	obs_output_update(context.output, settings);
 	obs_data_release(settings);
 
-	obs_output_set_media(context.output, context.video_queue, nullptr);
+	obs_output_set_media(context.output, context.video_queue, context.audio_queue);
 	obs_output_start(context.output);
 	context.enabled = true;
 }
