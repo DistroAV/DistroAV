@@ -31,7 +31,7 @@ struct preview_output {
 	obs_output_t* output;
 
 	video_t* video_queue;
-	audio_t* audio_queue; // unused for now
+	audio_t* dummy_audio_queue; // unused for now
 	gs_texrender_t* texrender;
 	gs_stagesurf_t* stagesurface;
 	uint8_t* video_data;
@@ -49,6 +49,7 @@ void preview_output_init(const char* default_name)
 {
 	obs_data_t* output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
+	obs_data_set_bool(output_settings, "uses_audio", false);
 	context.output = obs_output_create(
 			"ndi_output", "NDI Preview Output", output_settings, nullptr
 	);
@@ -97,7 +98,7 @@ void preview_output_start(const char* output_name)
 	};
 	ai.input_param = nullptr;
 
-	audio_output_open(&context.audio_queue, &ai);
+	audio_output_open(&context.dummy_audio_queue, &ai);
 
 	obs_frontend_add_event_callback(on_preview_scene_changed, &context);
 	if (obs_frontend_preview_program_mode_active()) {
@@ -112,7 +113,7 @@ void preview_output_start(const char* output_name)
 	obs_output_update(context.output, settings);
 	obs_data_release(settings);
 
-	obs_output_set_media(context.output, context.video_queue, context.audio_queue);
+	obs_output_set_media(context.output, context.video_queue, context.dummy_audio_queue);
 	obs_output_start(context.output);
 	context.enabled = true;
 }
