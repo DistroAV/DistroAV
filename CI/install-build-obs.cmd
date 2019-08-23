@@ -99,12 +99,12 @@ if defined BuildOBS (
   mkdir build64
   echo   Running cmake for obs-studio %OBSLatestTag% 32-bit...
   cd ./build32
-  cmake -G "Visual Studio 14 2015" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
+  cmake -G "Visual Studio 14 2015" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DENABLE_SCRIPTING=false ..
   echo:
   echo:
   echo   Running cmake for obs-studio %OBSLatestTag% 64-bit...
   cd ../build64
-  cmake -G "Visual Studio 14 2015 Win64" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
+  cmake -G "Visual Studio 14 2015 Win64" -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true -DENABLE_SCRIPTING=false ..
   echo:
   echo:
   echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
