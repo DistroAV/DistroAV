@@ -24,7 +24,7 @@ tar -xf ./osx-deps-2018-08-09.tar.gz -C /tmp
 # Build OBS Studio
 git clone --recursive https://github.com/jp9000/obs-studio.git
 cd ./obs-studio
-git checkout 23.0.0
+git checkout 23.2.1
 mkdir build && cd build
 cmake .. \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 \
