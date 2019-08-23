@@ -27,6 +27,7 @@ apt-get install -y \
         libjansson-dev \
         libpulse-dev \
         libqt5x11extras5-dev \
+        libqt5svg5-dev \
         libspeexdsp-dev \
         libswresample-dev \
         libswscale-dev \
