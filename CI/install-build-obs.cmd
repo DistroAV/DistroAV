@@ -29,11 +29,11 @@ if exist C:\projects\obs-studio\ (
 	echo obs-studio directory exists
 	echo   Updating tag info
 	cd C:\projects\obs-studio\
-	git describe --tags --abbrev=0 > C:\projects\latest-obs-studio-tag-pre-pull.txt
+	git describe --tags --abbrev=0 --exclude="*-rc*" > C:\projects\latest-obs-studio-tag-pre-pull.txt
 	set /p OBSLatestTagPrePull=<C:\projects\latest-obs-studio-tag-pre-pull.txt
 	git checkout master
 	git pull
-	git describe --tags --abbrev=0 > C:\projects\latest-obs-studio-tag-post-pull.txt
+	git describe --tags --abbrev=0 --exclude="*-rc*" > C:\projects\latest-obs-studio-tag-post-pull.txt
 	set /p OBSLatestTagPostPull=<C:\projects\latest-obs-studio-tag-post-pull.txt
 	set /p OBSLatestTag=<C:\projects\latest-obs-studio-tag-post-pull.txt
 	echo %OBSLatestTagPostPull%> C:\projects\latest-obs-studio-tag.txt
@@ -62,7 +62,7 @@ if not exist C:\projects\obs-studio (
 	echo obs-studio directory does not exist
 	git clone https://github.com/obsproject/obs-studio
 	cd C:\projects\obs-studio\
-	git describe --tags --abbrev=0 > C:\projects\obs-studio-latest-tag.txt
+	git describe --tags --abbrev=0 --exclude="*-rc*" > C:\projects\obs-studio-latest-tag.txt
 	set /p OBSLatestTag=<C:\projects\obs-studio-latest-tag.txt
 	set BuildOBS=true
 )
