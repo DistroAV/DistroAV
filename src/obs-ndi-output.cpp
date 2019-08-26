@@ -63,6 +63,8 @@ struct ndi_output
 {
 	obs_output_t *output;
 	const char* ndi_name;
+	bool uses_video;
+	bool uses_audio;
 
 	bool started;
 	NDIlib_send_instance_t ndi_sender;
@@ -108,6 +110,8 @@ void ndi_output_getdefaults(obs_data_t* settings)
 {
 	obs_data_set_default_string(settings,
 								"ndi_name", "obs-ndi output (changeme)");
+	obs_data_set_default_bool(settings, "uses_video", true);
+	obs_data_set_default_bool(settings, "uses_audio", true);
 }
 
 bool ndi_output_start(void* data)
@@ -123,7 +127,7 @@ bool ndi_output_start(void* data)
 		return false;
 	}
 
-	if (video) {
+	if (o->uses_video && video) {
 		video_format format = video_output_get_format(video);
 		uint32_t width = video_output_get_width(video);
 		uint32_t height = video_output_get_height(video);
@@ -170,7 +174,7 @@ bool ndi_output_start(void* data)
 		flags |= OBS_OUTPUT_VIDEO;
 	}
 
-	if (audio) {
+	if (o->uses_audio && audio) {
 		o->audio_samplerate = audio_output_get_sample_rate(audio);
 		o->audio_channels = audio_output_get_channels(audio);
 		flags |= OBS_OUTPUT_AUDIO;
@@ -228,6 +232,8 @@ void ndi_output_update(void* data, obs_data_t* settings)
 {
 	auto o = (struct ndi_output*)data;
 	o->ndi_name = obs_data_get_string(settings, "ndi_name");
+	o->uses_video = obs_data_get_bool(settings, "uses_video");
+	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
 }
 
 void* ndi_output_create(obs_data_t* settings, obs_output_t* output)

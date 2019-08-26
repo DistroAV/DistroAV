@@ -27,6 +27,7 @@ apt-get install -y \
         libjansson-dev \
         libpulse-dev \
         libqt5x11extras5-dev \
+        libqt5svg5-dev \
         libspeexdsp-dev \
         libswresample-dev \
         libswscale-dev \
@@ -48,7 +49,7 @@ cd /root
 # Build obs-studio
 git clone https://github.com/jp9000/obs-studio ./obs-studio
 cd obs-studio
-git checkout 23.0.0
+git checkout 23.2.1
 mkdir build && cd build
 cmake -DUNIX_STRUCTURE=1 -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j4
