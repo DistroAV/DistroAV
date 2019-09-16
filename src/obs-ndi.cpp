@@ -100,17 +100,17 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	if (!ndiLib->NDIlib_initialize()) {
+	if (!ndiLib->initialize()) {
 		blog(LOG_ERROR, "CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
-	blog(LOG_INFO, "NDI library initialized successfully (%s)", ndiLib->NDIlib_version());
+	blog(LOG_INFO, "NDI library initialized successfully (%s)", ndiLib->version());
 
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
 	find_desc.p_groups = NULL;
-	ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
+	ndi_finder = ndiLib->find_create_v2(&find_desc);
 
 	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
@@ -175,8 +175,8 @@ void obs_module_unload()
 	blog(LOG_INFO, "goodbye !");
 
 	if (ndiLib) {
-		ndiLib->NDIlib_find_destroy(ndi_finder);
-		ndiLib->NDIlib_destroy();
+		ndiLib->find_destroy(ndi_finder);
+		ndiLib->destroy();
 	}
 
 	if (loaded_lib) {

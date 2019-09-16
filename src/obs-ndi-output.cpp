@@ -71,7 +71,7 @@ struct ndi_output
 
 	uint32_t frame_width;
 	uint32_t frame_height;
-	NDIlib_FourCC_type_e frame_fourcc;
+	NDIlib_FourCC_video_type_e frame_fourcc;
 	double video_framerate;
 
 	size_t audio_channels;
@@ -138,29 +138,29 @@ bool ndi_output_start(void* data)
 				if (!o->conv_function) {
 					return false;
 				}
-				o->frame_fourcc = NDIlib_FourCC_type_UYVY;
+				o->frame_fourcc = NDIlib_FourCC_video_type_UYVY;
 				o->conv_linesize = width * 2;
 				o->conv_buffer = new uint8_t[height * o->conv_linesize * 2]();
 				break;
 
 			case VIDEO_FORMAT_NV12:
-				o->frame_fourcc = NDIlib_FourCC_type_NV12;
+				o->frame_fourcc = NDIlib_FourCC_video_type_NV12;
 				break;
 
 			case VIDEO_FORMAT_I420:
-				o->frame_fourcc = NDIlib_FourCC_type_I420;
+				o->frame_fourcc = NDIlib_FourCC_video_type_I420;
 				break;
 
 			case VIDEO_FORMAT_RGBA:
-				o->frame_fourcc = NDIlib_FourCC_type_RGBA;
+				o->frame_fourcc = NDIlib_FourCC_video_type_RGBA;
 				break;
 
 			case VIDEO_FORMAT_BGRA:
-				o->frame_fourcc = NDIlib_FourCC_type_BGRA;
+				o->frame_fourcc = NDIlib_FourCC_video_type_BGRA;
 				break;
 
 			case VIDEO_FORMAT_BGRX:
-				o->frame_fourcc = NDIlib_FourCC_type_BGRX;
+				o->frame_fourcc = NDIlib_FourCC_video_type_BGRX;
 				break;
 
 			default:
@@ -186,7 +186,7 @@ bool ndi_output_start(void* data)
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
-	o->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
+	o->ndi_sender = ndiLib->send_create(&send_desc);
 	if (o->ndi_sender) {
 		if (o->perf_token) {
 			os_end_high_performance(o->perf_token);
@@ -216,7 +216,7 @@ void ndi_output_stop(void* data, uint64_t ts)
 	os_end_high_performance(o->perf_token);
 	o->perf_token = NULL;
 
-	ndiLib->NDIlib_send_destroy(o->ndi_sender);
+	ndiLib->send_destroy(o->ndi_sender);
 	delete o->conv_buffer;
 	o->conv_function = nullptr;
 
@@ -289,7 +289,7 @@ void ndi_output_rawvideo(void* data, struct video_data* frame)
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
 
-	ndiLib->NDIlib_send_send_video_v2(o->ndi_sender, &video_frame);
+	ndiLib->send_send_video_v2(o->ndi_sender, &video_frame);
 }
 
 void ndi_output_rawaudio(void* data, struct audio_data* frame)
@@ -324,7 +324,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	audio_frame.p_data = (float*)o->audio_conv_buffer;
 	audio_frame.timecode = (int64_t)(frame->timestamp / 100);
 
-	ndiLib->NDIlib_send_send_audio_v2(o->ndi_sender, &audio_frame);
+	ndiLib->send_send_audio_v2(o->ndi_sender, &audio_frame);
 }
 
 struct obs_output_info create_ndi_output_info()

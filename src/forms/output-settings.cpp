@@ -30,7 +30,7 @@ OutputSettings::OutputSettings(QWidget *parent) :
 	connect(ui->buttonBox, SIGNAL(accepted()),
 		this, SLOT(onFormAccepted()));
 
-	ui->ndiVersionLabel->setText(ndiLib->NDIlib_version());
+	ui->ndiVersionLabel->setText(ndiLib->version());
 }
 
 void OutputSettings::onFormAccepted() {
