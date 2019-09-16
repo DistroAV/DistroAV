@@ -136,7 +136,7 @@ void ndi_filter_raw_video(void* data, video_data* frame)
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 
 	pthread_mutex_lock(&s->ndi_sender_video_mutex);
-	ndiLib->NDIlib_send_send_video_v2(s->ndi_sender, &video_frame);
+	ndiLib->send_send_video_v2(s->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&s->ndi_sender_video_mutex);
 }
 
@@ -239,8 +239,8 @@ void ndi_filter_update(void* data, obs_data_t* settings)
 	pthread_mutex_lock(&s->ndi_sender_video_mutex);
 	pthread_mutex_lock(&s->ndi_sender_audio_mutex);
 
-	ndiLib->NDIlib_send_destroy(s->ndi_sender);
-	s->ndi_sender = ndiLib->NDIlib_send_create(&send_desc);
+	ndiLib->send_destroy(s->ndi_sender);
+	s->ndi_sender = ndiLib->send_create(&send_desc);
 
 	pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 	pthread_mutex_unlock(&s->ndi_sender_video_mutex);
@@ -293,7 +293,7 @@ void ndi_filter_destroy(void* data)
 	pthread_mutex_lock(&s->ndi_sender_video_mutex);
 	pthread_mutex_lock(&s->ndi_sender_audio_mutex);
 
-	ndiLib->NDIlib_send_destroy(s->ndi_sender);
+	ndiLib->send_destroy(s->ndi_sender);
 
 	pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 	pthread_mutex_unlock(&s->ndi_sender_video_mutex);
@@ -314,7 +314,7 @@ void ndi_filter_destroy_audioonly(void* data)
 	auto s = (struct ndi_filter*)data;
 
 	pthread_mutex_lock(&s->ndi_sender_audio_mutex);
-	ndiLib->NDIlib_send_destroy(s->ndi_sender);
+	ndiLib->send_destroy(s->ndi_sender);
 	pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 
 	if (s->perf_token) {
@@ -364,7 +364,7 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
 	audio_frame.p_data = (float*)ndi_data;
 
 	pthread_mutex_lock(&s->ndi_sender_audio_mutex);
-	ndiLib->NDIlib_send_send_audio_v2(s->ndi_sender, &audio_frame);
+	ndiLib->send_send_audio_v2(s->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&s->ndi_sender_audio_mutex);
 
 	bfree(ndi_data);

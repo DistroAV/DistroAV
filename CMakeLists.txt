@@ -40,7 +40,7 @@ add_library(obs-ndi MODULE
 	${obs-ndi_HEADERS})
 
 include_directories(
-	"lib/ndi/Include"
+	"lib/ndi"
 	"${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
 	${Qt5Core_INCLUDES}
 	${Qt5Widgets_INCLUDES})
