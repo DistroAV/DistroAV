@@ -44,7 +44,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 [Code]
 const
-  ndiRedistURL = 'http://new.tk/NDIRedistV3';
+  ndiRedistURL = 'http://new.tk/NDIRedistV4';
 
 procedure InitializeWizard;
 begin
