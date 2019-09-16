@@ -45,7 +45,7 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-const NDIlib_v3* ndiLib = nullptr;
+const NDIlib_v4* ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -64,7 +64,7 @@ struct obs_source_info alpha_filter_info;
 
 const NDIlib_v3* load_ndilib();
 
-typedef const NDIlib_v3* (*NDIlib_v3_load_)(void);
+typedef const NDIlib_v4* (*NDIlib_v4_load_)(void);
 QLibrary* loaded_lib = nullptr;
 
 NDIlib_find_instance_t ndi_finder;
@@ -194,7 +194,7 @@ const char* obs_module_description()
 	return "NDI input/output integration for OBS Studio";
 }
 
-const NDIlib_v3* load_ndilib()
+const NDIlib_v4* load_ndilib()
 {
 	QStringList locations;
 	locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
@@ -216,14 +216,14 @@ const NDIlib_v3* load_ndilib()
 			if (loaded_lib->load()) {
 				blog(LOG_INFO, "NDI runtime loaded successfully");
 
-				NDIlib_v3_load_ lib_load =
-					(NDIlib_v3_load_)loaded_lib->resolve("NDIlib_v3_load");
+				NDIlib_v4_load_ lib_load =
+					(NDIlib_v4_load_)loaded_lib->resolve("NDIlib_v4_load");
 
 				if (lib_load != nullptr) {
 					return lib_load();
 				}
 				else {
-					blog(LOG_INFO, "ERROR: NDIlib_v3_load not found in loaded library");
+					blog(LOG_INFO, "ERROR: NDIlib_v4_load not found in loaded library");
 				}
 			}
 			else {
