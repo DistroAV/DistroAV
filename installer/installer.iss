@@ -29,13 +29,21 @@ SolidCompression=yes
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Types]
+Name: "full"; Description: "Full installation"
+Name: "custom"; Description: "Custom installation"; Flags: iscustom
+
+[Components]
+Name: "main"; Description: "NDI Plugin for OBS Studio"; Types: full custom; Flags: fixed
+Name: "ndiruntime"; Description: "NDI Runtime (required by the plugin)"; Types: full custom
+
 [Files]
 Source: "..\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; Flags: dontcopy
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Run]
-Filename: "{tmp}\ndi-redist-installer.exe"; Parameters: "/verysilent"
+Filename: "{tmp}\ndi-redist-installer.exe"; StatusMsg: "Install NDI Runtime..."; Components: ndiruntime; Flags: hidewizard
 
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
@@ -59,7 +67,7 @@ begin
     String(GPLText)
   );
 
-  idpAddFile(ndiRedistUrl, ExpandConstant('{tmp}\ndi-redist-installer.exe'));
+  idpAddFileComp(ndiRedistUrl, ExpandConstant('{tmp}\ndi-redist-installer.exe'), 'ndiruntime');
   idpDownloadAfter(wpReady);
 end;
 
