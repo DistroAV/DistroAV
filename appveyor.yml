@@ -24,15 +24,12 @@ build_script:
   - call msbuild /m /p:Configuration=%build_config% C:\projects\obs-ndi\build64\obs-ndi.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 before_deploy:
-  - call C:\projects\obs-ndi\CI\prepare-slobs-package.cmd
   - 7z a "C:\projects\obs-ndi\build.zip" C:\projects\obs-ndi\release\*
-  - 7z a "C:\projects\obs-ndi\build-slobs.zip" C:\projects\obs-ndi\release-slobs\*
   - set PATH=%PATH%;"C:\\Program Files (x86)\\Inno Setup 5"
   - iscc "C:\projects\obs-ndi\installer\installer.iss"
 
 deploy_script:
   - ps: Push-AppveyorArtifact "C:\projects\obs-ndi\build.zip" -FileName "obs-ndi-$(git log --pretty=format:'%h' -n 1).zip"
-  - ps: Push-AppveyorArtifact "C:\projects\obs-ndi\build-slobs.zip" -FileName "obs-ndi-$(git log --pretty=format:'%h' -n 1)-slobs.zip"
   - ps: Push-AppveyorArtifact "C:\projects\obs-ndi\installer\Output\obs-ndi-Windows-Installer.exe" -FileName "obs-ndi-$(git log --pretty=format:'%h' -n 1)-Windows-Installer.exe"
 
 test: off
