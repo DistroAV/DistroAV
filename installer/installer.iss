@@ -25,14 +25,13 @@ DefaultGroupName={#MyAppName}
 OutputBaseFilename=obs-ndi-Windows-Installer
 Compression=lzma
 SolidCompression=yes
-LicenseFile=..\LICENSE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Files]
 Source: "..\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\LICENSE"; Flags: dontcopy
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Run]
@@ -47,7 +46,19 @@ const
   ndiRedistURL = 'http://new.tk/NDIRedistV4';
 
 procedure InitializeWizard;
+var
+  GPLText: AnsiString;
+  Page: TOutputMsgMemoWizardPage;
 begin
+  ExtractTemporaryFile('LICENSE');
+  LoadStringFromFile(ExpandConstant('{tmp}\LICENSE'), GPLText);
+
+  Page := CreateOutputMsgMemoPage(wpWelcome,
+    'License Information', 'Please review the license terms before installing obs-websocket',
+    'Press Page Down to see the rest of the agreement. Once you are aware of your rights, click Next to continue.',
+    String(GPLText)
+  );
+
   idpAddFile(ndiRedistUrl, ExpandConstant('{tmp}\ndi-redist-installer.exe'));
   idpDownloadAfter(wpReady);
 end;
@@ -60,7 +71,7 @@ var
 begin
   // initialize default path, which will be returned when the following registry
   // key queries fail due to missing keys or for some different reason
-  Result := '{pf32}\obs-studio';
+  Result := '{pf}\obs-studio';
   // query the first registry value; if this succeeds, return the obtained value
   if RegQueryStringValue(HKLM32, 'SOFTWARE\OBS Studio', '', InstallPath) then
     Result := InstallPath
