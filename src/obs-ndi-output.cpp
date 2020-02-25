@@ -327,21 +327,17 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	ndiLib->send_send_audio_v2(o->ndi_sender, &audio_frame);
 }
 
-struct obs_output_info create_ndi_output_info()
-{
-	struct obs_output_info ndi_output_info = {};
-	ndi_output_info.id				= "ndi_output";
-	ndi_output_info.flags			= OBS_OUTPUT_AV;
-	ndi_output_info.get_name		= ndi_output_getname;
-	ndi_output_info.get_properties	= ndi_output_getproperties;
-	ndi_output_info.get_defaults	= ndi_output_getdefaults;
-	ndi_output_info.create			= ndi_output_create;
-	ndi_output_info.destroy			= ndi_output_destroy;
-	ndi_output_info.update			= ndi_output_update;
-	ndi_output_info.start			= ndi_output_start;
-	ndi_output_info.stop			= ndi_output_stop;
-	ndi_output_info.raw_video		= ndi_output_rawvideo;
-	ndi_output_info.raw_audio		= ndi_output_rawaudio;
-
-	return ndi_output_info;
-}
+const struct obs_output_info ndi_output_info = {
+	.id = "ndi_output",
+	.flags = OBS_OUTPUT_AV,
+	.get_name = ndi_output_getname,
+	.create = ndi_output_create,
+	.destroy = ndi_output_destroy,
+	.start = ndi_output_start,
+	.stop = ndi_output_stop,
+	.raw_video = ndi_output_rawvideo,
+	.raw_audio = ndi_output_rawaudio,
+	.update = ndi_output_update,
+	.get_defaults = ndi_output_getdefaults,
+	.get_properties = ndi_output_getproperties
+};

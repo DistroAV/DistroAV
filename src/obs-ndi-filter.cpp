@@ -371,46 +371,30 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
 	return audio_data;
 }
 
-struct obs_source_info create_ndi_filter_info()
-{
-	struct obs_source_info ndi_filter_info = {};
-	ndi_filter_info.id				= "ndi_filter";
-	ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
-	ndi_filter_info.output_flags	= OBS_SOURCE_VIDEO;
+const struct obs_source_info ndi_filter_info = {
+	.id = "ndi_filter",
+	.type = OBS_SOURCE_TYPE_FILTER,
+	.output_flags = OBS_SOURCE_VIDEO,
+	.get_name = ndi_filter_getname,
+	.create = ndi_filter_create,
+	.destroy = ndi_filter_destroy,
+	.get_defaults = ndi_filter_getdefaults,
+	.get_properties = ndi_filter_getproperties,
+	.update = ndi_filter_update,
+	.video_tick = ndi_filter_tick,
+	.video_render = ndi_filter_videorender,
+	.filter_audio = ndi_filter_asyncaudio
+};
 
-	ndi_filter_info.get_name		= ndi_filter_getname;
-	ndi_filter_info.get_properties	= ndi_filter_getproperties;
-	ndi_filter_info.get_defaults	= ndi_filter_getdefaults;
-
-	ndi_filter_info.create			= ndi_filter_create;
-	ndi_filter_info.destroy			= ndi_filter_destroy;
-	ndi_filter_info.update			= ndi_filter_update;
-
-	ndi_filter_info.video_tick		= ndi_filter_tick;
-	ndi_filter_info.video_render	= ndi_filter_videorender;
-
-	// Audio is available only with async sources
-	ndi_filter_info.filter_audio	= ndi_filter_asyncaudio;
-
-	return ndi_filter_info;
-}
-
-struct obs_source_info create_ndi_audiofilter_info()
-{
-	struct obs_source_info ndi_filter_info = {};
-	ndi_filter_info.id				= "ndi_audiofilter";
-	ndi_filter_info.type			= OBS_SOURCE_TYPE_FILTER;
-	ndi_filter_info.output_flags	= OBS_SOURCE_AUDIO;
-
-	ndi_filter_info.get_name		= ndi_audiofilter_getname;
-	ndi_filter_info.get_properties	= ndi_filter_getproperties;
-	ndi_filter_info.get_defaults	= ndi_filter_getdefaults;
-
-	ndi_filter_info.create			= ndi_filter_create_audioonly;
-	ndi_filter_info.destroy			= ndi_filter_destroy_audioonly;
-	ndi_filter_info.update			= ndi_filter_update;
-
-	ndi_filter_info.filter_audio	= ndi_filter_asyncaudio;
-
-	return ndi_filter_info;
-}
+const struct obs_source_info ndi_audiofilter_info = {
+	.id = "ndi_audiofilter",
+	.type = OBS_SOURCE_TYPE_FILTER,
+	.output_flags = OBS_SOURCE_AUDIO,
+	.get_name = ndi_audiofilter_getname,
+	.create = ndi_filter_create_audioonly,
+	.destroy = ndi_filter_destroy_audioonly,
+	.get_defaults = ndi_filter_getdefaults,
+	.get_properties = ndi_filter_getproperties,
+	.update = ndi_filter_update,
+	.filter_audio = ndi_filter_asyncaudio
+};

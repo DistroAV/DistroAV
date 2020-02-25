@@ -566,23 +566,18 @@ void ndi_source_destroy(void* data)
 	bfree(s);
 }
 
-struct obs_source_info create_ndi_source_info()
-{
-	struct obs_source_info ndi_source_info = {};
-	ndi_source_info.id				= "ndi_source";
-	ndi_source_info.type			= OBS_SOURCE_TYPE_INPUT;
-	ndi_source_info.output_flags	= OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO |
-									  OBS_SOURCE_DO_NOT_DUPLICATE;
-	ndi_source_info.get_name		= ndi_source_getname;
-	ndi_source_info.get_properties	= ndi_source_getproperties;
-	ndi_source_info.get_defaults	= ndi_source_getdefaults;
-	ndi_source_info.update			= ndi_source_update;
-	ndi_source_info.show			= ndi_source_shown;
-	ndi_source_info.hide			= ndi_source_hidden;
-	ndi_source_info.activate		= ndi_source_activated;
-	ndi_source_info.deactivate		= ndi_source_deactivated;
-	ndi_source_info.create			= ndi_source_create;
-	ndi_source_info.destroy			= ndi_source_destroy;
-
-	return ndi_source_info;
-}
+const struct obs_source_info ndi_source_info = {
+	.id	= "ndi_source",
+	.type = OBS_SOURCE_TYPE_INPUT,
+	.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE,
+	.get_name = ndi_source_getname,
+	.create = ndi_source_create,
+	.destroy = ndi_source_destroy,
+	.get_defaults = ndi_source_getdefaults,
+	.get_properties = ndi_source_getproperties,
+	.update	= ndi_source_update,
+	.activate = ndi_source_activated,
+	.deactivate = ndi_source_deactivated,
+	.show = ndi_source_shown,
+	.hide = ndi_source_hidden
+};

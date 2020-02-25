@@ -45,20 +45,12 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-extern struct obs_source_info create_ndi_source_info();
-struct obs_source_info ndi_source_info;
+extern const struct obs_source_info ndi_source_info;
+extern const struct obs_source_info ndi_filter_info;
+extern const struct obs_source_info ndi_audiofilter_info;
+extern const struct obs_source_info alpha_filter_info;
 
-extern struct obs_output_info create_ndi_output_info();
-struct obs_output_info ndi_output_info;
-
-extern struct obs_source_info create_ndi_filter_info();
-struct obs_source_info ndi_filter_info;
-
-extern struct obs_source_info create_ndi_audiofilter_info();
-struct obs_source_info ndi_audiofilter_info;
-
-extern struct obs_source_info create_alpha_filter_info();
-struct obs_source_info alpha_filter_info;
+extern const struct obs_output_info ndi_output_info;
 
 const NDIlib_v3* load_ndilib();
 typedef const NDIlib_v4* (*NDIlib_v4_load_)(void);
@@ -111,20 +103,12 @@ bool obs_module_load(void)
 	find_desc.p_groups = NULL;
 	ndi_finder = ndiLib->find_create_v2(&find_desc);
 
-	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
-
-	ndi_output_info = create_ndi_output_info();
-	obs_register_output(&ndi_output_info);
-
-	ndi_filter_info = create_ndi_filter_info();
 	obs_register_source(&ndi_filter_info);
-
-	ndi_audiofilter_info = create_ndi_audiofilter_info();
 	obs_register_source(&ndi_audiofilter_info);
-
-	alpha_filter_info = create_alpha_filter_info();
 	obs_register_source(&alpha_filter_info);
+
+	obs_register_output(&ndi_output_info);
 
 	if (main_window) {
 		config.load();
