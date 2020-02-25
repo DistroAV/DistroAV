@@ -25,8 +25,4 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
 
-void main_output_start(const char* output_name);
-void main_output_stop();
-bool main_output_is_running();
-
 extern const NDIlib_v4* ndiLib;
