@@ -18,13 +18,13 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #include "output-settings.h"
 
-#include "../Config.h"
 #include "../obs-ndi.h"
 #include "../preview-output.h"
 
-OutputSettings::OutputSettings(QWidget *parent) :
+OutputSettings::OutputSettings(Config& config, QWidget *parent) :
 	QDialog(parent),
-	ui(new Ui::OutputSettings)
+	ui(new Ui::OutputSettings),
+	_config(config)
 {
 	ui->setupUi(this);
 	connect(ui->buttonBox, SIGNAL(accepted()),
@@ -33,18 +33,17 @@ OutputSettings::OutputSettings(QWidget *parent) :
 	ui->ndiVersionLabel->setText(ndiLib->version());
 }
 
-void OutputSettings::onFormAccepted() {
-	Config* conf = Config::Current();
+void OutputSettings::onFormAccepted()
+{
+	_config.OutputEnabled = ui->mainOutputGroupBox->isChecked();
+	_config.OutputName = ui->mainOutputName->text();
 
-	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
-	conf->OutputName = ui->mainOutputName->text();
+	_config.PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
+	_config.PreviewOutputName = ui->previewOutputName->text();
 
-	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
-	conf->PreviewOutputName = ui->previewOutputName->text();
+	_config.Save();
 
-	conf->Save();
-
-	if (conf->OutputEnabled) {
+	if (_config.OutputEnabled) {
 		if (main_output_is_running()) {
 			main_output_stop();
 		}
@@ -53,7 +52,7 @@ void OutputSettings::onFormAccepted() {
 		main_output_stop();
 	}
 
-	if (conf->PreviewOutputEnabled) {
+	if (_config.PreviewOutputEnabled) {
 		if (preview_output_is_enabled()) {
 			preview_output_stop();
 		}
@@ -64,23 +63,24 @@ void OutputSettings::onFormAccepted() {
 	}
 }
 
-void OutputSettings::showEvent(QShowEvent* event) {
-	Config* conf = Config::Current();
+void OutputSettings::showEvent(QShowEvent* event)
+{
+	ui->mainOutputGroupBox->setChecked(_config.OutputEnabled);
+	ui->mainOutputName->setText(_config.OutputName);
 
-	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
-	ui->mainOutputName->setText(conf->OutputName);
-
-	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
-	ui->previewOutputName->setText(conf->PreviewOutputName);
+	ui->previewOutputGroupBox->setChecked(_config.PreviewOutputEnabled);
+	ui->previewOutputName->setText(_config.PreviewOutputName);
 }
 
-void OutputSettings::ToggleShowHide() {
+void OutputSettings::ToggleShowHide()
+{
 	if (!isVisible())
 		setVisible(true);
 	else
 		setVisible(false);
 }
 
-OutputSettings::~OutputSettings() {
+OutputSettings::~OutputSettings()
+{
 	delete ui;
 }

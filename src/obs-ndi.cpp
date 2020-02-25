@@ -45,8 +45,6 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_AUTHOR("Stephane Lepin (Palakis)")
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
-const NDIlib_v4* ndiLib = nullptr;
-
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
 
@@ -63,13 +61,14 @@ extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
 const NDIlib_v3* load_ndilib();
-
 typedef const NDIlib_v4* (*NDIlib_v4_load_)(void);
+
 QLibrary* loaded_lib = nullptr;
+const NDIlib_v4* ndiLib = nullptr;
+NDIlib_find_instance_t ndi_finder = nullptr;
+OutputSettings* output_settings = nullptr;
 
-NDIlib_find_instance_t ndi_finder;
-
-OutputSettings* output_settings;
+Config config;
 
 bool obs_module_load(void)
 {
@@ -128,18 +127,17 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
-		Config* conf = Config::Current();
-		conf->Load();
+		config.Load();
 
-		main_output_init(conf->OutputName.toUtf8().constData());
-		preview_output_init(conf->PreviewOutputName.toUtf8().constData());
+		main_output_init(config.OutputName.toUtf8().constData());
+		preview_output_init(config.PreviewOutputName.toUtf8().constData());
 
 		// Ui setup
 		QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
 			obs_module_text("NDIPlugin.Menu.OutputSettings"));
 
 		obs_frontend_push_ui_translation(obs_module_get_string);
-		output_settings = new OutputSettings(main_window);
+		output_settings = new OutputSettings(config, main_window);
 		obs_frontend_pop_ui_translation();
 
 		auto menu_cb = [] {
@@ -147,15 +145,13 @@ bool obs_module_load(void)
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-		obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
-			Config* conf = (Config*)private_data;
-
+		obs_frontend_add_event_callback([config](enum obs_frontend_event event, void *private_data) {
 			if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-				if (conf->OutputEnabled) {
-					main_output_start(conf->OutputName.toUtf8().constData());
+				if (config.OutputEnabled) {
+					main_output_start(config.OutputName.toUtf8().constData());
 				}
-				if (conf->PreviewOutputEnabled) {
-					preview_output_start(conf->PreviewOutputName.toUtf8().constData());
+				if (config.PreviewOutputEnabled) {
+					preview_output_start(config.PreviewOutputName.toUtf8().constData());
 				}
 			} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 				preview_output_stop();
@@ -164,7 +160,7 @@ bool obs_module_load(void)
 				preview_output_deinit();
 				main_output_deinit();
 			}
-		}, (void*)conf);
+		}, nullptr);
 	}
 
 	return true;

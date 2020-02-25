@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 Stéphane Lepin <steph  name of author
+Copyright (C) 2016-2018 Stï¿½phane Lepin <steph  name of author
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -21,12 +21,14 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #include <QDialog>
 
+#include "../Config.h"
+
 #include "ui_output-settings.h"
 
 class OutputSettings : public QDialog {
   Q_OBJECT
   public:
-	explicit OutputSettings(QWidget* parent = 0);
+	explicit OutputSettings(Config& config, QWidget* parent = 0);
 	~OutputSettings();
 	void showEvent(QShowEvent* event);
 	void ToggleShowHide();
@@ -36,6 +38,7 @@ class OutputSettings : public QDialog {
 
   private:
 	Ui::OutputSettings* ui;
+	Config& _config;
 };
 
 #endif // OUTPUTSETTINGS_H

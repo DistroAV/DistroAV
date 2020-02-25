@@ -27,7 +27,6 @@ class Config {
 	Config();
 	static void OBSSaveCallback(obs_data_t* save_data,
 		bool saving, void* private_data);
-	static Config* Current();
 	void Load();
 	void Save();
 
@@ -35,9 +34,6 @@ class Config {
 	QString OutputName;
 	QString PreviewOutputName;
 	bool PreviewOutputEnabled;
-
-  private:
-	static Config* _instance;
 };
 
 #endif // CONFIG_H

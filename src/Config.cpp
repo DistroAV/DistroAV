@@ -28,8 +28,6 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PARAM_PREVIEW_OUTPUT_ENABLED "PreviewOutputEnabled"
 #define PARAM_PREVIEW_OUTPUT_NAME "PreviewOutputName"
 
-Config* Config::_instance = nullptr;
-
 Config::Config() :
 	OutputEnabled(false),
 	OutputName("OBS"),
@@ -80,11 +78,4 @@ void Config::Save() {
 		
 		config_save(obs_config);
 	}
-}
-
-Config* Config::Current() {
-	if (!_instance) {
-		_instance = new Config();
-	}
-	return _instance;
 }
