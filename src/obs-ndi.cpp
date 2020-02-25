@@ -129,7 +129,7 @@ bool obs_module_load(void)
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-		obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
+		auto eventCb = [](enum obs_frontend_event event, void *private_data) {
 			auto config = reinterpret_cast<Config*>(private_data);
 
 			if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
@@ -145,8 +145,12 @@ bool obs_module_load(void)
 
 				preview_output_deinit();
 				main_output_deinit();
+
+				obs_frontend_remove_event_callback(eventCb, (void*)&config);
 			}
-		}, (void*)&config);
+		}
+
+		obs_frontend_add_event_callback(eventCb, (void*)&config);
 	}
 
 	return true;
