@@ -16,8 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program; If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifndef OBSNDI_H
-#define OBSNDI_H
+#pragma once
 
 #include <Processing.NDI.Lib.h>
 
@@ -30,6 +29,7 @@ void main_output_start(const char* output_name);
 void main_output_stop();
 bool main_output_is_running();
 
-extern const NDIlib_v4* ndiLib;
+class Config;
+extern Config& GetConfigInstance();
 
-#endif // OBSNDI_H
+extern const NDIlib_v4* ndiLib;
