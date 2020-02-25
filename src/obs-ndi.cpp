@@ -67,6 +67,30 @@ OutputSettings* output_settings = nullptr;
 
 Config config;
 
+const struct event_cb mainEventCallback = {
+	.config = config,
+	.callback = [](enum obs_frontend_event event, void *private_data) {
+		auto context = reinterpret_cast<struct event_cb*>(private_data);
+
+		if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+			if (context->config.mainOutputEnabled()) {
+				main_output_start(context->config.mainOutputName());
+			}
+			if (context->config.previewOutputEnabled()) {
+				preview_output_start(context->config.previewOutputName());
+			}
+		} else if (event == OBS_FRONTEND_EVENT_EXIT) {
+			preview_output_stop();
+			main_output_stop();
+
+			preview_output_deinit();
+			main_output_deinit();
+
+			obs_frontend_remove_event_callback(context->callback, private_data);
+		}
+	}
+};
+
 bool obs_module_load(void)
 {
 	blog(LOG_INFO, "hello ! (version %s)", OBS_NDI_VERSION);
@@ -133,32 +157,8 @@ bool obs_module_load(void)
 			output_settings->ToggleShowHide();
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
-
-		const struct event_cb eventCb = {
-			.config = config,
-			.callback = [](enum obs_frontend_event event, void *private_data) {
-				auto context = reinterpret_cast<struct event_cb*>(private_data);
-
-				if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-					if (context->config.mainOutputEnabled()) {
-						main_output_start(context->config.mainOutputName());
-					}
-					if (context->config.previewOutputEnabled()) {
-						preview_output_start(context->config.previewOutputName());
-					}
-				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
-					preview_output_stop();
-					main_output_stop();
-
-					preview_output_deinit();
-					main_output_deinit();
-
-					obs_frontend_remove_event_callback(context->callback, private_data);
-				}
-			}
-		};
 	
-		obs_frontend_add_event_callback(eventCb.callback, (void*)&eventCb);
+		obs_frontend_add_event_callback(mainEventCallback.callback, (void*)&mainEventCallback);
 	}
 
 	return true;
@@ -167,6 +167,8 @@ bool obs_module_load(void)
 void obs_module_unload()
 {
 	blog(LOG_INFO, "goodbye !");
+
+	obs_frontend_remove_event_callback(mainEventCallback.callback, (void*)&mainEventCallback);
 
 	if (ndiLib) {
 		ndiLib->find_destroy(ndi_finder);
