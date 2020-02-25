@@ -6,6 +6,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 include(external/FindLibObs.cmake)
 find_package(LibObs REQUIRED)
 find_package(Qt5Core REQUIRED)
@@ -112,14 +115,13 @@ endif()
 
 # OSX
 if(APPLE)
-	set_target_properties(obs-ndi PROPERTIES PREFIX "")
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}")
 endif()
 
 # Linux
 if(UNIX AND NOT APPLE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mtune=core2 -Ofast")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=core2 -Ofast")
 
 	if(ARCH EQUAL 64)
 		set(ARCH_NAME "x86_64")
