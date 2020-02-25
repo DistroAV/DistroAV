@@ -27,13 +27,42 @@ class Config {
 	Config();
 	static void OBSSaveCallback(obs_data_t* save_data,
 		bool saving, void* private_data);
-	void Load();
-	void Save();
+	void load();
+	void save();
 
-	bool OutputEnabled;
-	QString OutputName;
-	QString PreviewOutputName;
-	bool PreviewOutputEnabled;
+	bool mainOutputEnabled() {
+		return _mainOutputEnabled;
+	}
+	void setMainOutputEnabled(bool enabled) {
+		_mainOutputEnabled = enabled;
+	}
+
+	const char* mainOutputName() {
+		return _mainOutputName.c_str();
+	}
+	void setMainOutputName(const char* name) {
+		_mainOutputName = name;
+	}
+
+	bool previewOutputEnabled() {
+		return _previewOutputEnabled;
+	}
+	void setPreviewOutputEnabled(bool enabled) {
+		_previewOutputEnabled = enabled;
+	}
+
+	const char* previewOutputName() {
+		return _previewOutputName.c_str();
+	}
+	void setPreviewOutputName(const char* name) {
+		_previewOutputName = name;
+	}
+
+  private:
+	bool _mainOutputEnabled;
+	std::string _mainOutputName;
+	bool _previewOutputEnabled;
+	std::string _previewOutputName;
 };
 
 #endif // CONFIG_H

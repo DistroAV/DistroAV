@@ -29,52 +29,52 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PARAM_PREVIEW_OUTPUT_NAME "PreviewOutputName"
 
 Config::Config() :
-	OutputEnabled(false),
-	OutputName("OBS"),
-	PreviewOutputEnabled(false),
-	PreviewOutputName("OBS Preview")
+	_mainOutputEnabled(false),
+	_mainOutputName("OBS"),
+	_previewOutputEnabled(false),
+	_previewOutputName("OBS Preview")
 {
 	config_t* obs_config = obs_frontend_get_global_config();
 	if (obs_config) {
 		config_set_default_bool(obs_config,
-			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
+			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, _mainOutputEnabled);
 		config_set_default_string(obs_config,
-			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, OutputName.toUtf8().constData());
+			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, _mainOutputName.c_str());
 
 		config_set_default_bool(obs_config,
-			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, _previewOutputEnabled);
 		config_set_default_string(obs_config,
-			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, PreviewOutputName.toUtf8().constData());
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, _previewOutputName.c_str());
 	}
 }
 
-void Config::Load() {
+void Config::load() {
 	config_t* obs_config = obs_frontend_get_global_config();
 	if (obs_config) {
-		OutputEnabled = config_get_bool(obs_config,
+		_mainOutputEnabled = config_get_bool(obs_config,
 			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
-		OutputName = config_get_string(obs_config,
+		_mainOutputName = config_get_string(obs_config,
 			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
 
-		PreviewOutputEnabled = config_get_bool(obs_config,
+		_previewOutputEnabled = config_get_bool(obs_config,
 			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
-		PreviewOutputName = config_get_string(obs_config,
+		_previewOutputName = config_get_string(obs_config,
 			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
 	}
 }
 
-void Config::Save() {
+void Config::save() {
 	config_t* obs_config = obs_frontend_get_global_config();
 	if (obs_config) {
 		config_set_bool(obs_config,
-			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
+			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, _mainOutputEnabled);
 		config_set_string(obs_config,
-			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, OutputName.toUtf8().constData());
+			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, _mainOutputName.c_str());
 
 		config_set_bool(obs_config,
-			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, _previewOutputEnabled);
 		config_set_string(obs_config,
-			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, PreviewOutputName.toUtf8().constData());
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, _previewOutputName.c_str());
 		
 		config_save(obs_config);
 	}

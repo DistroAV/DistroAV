@@ -127,10 +127,10 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
-		config.Load();
+		config.load();
 
-		main_output_init(config.OutputName.toUtf8().constData());
-		preview_output_init(config.PreviewOutputName.toUtf8().constData());
+		main_output_init(config.mainOutputName());
+		preview_output_init(config.previewOutputName());
 
 		// Ui setup
 		QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(
@@ -147,11 +147,11 @@ bool obs_module_load(void)
 
 		obs_frontend_add_event_callback([config](enum obs_frontend_event event, void *private_data) {
 			if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-				if (config.OutputEnabled) {
-					main_output_start(config.OutputName.toUtf8().constData());
+				if (config.mainOutputEnabled()) {
+					main_output_start(config.mainOutputName());
 				}
-				if (config.PreviewOutputEnabled) {
-					preview_output_start(config.PreviewOutputName.toUtf8().constData());
+				if (config.previewOutputEnabled()) {
+					preview_output_start(config.previewOutputName());
 				}
 			} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 				preview_output_stop();

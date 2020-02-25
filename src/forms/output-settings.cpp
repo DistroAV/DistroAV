@@ -35,15 +35,15 @@ OutputSettings::OutputSettings(Config& config, QWidget *parent) :
 
 void OutputSettings::onFormAccepted()
 {
-	_config.OutputEnabled = ui->mainOutputGroupBox->isChecked();
-	_config.OutputName = ui->mainOutputName->text();
+	_config.setMainOutputEnabled(ui->mainOutputGroupBox->isChecked());
+	_config.setMainOutputName(ui->mainOutputName->text().toUtf8().constData());
 
-	_config.PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
-	_config.PreviewOutputName = ui->previewOutputName->text();
+	_config.setPreviewOutputEnabled(ui->previewOutputGroupBox->isChecked());
+	_config.setPreviewOutputName(ui->previewOutputName->text().toUtf8().constData());
 
-	_config.Save();
+	_config.save();
 
-	if (_config.OutputEnabled) {
+	if (_config.mainOutputEnabled()) {
 		if (main_output_is_running()) {
 			main_output_stop();
 		}
@@ -52,7 +52,7 @@ void OutputSettings::onFormAccepted()
 		main_output_stop();
 	}
 
-	if (_config.PreviewOutputEnabled) {
+	if (_config.previewOutputEnabled()) {
 		if (preview_output_is_enabled()) {
 			preview_output_stop();
 		}
@@ -65,11 +65,11 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent* event)
 {
-	ui->mainOutputGroupBox->setChecked(_config.OutputEnabled);
-	ui->mainOutputName->setText(_config.OutputName);
+	ui->mainOutputGroupBox->setChecked(_config.mainOutputEnabled());
+	ui->mainOutputName->setText(_config.mainOutputName());
 
-	ui->previewOutputGroupBox->setChecked(_config.PreviewOutputEnabled);
-	ui->previewOutputName->setText(_config.PreviewOutputName);
+	ui->previewOutputGroupBox->setChecked(_config.previewOutputEnabled());
+	ui->previewOutputName->setText(_config.previewOutputName());
 }
 
 void OutputSettings::ToggleShowHide()
