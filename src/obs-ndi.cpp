@@ -55,6 +55,11 @@ extern const struct obs_output_info ndi_output_info;
 const NDIlib_v3* load_ndilib();
 typedef const NDIlib_v4* (*NDIlib_v4_load_)(void);
 
+struct event_cb {
+	Config& config;
+	obs_frontend_event_cb callback;
+};
+
 QLibrary* loaded_lib = nullptr;
 const NDIlib_v4* ndiLib = nullptr;
 NDIlib_find_instance_t ndi_finder = nullptr;
@@ -129,28 +134,31 @@ bool obs_module_load(void)
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-		auto eventCb = [](enum obs_frontend_event event, void *private_data) {
-			auto config = reinterpret_cast<Config*>(private_data);
+		const struct event_cb eventCb = {
+			.config = config,
+			.callback = [](enum obs_frontend_event event, void *private_data) {
+				auto context = reinterpret_cast<struct event_cb*>(private_data);
 
-			if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-				if (config->mainOutputEnabled()) {
-					main_output_start(config->mainOutputName());
+				if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+					if (context->config.mainOutputEnabled()) {
+						main_output_start(context->config.mainOutputName());
+					}
+					if (context->config.previewOutputEnabled()) {
+						preview_output_start(context->config.previewOutputName());
+					}
+				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
+					preview_output_stop();
+					main_output_stop();
+
+					preview_output_deinit();
+					main_output_deinit();
+
+					obs_frontend_remove_event_callback(context->callback, private_data);
 				}
-				if (config->previewOutputEnabled()) {
-					preview_output_start(config->previewOutputName());
-				}
-			} else if (event == OBS_FRONTEND_EVENT_EXIT) {
-				preview_output_stop();
-				main_output_stop();
-
-				preview_output_deinit();
-				main_output_deinit();
-
-				obs_frontend_remove_event_callback(eventCb, (void*)&config);
 			}
-		}
-
-		obs_frontend_add_event_callback(eventCb, (void*)&config);
+		};
+	
+		obs_frontend_add_event_callback(eventCb.callback, (void*)&eventCb);
 	}
 
 	return true;
