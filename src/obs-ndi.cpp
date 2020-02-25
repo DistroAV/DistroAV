@@ -129,13 +129,15 @@ bool obs_module_load(void)
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
-		obs_frontend_add_event_callback([config](enum obs_frontend_event event, void *private_data) {
+		obs_frontend_add_event_callback([](enum obs_frontend_event event, void *private_data) {
+			auto config = reinterpret_cast<Config*>(private_data);
+
 			if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-				if (config.mainOutputEnabled()) {
-					main_output_start(config.mainOutputName());
+				if (config->mainOutputEnabled()) {
+					main_output_start(config->mainOutputName());
 				}
-				if (config.previewOutputEnabled()) {
-					preview_output_start(config.previewOutputName());
+				if (config->previewOutputEnabled()) {
+					preview_output_start(config->previewOutputName());
 				}
 			} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 				preview_output_stop();
@@ -144,7 +146,7 @@ bool obs_module_load(void)
 				preview_output_deinit();
 				main_output_deinit();
 			}
-		}, nullptr);
+		}, (void*)&config);
 	}
 
 	return true;
