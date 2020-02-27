@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program; If not, see <https://www.gnu.org/licenses/>
 */
 
+#include "preview-output.h"
+
 #include <obs.h>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
