@@ -18,6 +18,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #pragma once
 
+// TODO refactor this into a class
+
 void preview_output_init(const char* initial_ndi_name);
 void preview_output_start(const char* ndi_name);
 void preview_output_stop();

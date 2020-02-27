@@ -22,6 +22,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <QtCore/QString>
 #include <obs-module.h>
 
+// TODO turn into a QObject to provide signals
 class Config {
   public:
 	Config();
@@ -29,6 +30,8 @@ class Config {
 		bool saving, void* private_data);
 	void load();
 	void save();
+
+	// TODO add config change signal
 
 	bool mainOutputEnabled() {
 		return _mainOutputEnabled;

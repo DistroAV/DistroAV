@@ -44,6 +44,8 @@ void OutputSettings::onFormAccepted()
 
 	_config.save();
 
+	// TODO signal config changes and let subscribers listen to changes
+
 	if (_config.mainOutputEnabled()) {
 		if (main_output_is_running()) {
 			main_output_stop();
