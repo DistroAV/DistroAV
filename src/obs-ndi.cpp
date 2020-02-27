@@ -75,10 +75,10 @@ const struct event_cb mainEventCallback = {
 
 		if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
 			if (context->config.mainOutputEnabled()) {
-				main_output_start(context->config.mainOutputName());
+				main_output_start(QT_TO_UTF8(context->config.mainOutputName()));
 			}
 			if (context->config.previewOutputEnabled()) {
-				preview_output_start(context->config.previewOutputName());
+				preview_output_start(QT_TO_UTF8(context->config.previewOutputName()));
 			}
 		} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 			preview_output_stop();
@@ -143,8 +143,8 @@ bool obs_module_load(void)
 	if (main_window) {
 		config.load();
 
-		main_output_init(config.mainOutputName());
-		preview_output_init(config.previewOutputName());
+		main_output_init(QT_TO_UTF8(config.mainOutputName()));
+		preview_output_init(QT_TO_UTF8(config.previewOutputName()));
 
 		// Ui setup
 		QAction* menu_action = (QAction*)obs_frontend_add_tools_menu_qaction(

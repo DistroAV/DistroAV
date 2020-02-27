@@ -37,10 +37,10 @@ OutputSettings::OutputSettings(Config& config, QWidget *parent) :
 void OutputSettings::onFormAccepted()
 {
 	_config.setMainOutputEnabled(ui->mainOutputGroupBox->isChecked());
-	_config.setMainOutputName(ui->mainOutputName->text().toUtf8().constData());
+	_config.setMainOutputName(ui->mainOutputName->text());
 
 	_config.setPreviewOutputEnabled(ui->previewOutputGroupBox->isChecked());
-	_config.setPreviewOutputName(ui->previewOutputName->text().toUtf8().constData());
+	_config.setPreviewOutputName(ui->previewOutputName->text());
 
 	_config.save();
 
@@ -48,7 +48,7 @@ void OutputSettings::onFormAccepted()
 		if (main_output_is_running()) {
 			main_output_stop();
 		}
-		main_output_start(ui->mainOutputName->text().toUtf8().constData());
+		main_output_start(QT_TO_UTF8(ui->mainOutputName->text()));
 	} else {
 		main_output_stop();
 	}
@@ -57,7 +57,7 @@ void OutputSettings::onFormAccepted()
 		if (preview_output_is_enabled()) {
 			preview_output_stop();
 		}
-		preview_output_start(ui->previewOutputName->text().toUtf8().constData());
+		preview_output_start(QT_TO_UTF8(ui->previewOutputName->text()));
 	}
 	else {
 		preview_output_stop();

@@ -47,10 +47,10 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void* param);
 void render_preview_source(void* param, uint32_t cx, uint32_t cy);
 
-void preview_output_init(const char* default_name)
+void preview_output_init(const char* initial_ndi_name)
 {
 	obs_data_t* output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", default_name);
+	obs_data_set_string(output_settings, "ndi_name", initial_ndi_name);
 	obs_data_set_bool(output_settings, "uses_audio", false);
 	context.output = obs_output_create(
 			"ndi_output", "NDI Preview Output", output_settings, nullptr
@@ -58,11 +58,11 @@ void preview_output_init(const char* default_name)
 	obs_data_release(output_settings);
 }
 
-void preview_output_start(const char* output_name)
+void preview_output_start(const char* ndi_name)
 {
 	if (context.enabled || !context.output) return;
 
-	blog(LOG_INFO, "starting NDI preview output with name '%s'", output_name);
+	blog(LOG_INFO, "starting NDI preview output with name '%s'", ndi_name);
 
 	obs_get_video_info(&context.ovi);
 
@@ -78,7 +78,7 @@ void preview_output_start(const char* output_name)
 	const audio_output_info* mainAOI = audio_output_get_info(obs_get_audio());
 
 	video_output_info vi = { 0 };
-	vi.name = output_name;
+	vi.name = ndi_name;
 	vi.format = VIDEO_FORMAT_BGRA;
 	vi.width = width;
 	vi.height = height;
@@ -91,7 +91,7 @@ void preview_output_start(const char* output_name)
 	video_output_open(&context.video_queue, &vi);
 
 	audio_output_info ai = { 0 };
-	ai.name = output_name;
+	ai.name = ndi_name;
 	ai.format = mainAOI->format;
 	ai.samples_per_sec = mainAOI->samples_per_sec;
 	ai.speakers = mainAOI->speakers;
@@ -111,7 +111,7 @@ void preview_output_start(const char* output_name)
 	obs_add_main_render_callback(render_preview_source, &context);
 
 	obs_data_t* settings = obs_output_get_settings(context.output);
-	obs_data_set_string(settings, "ndi_name", output_name);
+	obs_data_set_string(settings, "ndi_name", ndi_name);
 	obs_output_update(context.output, settings);
 	obs_data_release(settings);
 

@@ -37,10 +37,10 @@ class Config {
 		_mainOutputEnabled = enabled;
 	}
 
-	const char* mainOutputName() {
-		return _mainOutputName.c_str();
+	const QString& mainOutputName() {
+		return _mainOutputName;
 	}
-	void setMainOutputName(const char* name) {
+	void setMainOutputName(const QString& name) {
 		_mainOutputName = name;
 	}
 
@@ -51,18 +51,18 @@ class Config {
 		_previewOutputEnabled = enabled;
 	}
 
-	const char* previewOutputName() {
-		return _previewOutputName.c_str();
+	const QString& previewOutputName() {
+		return _previewOutputName;
 	}
-	void setPreviewOutputName(const char* name) {
+	void setPreviewOutputName(const QString& name) {
 		_previewOutputName = name;
 	}
 
   private:
 	bool _mainOutputEnabled;
-	std::string _mainOutputName;
+	QString _mainOutputName;
 	bool _previewOutputEnabled;
-	std::string _previewOutputName;
+	QString _previewOutputName;
 };
 
 #endif // CONFIG_H

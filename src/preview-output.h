@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 Stéphane Lepin <steph  name of author
+Copyright (C) 2016-2018 Stï¿½phane Lepin <steph  name of author
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -18,8 +18,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #pragma once
 
-void preview_output_init(const char* default_name);
-void preview_output_start(const char* output_name);
+void preview_output_init(const char* initial_ndi_name);
+void preview_output_start(const char* ndi_name);
 void preview_output_stop();
 void preview_output_deinit();
 bool preview_output_is_enabled();

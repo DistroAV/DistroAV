@@ -39,12 +39,12 @@ Config::Config() :
 		config_set_default_bool(obs_config,
 			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, _mainOutputEnabled);
 		config_set_default_string(obs_config,
-			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, _mainOutputName.c_str());
+			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, QT_TO_UTF8(_mainOutputName));
 
 		config_set_default_bool(obs_config,
 			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, _previewOutputEnabled);
 		config_set_default_string(obs_config,
-			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, _previewOutputName.c_str());
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, QT_TO_UTF8(_previewOutputName));
 	}
 }
 
@@ -69,12 +69,12 @@ void Config::save() {
 		config_set_bool(obs_config,
 			SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, _mainOutputEnabled);
 		config_set_string(obs_config,
-			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, _mainOutputName.c_str());
+			SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, QT_TO_UTF8(_mainOutputName));
 
 		config_set_bool(obs_config,
 			SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, _previewOutputEnabled);
 		config_set_string(obs_config,
-			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, _previewOutputName.c_str());
+			SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, QT_TO_UTF8(_previewOutputName));
 		
 		config_save(obs_config);
 	}

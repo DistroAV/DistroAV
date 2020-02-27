@@ -20,6 +20,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #include <Processing.NDI.Lib.h>
 
+#define QT_TO_UTF8(str) str.toUtf8().constData()
+
 #define OBS_NDI_VERSION "4.7.1"
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
