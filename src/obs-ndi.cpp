@@ -25,15 +25,16 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
-#include <QDir>
-#include <QFileInfo>
-#include <QProcess>
-#include <QLibrary>
-#include <QMainWindow>
-#include <QAction>
-#include <QMessageBox>
-#include <QString>
-#include <QStringList>
+
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
+#include <QtCore/QProcess>
+#include <QtCore/QLibrary>
+#include <QtWidgets/QMainWindow>
+#include <QtWidgets/QAction>
+#include <QtWidgets/QMessageBox>
 
 #include "obs-ndi.h"
 #include "main-output.h"

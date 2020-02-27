@@ -19,7 +19,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #ifndef OUTPUTSETTINGS_H
 #define OUTPUTSETTINGS_H
 
-#include <QDialog>
+#include <QtWidgets/QDialog>
 
 #include "../Config.h"
 

@@ -19,7 +19,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <QString>
+#include <QtCore/QString>
 #include <obs-module.h>
 
 class Config {
