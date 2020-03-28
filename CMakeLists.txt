@@ -6,10 +6,15 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
-include(external/FindLibObs.cmake)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if (WIN32 OR APPLE)
+    include(external/FindLibObs.cmake)
+endif()
+
 find_package(LibObs REQUIRED)
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Widgets REQUIRED)
+find_package(Qt5 REQUIRED Core Widgets)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(ARCH 64)
@@ -56,6 +61,10 @@ if(WIN32)
 	if(OBS_FRONTEND_LIB EQUAL "OBS_FRONTEND_LIB-NOTFOUND")
 		message(FATAL_ERROR "Could not find OBS Frontend API\'s library !")
 	endif()
+
+    if(MSVC)
+	    add_compile_options("/MP")
+    endif()
 
 	add_definitions(/O2)
 	string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
