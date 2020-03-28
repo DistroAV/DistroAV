@@ -38,4 +38,5 @@ echo "[obs-ndi] Actual package build"
 packagesbuild ./installer/obs-ndi.pkgproj
 
 echo "[obs-ndi] Renaming obs-ndi.pkg to $FILENAME"
-mv ./release/obs-ndi.pkg ./release/$FILENAME
+mkdir release
+mv ./build/obs-ndi.pkg ./release/$FILENAME
