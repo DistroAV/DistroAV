@@ -18,25 +18,25 @@ REM Set up the build flag as undefined.
 set "BuildOBS="
 
 REM Check the last tag successfully built by CI.
-if exist C:\projects\obs-studio-last-tag-built.txt (
-	set /p OBSLastTagBuilt=<C:\projects\obs-studio-last-tag-built.txt
+if exist "%OBSPath%\obs-studio-last-tag-built.txt" (
+	set /p OBSLastTagBuilt=<"%OBSPath%\obs-studio-last-tag-built.txt"
 ) else (
 	set OBSLastTagBuilt=0
 )
 
 REM If obs-studio directory exists, run git pull and get the latest tag number.
-if exist C:\projects\obs-studio\ (
+if exist %OBSPath% (
 	echo obs-studio directory exists
 	echo   Updating tag info
-	cd C:\projects\obs-studio\
-	git describe --tags --abbrev=0 --exclude="*-rc*" > C:\projects\latest-obs-studio-tag-pre-pull.txt
-	set /p OBSLatestTagPrePull=<C:\projects\latest-obs-studio-tag-pre-pull.txt
+	cd /D %OBSPath%
+	git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
+	set /p OBSLatestTagPrePull=<"%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
 	git checkout master
 	git pull
-	git describe --tags --abbrev=0 --exclude="*-rc*" > C:\projects\latest-obs-studio-tag-post-pull.txt
-	set /p OBSLatestTagPostPull=<C:\projects\latest-obs-studio-tag-post-pull.txt
-	set /p OBSLatestTag=<C:\projects\latest-obs-studio-tag-post-pull.txt
-	echo %OBSLatestTagPostPull%> C:\projects\latest-obs-studio-tag.txt
+	git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
+	set /p OBSLatestTagPostPull=<"%OBSPath%\latest-obs-studio-tag-post-pull.txt"
+	set /p OBSLatestTag=<"%OBSPath%\latest-obs-studio-tag-post-pull.txt"
+	echo %OBSLatestTagPostPull%> "%OBSPath%\latest-obs-studio-tag.txt"
 )
 
 REM Check the obs-studio tags for mismatches.
@@ -58,22 +58,22 @@ if not %OBSLatestTagPostPull%==%OBSLastTagBuilt% (
 
 REM If obs-studio directory does not exist, clone the git repo, get the latest
 REM tag number, and set the build flag.
-if not exist C:\projects\obs-studio (
+if not exist %OBSPath% (
 	echo obs-studio directory does not exist
-	git clone https://github.com/obsproject/obs-studio
-	cd C:\projects\obs-studio\
-	git describe --tags --abbrev=0 --exclude="*-rc*" > C:\projects\obs-studio-latest-tag.txt
-	set /p OBSLatestTag=<C:\projects\obs-studio-latest-tag.txt
+	git clone https://github.com/obsproject/obs-studio %OBSPath%
+	cd /D %OBSPath%\
+	git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\obs-studio-latest-tag.txt"
+	set /p OBSLatestTag=<"%OBSPath%\obs-studio-latest-tag.txt"
 	set BuildOBS=true
 )
 
 REM If the needed obs-studio libs for this build_config do not exist,
 REM set the build flag.
-if not exist C:\projects\obs-studio\build32\libobs\%build_config%\obs.lib (
+if not exist %OBSPath%\build32\libobs\%build_config%\obs.lib (
 	echo obs-studio\build32\libobs\%build_config%\obs.lib does not exist
 	set BuildOBS=true
 )
-if not exist C:\projects\obs-studio\build32\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib (
+if not exist %OBSPath%\build32\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib (
 	echo obs-studio\build32\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib does not exist
 	set BuildOBS=true
 )
@@ -95,35 +95,43 @@ echo:
 REM If the build flag is set, build obs-studio.
 if defined BuildOBS (
 	echo Building obs-studio...
+    cd /D %OBSPath%
 	echo   git checkout %OBSLatestTag%
 	git checkout %OBSLatestTag%
 	echo:
-	echo   Removing previous build dirs...
-	if exist build rmdir /s /q C:\projects\obs-studio\build
-	if exist build32 rmdir /s /q C:\projects\obs-studio\build32
-	if exist build64 rmdir /s /q C:\projects\obs-studio\build64
-	echo   Making new build dirs...
-	mkdir build
+	
+    echo   Removing previous build dirs...
+	if exist build32 rmdir /s /q "%OBSPath%\build32"
+	if exist build64 rmdir /s /q "%OBSPath%\build64"
+	
+    echo   Making new build dirs...
 	mkdir build32
 	mkdir build64
-	echo   Running cmake for obs-studio %OBSLatestTag% 32-bit...
-	cd ./build32
-	cmake -G "Visual Studio 14 2015" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
+	
+    echo   Running cmake for obs-studio %OBSLatestTag% 32-bit...
+	cd build32
+	cmake -G "Visual Studio 16 2019" -A Win32 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR32%" -DDepsPath="%DepsPath32%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
 	echo:
 	echo:
-	echo   Running cmake for obs-studio %OBSLatestTag% 64-bit...
-	cd ../build64
-	cmake -G "Visual Studio 14 2015 Win64" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
+	
+    echo   Running cmake for obs-studio %OBSLatestTag% 64-bit...
+	cd ..\build64
+	cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR64%" -DDepsPath="%DepsPath64%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
 	echo:
 	echo:
-	echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
-	call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build32\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-	echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
-	call msbuild /m /p:Configuration=%build_config% C:\projects\obs-studio\build64\obs-studio.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-	cd ..
-	git describe --tags --abbrev=0 > C:\projects\obs-studio-last-tag-built.txt
-	set /p OBSLastTagBuilt=<C:\projects\obs-studio-last-tag-built.txt
+	
+    REM echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
+	REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build32\obs-studio.sln
+	
+    REM echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
+	REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build64\obs-studio.sln
+	
+    cd ..
+	git describe --tags --abbrev=0 > "%OBSPath%\obs-studio-last-tag-built.txt"
+	set /p OBSLastTagBuilt=<"%OBSPath%\obs-studio-last-tag-built.txt"
 ) else (
 	echo Last OBS tag built is:  %OBSLastTagBuilt%
 	echo No need to rebuild OBS.
 )
+
+dir "%OBSPath%\libobs"

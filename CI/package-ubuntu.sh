@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
+
+BASE_DIR=$(pwd)
 
 NDILIB_VERSION="4.0.0"
 NDILIB_INSTALLER_SHA256="60c35b3774f45bf9d5b852c87887fbe57dd274a19531824d8b71fa324ca36a02"
@@ -15,39 +17,39 @@ yes | PAGER="cat" sh $NDILIB_INSTALLER
 rm -rf /tmp/ndisdk
 mv "/tmp/NDI SDK for Linux" /tmp/ndisdk
 
-cd /root/obs-ndi
+cd $BASE_DIR
 
 export GIT_HASH=$(git rev-parse --short HEAD)
-export PKG_VERSION="1-$GIT_HASH-$TRAVIS_BRANCH-git"
+export PKG_VERSION="1-$GIT_HASH-$BRANCH_SHORT_NAME-git"
 
-if [ -n "${TRAVIS_TAG}" ]; then
-	export PKG_VERSION="$TRAVIS_TAG"
+if [[ "$BRANCH_FULL_NAME" =~ "^refs/tags/" ]]; then
+	export PKG_VERSION="$BRANCH_SHORT_NAME"
 fi
 
-cd /root/obs-ndi/build
+cd ./build
 
-PAGER="cat" checkinstall -y --type=debian --fstrans=no --nodoc \
+PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
 	--pkglicense="GPLv2" --maintainer="stephane.lepin@gmail.com" \
 	--requires="libndi3 (>= $NDILIB_VERSION)" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
-	--pakdir="/package"
+	--pakdir="../package"
 
-PAGER="cat" checkinstall -y --type=debian --fstrans=no --nodoc \
+PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
         --pkgname=libndi3 --pkgversion="$NDILIB_VERSION" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
-        --pakdir="/package" ../CI/create-libndi-deb.sh
+        --pakdir="../package" ../CI/create-libndi-deb.sh
 
-PAGER="cat" checkinstall -y --type=debian --fstrans=no --nodoc \
+PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
         --pkgname=libndi3-dev --pkgversion="$NDILIB_VERSION" --requires="libndi3 (>= $NDILIB_VERSION)" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
         --pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
-        --pakdir="/package" ../CI/create-libndi-dev-deb.sh
+        --pakdir="../package" ../CI/create-libndi-dev-deb.sh
 
-chmod ao+r /package/*
+sudo chmod ao+r ../package/*
