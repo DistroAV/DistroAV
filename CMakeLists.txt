@@ -6,10 +6,15 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
-include(external/FindLibObs.cmake)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if (WIN32 OR APPLE)
+    include(external/FindLibObs.cmake)
+endif()
+
 find_package(LibObs REQUIRED)
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Widgets REQUIRED)
+find_package(Qt5 REQUIRED Core Widgets)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(ARCH 64)
@@ -57,6 +62,10 @@ if(WIN32)
 		message(FATAL_ERROR "Could not find OBS Frontend API\'s library !")
 	endif()
 
+    if(MSVC)
+	    add_compile_options("/MP")
+    endif()
+
 	add_definitions(/O2)
 	string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 	message("${CMAKE_CXX_FLAGS_RELEASE}")
@@ -78,6 +87,7 @@ if(WIN32)
 
 	set(RELEASE_DIR "${PROJECT_SOURCE_DIR}/release")
 	add_custom_command(TARGET obs-ndi POST_BUILD
+        # If config is Release, package release files
 		COMMAND if $<CONFIG:Release>==1 (
 			"${CMAKE_COMMAND}" -E make_directory
 				"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
@@ -92,6 +102,27 @@ if(WIN32)
 			"${CMAKE_COMMAND}" -E copy
 				"$<TARGET_FILE:obs-ndi>"
 				"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+        # If config is RelWithDebInfo, package release files
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+			"${CMAKE_COMMAND}" -E make_directory
+			    "${RELEASE_DIR}/data/obs-plugins/obs-ndi"
+			    "${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+            "${CMAKE_COMMAND}" -E copy_directory
+			    "${PROJECT_SOURCE_DIR}/data"
+			    "${RELEASE_DIR}/data/obs-plugins/obs-ndi")
+
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+            "${CMAKE_COMMAND}" -E copy
+			    "$<TARGET_FILE:obs-ndi>"
+			    "${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+            "${CMAKE_COMMAND}" -E copy
+			    "$<TARGET_PDB_FILE:obs-ndi>"
+			    "${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
 
 		# Copy to obs-studio dev environment for immediate testing
 		COMMAND if $<CONFIG:Debug>==1 (
