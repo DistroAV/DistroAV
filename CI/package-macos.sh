@@ -35,7 +35,7 @@ echo "[obs-ndi] Dependencies for obs-ndi"
 otool -L ./build/obs-ndi.so
 
 echo "[obs-ndi] Actual package build"
-packagesbuild ./CI/macos/obs-ndi.pkgproj
+packagesbuild ./installer/obs-ndi.pkgproj
 
 echo "[obs-ndi] Renaming obs-ndi.pkg to $FILENAME"
 mv ./release/obs-ndi.pkg ./release/$FILENAME
