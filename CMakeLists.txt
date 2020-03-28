@@ -87,6 +87,7 @@ if(WIN32)
 
 	set(RELEASE_DIR "${PROJECT_SOURCE_DIR}/release")
 	add_custom_command(TARGET obs-ndi POST_BUILD
+        # If config is Release, package release files
 		COMMAND if $<CONFIG:Release>==1 (
 			"${CMAKE_COMMAND}" -E make_directory
 				"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
@@ -101,6 +102,27 @@ if(WIN32)
 			"${CMAKE_COMMAND}" -E copy
 				"$<TARGET_FILE:obs-ndi>"
 				"${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+        # If config is RelWithDebInfo, package release files
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+			"${CMAKE_COMMAND}" -E make_directory
+			    "${RELEASE_DIR}/data/obs-plugins/obs-ndi"
+			    "${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+            "${CMAKE_COMMAND}" -E copy_directory
+			    "${PROJECT_SOURCE_DIR}/data"
+			    "${RELEASE_DIR}/data/obs-plugins/obs-ndi")
+
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+            "${CMAKE_COMMAND}" -E copy
+			    "$<TARGET_FILE:obs-ndi>"
+			    "${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
+
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+            "${CMAKE_COMMAND}" -E copy
+			    "$<TARGET_PDB_FILE:obs-ndi>"
+			    "${RELEASE_DIR}/obs-plugins/${OBS_ARCH_NAME}")
 
 		# Copy to obs-studio dev environment for immediate testing
 		COMMAND if $<CONFIG:Debug>==1 (
