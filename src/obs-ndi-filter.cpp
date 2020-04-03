@@ -371,7 +371,7 @@ struct obs_audio_data* ndi_filter_asyncaudio(void *data,
 	return audio_data;
 }
 
-const struct obs_source_info ndi_filter_info = {
+extern const struct obs_source_info ndi_filter_info = {
 	.id = "ndi_filter",
 	.type = OBS_SOURCE_TYPE_FILTER,
 	.output_flags = OBS_SOURCE_VIDEO,
@@ -386,7 +386,7 @@ const struct obs_source_info ndi_filter_info = {
 	.filter_audio = ndi_filter_asyncaudio
 };
 
-const struct obs_source_info ndi_audiofilter_info = {
+extern const struct obs_source_info ndi_audiofilter_info = {
 	.id = "ndi_audiofilter",
 	.type = OBS_SOURCE_TYPE_FILTER,
 	.output_flags = OBS_SOURCE_AUDIO,

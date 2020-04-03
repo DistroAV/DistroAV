@@ -327,7 +327,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	ndiLib->send_send_audio_v2(o->ndi_sender, &audio_frame);
 }
 
-const struct obs_output_info ndi_output_info = {
+extern const struct obs_output_info ndi_output_info = {
 	.id = "ndi_output",
 	.flags = OBS_OUTPUT_AV,
 	.get_name = ndi_output_getname,

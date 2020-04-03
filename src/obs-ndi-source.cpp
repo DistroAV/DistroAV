@@ -566,7 +566,7 @@ void ndi_source_destroy(void* data)
 	bfree(s);
 }
 
-const struct obs_source_info ndi_source_info = {
+extern const struct obs_source_info ndi_source_info = {
 	.id	= "ndi_source",
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE,

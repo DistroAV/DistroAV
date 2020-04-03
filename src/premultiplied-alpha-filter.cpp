@@ -54,7 +54,7 @@ void alpha_filter_videorender(void* data, gs_effect_t* effect) {
 	obs_source_process_filter_end(s->context, s->effect, 0, 0);
 }
 
-const struct obs_source_info alpha_filter_info = {
+extern const struct obs_source_info alpha_filter_info = {
 	.id = OBS_NDI_ALPHA_FILTER_ID,
 	.type = OBS_SOURCE_TYPE_FILTER,
 	.output_flags = OBS_SOURCE_VIDEO,
