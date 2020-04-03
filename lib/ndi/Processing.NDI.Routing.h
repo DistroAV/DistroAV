@@ -7,7 +7,7 @@
 //
 //*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2019 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -56,3 +56,13 @@ bool NDIlib_routing_change(NDIlib_routing_instance_t p_instance, const NDIlib_so
 // Change the routing of this source to another destination
 PROCESSINGNDILIB_API
 bool NDIlib_routing_clear(NDIlib_routing_instance_t p_instance);
+
+// Get the current number of receivers connected to this source. This can be used to avoid even rendering when nothing is connected to the video source. 
+// which can significantly improve the efficiency if you want to make a lot of sources available on the network. If you specify a timeout that is not
+// 0 then it will wait until there are connections for this amount of time.
+PROCESSINGNDILIB_API
+int NDIlib_routing_get_no_connections(NDIlib_routing_instance_t p_instance, uint32_t timeout_in_ms);
+
+// Retrieve the source information for the given router instance.  This pointer is valid until NDIlib_routing_destroy is called.
+PROCESSINGNDILIB_API
+const NDIlib_source_t* NDIlib_routing_get_source_name(NDIlib_routing_instance_t p_instance);
