@@ -294,7 +294,7 @@ void* ndi_source_poll_audio_video(void* data)
 	blog(LOG_INFO, "A/V thread for '%s' started",
 						obs_source_get_name(s->source));
 
-	NDIlib_audio_frame_v3_t audio_frame;
+	NDIlib_audio_frame_v2_t audio_frame;
 	obs_source_audio obs_audio_frame = {0};
 	NDIlib_video_frame_v2_t video_frame;
 	obs_source_frame obs_video_frame = {0};
@@ -306,7 +306,7 @@ void* ndi_source_poll_audio_video(void* data)
 
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 	while (s->running) {
-		frame_received = ndiLib->recv_capture_v3(
+		frame_received = ndiLib->recv_capture_v2(
 			s->ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
 		if (frame_received == NDIlib_frame_type_audio) {
@@ -343,7 +343,7 @@ void* ndi_source_poll_audio_video(void* data)
 			}
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
-			ndiLib->recv_free_audio_v3(s->ndi_receiver, &audio_frame);
+			ndiLib->recv_free_audio_v2(s->ndi_receiver, &audio_frame);
 			continue;
 		}
 
