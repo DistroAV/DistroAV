@@ -990,9 +990,6 @@
 				<key>VERSION</key>
 				<integer>5</integer>
 			</dict>
-			<key>PACKAGE_SCRIPTS</key>
-			<dict>
-			</dict>
 			<key>PACKAGE_SETTINGS</key>
 			<dict>
 				<key>AUTHENTICATION</key>
