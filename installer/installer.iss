@@ -4,7 +4,7 @@
 #include "idp\idp.iss"
 
 #define MyAppName "obs-ndi"
-#define MyAppVersion "4.7.1"
+#define MyAppVersion "4.8.0"
 #define MyAppPublisher "Stephane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
 
