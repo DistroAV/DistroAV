@@ -7,6 +7,7 @@
 #define MyAppVersion "4.8.0"
 #define MyAppPublisher "Stephane Lepin"
 #define MyAppURL "http://github.com/Palakis/obs-ndi"
+#define NDIRuntimeVersion "4.5.1"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -35,7 +36,7 @@ Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
 Name: "main"; Description: "NDI Plugin for OBS Studio"; Types: full custom; Flags: fixed
-Name: "ndiruntime"; Description: "NDI Runtime (required by the plugin)"; Types: full custom
+Name: "ndiruntime"; Description: "NDI {#NDIRuntimeVersion} Runtime (required by the plugin)"; Types: full custom
 
 [Files]
 Source: "..\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -51,7 +52,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 [Code]
 const
-  ndiRedistURL = 'http://new.tk/NDIRedistV4';
+  ndiRedistURL = "https://ndi.palakis.fr/runtime/ndi-runtime-{#NDIRuntimeVersion}-Windows.exe";
 
 procedure InitializeWizard;
 var
