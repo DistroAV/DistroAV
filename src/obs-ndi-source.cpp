@@ -566,7 +566,7 @@ void ndi_source_destroy(void* data)
 	bfree(s);
 }
 
-const struct obs_source_info create_ndi_source_info()
+struct obs_source_info create_ndi_source_info()
 {
 	struct obs_source_info ndi_source_info = {};
 	ndi_source_info.id				= "ndi_source";

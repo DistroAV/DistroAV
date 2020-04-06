@@ -47,19 +47,19 @@ OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
 const NDIlib_v4* ndiLib = nullptr;
 
-extern const struct obs_source_info create_ndi_source_info();
+extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
 
-extern const struct obs_output_info create_ndi_output_info();
+extern struct obs_output_info create_ndi_output_info();
 struct obs_output_info ndi_output_info;
 
-extern const struct obs_source_info create_ndi_filter_info();
+extern struct obs_source_info create_ndi_filter_info();
 struct obs_source_info ndi_filter_info;
 
-extern const struct obs_source_info create_ndi_audiofilter_info();
+extern struct obs_source_info create_ndi_audiofilter_info();
 struct obs_source_info ndi_audiofilter_info;
 
-extern const struct obs_source_info create_alpha_filter_info();
+extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
 const NDIlib_v4* load_ndilib();
