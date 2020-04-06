@@ -19,6 +19,7 @@ fi
 echo "[obs-ndi] Building 'obs-ndi' for macOS."
 mkdir -p build && cd build
 cmake .. \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 \
 	-DQTDIR=/usr/local/opt/qt \
 	-DLIBOBS_INCLUDE_DIR=../../obs-studio/libobs \
 	-DLIBOBS_LIB=../../obs-studio/libobs \
