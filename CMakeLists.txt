@@ -63,7 +63,8 @@ if(WIN32)
 	endif()
 
     if(MSVC)
-	    add_compile_options("/MP")
+        # Enable Multicore Builds
+	    add_definitions(/MP)
     endif()
 
 	add_definitions(/O2)
