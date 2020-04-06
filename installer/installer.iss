@@ -52,7 +52,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 [Code]
 const
-  ndiRedistURL = "https://ndi.palakis.fr/runtime/ndi-runtime-{#NDIRuntimeVersion}-Windows.exe";
+  ndiRedistURL = 'https://ndi.palakis.fr/runtime/ndi-runtime-{#NDIRuntimeVersion}-Windows.exe';
 
 procedure InitializeWizard;
 var
