@@ -63,8 +63,8 @@ if(WIN32)
 	endif()
 
     if(MSVC)
-        # Enable Multicore Builds
-	    add_definitions(/MP)
+        # Enable Multicore Builds and disable FH4 (to not depend on VCRUNTIME140_1.DLL)
+	    add_definitions(/MP /d2FH4-)
     endif()
 
 	add_definitions(/O2)
