@@ -7,7 +7,7 @@
 //
 //*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2019 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -44,7 +44,7 @@ typedef enum NDIlib_frame_type_e
 	NDIlib_frame_type_status_change = 100,
 
 	// Ensure that the size is 32bits
-	NDIlib_frame_type_max = 0xffffffff
+	NDIlib_frame_type_max = 0x7fffffff
 } NDIlib_frame_type_e;
 
 // FourCC values for video frames
@@ -116,7 +116,7 @@ typedef enum NDIlib_FourCC_video_type_e
 	NDIlib_FourCC_type_RGBX = NDIlib_FourCC_video_type_RGBX,
 
 	// Ensure that the size is 32bits
-	NDIlib_FourCC_video_type_max = 0xffffffff
+	NDIlib_FourCC_video_type_max = 0x7fffffff
 } NDIlib_FourCC_video_type_e;
 
 // Really for backwards compatibility
@@ -130,7 +130,7 @@ typedef enum NDIlib_FourCC_audio_type_e
 	NDIlib_FourCC_type_FLTP = NDIlib_FourCC_audio_type_FLTP,
 
 	// Ensure that the size is 32bits
-	NDIlib_FourCC_audio_type_max = 0xffffffff
+	NDIlib_FourCC_audio_type_max = 0x7fffffff
 } NDIlib_FourCC_audio_type_e;
 
 typedef enum NDIlib_frame_format_type_e
@@ -146,7 +146,7 @@ typedef enum NDIlib_frame_format_type_e
 	NDIlib_frame_format_type_field_1 = 3,
 
 	// Ensure that the size is 32bits
-	NDIlib_frame_format_type_max = 0xffffffff
+	NDIlib_frame_format_type_max = 0x7fffffff
 } NDIlib_frame_format_type_e;
 
 // When you specify this as a timecode, the timecode will be synthesized for you. This may

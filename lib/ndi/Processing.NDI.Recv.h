@@ -7,7 +7,7 @@
 //
 //*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2019 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -34,7 +34,7 @@ typedef enum NDIlib_recv_bandwidth_e
 	NDIlib_recv_bandwidth_highest = 100,       // Receive metadata, audio, video at full resolution.
 
 	// Ensure this is 32bits in size
-	NDIlib_recv_bandwidth_max = 0xffffffff
+	NDIlib_recv_bandwidth_max = 0x7fffffff
 } NDIlib_recv_bandwidth_e;
 
 typedef enum NDIlib_recv_color_format_e
@@ -85,8 +85,14 @@ typedef enum NDIlib_recv_color_format_e
 	NDIlib_recv_color_format_e_RGBX_RGBA = NDIlib_recv_color_format_RGBX_RGBA,
 	NDIlib_recv_color_format_e_UYVY_RGBA = NDIlib_recv_color_format_UYVY_RGBA,
 
+#ifdef _WIN32
+	// For Windows we can support flipped images which is unfortunately something that Microsoft decided to do
+	// back in the old days. 
+	NDIlib_recv_color_format_BGRX_BGRA_flipped = 1000 + NDIlib_recv_color_format_BGRX_BGRA,
+#endif
+
 	// Force the size to be 32bits
-	NDIlib_recv_color_format_max = 0xffffffff
+	NDIlib_recv_color_format_max = 0x7fffffff
 } NDIlib_recv_color_format_e;
 
 // The creation structure that is used when you are creating a receiver
@@ -187,6 +193,21 @@ NDIlib_frame_type_e NDIlib_recv_capture_v2(
 	NDIlib_metadata_frame_t* p_metadata,    // The metadata received (can be NULL)
 	uint32_t timeout_in_ms);                // The amount of time in milliseconds to wait for data.
 
+// This will allow you to receive video, audio and metadata frames.
+// Any of the buffers can be NULL, in which case data of that type
+// will not be captured in this call. This call can be called simultaneously
+// on separate threads, so it is entirely possible to receive audio, video, metadata
+// all on separate threads. This function will return NDIlib_frame_type_none if no
+// data is received within the specified timeout and NDIlib_frame_type_error if the connection is lost.
+// Buffers captured with this must be freed with the appropriate free function below.
+PROCESSINGNDILIB_API
+NDIlib_frame_type_e NDIlib_recv_capture_v3(
+	NDIlib_recv_instance_t p_instance,      // The library instance
+	NDIlib_video_frame_v2_t* p_video_data,  // The video data received (can be NULL)
+	NDIlib_audio_frame_v3_t* p_audio_data,  // The audio data received (can be NULL)
+	NDIlib_metadata_frame_t* p_metadata,    // The metadata received (can be NULL)
+	uint32_t timeout_in_ms);                // The amount of time in milliseconds to wait for data.
+
 // Free the buffers returned by capture for video
 PROCESSINGNDILIB_API
 void NDIlib_recv_free_video_v2(NDIlib_recv_instance_t p_instance, const NDIlib_video_frame_v2_t* p_video_data);
@@ -194,6 +215,10 @@ void NDIlib_recv_free_video_v2(NDIlib_recv_instance_t p_instance, const NDIlib_v
 // Free the buffers returned by capture for audio
 PROCESSINGNDILIB_API 
 void NDIlib_recv_free_audio_v2(NDIlib_recv_instance_t p_instance, const NDIlib_audio_frame_v2_t* p_audio_data);
+
+// Free the buffers returned by capture for audio
+PROCESSINGNDILIB_API
+void NDIlib_recv_free_audio_v3(NDIlib_recv_instance_t p_instance, const NDIlib_audio_frame_v3_t* p_audio_data);
 
 // Free the buffers returned by capture for metadata
 PROCESSINGNDILIB_API

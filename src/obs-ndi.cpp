@@ -62,7 +62,7 @@ struct obs_source_info ndi_audiofilter_info;
 extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
-const NDIlib_v3* load_ndilib();
+const NDIlib_v4* load_ndilib();
 
 typedef const NDIlib_v4* (*NDIlib_v4_load_)(void);
 QLibrary* loaded_lib = nullptr;

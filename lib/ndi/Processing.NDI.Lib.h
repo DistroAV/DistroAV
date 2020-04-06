@@ -7,7 +7,7 @@
 //
 //*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2019 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -74,7 +74,11 @@
 
 #ifndef PROCESSINGNDILIB_DEPRECATED
 #	ifdef _WIN32
-#		define PROCESSINGNDILIB_DEPRECATED __declspec(deprecated)
+#		ifdef _MSC_VER
+#			define PROCESSINGNDILIB_DEPRECATED __declspec(deprecated)
+#		else // _MSC_VER
+#			define PROCESSINGNDILIB_DEPRECATED __attribute((deprecated))
+#		endif // _MSC_VER
 #	else // _WIN32
 #		define PROCESSINGNDILIB_DEPRECATED
 #	endif // _WIN32

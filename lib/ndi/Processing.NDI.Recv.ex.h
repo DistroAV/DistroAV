@@ -7,7 +7,7 @@
 //
 //*************************************************************************************************************************************
 // 
-// Copyright(c) 2014-2019 NewTek, inc
+// Copyright(c) 2014-2020, NewTek, inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
 // files(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, 
@@ -40,7 +40,7 @@ bool NDIlib_recv_ptz_is_supported(NDIlib_recv_instance_t p_instance);
 //		newer support which is more feature rich and supports the recording of all stream types, does not take CPU time to record
 //		NDI sources (it does not require any type of re-compression since it can just store the data in the file), it will synchronize
 //		all recorders on a system (and cross systems if NTP clock locking is used). 
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 bool NDIlib_recv_recording_is_supported(NDIlib_recv_instance_t p_instance);
 
 // PTZ Controls
@@ -128,13 +128,13 @@ bool NDIlib_recv_ptz_exposure_manual(NDIlib_recv_instance_t p_instance, const fl
 // not present, a name will be chosen automatically. If you do not with to provide a filename hint you can simply pass NULL. 
 //
 // See note above on depreciation and why this is, and how to replace this functionality.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 bool NDIlib_recv_recording_start(NDIlib_recv_instance_t p_instance, const char* p_filename_hint);
 
 // Stop recording.
 //
 // See note above on depreciation and why this is, and how to replace this functionality.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 bool NDIlib_recv_recording_stop(NDIlib_recv_instance_t p_instance);
 
 // This will control the audio level for the recording.dB is specified in decibels relative to the reference level of the source. Not all recording sources support 
@@ -142,28 +142,28 @@ bool NDIlib_recv_recording_stop(NDIlib_recv_instance_t p_instance);
 // might not support this message.
 //
 // See note above on depreciation and why this is, and how to replace this functionality.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 bool NDIlib_recv_recording_set_audio_level(NDIlib_recv_instance_t p_instance, const float level_dB);
 
 // This will determine if the source is currently recording. It will return true while recording is in progress and false when it is not. Because there is
 // one recorded and multiple people might be connected to it, there is a chance that it is recording which was initiated by someone else.
 //
 // See note above on depreciation and why this is, and how to replace this functionality.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 bool NDIlib_recv_recording_is_recording(NDIlib_recv_instance_t p_instance);
 
 // Get the current filename for recording. When this is set it will return a non-NULL value which is owned by you and freed using NDIlib_recv_free_string. 
 // If a file was already being recorded by another client, the massage will contain the name of that file. The filename contains a UNC path (when one is available) 
 // to the recorded file, and can be used to access the file on your local machine for playback.  If a UNC path is not available, then this will represent the local 
 // filename. This will remain valid even after the file has stopped being recorded until the next file is started.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 const char* NDIlib_recv_recording_get_filename(NDIlib_recv_instance_t p_instance);
 
 // This will tell you whether there was a recording error and what that string is. When this is set it will return a non-NULL value which is owned by you and 
 // freed using NDIlib_recv_free_string. When there is no error it will return NULL.
 //
 // See note above on depreciation and why this is, and how to replace this functionality.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 const char* NDIlib_recv_recording_get_error(NDIlib_recv_instance_t p_instance);
 
 // In order to get the duration 
@@ -184,5 +184,5 @@ typedef struct NDIlib_recv_recording_time_t
 // Get the current recording times. 
 //
 // See note above on depreciation and why this is, and how to replace this functionality.
-PROCESSINGNDILIB_DEPRECATED PROCESSINGNDILIB_API
+PROCESSINGNDILIB_API PROCESSINGNDILIB_DEPRECATED
 bool NDIlib_recv_recording_get_times(NDIlib_recv_instance_t p_instance, NDIlib_recv_recording_time_t* p_times);

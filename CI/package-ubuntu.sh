@@ -4,8 +4,8 @@ set -e
 
 BASE_DIR=$(pwd)
 
-NDILIB_VERSION="4.0.0"
-NDILIB_INSTALLER_SHA256="60c35b3774f45bf9d5b852c87887fbe57dd274a19531824d8b71fa324ca36a02"
+NDILIB_VERSION="4.5.1"
+NDILIB_INSTALLER_SHA256="e0bc795d2281cfa60fcc881366ce19156164a2c7bb1b9f95a1e213f8c87c91dc"
 NDILIB_INSTALLER="/tmp/libndi-install.sh"
 
 cd /tmp
@@ -16,6 +16,7 @@ yes | PAGER="cat" sh $NDILIB_INSTALLER
 
 rm -rf /tmp/ndisdk
 mv "/tmp/NDI SDK for Linux" /tmp/ndisdk
+ls /tmp/ndisdk
 
 cd $BASE_DIR
 
@@ -32,13 +33,13 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
 	--pkglicense="GPLv2" --maintainer="stephane.lepin@gmail.com" \
-	--requires="libndi3 (>= $NDILIB_VERSION)" --pkggroup="video" \
+	--requires="libndi4>=$NDILIB_VERSION" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
 	--pakdir="../package"
 
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi3 --pkgversion="$NDILIB_VERSION" \
+        --pkgname=libndi4 --pkgversion="$NDILIB_VERSION" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
@@ -46,7 +47,7 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi3-dev --pkgversion="$NDILIB_VERSION" --requires="libndi3 (>= $NDILIB_VERSION)" \
+        --pkgname=libndi4-dev --pkgversion="$NDILIB_VERSION" --requires="libndi4>=$NDILIB_VERSION" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
         --pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
