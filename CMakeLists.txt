@@ -65,10 +65,6 @@ if(WIN32)
     if(MSVC)
         # Enable Multicore Builds and disable FH4 (to not depend on VCRUNTIME140_1.DLL)
 	    add_definitions(/MP /d2FH4-)
-
-        # Disable FH4 (to not depend on VCRUNTIME140_1.DLL)
-        # target_compile_options(obs-ndi PRIVATE "-d2FH4-")
-        # target_link_options(obs-ndi PRIVATE "-d2FH4-")
     endif()
 
 	add_definitions(/O2)
