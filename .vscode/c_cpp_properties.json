@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64",
+            "compilerArgs": [
+                "/Users/stephane/develop/obs/obs-studio/UI/libobs/",
+                "/Users/stephane/develop/obs/obs-studio/UI/obs-frontend-api/",
+                "/usr/local/Cellar/qt/5.13.0/include/"
+            ]
+        }
+    ],
+    "version": 4
+}
