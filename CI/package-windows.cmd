@@ -9,4 +9,4 @@ REM Package ZIP archive
 7z a "obs-ndi-%PackageVersion%-Windows.zip" "..\release\*"
 
 REM Build installer
-iscc ..\installer\installer.iss /O. /F"obs-ndi-%PackageVersion%-Windows"
+iscc ..\installer\installer.iss /O. /F"obs-ndi-%PackageVersion%-Windows-Installer"
