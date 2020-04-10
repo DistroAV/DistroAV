@@ -1,3 +1,6 @@
+variables:
+  isReleaseMode: ${{ startsWith(variables['Build.SourceBranch'], 'refs/tags/') }}
+
 jobs:
 - job: 'Build_Windows'
   pool:
@@ -131,11 +134,17 @@ jobs:
     - script: ./CI/build-macos.sh
       displayName: 'Build obs-ndi'
 
+    - task: InstallAppleCertificate@1
+      displayName: 'Install release signing certificates'
+      condition: $(isReleaseMode)
+      inputs:
+        certSecureFile: 'Certificates.p12'
+        certPwd: $(secrets.macOS.certificatesImportPassword)
+
     - script: ./CI/package-macos.sh
       displayName: 'Package obs-ndi'
       env:
-        CERTIFICATES_KEY: $(secrets.macOS.certificatesKey)
-        CERTIFICATES_IV: $(secrets.macOS.certificatesIV)
+        RELEASE_MODE: $(isReleaseMode)
         CODE_SIGNING_IDENTITY: $(secrets.macOS.codeSigningIdentity)
         INSTALLER_SIGNING_IDENTITY: $(secrets.macOS.installerSigningIdentity)
         AC_USERNAME: $(secrets.macOS.notarization.username)
