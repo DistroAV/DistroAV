@@ -12,13 +12,20 @@ fi
 echo "[obs-ndi] Preparing package build"
 export QT_CELLAR_PREFIX="$(/usr/bin/find /usr/local/Cellar/qt -d 1 | sort -t '.' -k 1,1n -k 2,2n -k 3,3n | tail -n 1)"
 
-export GIT_HASH=$(git rev-parse --short HEAD)
-export GIT_BRANCH_OR_TAG=$(git name-rev --name-only HEAD | awk -F/ '{print $NF}')
+GIT_HASH=$(git rev-parse --short HEAD)
+GIT_BRANCH_OR_TAG=$(git name-rev --name-only HEAD | awk -F/ '{print $NF}')
 
-export VERSION="$GIT_HASH-$GIT_BRANCH_OR_TAG"
-export LATEST_VERSION="$GIT_BRANCH_OR_TAG"
+VERSION="$GIT_HASH-$GIT_BRANCH_OR_TAG"
+LATEST_VERSION="$GIT_BRANCH_OR_TAG"
 
-export FILENAME="obs-ndi-$VERSION.pkg"
+FILENAME_UNSIGNED="obs-ndi-$VERSION-Unsigned.pkg"
+FILENAME="obs-ndi-$VERSION.pkg"
+
+RELEASE_MODE=0
+if [[ $BRANCH_FULL_NAME =~ ^refs\/tags\/ ]]; then
+        # TODO create the keychain and load the signing certificates into it
+	RELEASE_MODE=1
+fi
 
 echo "[obs-ndi] Modifying obs-ndi.so"
 install_name_tool \
@@ -34,9 +41,41 @@ install_name_tool \
 echo "[obs-ndi] Dependencies for obs-ndi"
 otool -L ./build/obs-ndi.so
 
+if [[ "$RELEASE_MODE" == "1" ]]; then
+        echo "[obs-ndi] Signing plugin binary: ./build/obs-ndi.so"
+        mv ./build/obs-ndi.so ./build/obs-ndi.unsigned.so
+        productsign --sign \
+                $BINARY_SIGNING_IDENTITY \
+                ./build/obs-ndi.unsigned.so \
+                ./build/obs-ndi.so
+else
+        echo "[obs-ndi] Skipped plugin codesigning"
+fi
+
 echo "[obs-ndi] Actual package build"
 packagesbuild ./installer/obs-ndi.pkgproj
 
 echo "[obs-ndi] Renaming obs-ndi.pkg to $FILENAME"
 mkdir release
-mv ./installer/build/obs-ndi.pkg ./release/$FILENAME
+mv ./installer/build/obs-ndi.pkg ./release/$FILENAME_UNSIGNED
+
+if [[ "$RELEASE_MODE" == "1" ]]; then
+        echo "[obs-ndi] Signing installer: $FILENAME"
+        productsign --sign \
+                $INSTALLER_SIGNING_IDENTITY \
+                ./release/$FILENAME_UNSIGNED \
+                ./release/$FILENAME
+
+        echo "[obs-ndi] Submitting installer $FILENAME for notarization"
+        xcrun altool \
+                --notarize-app \
+                --primary-bundle-id "fr.palakis.obs-ndi"
+                --username $AC_USERNAME
+                --password $AC_PASSWORD
+                --asc-provider $AC_PROVIDER_SHORTNAME
+                --file ./release/$FILENAME
+
+        rm ./release/$FILENAME_UNSIGNED
+else
+        echo "[obs-ndi] Skipped installer codesigning and notarization"
+fi
