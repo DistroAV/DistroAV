@@ -39,7 +39,7 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
-        --pkgname=libndi4 --pkgversion="$NDILIB_VERSION" \
+        --pkgname=libndi4 --replaces=libndi3 --pkgversion="$NDILIB_VERSION" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
