@@ -23,7 +23,20 @@ FILENAME="obs-ndi-$VERSION.pkg"
 
 RELEASE_MODE=0
 if [[ $BRANCH_FULL_NAME =~ ^refs\/tags\/ ]]; then
-        # TODO create the keychain and load the signing certificates into it
+        # Setup keychain (I have to admit, this is straight up copied from OBS' CI)
+	hr "Decrypting Cert"
+	openssl aes-256-cbc -K $encrypted_todo_key -iv $encrypted_todo_iv -in ../CI/osxcert/Certificates.p12.enc -out Certificates.p12 -d
+        hr "Creating Keychain"
+	security create-keychain -p mysecretpassword build.keychain
+	security default-keychain -s build.keychain
+	security unlock-keychain -p mysecretpassword build.keychain
+	security set-keychain-settings -t 3600 -u build.keychain
+        hr "Importing certs into keychain"
+	security import ./Certificates.p12 -k build.keychain -T /usr/bin/productsign -P ""
+	# macOS 10.12+
+	security set-key-partition-list -S apple-tool:,apple: -s -k mysecretpassword build.keychain
+
+        # Enable release mode
 	RELEASE_MODE=1
 fi
 
