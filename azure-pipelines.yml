@@ -1,6 +1,5 @@
 variables:
-  # isReleaseMode: ${{ startsWith(variables['Build.SourceBranch'], 'refs/tags/') }}
-  isReleaseMode: True
+  isReleaseMode: ${{ startsWith(variables['Build.SourceBranch'], 'refs/tags/') }}
 
 trigger:
   branches:
