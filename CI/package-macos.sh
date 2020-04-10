@@ -59,14 +59,20 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 
 	echo "[obs-ndi] Submitting installer $FILENAME for notarization"
 	zip -r ./release/$FILENAME.zip ./release/$FILENAME
-	xcrun altool \
+	UPLOAD_RESULT=`xcrun altool \
 		--notarize-app \
 		--primary-bundle-id "fr.palakis.obs-ndi" \
 		--username "$AC_USERNAME" \
 		--password "$AC_PASSWORD" \
 		--asc-provider "$AC_PROVIDER_SHORTNAME" \
-		--file ./release/$FILENAME.zip
+		--output-format xml \
+		--file "./release/$FILENAME.zip"`
 	rm ./release/$FILENAME.zip
+
+	echo "Request UUID: $UPLOAD_RESULT"
+
+	# echo "[obs-ndi] Wait for notarization result"
+	# TODO
 
 	echo "[obs-ndi] Staple ticket to installer: $FILENAME"
 	xcrun stapler staple ./release/$FILENAME
