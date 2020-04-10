@@ -65,15 +65,21 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 		--username "$AC_USERNAME" \
 		--password "$AC_PASSWORD" \
 		--asc-provider "$AC_PROVIDER_SHORTNAME" \
-		--output-format xml \
 		--file "./release/$FILENAME.zip")
 	rm ./release/$FILENAME.zip
 
 	REQUEST_UUID=$(echo $UPLOAD_RESULT | awk -F ' = ' '/RequestUUID/ {print $2}')
 	echo "Request UUID: $REQUEST_UUID"
 
-	# echo "[obs-ndi] Wait for notarization result"
-	# TODO
+	echo "[obs-ndi] Wait for notarization result"
+	while sleep 30 && date; do
+		CHECK_RESULT=$(xcrun altool \
+			--notarization-info "$REQUEST_UUID"
+			--username "$AC_USERNAME" \
+			--password "$AC_PASSWORD" \
+			--asc-provider "$AC_PROVIDER_SHORTNAME")
+		echo $CHECK_RESULT
+	done
 
 	echo "[obs-ndi] Staple ticket to installer: $FILENAME"
 	xcrun stapler staple ./release/$FILENAME
