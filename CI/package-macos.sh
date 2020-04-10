@@ -34,7 +34,7 @@ if [[ $BRANCH_FULL_NAME =~ ^refs\/tags\/ ]]; then
 	security unlock-keychain -p $KEYCHAIN_PASSWORD build.keychain
 	security set-keychain-settings -t 3600 -u build.keychain
 	hr "Importing certs into keychain"
-	security import ./Certificates.p12 -k build.keychain -T /usr/bin/productsign -P ""
+	security import ./Certificates.p12 -k build.keychain -T /usr/bin/codesign -T /usr/bin/productsign -P ""
 	# macOS 10.12+
 	security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASSWORD build.keychain
 
