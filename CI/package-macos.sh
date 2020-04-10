@@ -16,7 +16,6 @@ GIT_HASH=$(git rev-parse --short HEAD)
 GIT_BRANCH_OR_TAG=$(git name-rev --name-only HEAD | awk -F/ '{print $NF}')
 
 VERSION="$GIT_HASH-$GIT_BRANCH_OR_TAG"
-LATEST_VERSION="$GIT_BRANCH_OR_TAG"
 
 FILENAME_UNSIGNED="obs-ndi-$VERSION-Unsigned.pkg"
 FILENAME="obs-ndi-$VERSION.pkg"
