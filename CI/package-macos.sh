@@ -72,6 +72,7 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 	echo "Request UUID: $REQUEST_UUID"
 
 	echo "[obs-ndi] Wait for notarization result"
+	# Pieces of code borrowed from rednoah/notarized-app
 	while sleep 30 && date; do
 		CHECK_RESULT=$(xcrun altool \
 			--notarization-info "$REQUEST_UUID" \
@@ -79,10 +80,18 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 			--password "$AC_PASSWORD" \
 			--asc-provider "$AC_PROVIDER_SHORTNAME")
 		echo $CHECK_RESULT
-	done
 
-	echo "[obs-ndi] Staple ticket to installer: $FILENAME"
-	xcrun stapler staple ./release/$FILENAME
+		if grep -q "Status: success" <<< "$CHECK_RESULT"; then
+			echo "[obs-ndi] Staple ticket to installer: $FILENAME"
+			xcrun stapler staple ./release/$FILENAME
+			break
+		elif grep -q "Status: in progress" <<< "$CHECK_RESULT"; then
+			continue
+		elif grep -q "Status:" <<< "$CHECK_RESULT"; then
+			echo "[obs-ndi] Unknown notarization error, exiting"
+			exit 1
+		fi
+	done
 else
 	echo "[obs-ndi] Skipped installer codesigning and notarization"
 fi
