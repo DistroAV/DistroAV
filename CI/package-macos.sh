@@ -56,11 +56,7 @@ otool -L ./build/obs-ndi.so
 
 if [[ "$RELEASE_MODE" == "1" ]]; then
         echo "[obs-ndi] Signing plugin binary: ./build/obs-ndi.so"
-        mv ./build/obs-ndi.so ./build/obs-ndi.unsigned.so
-        productsign --sign \
-                $BINARY_SIGNING_IDENTITY \
-                ./build/obs-ndi.unsigned.so \
-                ./build/obs-ndi.so
+        codesign --sign "$BINARY_SIGNING_IDENTITY" ./build/obs-ndi.so
 else
         echo "[obs-ndi] Skipped plugin codesigning"
 fi
@@ -74,8 +70,8 @@ mv ./installer/build/obs-ndi.pkg ./release/$FILENAME_UNSIGNED
 
 if [[ "$RELEASE_MODE" == "1" ]]; then
         echo "[obs-ndi] Signing installer: $FILENAME"
-        productsign --sign \
-                $INSTALLER_SIGNING_IDENTITY \
+        productsign \
+                --sign "$INSTALLER_SIGNING_IDENTITY" \
                 ./release/$FILENAME_UNSIGNED \
                 ./release/$FILENAME
 
