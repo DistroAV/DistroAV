@@ -133,6 +133,14 @@ jobs:
 
     - script: ./CI/package-macos.sh
       displayName: 'Package obs-ndi'
+      env:
+        CERTIFICATES_KEY: $(secrets.macOS.certificatesKey)
+        CERTIFICATES_IV: $(secrets.macOS.certificatesIV)
+        CODE_SIGNING_IDENTITY: $(secrets.macOS.codeSigningIdentity)
+        INSTALLER_SIGNING_IDENTITY: $(secrets.macOS.installerSigningIdentity)
+        AC_USERNAME: $(secrets.macOS.notarizationAccount.username)
+        AC_PASSWORD: $(secrets.macOS.notarizationAccount.password)
+        AC_PROVIDER_SHORTNAME: $(secrets.macOS.notarizationAccount.providerShortname)
 
     - task: PublishBuildArtifacts@1
       inputs:

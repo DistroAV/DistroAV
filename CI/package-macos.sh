@@ -23,31 +23,31 @@ FILENAME="obs-ndi-$VERSION.pkg"
 
 RELEASE_MODE=0
 if [[ $BRANCH_FULL_NAME =~ ^refs\/tags\/ ]]; then
-        # Setup keychain (I have to admit, this is straight up copied from OBS' CI)
+	# Setup keychain (I have to admit, this is straight up copied from OBS' CI)
 	hr "Decrypting Cert"
-	openssl aes-256-cbc -K $encrypted_todo_key -iv $encrypted_todo_iv -in ../CI/osxcert/Certificates.p12.enc -out Certificates.p12 -d
-        hr "Creating Keychain"
+	openssl aes-256-cbc -K $CERTIFICATES_KEY -iv $CERTIFICATES_IV -in ../CI/macos/Certificates.p12.enc -out Certificates.p12 -d
+	hr "Creating Keychain"
 	security create-keychain -p mysecretpassword build.keychain
 	security default-keychain -s build.keychain
 	security unlock-keychain -p mysecretpassword build.keychain
 	security set-keychain-settings -t 3600 -u build.keychain
-        hr "Importing certs into keychain"
+	hr "Importing certs into keychain"
 	security import ./Certificates.p12 -k build.keychain -T /usr/bin/productsign -P ""
 	# macOS 10.12+
 	security set-key-partition-list -S apple-tool:,apple: -s -k mysecretpassword build.keychain
 
-        # Enable release mode
+	# Enable release mode
 	RELEASE_MODE=1
 fi
 
 echo "[obs-ndi] Modifying obs-ndi.so"
 install_name_tool \
 	-change /usr/local/opt/qt/lib/QtWidgets.framework/Versions/5/QtWidgets \
-        @executable_path/../Frameworks/QtWidgets.framework/Versions/5/QtWidgets \
+	@executable_path/../Frameworks/QtWidgets.framework/Versions/5/QtWidgets \
 	-change /usr/local/opt/qt/lib/QtGui.framework/Versions/5/QtGui \
-        @executable_path/../Frameworks/QtGui.framework/Versions/5/QtGui \
+	@executable_path/../Frameworks/QtGui.framework/Versions/5/QtGui \
 	-change /usr/local/opt/qt/lib/QtCore.framework/Versions/5/QtCore \
-        @executable_path/../Frameworks/QtCore.framework/Versions/5/QtCore \
+	@executable_path/../Frameworks/QtCore.framework/Versions/5/QtCore \
 	./build/obs-ndi.so
 
 # Check if replacement worked
@@ -55,10 +55,10 @@ echo "[obs-ndi] Dependencies for obs-ndi"
 otool -L ./build/obs-ndi.so
 
 if [[ "$RELEASE_MODE" == "1" ]]; then
-        echo "[obs-ndi] Signing plugin binary: ./build/obs-ndi.so"
-        codesign --sign "$BINARY_SIGNING_IDENTITY" ./build/obs-ndi.so
+	echo "[obs-ndi] Signing plugin binary: ./build/obs-ndi.so"
+	codesign --sign "$CODE_SIGNING_IDENTITY" ./build/obs-ndi.so
 else
-        echo "[obs-ndi] Skipped plugin codesigning"
+	echo "[obs-ndi] Skipped plugin codesigning"
 fi
 
 echo "[obs-ndi] Actual package build"
@@ -69,22 +69,22 @@ mkdir release
 mv ./installer/build/obs-ndi.pkg ./release/$FILENAME_UNSIGNED
 
 if [[ "$RELEASE_MODE" == "1" ]]; then
-        echo "[obs-ndi] Signing installer: $FILENAME"
-        productsign \
-                --sign "$INSTALLER_SIGNING_IDENTITY" \
-                ./release/$FILENAME_UNSIGNED \
-                ./release/$FILENAME
+	echo "[obs-ndi] Signing installer: $FILENAME"
+	productsign \
+		--sign "$INSTALLER_SIGNING_IDENTITY" \
+		./release/$FILENAME_UNSIGNED \
+		./release/$FILENAME
 
-        echo "[obs-ndi] Submitting installer $FILENAME for notarization"
-        xcrun altool \
-                --notarize-app \
-                --primary-bundle-id "fr.palakis.obs-ndi"
-                --username $AC_USERNAME
-                --password $AC_PASSWORD
-                --asc-provider $AC_PROVIDER_SHORTNAME
-                --file ./release/$FILENAME
+	echo "[obs-ndi] Submitting installer $FILENAME for notarization"
+	xcrun altool \
+		--notarize-app \
+		--primary-bundle-id "fr.palakis.obs-ndi"
+		--username $AC_USERNAME
+		--password $AC_PASSWORD
+		--asc-provider $AC_PROVIDER_SHORTNAME
+		--file ./release/$FILENAME
 
-        rm ./release/$FILENAME_UNSIGNED
+	rm ./release/$FILENAME_UNSIGNED
 else
-        echo "[obs-ndi] Skipped installer codesigning and notarization"
+	echo "[obs-ndi] Skipped installer codesigning and notarization"
 fi
