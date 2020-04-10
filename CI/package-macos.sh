@@ -55,18 +55,34 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 		--sign "$INSTALLER_SIGNING_IDENTITY" \
 		./release/$FILENAME_UNSIGNED \
 		./release/$FILENAME
+	rm ./release/$FILENAME_UNSIGNED
 
 	echo "[obs-ndi] Submitting installer $FILENAME for notarization"
 	zip -r ./release/$FILENAME.zip ./release/$FILENAME
-	xcrun altool \
+	UPLOAD_RESULT=$(xcrun altool \
 		--notarize-app \
 		--primary-bundle-id "fr.palakis.obs-ndi" \
-		--username $AC_USERNAME \
-		--password $AC_PASSWORD \
-		--asc-provider $AC_PROVIDER_SHORTNAME \
-		--file ./release/$FILENAME.zip
+		--username "$AC_USERNAME" \
+		--password "$AC_PASSWORD" \
+		--asc-provider "$AC_PROVIDER_SHORTNAME" \
+		--file ./release/$FILENAME.zip)
+	rm ./release/$FILENAME.zip
 
-	rm ./release/$FILENAME_UNSIGNED ./release/$FILENAME.zip
+	# Code borrowed from rednoah/notarize-app
+	echo "[obs-ndi] Waiting for notarization result..."
+	REQUEST_UUID=$(awk -F ' = ' '/RequestUUID/ {print $2}' "${UPLOAD_RESULT}")
+	while sleep 60 && date; do
+		INFO_LOG=$(xcrun altool \
+			--notarization-info "$REQUEST_UUID" \
+			--username "$AC_USERNAME" \
+			--password "$AC_PASSWORD" \
+			--asc-provider "$AC_PROVIDER_SHORTNAME")
+		
+		echo $INFO_LOG	
+	done
+
+	echo "[obs-ndi] Staple notarized installer: $FILENAME"
+	xcrun stapler staple ./release/$FILENAME
 else
 	echo "[obs-ndi] Skipped installer codesigning and notarization"
 fi
