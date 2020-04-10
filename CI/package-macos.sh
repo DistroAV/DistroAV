@@ -74,7 +74,7 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 	echo "[obs-ndi] Wait for notarization result"
 	while sleep 30 && date; do
 		CHECK_RESULT=$(xcrun altool \
-			--notarization-info "$REQUEST_UUID"
+			--notarization-info "$REQUEST_UUID" \
 			--username "$AC_USERNAME" \
 			--password "$AC_PASSWORD" \
 			--asc-provider "$AC_PROVIDER_SHORTNAME")
