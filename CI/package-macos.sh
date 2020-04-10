@@ -60,10 +60,10 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 	zip -r ./release/$FILENAME.zip ./release/$FILENAME
 	xcrun altool \
 		--notarize-app \
-		--primary-bundle-id "fr.palakis.obs-ndi"
-		--username $AC_USERNAME
-		--password $AC_PASSWORD
-		--asc-provider $AC_PROVIDER_SHORTNAME
+		--primary-bundle-id "fr.palakis.obs-ndi" \
+		--username $AC_USERNAME \
+		--password $AC_PASSWORD \
+		--asc-provider $AC_PROVIDER_SHORTNAME \
 		--file ./release/$FILENAME.zip
 
 	rm ./release/$FILENAME_UNSIGNED ./release/$FILENAME.zip
