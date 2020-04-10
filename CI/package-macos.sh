@@ -55,7 +55,7 @@ echo "[obs-ndi] Dependencies for obs-ndi"
 otool -L ./build/obs-ndi.so
 
 if [[ "$RELEASE_MODE" == "1" ]]; then
-	echo "[obs-ndi] Signing plugin binary: ./build/obs-ndi.so"
+	echo "[obs-ndi] Signing plugin binary: obs-ndi.so"
 	codesign --sign "$CODE_SIGNING_IDENTITY" ./build/obs-ndi.so
 else
 	echo "[obs-ndi] Skipped plugin codesigning"
@@ -76,15 +76,16 @@ if [[ "$RELEASE_MODE" == "1" ]]; then
 		./release/$FILENAME
 
 	echo "[obs-ndi] Submitting installer $FILENAME for notarization"
+	zip -r ./release/$FILENAME.zip ./release/$FILENAME
 	xcrun altool \
 		--notarize-app \
 		--primary-bundle-id "fr.palakis.obs-ndi"
 		--username $AC_USERNAME
 		--password $AC_PASSWORD
 		--asc-provider $AC_PROVIDER_SHORTNAME
-		--file ./release/$FILENAME
+		--file ./release/$FILENAME.zip
 
-	rm ./release/$FILENAME_UNSIGNED
+	rm ./release/$FILENAME_UNSIGNED ./release/$FILENAME.zip
 else
 	echo "[obs-ndi] Skipped installer codesigning and notarization"
 fi
