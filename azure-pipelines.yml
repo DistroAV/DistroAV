@@ -1,6 +1,14 @@
 variables:
   isReleaseMode: ${{ startsWith(variables['Build.SourceBranch'], 'refs/tags/') }}
 
+trigger:
+  branches:
+    include:
+      - master
+  tags:
+    include:
+      - '*'
+
 jobs:
 - job: 'Build_Windows'
   pool:
