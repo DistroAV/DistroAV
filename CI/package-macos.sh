@@ -81,7 +81,7 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 			--asc-provider "$AC_PROVIDER_SHORTNAME")
 		echo $CHECK_RESULT
 
-		if [ ! grep -q "Status: in progress" <<< "$CHECK_RESULT" ]; then
+		if ! grep -q "Status: in progress" <<< "$CHECK_RESULT"; then
 			echo "[obs-ndi] Staple ticket to installer: $FILENAME"
 			xcrun stapler staple ./release/$FILENAME
 			break
