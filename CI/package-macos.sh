@@ -81,15 +81,10 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 			--asc-provider "$AC_PROVIDER_SHORTNAME")
 		echo $CHECK_RESULT
 
-		if grep -q "Status: success" <<< "$CHECK_RESULT"; then
+		if [ ! grep -q "Status: in progress" <<< "$CHECK_RESULT" ]; then
 			echo "[obs-ndi] Staple ticket to installer: $FILENAME"
 			xcrun stapler staple ./release/$FILENAME
 			break
-		elif grep -q "Status: in progress" <<< "$CHECK_RESULT"; then
-			continue
-		elif grep -q "Status:" <<< "$CHECK_RESULT"; then
-			echo "[obs-ndi] Unknown notarization error, exiting"
-			exit 1
 		fi
 	done
 else
