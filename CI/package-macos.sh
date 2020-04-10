@@ -23,18 +23,20 @@ FILENAME="obs-ndi-$VERSION.pkg"
 
 RELEASE_MODE=0
 if [[ $BRANCH_FULL_NAME =~ ^refs\/tags\/ ]]; then
-	# Setup keychain (I have to admit, this is straight up copied from OBS' CI)
+	KEYCHAIN_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
+
+	# Setup keychain (I have to admit, this is almost straight up copied from OBS' CI)
 	hr "Decrypting Cert"
 	openssl aes-256-cbc -K $CERTIFICATES_KEY -iv $CERTIFICATES_IV -in ../CI/macos/Certificates.p12.enc -out Certificates.p12 -d
 	hr "Creating Keychain"
-	security create-keychain -p mysecretpassword build.keychain
+	security create-keychain -p $KEYCHAIN_PASSWORD build.keychain
 	security default-keychain -s build.keychain
-	security unlock-keychain -p mysecretpassword build.keychain
+	security unlock-keychain -p $KEYCHAIN_PASSWORD build.keychain
 	security set-keychain-settings -t 3600 -u build.keychain
 	hr "Importing certs into keychain"
 	security import ./Certificates.p12 -k build.keychain -T /usr/bin/productsign -P ""
 	# macOS 10.12+
-	security set-key-partition-list -S apple-tool:,apple: -s -k mysecretpassword build.keychain
+	security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASSWORD build.keychain
 
 	# Enable release mode
 	RELEASE_MODE=1
