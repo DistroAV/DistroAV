@@ -59,18 +59,20 @@ if [[ "$RELEASE_MODE" == "True" ]]; then
 
 	echo "[obs-ndi] Submitting installer $FILENAME for notarization"
 	zip -r ./release/$FILENAME.zip ./release/$FILENAME
-	UPLOAD_RESULT=$(xcrun altool \
+	xcrun altool \
 		--notarize-app \
 		--primary-bundle-id "fr.palakis.obs-ndi" \
 		--username "$AC_USERNAME" \
 		--password "$AC_PASSWORD" \
 		--asc-provider "$AC_PROVIDER_SHORTNAME" \
 		--output-format xml \
-		--file "./release/$FILENAME.zip")
+		--file "./release/$FILENAME.zip" > /tmp/UploadResult.plist
 	rm ./release/$FILENAME.zip
 
-	REQUEST_UUID=$(echo "$UPLOAD_RESULT" | defaults read - "notarization-upload.RequestUUID")
-	echo "Request UUID: $REQUEST_UUID"
+	cat /tmp/UploadResult.plist
+
+	# REQUEST_UUID=$(defaults read /tmp/UploadResult.plist "notarization-upload.RequestUUID")
+	# echo "Request UUID: $REQUEST_UUID"
 
 	# echo "[obs-ndi] Wait for notarization result"
 	# TODO
