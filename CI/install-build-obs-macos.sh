@@ -29,9 +29,8 @@ cd ..
 echo "[obs-ndi] Cloning obs-studio from GitHub.."
 git clone https://github.com/obsproject/obs-studio
 cd obs-studio
-# OBSLatestTag=$(git describe --tags --abbrev=0)
-# git checkout $OBSLatestTag
-git checkout 24.0.6
+OBSLatestTag=$(git describe --tags --abbrev=0)
+git checkout $OBSLatestTag
 mkdir build && cd build
 echo "[obs-ndi] Building obs-studio.."
 cmake .. \
