@@ -3,6 +3,10 @@ obs-ndi
 
 Network A/V in OBS Studio with NewTek's NDI technology.
 
+Follow the main author on Twitter for news & updates : [@LePalakis](https://twitter.com/LePalakis)
+
+[![Build Status](https://dev.azure.com/Palakis/obs-ndi/_apis/build/status/Palakis.obs-ndi?branchName=master)](https://dev.azure.com/Palakis/obs-ndi/_build/latest?definitionId=1&branchName=master)
+
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
 - **NDI Output** : transmit video and audio from OBS to NDI
@@ -43,8 +47,3 @@ make -j4
 # Copy libobs-ndi.so to the obs-plugins folder
 # Copy libndi.dylib from the NDI SDK to the obs-plugins folder too
 ```
-
-### Automated Builds
-- Windows: [![Automated Build status for Windows](https://ci.appveyor.com/api/projects/status/github/Palakis/obs-ndi)](https://ci.appveyor.com/project/Palakis/obs-ndi/history)
-- Linux: [![Automated Build status for Linux](https://travis-ci.org/Palakis/obs-ndi.svg?branch=master)](https://travis-ci.org/Palakis/obs-ndi)
-- macOS: [![Automated Build status for macOS](https://img.shields.io/azure-devops/build/Palakis/obs-ndi/Palakis.obs-ndi.svg)](https://dev.azure.com/Palakis/obs-ndi/_build)
