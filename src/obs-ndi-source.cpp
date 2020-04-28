@@ -41,6 +41,8 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
 
+// sync mode "Internal" got removed
+#define PROP_SYNC_INTERNAL 0
 #define PROP_SYNC_NDI_TIMESTAMP 1
 #define PROP_SYNC_NDI_SOURCE_TIMECODE 2
 
@@ -456,6 +458,13 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	}
 
 	s->sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
+	// if sync mode is set to the unsupported "Internal" mode, set it
+	// to "Source Timing" mode and apply that change to the settings data
+	if (s->sync_mode == PROP_SYNC_INTERNAL) {
+		s->sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE;
+		obs_data_set_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
+	}
+
 	s->yuv_range =
 		prop_to_range_type((int)obs_data_get_int(settings, PROP_YUV_RANGE));
 	s->yuv_colorspace =
