@@ -41,6 +41,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
 
+// sync mode "Internal" got removed
 #define PROP_SYNC_INTERNAL 0
 #define PROP_SYNC_NDI_TIMESTAMP 1
 #define PROP_SYNC_NDI_SOURCE_TIMECODE 2
@@ -217,9 +218,6 @@ obs_properties_t* ndi_source_getproperties(void* data)
 		OBS_COMBO_FORMAT_INT);
 
 	obs_property_list_add_int(sync_modes,
-		obs_module_text("NDIPlugin.SyncMode.Internal"),
-		PROP_SYNC_INTERNAL);
-	obs_property_list_add_int(sync_modes,
 		obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
 		PROP_SYNC_NDI_TIMESTAMP);
 	obs_property_list_add_int(sync_modes,
@@ -281,7 +279,7 @@ obs_properties_t* ndi_source_getproperties(void* data)
 void ndi_source_getdefaults(obs_data_t* settings)
 {
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
-	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_TIMESTAMP);
+	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
@@ -314,14 +312,6 @@ void* ndi_source_poll_audio_video(void* data)
 				channel_count_to_layout(audio_frame.no_channels);
 
 			switch (s->sync_mode) {
-				case PROP_SYNC_INTERNAL:
-				default:
-					obs_audio_frame.timestamp = os_gettime_ns();
-					obs_audio_frame.timestamp +=
-						((uint64_t)audio_frame.no_samples * 1000000000ULL /
-							(uint64_t)audio_frame.sample_rate);
-					break;
-
 				case PROP_SYNC_NDI_TIMESTAMP:
 					obs_audio_frame.timestamp =
 						(uint64_t)(audio_frame.timestamp * 100.0);
@@ -377,11 +367,6 @@ void* ndi_source_poll_audio_video(void* data)
 			}
 
 			switch (s->sync_mode) {
-				case PROP_SYNC_INTERNAL:
-				default:
-					obs_video_frame.timestamp = os_gettime_ns();
-					break;
-
 				case PROP_SYNC_NDI_TIMESTAMP:
 					obs_video_frame.timestamp =
 						(uint64_t)(video_frame.timestamp * 100);
@@ -473,6 +458,13 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	}
 
 	s->sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
+	// if sync mode is set to the unsupported "Internal" mode, set it
+	// to "Source Timing" mode and apply that change to the settings data
+	if (s->sync_mode == PROP_SYNC_INTERNAL) {
+		s->sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE;
+		obs_data_set_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
+	}
+
 	s->yuv_range =
 		prop_to_range_type((int)obs_data_get_int(settings, PROP_YUV_RANGE));
 	s->yuv_colorspace =
