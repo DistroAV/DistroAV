@@ -32,6 +32,7 @@ cd ./build
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
+        --summary="NewTek NDI integration for OBS Studio" \
 	--pkglicense="GPLv2" --maintainer="stephane.lepin@gmail.com" \
 	--requires="obs-studio \(\>= 25.0.7\), libndi4 \(\>= ${NDILIB_VERSION}\)" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
@@ -40,6 +41,7 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
         --pkgname=libndi4 --replaces=libndi3 --pkgversion="$NDILIB_VERSION" \
+        --summary="NDI $NDILIB_VERSION Runtime" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
        	--pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
@@ -48,6 +50,7 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
         --backup=no --deldoc=yes --install=no \
         --pkgname=libndi4-dev --pkgversion="$NDILIB_VERSION" --requires="libndi4>=$NDILIB_VERSION" \
+        --summary="Development files and headers for the NDI $NDILIB_VERSION Runtime" \
         --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
         --pkggroup="video" \
         --pkgsource="http://ndi.newtek.com" \
