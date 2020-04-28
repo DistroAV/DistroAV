@@ -33,7 +33,7 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 	--backup=no --deldoc=yes --install=no \
 	--pkgname=obs-ndi --pkgversion="$PKG_VERSION" \
 	--pkglicense="GPLv2" --maintainer="stephane.lepin@gmail.com" \
-	--requires="libndi4>=$NDILIB_VERSION" --pkggroup="video" \
+	--requires="obs-studio>=25.0.7,libndi4>=$NDILIB_VERSION" --pkggroup="video" \
 	--pkgsource="https://github.com/Palakis/obs-ndi" \
 	--pakdir="../package"
 
