@@ -168,11 +168,8 @@ if(UNIX AND NOT APPLE)
         execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE UNAME_MACHINE)
 
 	install(TARGETS obs-ndi
-                LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/obs-plugins)
-	# Dirty fix for Ubuntu
-	install(TARGETS obs-ndi
-		LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${UNAME_MACHINE}-linux-gnu/obs-plugins)
+                LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}/obs-plugins)
 
 	install(FILES ${locale_files}
-		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/obs/obs-plugins/obs-ndi/locale")
+		DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/obs/obs-plugins/obs-ndi/locale")
 endif()
