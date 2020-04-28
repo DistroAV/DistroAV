@@ -281,7 +281,7 @@ obs_properties_t* ndi_source_getproperties(void* data)
 void ndi_source_getdefaults(obs_data_t* settings)
 {
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
-	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_TIMESTAMP);
+	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
