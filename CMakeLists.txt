@@ -151,28 +151,18 @@ endif()
 
 # Linux
 if(UNIX AND NOT APPLE)
+	include(GNUInstallDirs)
+
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mtune=core2 -Ofast")
 
-	if(ARCH EQUAL 64)
-		set(ARCH_NAME "x86_64")
-	else()
-		set(ARCH_NAME "i686")
-	endif()
-
 	set_target_properties(obs-ndi PROPERTIES PREFIX "")
-
-	target_link_libraries(obs-ndi
-		obs-frontend-api)
+	target_link_libraries(obs-ndi obs-frontend-api)
 
 	file(GLOB locale_files data/locale/*.ini)
-        execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE UNAME_MACHINE)
 
 	install(TARGETS obs-ndi
-                LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/obs-plugins)
-	# Dirty fix for Ubuntu
-	install(TARGETS obs-ndi
-		LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${UNAME_MACHINE}-linux-gnu/obs-plugins)
+                LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}/obs-plugins)
 
 	install(FILES ${locale_files}
-		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/obs/obs-plugins/obs-ndi/locale")
+		DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/obs/obs-plugins/obs-ndi/locale")
 endif()
