@@ -50,7 +50,7 @@ jobs:
           obs | "$(Agent.OS)"
         path: $(OBSPath)
 
-    - script: ./CI/checkout-cmake-obs-windows.cmd
+    - script: ./CI/prepare-obs-windows.cmd
       displayName: 'Checkout & CMake OBS Studio'
       env:
         build_config: $(build_config)
