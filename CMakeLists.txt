@@ -160,8 +160,12 @@ if(UNIX AND NOT APPLE)
 
 	file(GLOB locale_files data/locale/*.ini)
 
-	install(TARGETS obs-ndi
-                LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}/obs-plugins)
+	install(TARGETS obs-ndi LIBRARY
+		DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/obs-plugins")
+	if(${USE_UBUNTU_FIX})
+		install(TARGETS obs-ndi LIBRARY
+			DESTINATION "/usr/lib/obs-plugins")
+	endif()
 
 	install(FILES ${locale_files}
 		DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/obs/obs-plugins/obs-ndi/locale")
