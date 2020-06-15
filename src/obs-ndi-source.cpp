@@ -25,6 +25,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <util/threading.h>
 #include <chrono>
 #include <thread>
+#include <algorithm>
 
 #include "obs-ndi.h"
 
@@ -307,9 +308,9 @@ void* ndi_source_poll_audio_video(void* data)
 		frame_received = ndiLib->recv_capture_v2(
 			s->ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
+		int channelCount = (int)fmin(8, audio_frame.no_channels);
 		if (frame_received == NDIlib_frame_type_audio) {
-			obs_audio_frame.speakers =
-				channel_count_to_layout(audio_frame.no_channels);
+			obs_audio_frame.speakers = channel_count_to_layout(channelCount);
 
 			switch (s->sync_mode) {
 				case PROP_SYNC_NDI_TIMESTAMP:
@@ -327,7 +328,7 @@ void* ndi_source_poll_audio_video(void* data)
 			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
 			obs_audio_frame.frames = audio_frame.no_samples;
 
-			for (int i = 0; i < audio_frame.no_channels; ++i) {
+			for (int i = 0; i < channelCount; ++i) {
 				obs_audio_frame.data[i] =
 					(uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
 			}
