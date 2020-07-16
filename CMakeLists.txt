@@ -9,6 +9,10 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") 
+    set(CMAKE_CXX_FLAGS "-mfpu=neon")
+endif()
+
 if (WIN32 OR APPLE)
     include(external/FindLibObs.cmake)
 endif()
@@ -153,7 +157,11 @@ endif()
 if(UNIX AND NOT APPLE)
 	include(GNUInstallDirs)
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mtune=core2 -Ofast")
+	if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") 
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mtune=arm7 -Ofast")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mtune=core2 -Ofast")
+	endif()
 
 	set_target_properties(obs-ndi PROPERTIES PREFIX "")
 	target_link_libraries(obs-ndi obs-frontend-api)
