@@ -43,11 +43,11 @@ static void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 	uint8_t* _out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
 	for (uint32_t y = start_y; y < end_y; ++y) {
-		_Y = input[0] + (y * in_linesize[0]);
-		_U = input[1] + (y * in_linesize[1]);
-		_V = input[2] + (y * in_linesize[2]);
+		_Y = input[0] + ((size_t)y * (size_t)in_linesize[0]);
+		_U = input[1] + ((size_t)y * (size_t)in_linesize[1]);
+		_V = input[2] + ((size_t)y * (size_t)in_linesize[2]);
 
-		_out = output + (y * out_linesize);
+		_out = output + ((size_t)y * (size_t)out_linesize);
 
 		for (uint32_t x = 0; x < width; x += 2) {
 			// Quality loss here. Some chroma samples are ignored.
@@ -137,7 +137,7 @@ bool ndi_output_start(void* data)
 				o->conv_function = convert_i444_to_uyvy;
 				o->frame_fourcc = NDIlib_FourCC_video_type_UYVY;
 				o->conv_linesize = width * 2;
-				o->conv_buffer = new uint8_t[height * o->conv_linesize * 2]();
+				o->conv_buffer = new uint8_t[(size_t)height * (size_t)o->conv_linesize * 2]();
 				break;
 
 			case VIDEO_FORMAT_NV12:
@@ -303,7 +303,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 
 	const size_t data_size =
-		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
+		(size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
 	if (data_size > o->audio_conv_buffer_size) {
 		if (o->audio_conv_buffer) {
 			bfree(o->audio_conv_buffer);
@@ -313,7 +313,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	}
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(o->audio_conv_buffer + (i * audio_frame.channel_stride_in_bytes),
+		memcpy(o->audio_conv_buffer + ((size_t)i * (size_t)audio_frame.channel_stride_in_bytes),
 			frame->data[i],
 			audio_frame.channel_stride_in_bytes);
 	}
