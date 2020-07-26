@@ -135,9 +135,6 @@ bool ndi_output_start(void* data)
 		switch (format) {
 			case VIDEO_FORMAT_I444:
 				o->conv_function = convert_i444_to_uyvy;
-				if (!o->conv_function) {
-					return false;
-				}
 				o->frame_fourcc = NDIlib_FourCC_video_type_UYVY;
 				o->conv_linesize = width * 2;
 				o->conv_buffer = new uint8_t[height * o->conv_linesize * 2]();
