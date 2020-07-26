@@ -304,6 +304,11 @@ void* ndi_source_poll_audio_video(void* data)
 
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 	while (s->running) {
+		if (ndiLib->recv_get_no_connections(s->ndi_receiver) == 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
+		}
+
 		frame_received = ndiLib->recv_capture_v3(
 			s->ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
@@ -389,11 +394,6 @@ void* ndi_source_poll_audio_video(void* data)
 
 			obs_source_output_video(s->source, &obs_video_frame);
 			ndiLib->recv_free_video_v2(s->ndi_receiver, &video_frame);
-			continue;
-		}
-
-		if (ndiLib->recv_get_no_connections(s->ndi_receiver) == 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
 	}
