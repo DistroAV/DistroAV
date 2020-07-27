@@ -296,11 +296,12 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	if (!o->started || !o->audio_samplerate || !o->audio_channels)
 		return;
 
-	NDIlib_audio_frame_v2_t audio_frame = {0};
+	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
+	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
 	const size_t data_size =
 		(size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
@@ -318,10 +319,10 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 			audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = (float*)o->audio_conv_buffer;
+	audio_frame.p_data = o->audio_conv_buffer;
 	audio_frame.timecode = (int64_t)(frame->timestamp / 100);
 
-	ndiLib->send_send_audio_v2(o->ndi_sender, &audio_frame);
+	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
 
 struct obs_output_info create_ndi_output_info()
