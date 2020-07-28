@@ -339,7 +339,6 @@ void* ndi_source_poll_audio_video(void* data)
 
 			obs_source_output_audio(s->source, &obs_audio_frame);
 			ndiLib->recv_free_audio_v3(s->ndi_receiver, &audio_frame);
-			continue;
 		}
 
 		if (frame_received == NDIlib_frame_type_video) {
@@ -394,7 +393,6 @@ void* ndi_source_poll_audio_video(void* data)
 
 			obs_source_output_video(s->source, &obs_video_frame);
 			ndiLib->recv_free_video_v2(s->ndi_receiver, &video_frame);
-			continue;
 		}
 	}
 
