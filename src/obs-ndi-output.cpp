@@ -270,12 +270,11 @@ void ndi_output_rawvideo(void* data, struct video_data* frame)
 	video_frame.xres = width;
 	video_frame.yres = height;
 	video_frame.frame_rate_N = (int)(o->video_framerate * 100);
-	video_frame.frame_rate_D = 100;
-	video_frame.picture_aspect_ratio = (float)width / (float)height;
+	video_frame.frame_rate_D = 100; // TODO fixme: broken on fractional framerates
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 	video_frame.timecode = (int64_t)(frame->timestamp / 100);
-
 	video_frame.FourCC = o->frame_fourcc;
+
 	if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
 		o->conv_function(frame->data, frame->linesize,
 							 0, height,
