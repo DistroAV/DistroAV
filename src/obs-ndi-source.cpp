@@ -368,6 +368,10 @@ void* ndi_source_poll_audio_video(void* data)
 				case NDIlib_FourCC_type_NV12:
 					obs_video_frame.format = VIDEO_FORMAT_NV12;
 					break;
+
+				default:
+					blog(LOG_INFO, "warning: unsupported video pixel format: %d", video_frame.FourCC);
+					break;
 			}
 
 			switch (s->sync_mode) {
