@@ -459,7 +459,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	// if sync mode is set to the unsupported "Internal" mode, set it
 	// to "Source Timing" mode and apply that change to the settings data
 	if (s->sync_mode == PROP_SYNC_INTERNAL) {
-		s->sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE;
+		s->sync_mode = PROP_SYNC_NDI_SOURCE_TIMECODE;
 		obs_data_set_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
 
