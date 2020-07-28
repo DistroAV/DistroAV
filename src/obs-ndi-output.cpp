@@ -214,8 +214,10 @@ void ndi_output_stop(void* data, uint64_t ts)
 	o->perf_token = NULL;
 
 	ndiLib->send_destroy(o->ndi_sender);
-	delete o->conv_buffer;
-	o->conv_function = nullptr;
+	if (o->conv_buffer) {
+		delete o->conv_buffer;
+		o->conv_function = nullptr;
+	}
 
 	o->frame_width = 0;
 	o->frame_height = 0;
