@@ -321,7 +321,7 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	}
 
 	audio_frame.p_data = o->audio_conv_buffer;
-	audio_frame.timecode = (int64_t)(frame->timestamp / 100);
+	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
