@@ -3,32 +3,31 @@
 class Qt < Formula
   desc "Cross-platform application and UI framework"
   homepage "https://www.qt.io/"
-  url "https://download.qt.io/official_releases/qt/5.10/5.10.0/single/qt-everywhere-src-5.10.0.tar.xz"
-  mirror "https://www.mirrorservice.org/sites/download.qt-project.org/official_releases/qt/5.10/5.10.0/single/qt-everywhere-opensource-src-5.10.0.tar.xz"
-  sha256 "936d4cf5d577298f4f9fdb220e85b008ae321554a5fcd38072dc327a7296230e"
+  url "https://download.qt.io/official_releases/qt/5.10/5.10.1/single/qt-everywhere-src-5.10.1.tar.xz"
+  mirror "https://www.mirrorservice.org/sites/download.qt-project.org/official_releases/qt/5.10/5.10.1/single/qt-everywhere-src-5.10.1.tar.xz"
+  sha256 "05ffba7b811b854ed558abf2be2ddbd3bb6ddd0b60ea4b5da75d277ac15e740a"
   head "https://code.qt.io/qt/qt5.git", :branch => "5.10", :shallow => false
 
   bottle do
-    sha256 "332ab2f3eb7c13510f460c13d28a562db03297149a3615feb9e3d467fafde56c" => :high_sierra
-    sha256 "c93cf6ead1774cfa7a369c92c7d6a69154bc0dd5b48a0e7ddf3a78202c4a3dc5" => :sierra
-    sha256 "44425e23d8b9c2b8b2f50d850ca94dcd411cd89e20e057c8d6505c9056d06328" => :el_capitan
+    sha256 "8b4bad005596a5f8790150fe455db998ac2406f4e0f04140d6656205d844d266" => :high_sierra
+    sha256 "9c488554935fb573554a4e36d36d3c81e47245b7fefc4b61edef894e67ba1740" => :sierra
+    sha256 "c0407afba5951df6cc4c6f6c1c315972bd41c99cecb4e029919c4c15ab6f7bdc" => :el_capitan
   end
 
   keg_only "Qt 5 has CMake issues when linked"
 
   option "with-docs", "Build documentation"
   option "with-examples", "Build examples"
-  
-  deprecated_option "with-mysql" => "with-mysql-client"
+  option "without-proprietary-codecs", "Don't build with proprietary codecs (e.g. mp3)"
 
   # OS X 10.7 Lion is still supported in Qt 5.5, but is no longer a reference
   # configuration and thus untested in practice. Builds on OS X 10.7 have been
   # reported to fail: <https://github.com/Homebrew/homebrew/issues/45284>.
-  depends_on :macos => :mountain_lion
+  # depends_on :macos => :mountain_lion
 
   depends_on "pkg-config" => :build
   depends_on :xcode => :build
-  depends_on "mysql-client" => :optional
+  depends_on "mysql" => :optional
   depends_on "postgresql" => :optional
 
   # Restore `.pc` files for framework-based build of Qt 5 on OS X. This
@@ -42,18 +41,6 @@ class Qt < Formula
   patch do
     url "https://raw.githubusercontent.com/Homebrew/formula-patches/e8fe6567/qt5/restore-pc-files.patch"
     sha256 "48ff18be2f4050de7288bddbae7f47e949512ac4bcd126c2f504be2ac701158b"
-  end
-
-  # Remove for > 5.10.0
-  # Fix "error: 'loadFileURL:allowingReadAccessToURL:' is only available on
-  # macOS 10.11 or newer [-Werror,-Wunguarded-availability]"
-  # Reported 8 Dec 2017 https://bugreports.qt.io/browse/QTBUG-65075
-  # Equivalent to upstream fix from 8 Dec 2017 https://codereview.qt-project.org/#/c/213993/
-  if MacOS::Xcode.version >= "9.0"
-    patch do
-      url "https://raw.githubusercontent.com/Homebrew/formula-patches/9c97726e2b153099049326ade23fe24b52b778fe/qt/QTBUG-65075.diff"
-      sha256 "a51595868c6173ab53463107e0ee3355576002c32ab80897587c3607589cfd22"
-    end
   end
 
   def install
@@ -75,7 +62,7 @@ class Qt < Formula
 
     args << "-nomake" << "examples" if build.without? "examples"
 
-    if build.with? "mysql-client"
+    if build.with? "mysql"
       args << "-plugin-sql-mysql"
       (buildpath/"brew_shim/mysql_config").write <<~EOS
         #!/bin/sh
@@ -90,6 +77,7 @@ class Qt < Formula
     end
 
     args << "-plugin-sql-psql" if build.with? "postgresql"
+    args << "-proprietary-codecs" if build.with? "proprietary-codecs"
 
     system "./configure", *args
     system "make"
@@ -139,7 +127,6 @@ class Qt < Formula
     (testpath/"main.cpp").write <<~EOS
       #include <QCoreApplication>
       #include <QDebug>
-
       int main(int argc, char *argv[])
       {
         QCoreApplication a(argc, argv);

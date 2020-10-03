@@ -34,13 +34,8 @@ done
 
 # qtndis deps
 echo "[obs-ndi] Installing obs-ndi dependency 'QT 5.10.1'.."
-# =!= NOTICE =!=
-# When building QT5 from sources on macOS 10.13+, use local qt5 formula:
-# brew install ./CI/macos/qt.rb
-# Pouring from the bottle is much quicker though, so use bottle for now.
-# =!= NOTICE =!=
 
-brew install https://gist.githubusercontent.com/DDRBoxman/b3956fab6073335a4bf151db0dcbd4ad/raw/ed1342a8a86793ea8c10d8b4d712a654da121ace/qt.rb
+brew install ./CI/macos/qt.rb
 
 # Pin this version of QT5 to avoid `brew upgrade`
 # upgrading it to incompatible version
