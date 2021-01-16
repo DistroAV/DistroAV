@@ -21,6 +21,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #endif
 
 #include <obs-module.h>
+#include <obs-frontend-api.h>
 #include <util/platform.h>
 #include <util/threading.h>
 #include <chrono>
@@ -70,6 +71,12 @@ struct ndi_source
 	NDIlib_tally_t tally;
 	bool alpha_filter_enabled;
 	os_performance_token_t* perf_token;
+};
+
+struct ndi_preview_check_context
+{
+	bool found;
+	struct ndi_source* s;
 };
 
 static obs_source_t* find_filter_by_id(obs_source_t* context, const char* id)
@@ -409,6 +416,32 @@ void* ndi_source_poll_audio_video(void* data)
 	return nullptr;
 }
 
+bool ndi_source_in_preview(struct ndi_source* s)
+{
+
+	struct ndi_preview_check_context a;
+	a.found = false;
+	a.s = s;
+
+	obs_source_t* preview_scenesource = obs_frontend_get_current_preview_scene();
+	if (preview_scenesource) {
+		obs_scene_t* preview_scene = obs_scene_from_source(preview_scenesource);
+		obs_source_release(preview_scenesource);
+		if (preview_scene) {
+			obs_scene_enum_items(preview_scene, [](obs_scene_t* scene, obs_sceneitem_t* item, void* context) -> bool {
+				struct ndi_preview_check_context* data = (struct ndi_preview_check_context*)context;
+				obs_source_t* curr_source = obs_sceneitem_get_source(item);
+				
+				if (curr_source == data->s->source) {
+					data->found = true;
+				}
+				return !data->found;
+			}, &a);
+		}
+	}
+	return a.found;
+}
+
 void ndi_source_update(void* data, obs_data_t* settings)
 {
 	auto s = (struct ndi_source*)data;
@@ -492,7 +525,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 			recv_desc.source_to_connect_to.p_ndi_name);
 
 		// Update tally status
-		s->tally.on_preview = obs_source_showing(s->source);
+		s->tally.on_preview = ndi_source_in_preview(s);
 		s->tally.on_program = obs_source_active(s->source);
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
 	} else {
@@ -502,12 +535,24 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	}
 }
 
+void ndi_source_videotick(void* data, float seconds)
+{
+	(void)seconds;
+	auto s = (struct ndi_source*)data;
+	if (s->ndi_receiver) {
+		bool newstate = ndi_source_in_preview(s);
+		if (newstate != s->tally.on_preview) {
+			s->tally.on_preview = newstate;
+			ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
+		}
+	}
+}
+
 void ndi_source_shown(void* data)
 {
 	auto s = (struct ndi_source*)data;
-
 	if (s->ndi_receiver) {
-		s->tally.on_preview = true;
+		s->tally.on_preview = ndi_source_in_preview(s);
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
 	}
 }
@@ -578,6 +623,7 @@ struct obs_source_info create_ndi_source_info()
 	ndi_source_info.deactivate		= ndi_source_deactivated;
 	ndi_source_info.create			= ndi_source_create;
 	ndi_source_info.destroy			= ndi_source_destroy;
+	ndi_source_info.video_tick		= ndi_source_videotick;
 
 	return ndi_source_info;
 }
