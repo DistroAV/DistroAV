@@ -418,7 +418,6 @@ void* ndi_source_poll_audio_video(void* data)
 
 bool ndi_source_in_preview(struct ndi_source* s)
 {
-
 	struct ndi_preview_check_context a;
 	a.found = false;
 	a.s = s;
