@@ -35,6 +35,8 @@ class Config {
 	QString OutputName;
 	QString PreviewOutputName;
 	bool PreviewOutputEnabled;
+	bool TallyProgramEnabled;
+	bool TallyPreviewEnabled;
 
   private:
 	static Config* _instance;
