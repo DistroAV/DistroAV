@@ -493,7 +493,7 @@ void ndi_source_update(void* data, obs_data_t* settings)
 			recv_desc.source_to_connect_to.p_ndi_name);
 
 		// Update tally status
-        Config* conf = Config::Current();
+		Config* conf = Config::Current();
 		s->tally.on_preview = conf->TallyPreviewEnabled && obs_source_showing(s->source);
 		s->tally.on_program = conf->TallyProgramEnabled && obs_source_active(s->source);
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
