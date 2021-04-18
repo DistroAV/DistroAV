@@ -38,6 +38,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #define PROP_YUV_RANGE "yuv_range"
 #define PROP_YUV_COLORSPACE "yuv_colorspace"
 #define PROP_LATENCY "latency"
+#define PROP_AUDIO "ndi_audio"
 
 #define PROP_BW_HIGHEST 0
 #define PROP_BW_LOWEST 1
@@ -70,6 +71,7 @@ struct ndi_source
 	bool running;
 	NDIlib_tally_t tally;
 	bool alpha_filter_enabled;
+	bool audio_enabled;
 	os_performance_token_t* perf_token;
 };
 
@@ -261,6 +263,9 @@ obs_properties_t* ndi_source_getproperties(void* data)
 		obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
 		PROP_LATENCY_LOW);
 
+	obs_properties_add_bool(props, PROP_AUDIO,
+		obs_module_text("NDIPlugin.SourceProps.Audio"));
+
 	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com", [](
 		obs_properties_t *pps,
 		obs_property_t *prop,
@@ -285,6 +290,7 @@ void ndi_source_getdefaults(obs_data_t* settings)
 	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
+	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 }
 
 void* ndi_source_poll_audio_video(void* data)
@@ -316,30 +322,32 @@ void* ndi_source_poll_audio_video(void* data)
 
 		int channelCount = (int)fmin(8, audio_frame.no_channels);
 		if (frame_received == NDIlib_frame_type_audio) {
-			obs_audio_frame.speakers = channel_count_to_layout(channelCount);
+			if(s->audio_enabled) {
+				obs_audio_frame.speakers = channel_count_to_layout(channelCount);
 
-			switch (s->sync_mode) {
-				case PROP_SYNC_NDI_TIMESTAMP:
-					obs_audio_frame.timestamp =
-						(uint64_t)(audio_frame.timestamp * 100);
-					break;
+				switch (s->sync_mode) {
+					case PROP_SYNC_NDI_TIMESTAMP:
+						obs_audio_frame.timestamp =
+							(uint64_t)(audio_frame.timestamp * 100);
+						break;
 
-				case PROP_SYNC_NDI_SOURCE_TIMECODE:
-					obs_audio_frame.timestamp =
-						(uint64_t)(audio_frame.timecode * 100);
-					break;
+					case PROP_SYNC_NDI_SOURCE_TIMECODE:
+						obs_audio_frame.timestamp =
+							(uint64_t)(audio_frame.timecode * 100);
+						break;
+				}
+
+				obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
+				obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
+				obs_audio_frame.frames = audio_frame.no_samples;
+
+				for (int i = 0; i < channelCount; ++i) {
+					obs_audio_frame.data[i] =
+						(uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
+				}
+
+				obs_source_output_audio(s->source, &obs_audio_frame);
 			}
-
-			obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
-			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
-			obs_audio_frame.frames = audio_frame.no_samples;
-
-			for (int i = 0; i < channelCount; ++i) {
-				obs_audio_frame.data[i] =
-					(uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
-			}
-
-			obs_source_output_audio(s->source, &obs_audio_frame);
 			ndiLib->recv_free_audio_v3(s->ndi_receiver, &audio_frame);
 		}
 
@@ -477,6 +485,8 @@ void ndi_source_update(void* data, obs_data_t* settings)
 	const bool is_unbuffered =
 		(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOW);
 	obs_source_set_async_unbuffered(s->source, is_unbuffered);
+
+	s->audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 
 	s->ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
 	if (s->ndi_receiver) {
