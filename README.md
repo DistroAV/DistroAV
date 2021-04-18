@@ -3,9 +3,9 @@ obs-ndi
 
 Network A/V in OBS Studio with NewTek's NDI technology.
 
-Follow the main author on Twitter for news & updates : [@LePalakis](https://twitter.com/LePalakis)
-
 [![Build Status](https://dev.azure.com/Palakis/obs-ndi/_apis/build/status/Palakis.obs-ndi?branchName=master)](https://dev.azure.com/Palakis/obs-ndi/_build/latest?definitionId=1&branchName=master)
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/fold_left.svg?style=social&label=Follow%20%40LePalakis)](https://twitter.com/LePalakis)
+[![Financial Contributors on Open Collective](https://opencollective.com/obs-websocket/all/badge.svg?label=financial+contributors)](https://opencollective.com/obs-websocket)
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
@@ -20,18 +20,20 @@ Binaries for Windows, macOS and Linux are available in the [Releases](https://gi
 You'll need CMake and a working development environment for OBS Studio installed on your computer.
 
 ### Windows
-In cmake-gui, you'll have to set these CMake variables :
+In cmake-gui, you'll have to set these CMake variables:
 - **QTDIR** (path) : location of the Qt environment suited for your compiler and architecture
-- **LIBOBS_INCLUDE_DIR** (path) : location of the libobs subfolder in the source code of OBS Studio
+- **LIBOBS_INCLUDE_DIR** (path) : location of the `libobs` subfolder in the source code of OBS Studio
 - **LIBOBS_LIB** (filepath) : location of the obs.lib file
 - **OBS_FRONTEND_LIB** (filepath) : location of the obs-frontend-api.lib file
 
 ### Linux
-On Debian/Ubuntu :  
+On Debian/Ubuntu:
 ```
+# Start by installing the latest libndi deb available [here](https://github.com/Palakis/obs-ndi/releases).
 git clone https://github.com/Palakis/obs-ndi.git
 cd obs-ndi
 mkdir build && cd build
+# If you are on Ubuntu, add the `-DUSE_UBUNTU_FIX=true` flag to your cmake command
 cmake -DLIBOBS_INCLUDE_DIR="<path to the libobs sub-folder in obs-studio's source code>" -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j4
 sudo make install
