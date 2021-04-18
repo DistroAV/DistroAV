@@ -28,6 +28,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <algorithm>
 
 #include "obs-ndi.h"
+#include "Config.h"
 
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BANDWIDTH "ndi_bw_mode"
@@ -492,8 +493,9 @@ void ndi_source_update(void* data, obs_data_t* settings)
 			recv_desc.source_to_connect_to.p_ndi_name);
 
 		// Update tally status
-		s->tally.on_preview = obs_source_showing(s->source);
-		s->tally.on_program = obs_source_active(s->source);
+		Config* conf = Config::Current();
+		s->tally.on_preview = conf->TallyPreviewEnabled && obs_source_showing(s->source);
+		s->tally.on_program = conf->TallyProgramEnabled && obs_source_active(s->source);
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
 	} else {
 		blog(LOG_ERROR,
@@ -507,7 +509,7 @@ void ndi_source_shown(void* data)
 	auto s = (struct ndi_source*)data;
 
 	if (s->ndi_receiver) {
-		s->tally.on_preview = true;
+		s->tally.on_preview = (Config::Current())->TallyPreviewEnabled;
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
 	}
 }
@@ -527,7 +529,7 @@ void ndi_source_activated(void* data)
 	auto s = (struct ndi_source*)data;
 
 	if (s->ndi_receiver) {
-		s->tally.on_program = true;
+		s->tally.on_program = (Config::Current())->TallyProgramEnabled;
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
 	}
 }

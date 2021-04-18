@@ -42,6 +42,9 @@ void OutputSettings::onFormAccepted() {
 	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	conf->PreviewOutputName = ui->previewOutputName->text();
 
+	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
+	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
+
 	conf->Save();
 
 	if (conf->OutputEnabled) {
@@ -72,6 +75,9 @@ void OutputSettings::showEvent(QShowEvent* event) {
 
 	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
 	ui->previewOutputName->setText(conf->PreviewOutputName);
+
+	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
+	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);
 }
 
 void OutputSettings::ToggleShowHide() {
