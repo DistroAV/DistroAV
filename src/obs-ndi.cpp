@@ -200,7 +200,9 @@ const NDIlib_v4* load_ndilib()
 	locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
 #if defined(__linux__) || defined(__APPLE__)
 	locations << "/usr/lib";
+	locations << "/usr/lib64";
 	locations << "/usr/local/lib";
+	locations << "/usr/local/lib64";
 #endif
 
 	for (QString path : locations) {
