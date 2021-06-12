@@ -23,6 +23,7 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <util/platform.h>
 #include <util/threading.h>
+#include <util/util_uint64.h>
 #include <chrono>
 #include <thread>
 #include <algorithm>
@@ -336,6 +337,10 @@ void* ndi_source_poll_audio_video(void* data)
 							(uint64_t)(audio_frame.timecode * 100);
 						break;
 				}
+				if (!obs_audio_frame.timestamp)
+					obs_audio_frame.timestamp = os_gettime_ns() -
+					util_mul_div64(audio_frame.no_samples,
+					1000000000ULL, audio_frame.sample_rate);
 
 				obs_audio_frame.samples_per_sec = audio_frame.sample_rate;
 				obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
