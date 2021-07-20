@@ -4,6 +4,7 @@
 /release/
 /installer/Output/
 /installer/installer-windows.generated.iss
+/src/obs-ndi-macros.generated.h
 .DS_Store
 .idea
 .vscode
