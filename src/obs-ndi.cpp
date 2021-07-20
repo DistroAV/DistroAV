@@ -7,34 +7,48 @@
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QDir>
+#include <QAction>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
 
 #include "obs-ndi.h"
+#include "forms/SettingsDialog.h"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
+SettingsDialog *_settingsDialog = nullptr;
+
 // Global LibNdi pointer
-const NDIlib_v5* ndiLib = nullptr;
+const NDIlib_v5 *ndiLib = nullptr;
 
 // QLibrary pointer for the loaded LibNdi binary file
-QLibrary* loaded_lib = nullptr;
+QLibrary *loaded_lib = nullptr;
 
 // Define LibNdi load function
-const NDIlib_v5* load_ndilib();
+const NDIlib_v5 *load_ndilib();
 
 bool obs_module_load(void)
 {
 	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version %s | Linked LibNDI Version %s)", OBS_NDI_VERSION, LIBNDI_VERSION);
 
-	QMainWindow* main_window = (QMainWindow*)obs_frontend_get_main_window();
-
-	if (!main_window) {
+	// Get main window pointer
+	QMainWindow *mainWindow = (QMainWindow*)obs_frontend_get_main_window();
+	if (!mainWindow) {
 		blog(LOG_ERROR, "[obs_module_load] MainWindow not found! Cannot load.");
 		return false;
 	}
+
+	// Create the Settings Dialog
+	obs_frontend_push_ui_translation(obs_module_get_string);
+	_settingsDialog = new SettingsDialog(mainWindow);
+	obs_frontend_pop_ui_translation();
+
+	// Add the settings dialog as a menu action the the Tools menu
+	const char* menuActionText = obs_module_text("OBSNdi.SettingsDialog.Title");
+	QAction *menuAction = (QAction*)obs_frontend_add_tools_menu_qaction(menuActionText);
+	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
 
 	ndiLib = load_ndilib();
 	if (!ndiLib) {
@@ -48,7 +62,7 @@ bool obs_module_load(void)
 		error_string_id += "Linux";
 #endif
 
-		QMessageBox::critical(main_window,
+		QMessageBox::critical(mainWindow,
 			obs_module_text("OBSNdi.PluginLoad.LibError.Title"),
 			obs_module_text(error_string_id.c_str()),
 			QMessageBox::Ok, QMessageBox::NoButton);
@@ -79,9 +93,9 @@ const char* obs_module_description()
 	return "NDI input/output integration for OBS Studio";
 }
 
-typedef const NDIlib_v5* (*NDIlib_v5_load_)(void);
+typedef const NDIlib_v5 *(*NDIlib_v5_load_)(void);
 
-const NDIlib_v5* load_ndilib()
+const NDIlib_v5 *load_ndilib()
 {
 	std::vector<std::string> libraryLocations;
 	const char* redistFolder = std::getenv(NDILIB_REDIST_FOLDER);
@@ -108,12 +122,10 @@ const NDIlib_v5* load_ndilib()
 				NDIlib_v5_load_ lib_load =
 					(NDIlib_v5_load_)loaded_lib->resolve("NDIlib_v5_load");
 
-				if (lib_load != nullptr) {
+				if (lib_load != nullptr)
 					return lib_load();
-				}
-				else {
+				else
 					blog(LOG_ERROR, "[load_ndilib] NDIlib_v5_load not found in loaded library.");
-				}
 			}
 			else {
 				delete loaded_lib;
