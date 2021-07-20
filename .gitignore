@@ -3,6 +3,7 @@
 /build64/
 /release/
 /installer/Output/
+/installer/installer-windows.generated.iss
 .DS_Store
 .idea
 .vscode
