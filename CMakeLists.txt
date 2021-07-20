@@ -51,6 +51,10 @@ find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
 
 # Configure files
 configure_file(
+	src/obs-ndi-macros.h.in
+	../src/obs-ndi-macros.generated.h
+)
+configure_file(
 	installer/installer-windows.iss.in
 	../installer/installer-windows.generated.iss)
 

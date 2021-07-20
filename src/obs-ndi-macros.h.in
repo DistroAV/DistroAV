@@ -1,0 +1,5 @@
+#pragma once
+
+#define OBS_NDI_VERSION "@CMAKE_PROJECT_VERSION@"
+
+#define LIBNDI_VERSION "@LIBNDI_VERSION@"
