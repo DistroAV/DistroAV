@@ -50,18 +50,18 @@
 #			ifdef _WIN64
 #				define NDILIB_LIBRARY_NAME  "Processing.NDI.Lib.x64.dll"
 #				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#				define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV4"
+#				define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV5"
 #			else // _WIN64
 #				define NDILIB_LIBRARY_NAME  "Processing.NDI.Lib.x86.dll"
 #				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#				define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV4"
+#				define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV5"
 #			endif // _WIN64
 #		endif // PROCESSINGNDILIB_EXPORTS
 #	else // _WIN32
 #		ifdef __APPLE__
 #			define NDILIB_LIBRARY_NAME  "libndi.dylib"
 #			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#			define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV4Apple"
+#			define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV5Apple"
 #		else // __APPLE__
 #			define NDILIB_LIBRARY_NAME  "libndi.so.5"
 #			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
