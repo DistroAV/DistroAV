@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>699</width>
-    <height>202</height>
+    <height>493</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,67 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QFormLayout" name="formLayout"/>
+    <widget class="QGroupBox" name="settingsGroupBox">
+     <property name="title">
+      <string>OBSNdi.SettingsDialog.SettingsGroupBox.Title</string>
+     </property>
+     <widget class="QWidget" name="formLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>30</y>
+        <width>661</width>
+        <height>171</height>
+       </rect>
+      </property>
+      <layout class="QFormLayout" name="formLayout"/>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="outputsGroupBox">
+     <property name="title">
+      <string>OBSNdi.SettingsDialog.OutputsGroupBox.Title</string>
+     </property>
+     <widget class="QGroupBox" name="programOutputGroupBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>30</y>
+        <width>661</width>
+        <height>81</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>OBSNdi.SettingsDialog.ProgramOutputGroupBox.Title</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QGroupBox" name="previewOutputGroupBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>120</y>
+        <width>661</width>
+        <height>81</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>OBSNdi.SettingsDialog.PreviewOutputGroupBox.Title</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
