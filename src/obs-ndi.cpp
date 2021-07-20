@@ -20,18 +20,18 @@ OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
 SettingsDialog *_settingsDialog = nullptr;
 
-// Global LibNdi pointer
+// Global NDILib pointer
 const NDIlib_v5 *ndiLib = nullptr;
 
-// QLibrary pointer for the loaded LibNdi binary file
+// QLibrary pointer for the loaded NDILib binary file
 QLibrary *loaded_lib = nullptr;
 
-// Define LibNdi load function
+// Define NDILib load function
 const NDIlib_v5 *load_ndilib();
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version %s | Linked LibNDI Version %s)", OBS_NDI_VERSION, LIBNDI_VERSION);
+	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version %s | Linked NDILib Version %s)", OBS_NDI_VERSION, NDILIB_HEADERS_VERSION);
 
 	// Get main window pointer
 	QMainWindow *mainWindow = (QMainWindow*)obs_frontend_get_main_window();
@@ -69,7 +69,7 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	//blog(LOG_INFO, "[obs_module_load] NDI library initialized successfully (%s)", ndiLib->version());
+	blog(LOG_INFO, "[obs_module_load] Finished loading. NDI Runtime Version: %s", ndiLib->version());
 
 	return true;
 }
@@ -112,12 +112,12 @@ const NDIlib_v5 *load_ndilib()
 
 		if (libPath.exists() && libPath.isFile()) {
 			QString libFilePath = libPath.absoluteFilePath();
-			blog(LOG_INFO, "[load_ndilib] Found NDI 5 library file at '%s'",
+			blog(LOG_INFO, "[load_ndilib] Found NDI library file at '%s'",
 				libFilePath.toUtf8().constData());
 
 			loaded_lib = new QLibrary(libFilePath, nullptr);
 			if (loaded_lib->load()) {
-				blog(LOG_INFO, "[load_ndilib] NDI 5 runtime loaded successfully.");
+				blog(LOG_INFO, "[load_ndilib] NDI runtime loaded successfully.");
 
 				NDIlib_v5_load_ lib_load =
 					(NDIlib_v5_load_)loaded_lib->resolve("NDIlib_v5_load");

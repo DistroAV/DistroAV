@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16...3.20)
 project(obs-ndi VERSION 5.0.0)
-set(LIBNDI_VERSION 5.0.0)
+set(NDILIB_HEADERS_VERSION 5.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
