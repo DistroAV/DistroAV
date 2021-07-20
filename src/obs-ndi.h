@@ -7,3 +7,5 @@
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
 #define QT_TO_UTF8(str) str.toUtf8().constData()
+
+extern const NDIlib_v5* ndiLib;
