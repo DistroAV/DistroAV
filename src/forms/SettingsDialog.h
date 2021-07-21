@@ -16,8 +16,7 @@ public:
 	void ToggleShowHide();
 
 private Q_SLOTS:
-	void DialogButtonClicked(QAbstractButton *button);
-	void SaveFormData();
+	//void DialogButtonClicked(QAbstractButton *button);
 
 private:
 	Ui::SettingsDialog *ui;
