@@ -111,15 +111,15 @@ if(WIN32)
 		set(OBS_BUILDDIR_ARCH "build32")
 	endif()
 
-    find_package(w32-pthreads REQUIRED)
+    # find_package(w32-pthreads REQUIRED)
 
 	#include_directories(
 	#	"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/UI"
 	#)
 
 	target_link_libraries(obs-ndi
-		"${OBS_FRONTEND_LIB}"
-        w32-pthreads)
+		"${OBS_FRONTEND_LIB}")
+        # w32-pthreads)
 
 	# Release package helper
 	# The "release" folder has a structure similar OBS' one on Windows
