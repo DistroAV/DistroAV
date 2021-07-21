@@ -356,6 +356,7 @@ jobs:
           mv "NDI SDK for Linux" /tmp/ndisdk
       - name: 'Package SDK Binaries'
         run: |
+          chmod +x ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
           PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
             --backup=no --deldoc=yes --install=no \
             --pkgname=libndi5 --replaces=libndi4 --pkgversion="${{ env.NDILIB_VERSION }}" \
@@ -365,6 +366,7 @@ jobs:
             --pakdir="../package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
       - name: 'Package Dev SDK Binaries'
         run: |
+          chmod +x ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
           PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
             --backup=no --deldoc=yes --install=no \
             --pkgname=libndi5-dev --pkgversion="${{ env.NDILIB_VERSION }}" --requires="libndi5 \(\>= ${{ env.NDILIB_VERSION }}\)" \
