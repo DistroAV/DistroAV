@@ -328,7 +328,7 @@ jobs:
   ubuntu64-ndi-runtime:
     name: 'Package NDI Runtime [Ubuntu]'
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/master' }}
+    if: ${{ github.ref == 'refs/heads/rewrite' }}
     env:
       NDILIB_VERSION: "5.0.0"
       SDK_DOWNLOAD_URL: "https://tt2468.net/dl/ndi/Install_NDI_SDK_v5_Linux.tar.gz"
