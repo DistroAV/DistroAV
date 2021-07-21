@@ -338,6 +338,14 @@ jobs:
         with:
           path: ${{ github.workspace }}/obs-ndi
           submodules: 'recursive'
+      - name: 'Install prerequisites (Apt)'
+        shell: bash
+        run: |
+          sudo dpkg --add-architecture amd64
+          sudo apt-get -qq update
+          sudo apt-get install -y \
+           build-essential \
+           checkinstall
       - name: 'Download and Extract SDK'
         run: |
           curl -kL -o ndi_sdk.tar.gz ${{ env.SDK_DOWNLOAD_URL }} -f --retry 5
