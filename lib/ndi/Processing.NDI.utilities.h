@@ -38,16 +38,16 @@
 
 // This describes an audio frame
 typedef struct NDIlib_audio_frame_interleaved_16s_t
-{	// The sample-rate of this buffer
+{	// The sample-rate of this buffer.
 	int sample_rate;
 
-	// The number of audio channels
+	// The number of audio channels.
 	int no_channels;
 
-	// The number of audio samples per channel
+	// The number of audio samples per channel.
 	int no_samples;
 
-	// The timecode of this frame in 100ns intervals
+	// The timecode of this frame in 100ns intervals.
 	int64_t timecode;
 
 	// The audio reference level in dB. This specifies how many dB above the reference level (+4dBU) is the
@@ -58,7 +58,7 @@ typedef struct NDIlib_audio_frame_interleaved_16s_t
 	//   because you have 20dB of headroom before clipping.
 	int reference_level;
 
-	// The audio data, interleaved 16bpp
+	// The audio data, interleaved 16bpp.
 	int16_t* p_data;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -68,18 +68,18 @@ typedef struct NDIlib_audio_frame_interleaved_16s_t
 
 } NDIlib_audio_frame_interleaved_16s_t;
 
-// This describes an audio frame
+// This describes an audio frame.
 typedef struct NDIlib_audio_frame_interleaved_32s_t
-{	// The sample-rate of this buffer
+{	// The sample-rate of this buffer.
 	int sample_rate;
 
-	// The number of audio channels
+	// The number of audio channels.
 	int no_channels;
 
-	// The number of audio samples per channel
+	// The number of audio samples per channel.
 	int no_samples;
 
-	// The timecode of this frame in 100ns intervals
+	// The timecode of this frame in 100ns intervals.
 	int64_t timecode;
 
 	// The audio reference level in dB. This specifies how many dB above the reference level (+4dBU) is the
@@ -90,7 +90,7 @@ typedef struct NDIlib_audio_frame_interleaved_32s_t
 	//   because you have 20dB of headroom before clipping.
 	int reference_level;
 
-	// The audio data, interleaved 32bpp
+	// The audio data, interleaved 32bpp.
 	int32_t* p_data;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -100,21 +100,21 @@ typedef struct NDIlib_audio_frame_interleaved_32s_t
 
 } NDIlib_audio_frame_interleaved_32s_t;
 
-// This describes an audio frame
+// This describes an audio frame.
 typedef struct NDIlib_audio_frame_interleaved_32f_t
-{	// The sample-rate of this buffer
+{	// The sample-rate of this buffer.
 	int sample_rate;
 
-	// The number of audio channels
+	// The number of audio channels.
 	int no_channels;
 
-	// The number of audio samples per channel
+	// The number of audio samples per channel.
 	int no_samples;
 
-	// The timecode of this frame in 100ns intervals
+	// The timecode of this frame in 100ns intervals.
 	int64_t timecode;
 
-	// The audio data, interleaved 32bpp
+	// The audio data, interleaved 32bpp.
 	float* p_data;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -124,39 +124,39 @@ typedef struct NDIlib_audio_frame_interleaved_32f_t
 
 } NDIlib_audio_frame_interleaved_32f_t;
 
-// This will add an audio frame in interleaved 16bpp
+// This will add an audio frame in interleaved 16bpp.
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_16s(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_16s_t* p_audio_data);
 
-// This will add an audio frame in interleaved 32bpp
+// This will add an audio frame in interleaved 32bpp.
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_32s(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_32s_t* p_audio_data);
 
-// This will add an audio frame in interleaved floating point
+// This will add an audio frame in interleaved floating point.
 PROCESSINGNDILIB_API
 void NDIlib_util_send_send_audio_interleaved_32f(NDIlib_send_instance_t p_instance, const NDIlib_audio_frame_interleaved_32f_t* p_audio_data);
 
-// Convert to interleaved 16bpp
+// Convert to interleaved 16bpp.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_to_interleaved_16s_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_16s_t* p_dst);
 
-// Convert from interleaved 16bpp
+// Convert from interleaved 16bpp.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_16s_v2(const NDIlib_audio_frame_interleaved_16s_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
 
-// Convert to interleaved 32bpp
+// Convert to interleaved 32bpp.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_to_interleaved_32s_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_32s_t* p_dst);
 
-// Convert from interleaved 32bpp
+// Convert from interleaved 32bpp.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_32s_v2(const NDIlib_audio_frame_interleaved_32s_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
 
-// Convert to interleaved floating point
+// Convert to interleaved floating point.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_to_interleaved_32f_v2(const NDIlib_audio_frame_v2_t* p_src, NDIlib_audio_frame_interleaved_32f_t* p_dst);
 
-// Convert from interleaved floating point
+// Convert from interleaved floating point.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_32f_v2(const NDIlib_audio_frame_interleaved_32f_t* p_src, NDIlib_audio_frame_v2_t* p_dst);
 

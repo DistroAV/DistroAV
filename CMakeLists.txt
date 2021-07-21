@@ -67,6 +67,7 @@ set(obs-ndi_SOURCES
 
 set(obs-ndi_HEADERS
 	src/obs-ndi.h
+    src/obs-ndi-macros.generated.h
     src/forms/SettingsDialog.h)
 
 
