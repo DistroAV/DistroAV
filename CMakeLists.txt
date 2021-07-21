@@ -87,6 +87,95 @@ target_link_libraries(obs-ndi
 	Qt5::Core
 	Qt5::Widgets)
 
+# Windows-specific build settings and tasks
+if(WIN32)
+	if(NOT DEFINED OBS_FRONTEND_LIB)
+		set(OBS_FRONTEND_LIB "OBS_FRONTEND_LIB-NOTFOUND" CACHE FILEPATH "OBS frontend library")
+		message(FATAL_ERROR "Could not find OBS Frontend API's library!")
+	endif()
+
+	if(MSVC)
+		# Enable Multicore Builds and disable FH4 (to not depend on VCRUNTIME140_1.DLL)
+		add_definitions(/MP /d2FH4-)
+	endif()
+
+	add_definitions(/O2)
+    string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+	message("${CMAKE_CXX_FLAGS_RELEASE}")
+
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(ARCH_NAME "64bit")
+		set(OBS_BUILDDIR_ARCH "build64")
+	else()
+		set(ARCH_NAME "32bit")
+		set(OBS_BUILDDIR_ARCH "build32")
+	endif()
+
+    find_package(w32-pthreads REQUIRED)
+
+	#include_directories(
+	#	"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/UI"
+	#)
+
+	target_link_libraries(obs-ndi
+		"${OBS_FRONTEND_LIB}"
+        w32-pthreads)
+
+	# Release package helper
+	# The "release" folder has a structure similar OBS' one on Windows
+	set(RELEASE_DIR "${PROJECT_SOURCE_DIR}/release")
+
+	add_custom_command(TARGET obs-ndi POST_BUILD
+		# If config is Release or RelWithDebInfo, package release files
+		COMMAND if $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>==1 (
+			"${CMAKE_COMMAND}" -E make_directory
+			"${RELEASE_DIR}/obs-plugins/${ARCH_NAME}"
+		)
+
+		COMMAND if $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>==1 (
+			"${CMAKE_COMMAND}" -E copy_directory
+			"${PROJECT_SOURCE_DIR}/data"
+			"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
+		)
+
+		COMMAND if $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>==1 (
+			"${CMAKE_COMMAND}" -E copy
+			"$<TARGET_FILE:obs-ndi>"
+			"${RELEASE_DIR}/obs-plugins/${ARCH_NAME}"
+		)
+
+		# If config is RelWithDebInfo, package PDB file for target
+		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
+			"${CMAKE_COMMAND}" -E copy
+			"$<TARGET_PDB_FILE:obs-ndi>"
+			"${RELEASE_DIR}/obs-plugins/${ARCH_NAME}"
+		)
+
+		# In the Debug configuration, copy to obs-studio dev environment for immediate testing
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E copy
+				"$<TARGET_FILE:obs-ndi>"
+				"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/obs-plugins/${ARCH_NAME}"
+		)
+
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E copy
+			"$<TARGET_PDB_FILE:obs-ndi>"
+			"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/obs-plugins/${ARCH_NAME}"
+		)
+
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E make_directory
+			"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/data/obs-plugins/obs-ndi"
+		)
+
+		COMMAND if $<CONFIG:Debug>==1 (
+			"${CMAKE_COMMAND}" -E copy_directory
+			"${PROJECT_SOURCE_DIR}/data"
+			"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/data/obs-plugins/obs-ndi"
+		)
+	)
+endif()
 
 # Linux-specific build settings
 if(UNIX AND NOT APPLE)
