@@ -325,3 +325,42 @@ jobs:
         with:
           name: '${{ env.GIT_HASH }}-Ubuntu64'
           path: '${{ github.workspace }}/obs-ndi/package/*.deb'
+  ubuntu64-ndi-runtime:
+    name: 'Package NDI Runtime [Ubuntu]'
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/master' }}
+    env:
+      NDILIB_VERSION: "5.0.0"
+      SDK_DOWNLOAD_URL: "https://tt2468.net/dl/ndi/Install_NDI_SDK_v5_Linux.tar.gz"
+    steps:
+      - name: 'Checkout obs-ndi'
+        uses: actions/checkout@v2
+        with:
+          path: ${{ github.workspace }}/obs-ndi
+          submodules: 'recursive'
+      - name: 'Download and Extract SDK'
+        run: |
+          curl -kL -o ndi_sdk.tar.gz ${{ env.SDK_DOWNLOAD_URL }} -f --retry 5
+          tar -xvf ndi_sdk.tar.gz
+          chmod +x Install_NDI_SDK_v5_Linux.sh
+          yes | PAGER="cat" bash Install_NDI_SDK_v5_Linux.sh
+          rm -rf /tmp/ndisdk
+          mv "NDI SDK For Linux" /tmp/ndisdk
+      - name: 'Package SDK Binaries'
+        run: |
+          PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
+            --backup=no --deldoc=yes --install=no \
+            --pkgname=libndi5 --replaces=libndi4 --pkgversion="${{ env.NDILIB_VERSION }}" \
+            --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
+           	--pkggroup="video" \
+            --pkgsource="http://ndi.newtek.com" \
+            --pakdir="../package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
+      - name: 'Package Dev SDK Binaries'
+        run: |
+          PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
+            --backup=no --deldoc=yes --install=no \
+            --pkgname=libndi5-dev --pkgversion="${{ env.NDILIB_VERSION }}" --requires="libndi5 \(\>= ${{ env.NDILIB_VERSION }}\)" \
+            --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
+            --pkggroup="video" \
+            --pkgsource="http://ndi.newtek.com" \
+            --pakdir="../package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
