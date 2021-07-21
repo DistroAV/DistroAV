@@ -345,7 +345,7 @@ jobs:
           chmod +x Install_NDI_SDK_v5_Linux.sh
           yes | PAGER="cat" bash Install_NDI_SDK_v5_Linux.sh
           rm -rf /tmp/ndisdk
-          mv "NDI SDK For Linux" /tmp/ndisdk
+          mv "NDI SDK for Linux" /tmp/ndisdk
       - name: 'Package SDK Binaries'
         run: |
           PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
