@@ -363,7 +363,7 @@ jobs:
             --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
            	--pkggroup="video" \
             --pkgsource="http://ndi.newtek.com" \
-            --pakdir="../package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
+            --pakdir="package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
       - name: 'Package Dev SDK Binaries'
         run: |
           chmod +x ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
@@ -373,4 +373,10 @@ jobs:
             --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
             --pkggroup="video" \
             --pkgsource="http://ndi.newtek.com" \
-            --pakdir="../package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
+            --pakdir="package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
+      - name: 'Publish Artifacts'
+        if: success()
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: 'NDI-${{ env.NDILIB_VERSION }}-Ubuntu64'
+          path: 'package/*.deb'
