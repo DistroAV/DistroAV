@@ -51,7 +51,7 @@ bool obs_module_load(void)
 	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
 
 	ndiLib = load_ndilib();
-	if (!ndiLib) {
+	if (!ndiLib) { // TODO: Show messagebox after OBS finishes loading
 		std::string error_string_id = "OBSNdi.PluginLoad.LibError.Message.";
 
 #if defined(_MSC_VER)
@@ -103,6 +103,7 @@ const NDIlib_v5 *load_ndilib()
 		libraryLocations.push_back(redistFolder);
 #if defined(__linux__) || defined(__APPLE__)
 	libraryLocations.push_back("/usr/lib");
+	libraryLocations.push_back("/usr/lib/x86_64-linux-gnu");
 	libraryLocations.push_back("/usr/local/lib");
 #endif
 
