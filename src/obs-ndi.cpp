@@ -13,6 +13,7 @@
 #include <util/platform.h>
 
 #include "obs-ndi.h"
+#include "obs-ndi-input.h"
 #include "forms/SettingsDialog.h"
 
 OBS_DECLARE_MODULE()
@@ -22,12 +23,12 @@ SettingsDialog *_settingsDialog = nullptr;
 
 // Global NDILib pointer
 const NDIlib_v5 *ndiLib = nullptr;
-
 // QLibrary pointer for the loaded NDILib binary file
 QLibrary *loaded_lib = nullptr;
-
 // Define NDILib load function
 const NDIlib_v5 *load_ndilib();
+
+NDIlib_find_instance_t ndi_finder;
 
 bool obs_module_load(void)
 {
@@ -51,7 +52,9 @@ bool obs_module_load(void)
 	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
 
 	ndiLib = load_ndilib();
-	if (!ndiLib) { // TODO: Show messagebox after OBS finishes loading
+	if (ndiLib) { // TODO: Show messagebox after OBS finishes loading
+		blog(LOG_DEBUG, "[obs_module_load] Loaded NDIlib binary.");
+	} else {
 		std::string error_string_id = "OBSNdi.PluginLoad.LibError.Message.";
 
 #if defined(_MSC_VER)
@@ -69,7 +72,29 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	blog(LOG_INFO, "[obs_module_load] Finished loading. NDI Runtime Version: %s", ndiLib->version());
+	if (ndiLib->NDIlib_initialize()) {
+		blog(LOG_DEBUG, "[obs_module_load] Initialized NDIlib.");
+	} else {
+		blog(LOG_ERROR, "[obs_module_load] NDIlib failed to initialize. Plugin disabled. Your CPU may not be supported.");
+		return false;
+	}
+
+	NDIlib_find_create_t find_desc = {0};
+	find_desc.show_local_sources = true;
+	find_desc.p_groups = NULL;
+	ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
+	if (ndi_finder) {
+		blog(LOG_DEBUG, "[obs_module_load] Initialized NDI Finder.");
+	} else {
+		blog(LOG_ERROR, "[obs_module_load] Failed to initialize NDI finder. Plugin disabled.");
+		return false;
+	}
+
+	blog(LOG_INFO, "[obs_module_load] NDI runtime loaded. Version: %s", ndiLib->NDIlib_version());
+
+	register_ndi_source_info();
+
+	blog(LOG_INFO, "[obs_module_load] Finished loading.");
 
 	return true;
 }
@@ -79,8 +104,8 @@ void obs_module_unload()
 	blog(LOG_INFO, "[obs_module_unload] Goodbye!");
 
 	if (ndiLib) {
-		//ndiLib->find_destroy(ndi_finder);
-		ndiLib->destroy();
+		ndiLib->NDIlib_find_destroy(ndi_finder);
+		ndiLib->NDIlib_destroy();
 	}
 
 	if (loaded_lib) {
@@ -120,8 +145,7 @@ const NDIlib_v5 *load_ndilib()
 			if (loaded_lib->load()) {
 				blog(LOG_INFO, "[load_ndilib] NDI runtime loaded successfully.");
 
-				NDIlib_v5_load_ lib_load =
-					(NDIlib_v5_load_)loaded_lib->resolve("NDIlib_v5_load");
+				NDIlib_v5_load_ lib_load = (NDIlib_v5_load_)loaded_lib->resolve("NDIlib_v5_load");
 
 				if (lib_load != nullptr)
 					return lib_load();

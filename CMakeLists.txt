@@ -62,13 +62,15 @@ configure_file(
 # Include sources and headers
 set(obs-ndi_SOURCES
 	src/obs-ndi.cpp
-    src/forms/SettingsDialog.cpp
-    src/forms/resources.qrc)
+	src/obs-ndi-input.cpp
+	src/forms/SettingsDialog.cpp
+	src/forms/resources.qrc)
 
 set(obs-ndi_HEADERS
 	src/obs-ndi.h
-    src/obs-ndi-macros.generated.h
-    src/forms/SettingsDialog.h)
+	src/obs-ndi-input.h
+	src/forms/SettingsDialog.h
+	src/obs-ndi-macros.generated.h)
 
 
 # Platform-independent build settings
