@@ -27,8 +27,8 @@
 //
 //***********************************************************************************************************
 
-// Structures and type definitions required by NDI finding
-// The reference to an instance of the receiver
+// Structures and type definitions required by NDI finding.
+// The reference to an instance of the receiver.
 typedef void* NDIlib_recv_instance_t;
 
 typedef enum NDIlib_recv_bandwidth_e
@@ -37,25 +37,25 @@ typedef enum NDIlib_recv_bandwidth_e
 	NDIlib_recv_bandwidth_lowest = 0,          // Receive metadata, audio, video at a lower bandwidth and resolution.
 	NDIlib_recv_bandwidth_highest = 100,       // Receive metadata, audio, video at full resolution.
 
-	// Ensure this is 32bits in size
+	// Ensure this is 32bits in size.
 	NDIlib_recv_bandwidth_max = 0x7fffffff
 } NDIlib_recv_bandwidth_e;
 
 typedef enum NDIlib_recv_color_format_e
-{	// When there is no alpha channel, this mode delivers BGRX
-	// When there is an alpha channel, this mode delivers BGRA
+{	// When there is no alpha channel, this mode delivers BGRX.
+	// When there is an alpha channel, this mode delivers BGRA.
 	NDIlib_recv_color_format_BGRX_BGRA = 0,
 
-	// When there is no alpha channel, this mode delivers UYVY
-	// When there is an alpha channel, this mode delivers BGRA
+	// When there is no alpha channel, this mode delivers UYVY.
+	// When there is an alpha channel, this mode delivers BGRA.
 	NDIlib_recv_color_format_UYVY_BGRA = 1,
 
-	// When there is no alpha channel, this mode delivers BGRX
-	// When there is an alpha channel, this mode delivers RGBA
+	// When there is no alpha channel, this mode delivers BGRX.
+	// When there is an alpha channel, this mode delivers RGBA.
 	NDIlib_recv_color_format_RGBX_RGBA = 2,
 
-	// When there is no alpha channel, this mode delivers UYVY
-	// When there is an alpha channel, this mode delivers RGBA
+	// When there is no alpha channel, this mode delivers UYVY.
+	// When there is an alpha channel, this mode delivers RGBA.
 	NDIlib_recv_color_format_UYVY_RGBA = 3,
 
 	// This format will try to decode the video using the fastest available color format for the incoming
@@ -66,7 +66,7 @@ typedef enum NDIlib_recv_color_format_e
 	// When using this format, you should consider than allow_video_fields is true, and individual fields
 	// will always be delivered.
 	//
-	// For most video sources on most platforms, this will follow the following conventions
+	// For most video sources on most platforms, this will follow the following conventions.
 	//      No alpha channel : UYVY
 	//      Alpha channel    : UYVA
 	NDIlib_recv_color_format_fastest = 100,
@@ -83,7 +83,7 @@ typedef enum NDIlib_recv_color_format_e
 	//      Alpha channel    : PA16 or UYVA
 	NDIlib_recv_color_format_best = 101,
 
-	// Legacy definitions for backwards compatibility
+	// Legacy definitions for backwards compatibility.
 	NDIlib_recv_color_format_e_BGRX_BGRA = NDIlib_recv_color_format_BGRX_BGRA,
 	NDIlib_recv_color_format_e_UYVY_BGRA = NDIlib_recv_color_format_UYVY_BGRA,
 	NDIlib_recv_color_format_e_RGBX_RGBA = NDIlib_recv_color_format_RGBX_RGBA,
@@ -95,11 +95,11 @@ typedef enum NDIlib_recv_color_format_e
 	NDIlib_recv_color_format_BGRX_BGRA_flipped = 1000 + NDIlib_recv_color_format_BGRX_BGRA,
 #endif
 
-	// Force the size to be 32bits
+	// Force the size to be 32bits.
 	NDIlib_recv_color_format_max = 0x7fffffff
 } NDIlib_recv_color_format_e;
 
-// The creation structure that is used when you are creating a receiver
+// The creation structure that is used when you are creating a receiver.
 typedef struct NDIlib_recv_create_v3_t
 {	// The source that you wish to connect to.
 	NDIlib_source_t source_to_connect_to;
@@ -135,13 +135,13 @@ typedef struct NDIlib_recv_create_v3_t
 // This allows you determine the current performance levels of the receiving to be able to detect whether
 // frames have been dropped.
 typedef struct NDIlib_recv_performance_t
-{	// The number of video frames
+{	// The number of video frames.
 	int64_t video_frames;
 
-	// The number of audio frames
+	// The number of audio frames.
 	int64_t audio_frames;
 
-	// The number of metadata frames
+	// The number of metadata frames.
 	int64_t metadata_frames;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -150,15 +150,15 @@ typedef struct NDIlib_recv_performance_t
 
 } NDIlib_recv_performance_t;
 
-// Get the current queue depths
+// Get the current queue depths.
 typedef struct NDIlib_recv_queue_t
-{	// The number of video frames
+{	// The number of video frames.
 	int video_frames;
 
-	// The number of audio frames
+	// The number of audio frames.
 	int audio_frames;
 
-	// The number of metadata frames
+	// The number of metadata frames.
 	int metadata_frames;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -190,10 +190,10 @@ void NDIlib_recv_connect(NDIlib_recv_instance_t p_instance, const NDIlib_source_
 // appropriate free function below.
 PROCESSINGNDILIB_API
 NDIlib_frame_type_e NDIlib_recv_capture_v2(
-	NDIlib_recv_instance_t p_instance,     // The library instance
-	NDIlib_video_frame_v2_t* p_video_data, // The video data received (can be NULL)
-	NDIlib_audio_frame_v2_t* p_audio_data, // The audio data received (can be NULL)
-	NDIlib_metadata_frame_t* p_metadata,   // The metadata received (can be NULL)
+	NDIlib_recv_instance_t p_instance,     // The library instance.
+	NDIlib_video_frame_v2_t* p_video_data, // The video data received (can be NULL).
+	NDIlib_audio_frame_v2_t* p_audio_data, // The audio data received (can be NULL).
+	NDIlib_metadata_frame_t* p_metadata,   // The metadata received (can be NULL).
 	uint32_t timeout_in_ms);               // The amount of time in milliseconds to wait for data.
 
 // This will allow you to receive video, audio and metadata frames. Any of the buffers can be NULL, in which
@@ -204,25 +204,25 @@ NDIlib_frame_type_e NDIlib_recv_capture_v2(
 // appropriate free function below.
 PROCESSINGNDILIB_API
 NDIlib_frame_type_e NDIlib_recv_capture_v3(
-	NDIlib_recv_instance_t p_instance,     // The library instance
-	NDIlib_video_frame_v2_t* p_video_data, // The video data received (can be NULL)
-	NDIlib_audio_frame_v3_t* p_audio_data, // The audio data received (can be NULL)
-	NDIlib_metadata_frame_t* p_metadata,   // The metadata received (can be NULL)
+	NDIlib_recv_instance_t p_instance,     // The library instance.
+	NDIlib_video_frame_v2_t* p_video_data, // The video data received (can be NULL).
+	NDIlib_audio_frame_v3_t* p_audio_data, // The audio data received (can be NULL).
+	NDIlib_metadata_frame_t* p_metadata,   // The metadata received (can be NULL).
 	uint32_t timeout_in_ms);               // The amount of time in milliseconds to wait for data.
 
-// Free the buffers returned by capture for video
+// Free the buffers returned by capture for video.
 PROCESSINGNDILIB_API
 void NDIlib_recv_free_video_v2(NDIlib_recv_instance_t p_instance, const NDIlib_video_frame_v2_t* p_video_data);
 
-// Free the buffers returned by capture for audio
+// Free the buffers returned by capture for audio.
 PROCESSINGNDILIB_API
 void NDIlib_recv_free_audio_v2(NDIlib_recv_instance_t p_instance, const NDIlib_audio_frame_v2_t* p_audio_data);
 
-// Free the buffers returned by capture for audio
+// Free the buffers returned by capture for audio.
 PROCESSINGNDILIB_API
 void NDIlib_recv_free_audio_v3(NDIlib_recv_instance_t p_instance, const NDIlib_audio_frame_v3_t* p_audio_data);
 
-// Free the buffers returned by capture for metadata
+// Free the buffers returned by capture for metadata.
 PROCESSINGNDILIB_API
 void NDIlib_recv_free_metadata(NDIlib_recv_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata);
 
