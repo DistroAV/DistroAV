@@ -37,6 +37,9 @@ void ndi_input::defaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, P_BANDWIDTH, OBS_NDI_BANDWIDTH_HIGHEST);
 	obs_data_set_default_bool(settings, P_INPUT_UNBUFFERED, false);
+	obs_data_set_default_bool(settings, P_HARDWARE_ACCEL, false);
+	obs_data_set_default_bool(settings, P_AUDIO, true);
+	obs_data_set_default_int(settings, P_COLOR_RANGE, OBS_NDI_COLOR_RANGE_PARTIAL);
 }
 
 obs_properties_t *ndi_input::properties()
@@ -54,6 +57,19 @@ obs_properties_t *ndi_input::properties()
 		return true;
 	});
 
+	obs_property_t *bw_list = obs_properties_add_list(props, P_BANDWIDTH, T_BANDWIDTH, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(bw_list, T_BANDWIDTH_HIGHEST, OBS_NDI_BANDWIDTH_HIGHEST);
+	obs_property_list_add_int(bw_list, T_BANDWIDTH_LOWEST, OBS_NDI_BANDWIDTH_LOWEST);
+	obs_property_list_add_int(bw_list, T_BANDWIDTH_AUDIO_ONLY, OBS_NDI_BANDWIDTH_AUDIO_ONLY);
+
+	obs_properties_add_bool(props, P_INPUT_UNBUFFERED, T_INPUT_UNBUFFERED);
+	obs_properties_add_bool(props, P_HARDWARE_ACCEL, T_HARDWARE_ACCEL);
+	obs_properties_add_bool(props, P_AUDIO, T_AUDIO);
+
+	obs_property_t *color_range_list = obs_properties_add_list(props, P_COLOR_RANGE, T_COLOR_RANGE, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(color_range_list, T_COLOR_RANGE_PARTIAL, OBS_NDI_COLOR_RANGE_PARTIAL);
+	obs_property_list_add_int(color_range_list, T_COLOR_RANGE_FULL, OBS_NDI_COLOR_RANGE_FULL);
+
 	return props;
 }
 
@@ -61,16 +77,17 @@ void ndi_input::update(obs_data_t *settings)
 {
 	stop_recv();
 
-	bool unbuffered = obs_data_get_bool(settings, P_INPUT_UNBUFFERED);
-	obs_source_set_async_unbuffered(source, unbuffered);
+	bool input_unbuffered = obs_data_get_bool(settings, P_INPUT_UNBUFFERED);
+	obs_source_set_async_unbuffered(source, input_unbuffered);
 
-	audio_enable = true;
-	yuv_range = VIDEO_RANGE_PARTIAL;
-
+	enum ndi_input_color_range color_range = (ndi_input_color_range)obs_data_get_int(settings, P_COLOR_RANGE);
+	yuv_range = input_color_range_to_obs(color_range);
+	
 	NDIlib_recv_create_v3_t recv_desc;
 	recv_desc.source_to_connect_to.p_ndi_name = obs_data_get_string(settings, P_SOURCE_NAME);
 	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
-	recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
+	enum ndi_input_bandwidth input_bandwidth = (ndi_input_bandwidth)obs_data_get_int(settings, P_BANDWIDTH);
+	recv_desc.bandwidth = input_bandwidth_to_ndi(input_bandwidth);
 	recv_desc.allow_video_fields = true;
 	recv_desc.p_ndi_recv_name = obs_source_get_name(source);
 
@@ -80,6 +97,9 @@ void ndi_input::update(obs_data_t *settings)
 		return;
 	}
 
+	// TODO: Hardware accel
+	bool enable_hardware_accel = obs_data_get_bool(settings, P_HARDWARE_ACCEL);
+
 	running = true;
 	video_thread = std::thread([this](){
 		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread started.", obs_source_get_name(source));
@@ -87,7 +107,8 @@ void ndi_input::update(obs_data_t *settings)
 		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread stopped.", obs_source_get_name(source));
 		obs_source_output_video(source, nullptr); // If OBS has a large frame buffer (like 25 frames), this could prematurely cut off video.
 	});
-	if (audio_enable) {
+	bool enable_audio = obs_data_get_bool(settings, P_AUDIO);
+	if (enable_audio) {
 		audio_thread = std::thread([this](){
 			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread started.", obs_source_get_name(source));
 			this->ndi_audio_thread();

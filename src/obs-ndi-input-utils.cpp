@@ -3,6 +3,32 @@
 #include "obs-ndi.h"
 #include "obs-ndi-input.h"
 
+enum NDIlib_recv_bandwidth_e input_bandwidth_to_ndi(enum ndi_input_bandwidth in)
+{
+	switch (in) {
+		default:
+		case OBS_NDI_BANDWIDTH_HIGHEST:
+			return NDIlib_recv_bandwidth_highest;
+		case OBS_NDI_BANDWIDTH_LOWEST:
+			return NDIlib_recv_bandwidth_lowest;
+		case OBS_NDI_BANDWIDTH_AUDIO_ONLY:
+			return NDIlib_recv_bandwidth_audio_only;
+		case OBS_NDI_BANDWIDTH_METADATA_ONLY:
+			return NDIlib_recv_bandwidth_metadata_only;
+	}
+}
+
+enum video_range_type input_color_range_to_obs(enum ndi_input_color_range in)
+{
+	switch (in) {
+		default:
+		case OBS_NDI_COLOR_RANGE_PARTIAL:
+			return VIDEO_RANGE_PARTIAL;
+		case OBS_NDI_COLOR_RANGE_FULL:
+			return VIDEO_RANGE_FULL;
+	}
+}
+
 enum video_format ndi_video_format_to_obs(enum NDIlib_FourCC_video_type_e in)
 {
 	switch (in) {
@@ -35,8 +61,8 @@ enum video_format ndi_video_format_to_obs(enum NDIlib_FourCC_video_type_e in)
 enum video_colorspace resolution_to_obs_colorspace(size_t x, size_t y)
 {
 	if (x > 720 || y > 576)
-		return VIDEO_CS_709
-	return VIDEO_CS_601
+		return VIDEO_CS_709;
+	return VIDEO_CS_601;
 }
 
 enum speaker_layout ndi_audio_layout_to_obs(size_t channel_count)
