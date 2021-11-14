@@ -2,8 +2,12 @@ name: "CI Multiplatform Build"
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
     branches:
       - rewrite
+    tags:
+      - '[45].[0-9]+.[0-9]+*'
   pull_request:
     paths-ignore:
       - '**.md'
@@ -41,7 +45,6 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-studio
         run: |
           git fetch --prune --unshallow
-          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
           echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: 'Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})'
@@ -55,9 +58,19 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-ndi
         run: |
           git fetch --prune --unshallow
-          echo "GIT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-          echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
+          GIT_TAG=$(git describe --exact-match --tags --abbrev=0) || GIT_TAG=""
+          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+          if [ "$GIT_TAG" ] ; then \
+            VERSION="$GIT_TAG" \
+            VERSION_SUFFIX=$(echo "$GIT_TAG" | cut -c6-20) ; \
+          else \
+            VERSION="$GIT_HASH-git" \
+            VERSION_SUFFIX="-$GIT_HASH-git" ; \
+          fi
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CMAKE_VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
       - name: 'Restore Cached Qt'
         id: qtcache
         uses: actions/cache@v2
@@ -95,7 +108,7 @@ jobs:
           path: ${{ github.workspace }}/obs-studio/build32
           key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_NAME }}-
+            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
       - name: 'Configure OBS-Studio 32-bit'
         if: steps.build-cache-obs-32.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/obs-studio
@@ -118,7 +131,7 @@ jobs:
           path: ${{ github.workspace }}/obs-studio/build64
           key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_NAME }}-
+            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
       - name: 'Configure OBS-Studio 64-bit'
         if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/obs-studio
@@ -137,13 +150,13 @@ jobs:
         run: |
           mkdir .\build32
           cd .\build32
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A Win32 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build32\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build32\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build32\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" ..
+          cmake -G "${{ env.CMAKE_GENERATOR }}" -A Win32 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build32\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build32\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build32\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" ..
       - name: 'Configure obs-ndi 64-bit'
         working-directory: ${{ github.workspace }}/obs-ndi
         run: |
           mkdir .\build64
           cd .\build64
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" ..
+          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" ..
       - name: 'Build obs-ndi 32-bit'
         working-directory: ${{ github.workspace }}/obs-ndi
         run: msbuild /m /p:Configuration=RelWithDebInfo .\build32\obs-ndi.sln
@@ -153,8 +166,7 @@ jobs:
       - name: 'Set PR Artifact Filename'
         shell: bash
         run: |
-          FILENAME="obs-ndi-${{ env.GIT_HASH }}-Windows"
-          echo "WIN_FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "WIN_FILENAME=obs-websocket-${{ env.PACKAGE_VERSION }}-Windows" >> $GITHUB_ENV
       - name: 'Package obs-ndi'
         working-directory: ${{ github.workspace }}/obs-ndi
         run: |
@@ -166,13 +178,13 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v2-preview
         with:
-          name: '${{ env.GIT_HASH }}-Windows'
+          name: 'obs-ndi-${{ env.PACKAGE_VERSION }}-Windows'
           path: ${{ github.workspace }}/obs-ndi/package/*.zip
       - name: 'Publish ${{ env.WIN_FILENAME }}-Installer.exe'
         if: success()
         uses: actions/upload-artifact@v2-preview
         with:
-          name: '${{ env.GIT_HASH }}-Windows-Installer'
+          name: 'obs-ndi-${{ env.PACKAGE_VERSION }}-Windows-Installer'
           path: ${{ github.workspace }}/obs-ndi/package/*.exe
   ubuntu64:
     name: "Linux/Ubuntu 64-bit"
@@ -195,7 +207,6 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-studio
         run: |
           git fetch --prune --unshallow
-          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
           echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: 'Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})'
@@ -208,9 +219,19 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-ndi
         run: |
           git fetch --prune --unshallow
-          echo "GIT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-          echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
+          GIT_TAG=$(git describe --exact-match --tags --abbrev=0) || GIT_TAG=""
+          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+          if [ "$GIT_TAG" ] ; then \
+            VERSION="$GIT_TAG" \
+            VERSION_SUFFIX=$(echo "$GIT_TAG" | cut -c6-20) ; \
+          else \
+            VERSION="$GIT_HASH-git" \
+            VERSION_SUFFIX="-$GIT_HASH-git" ; \
+          fi
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CMAKE_VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
       - name: 'Install prerequisites (Apt)'
         shell: bash
         run: |
@@ -291,7 +312,11 @@ jobs:
         run: |
           mkdir ./build
           cd ./build
-          cmake -DLIBOBS_INCLUDE_DIR=${{ github.workspace }}/obs-studio/libobs -DCMAKE_INSTALL_PREFIX=/usr -DUSE_UBUNTU_FIX=TRUE ..
+          if [ "${{ env.GIT_TAG }}" ] ; then \
+            cmake -DLIBOBS_INCLUDE_DIR=${{ github.workspace }}/obs-studio/libobs -DCMAKE_INSTALL_PREFIX=/usr -DUSE_UBUNTU_FIX=TRUE -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" -DCMAKE_BUILD_TYPE=Release ..
+          else \
+            cmake -DLIBOBS_INCLUDE_DIR=${{ github.workspace }}/obs-studio/libobs -DCMAKE_INSTALL_PREFIX=/usr -DUSE_UBUNTU_FIX=TRUE -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" ..
+          fi
       - name: 'Build obs-ndi'
         working-directory: ${{ github.workspace }}/obs-ndi
         shell: bash
@@ -302,35 +327,39 @@ jobs:
       - name: 'Set PR Artifact Filename'
         shell: bash
         run: |
-          FILENAME="obs-ndi-1-${{ env.GIT_HASH }}-1_amd64.deb"
-          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
-      - name: 'Package ${{ env.FILENAME }}'
+          echo "LINUX_FILENAME=obs-ndi-${{ env.PACKAGE_VERSION }}-Ubuntu64.deb" >> $GITHUB_ENV
+      - name: 'Package ${{ env.LINUX_FILENAME }}'
         if: success()
         working-directory: ${{ github.workspace }}/obs-ndi
         shell: bash
         run: |
-          VERSION="1-${{ env.GIT_HASH }}-git"
+          if [ "${{ env.GIT_TAG }}" ] ; then \
+            CHECKINSTALL_VERSION="${{ env.PACKAGE_VERSION }}" ; \
+          else \
+            CHECKINSTALL_VERSION="1-${{ env.PACKAGE_VERSION }}" ; \
+          fi
           cd ./build
           sudo checkinstall -y --type=debian --fstrans=no -nodoc \
-              --backup=no --deldoc=yes --install=no --pkgname=obs-ndi --pkgversion=$VERSION \
+              --backup=no --deldoc=yes --install=no --pkgname=obs-ndi --pkgversion="$CHECKINSTALL_VERSION" \
               --pkglicense="GPLv2.0" --maintainer="${{ github.event.pusher.email }}" --pkggroup="video" \
               --pkgsource="${{ github.event.repository.html_url }}" \
               --requires="obs-studio,libqt5core5a,libqt5widgets5,libqt5network5" \
               --pakdir="../package"
           sudo chmod ao+r ../package/*
+          sudo mv ../package/* ../package/${{ env.LINUX_FILENAME }}
           cd -
-      - name: 'Publish ${{ env.FILENAME }}'
+      - name: 'Publish ${{ env.LINUX_FILENAME }}'
         if: success()
         uses: actions/upload-artifact@v2-preview
         with:
-          name: '${{ env.GIT_HASH }}-Ubuntu64'
+          name: 'obs-ndi-${{ env.PACKAGE_VERSION }}-Ubuntu64'
           path: '${{ github.workspace }}/obs-ndi/package/*.deb'
   ubuntu64-ndi-runtime:
     name: 'Package NDI Runtime [Ubuntu]'
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/rewrite' }}
     env:
-      NDILIB_VERSION: "5.0.0"
+      NDILIB_VERSION: "5.0.10"
       SDK_DOWNLOAD_URL: "https://tt2468.net/dl/ndi/Install_NDI_SDK_v5_Linux.tar.gz"
     steps:
       - name: 'Checkout obs-ndi'
@@ -378,5 +407,5 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v2-preview
         with:
-          name: 'NDI-${{ env.NDILIB_VERSION }}-Ubuntu64'
+          name: 'libndi-${{ env.NDILIB_VERSION }}-Ubuntu64'
           path: 'package/*.deb'

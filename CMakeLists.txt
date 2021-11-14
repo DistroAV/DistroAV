@@ -1,9 +1,18 @@
 cmake_minimum_required(VERSION 3.16...3.20)
+
+# Version variables
 project(obs-ndi VERSION 5.0.0)
 set(NDILIB_HEADERS_VERSION 5.0.10)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Set correct version string
+if(DEFINED OBS_NDI_VERSION_SUFFIX AND NOT OBS_NDI_VERSION_SUFFIX STREQUAL "")
+	set(OBS_NDI_VERSION "${CMAKE_PROJECT_VERSION}${OBS_NDI_VERSION_SUFFIX}")
+	message(WARNING "-----------------------------------\nVersion Suffix provided. OBS_NDI_VERSION is now ${OBS_NDI_VERSION}\n-----------------------------------")
+else()
+	set(OBS_NDI_VERSION "${CMAKE_PROJECT_VERSION}")
+endif()
+
 
 # Prohibit in-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" _LOC_PATH)
@@ -23,12 +32,16 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 
+# C++ build stuff
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
 # Qt build stuff
 set(CMAKE_PREFIX_PATH "${QTDIR}")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
-
 set(CMAKE_AUTORCC ON) # For resources.qrc
 
 
@@ -116,15 +129,8 @@ if(WIN32)
 		set(OBS_BUILDDIR_ARCH "build32")
 	endif()
 
-    # find_package(w32-pthreads REQUIRED)
-
-	#include_directories(
-	#	"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/UI"
-	#)
-
 	target_link_libraries(obs-ndi
 		"${OBS_FRONTEND_LIB}")
-        # w32-pthreads)
 
 	# Release package helper
 	# The "release" folder has a structure similar OBS' one on Windows
