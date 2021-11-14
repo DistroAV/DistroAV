@@ -177,14 +177,22 @@ void ndi_input::ndi_video_thread()
 	NDIlib_video_frame_v2_t ndi_video_frame;
 	obs_source_frame obs_video_frame = {0};
 
+	bool last_frame = false;
+
 	while (running) {
 		if (ndiLib->recv_get_no_connections(ndi_recv) == 0) {
+			if (last_frame) { // Output null frame if playback ends
+				obs_source_output_video(source, nullptr);
+				last_frame = false;
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			continue;
 		}
 
 		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, &ndi_video_frame, nullptr, nullptr, 200) != NDIlib_frame_type_video)
 			continue;
+
+		last_frame = true;
 
 		obs_video_frame.format = ndi_video_format_to_obs(ndi_video_frame.FourCC);
 		obs_video_frame.timestamp = (uint64_t)(ndi_video_frame.timestamp * 100);
