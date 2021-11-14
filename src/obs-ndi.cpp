@@ -28,7 +28,7 @@ QLibrary *loaded_lib = nullptr;
 // Define NDILib load function
 const NDIlib_v5 *load_ndilib();
 
-NDIlib_find_instance_t ndi_finder;
+NDIlib_find_instance_t ndi_finder = nullptr;
 
 bool obs_module_load(void)
 {
@@ -104,7 +104,8 @@ void obs_module_unload()
 	blog(LOG_INFO, "[obs_module_unload] Goodbye!");
 
 	if (ndiLib) {
-		ndiLib->NDIlib_find_destroy(ndi_finder);
+		if (ndi_finder)
+			ndiLib->NDIlib_find_destroy(ndi_finder);
 		ndiLib->NDIlib_destroy();
 	}
 

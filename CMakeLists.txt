@@ -63,6 +63,7 @@ configure_file(
 set(obs-ndi_SOURCES
 	src/obs-ndi.cpp
 	src/obs-ndi-input.cpp
+	src/obs-ndi-input-utils.cpp
 	src/forms/SettingsDialog.cpp
 	src/forms/resources.qrc)
 
