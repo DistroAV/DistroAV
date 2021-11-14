@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="settingsGroupBox">
      <property name="title">
-      <string>OBSNdi.SettingsDialog.SettingsGroupBox.Title</string>
+      <string>Settings.SettingsGroupBox.Title</string>
      </property>
      <widget class="QWidget" name="formLayoutWidget">
       <property name="geometry">
@@ -35,7 +35,7 @@
    <item>
     <widget class="QGroupBox" name="outputsGroupBox">
      <property name="title">
-      <string>OBSNdi.SettingsDialog.OutputsGroupBox.Title</string>
+      <string>Settings.OutputsGroupBox.Title</string>
      </property>
      <widget class="QGroupBox" name="programOutputGroupBox">
       <property name="geometry">
@@ -47,7 +47,7 @@
        </rect>
       </property>
       <property name="title">
-       <string>OBSNdi.SettingsDialog.ProgramOutputGroupBox.Title</string>
+       <string>Settings.ProgramOutputGroupBox.Title</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -66,7 +66,7 @@
        </rect>
       </property>
       <property name="title">
-       <string>OBSNdi.SettingsDialog.PreviewOutputGroupBox.Title</string>
+       <string>Settings.PreviewOutputGroupBox.Title</string>
       </property>
       <property name="checkable">
        <bool>true</bool>

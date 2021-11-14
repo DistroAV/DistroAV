@@ -48,7 +48,7 @@ bool obs_module_load(void)
 	obs_frontend_pop_ui_translation();
 
 	// Add the settings dialog as a menu action the the Tools menu
-	const char* menuActionText = obs_module_text("OBSNdi.SettingsDialog.Title");
+	const char* menuActionText = obs_module_text("Settings.Title");
 	QAction *menuAction = (QAction*)obs_frontend_add_tools_menu_qaction(menuActionText);
 	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
 
@@ -56,7 +56,7 @@ bool obs_module_load(void)
 	if (ndiLib) { // TODO: Show messagebox after OBS finishes loading
 		blog(LOG_DEBUG, "[obs_module_load] Loaded NDIlib binary.");
 	} else {
-		std::string error_string_id = "OBSNdi.PluginLoad.LibError.Message.";
+		std::string error_string_id = "Plugin.Load.LibError.Message.";
 
 #if defined(_MSC_VER)
 		error_string_id += "Windows";
@@ -67,7 +67,7 @@ bool obs_module_load(void)
 #endif
 
 		QMessageBox::critical(mainWindow,
-			obs_module_text("OBSNdi.PluginLoad.LibError.Title"),
+			obs_module_text("Plugin.Load.LibError.Title"),
 			obs_module_text(error_string_id.c_str()),
 			QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
