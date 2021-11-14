@@ -33,7 +33,7 @@ NDIlib_find_instance_t ndi_finder = nullptr;
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version %s | Linked NDILib Version %s)", OBS_NDI_VERSION, NDILIB_HEADERS_VERSION);
+	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version: %s | Linked NDIlib Version: %s)", OBS_NDI_VERSION, NDILIB_HEADERS_VERSION);
 
 	// Get main window pointer
 	QMainWindow *mainWindow = (QMainWindow*)obs_frontend_get_main_window();
