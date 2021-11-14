@@ -228,6 +228,10 @@ void ndi_input::ndi_audio_thread()
 		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, nullptr, &ndi_audio_frame, nullptr, 200) != NDIlib_frame_type_audio)
 			continue;
 
+		// Reports seem to suggest that NDI can provide audio without timestamps.
+		if (!ndi_audio_frame.timestamp)
+			do_log(LOG_WARNING, "[ndi_input::ndi_audio_thread] Missing timestamp from NDI!");
+
 		size_t channel_count = (size_t)std::fmin(8, ndi_audio_frame.no_channels);
 
 		obs_audio_frame.speakers = ndi_audio_layout_to_obs(channel_count);
