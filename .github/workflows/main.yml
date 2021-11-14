@@ -99,16 +99,16 @@ jobs:
         run: |
           curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -f --retry 5 -C -
           7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}\cmbuild\deps"
-      - name: 'Restore OBS-Studio 32-bit Build v${{ env.OBS_GIT_TAG }} from Cache'
+      - name: 'Restore OBS-Studio 32-bit Build ${{ env.OBS_GIT_HASH }} (v${{ env.OBS_GIT_TAG }}) from Cache'
         id: build-cache-obs-32
         uses: actions/cache@v2
         env:
           CACHE_NAME: 'build-cache-obs-32'
         with:
           path: ${{ github.workspace }}/obs-studio/build32
-          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
+          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
+            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
       - name: 'Configure OBS-Studio 32-bit'
         if: steps.build-cache-obs-32.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/obs-studio
@@ -122,16 +122,16 @@ jobs:
         run: |
           msbuild /m /p:Configuration=RelWithDebInfo .\build32\libobs\libobs.vcxproj
           msbuild /m /p:Configuration=RelWithDebInfo .\build32\UI\obs-frontend-api\obs-frontend-api.vcxproj
-      - name: 'Restore OBS-Studio 64-bit Build v${{ env.OBS_GIT_TAG }} from Cache'
+      - name: 'Restore OBS-Studio 64-bit Build ${{ env.OBS_GIT_HASH }} (v${{ env.OBS_GIT_TAG }}) from Cache'
         id: build-cache-obs-64
         uses: actions/cache@v1
         env:
           CACHE_NAME: 'build-cache-obs-64'
         with:
           path: ${{ github.workspace }}/obs-studio/build64
-          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
+          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
+            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
       - name: 'Configure OBS-Studio 64-bit'
         if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/obs-studio
@@ -163,7 +163,7 @@ jobs:
       - name: 'Build obs-ndi 64-bit'
         working-directory: ${{ github.workspace }}/obs-ndi
         run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ndi.sln
-      - name: 'Set PR Artifact Filename'
+      - name: 'Set CI Artifact Filename'
         shell: bash
         run: |
           echo "WIN_FILENAME=obs-websocket-${{ env.PACKAGE_VERSION }}-Windows" >> $GITHUB_ENV
@@ -324,7 +324,7 @@ jobs:
           set -e
           cd ./build
           make -j4
-      - name: 'Set PR Artifact Filename'
+      - name: 'Set CI Artifact Filename'
         shell: bash
         run: |
           echo "LINUX_FILENAME=obs-ndi-${{ env.PACKAGE_VERSION }}-Ubuntu64.deb" >> $GITHUB_ENV
