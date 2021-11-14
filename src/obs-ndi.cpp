@@ -129,12 +129,14 @@ const NDIlib_v5 *load_ndilib()
 		libraryLocations.push_back(redistFolder);
 #if defined(__linux__) || defined(__APPLE__)
 	libraryLocations.push_back("/usr/lib");
+	libraryLocations.push_back("/usr/lib64");
 	libraryLocations.push_back("/usr/lib/x86_64-linux-gnu");
 	libraryLocations.push_back("/usr/local/lib");
+	libraryLocations.push_back("/usr/local/lib64");
 #endif
 
 	for (std::string path : libraryLocations) {
-		blog(LOG_INFO, "[load_ndilib] Trying library path: '%s'", path.c_str());
+		blog(LOG_DEBUG, "[load_ndilib] Trying library path: '%s'", path.c_str());
 		QFileInfo libPath(QDir(QString::fromStdString(path)).absoluteFilePath(NDILIB_LIBRARY_NAME));
 
 		if (libPath.exists() && libPath.isFile()) {
