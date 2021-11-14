@@ -18,6 +18,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #pragma once
 
+#include <util/base.h>
+
+#define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
+
 #define OBS_NDI_VERSION "@CMAKE_PROJECT_VERSION@"
 
 #define NDILIB_HEADERS_VERSION "@NDILIB_HEADERS_VERSION@"
