@@ -1,3 +1,4 @@
+#include <cmath>
 #include <chrono>
 #include <obs-module.h>
 
@@ -172,7 +173,7 @@ void ndi_input::stop_recv()
 void ndi_input::ndi_video_thread()
 {
 	// Perf tokens are a mysterious thing. Seems to affect the whole process, so I think it's safe to only request from the video thread.
-	perf_token = os_request_high_performance("NDI 5 Receiver Thread");
+	perf_token = os_request_high_performance("NDI 5 Receiver Video Thread");
 
 	NDIlib_video_frame_v2_t ndi_video_frame;
 	obs_source_frame obs_video_frame = {0};
