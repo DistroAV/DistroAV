@@ -64,12 +64,14 @@ set(obs-ndi_SOURCES
 	src/obs-ndi.cpp
 	src/obs-ndi-input.cpp
 	src/obs-ndi-input-utils.cpp
+	src/obs-ndi-output.cpp
 	src/forms/SettingsDialog.cpp
 	src/forms/resources.qrc)
 
 set(obs-ndi_HEADERS
 	src/obs-ndi.h
 	src/obs-ndi-input.h
+	src/obs-ndi-output.h
 	src/forms/SettingsDialog.h
 	src/obs-ndi-macros.generated.h)
 

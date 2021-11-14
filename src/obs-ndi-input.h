@@ -13,7 +13,6 @@
 #define P_AUDIO            "audio"
 #define P_COLOR_RANGE      "color_range"
 
-#define T_(text) obs_module_text(text)
 #define T_SOURCE_NAME          T_("Input.Properties.SourceName")
 #define T_REFRESH_SOURCES      T_("Input.Properties.RefreshSources")
 #define T_BANDWIDTH            T_("Input.Properties.Bandwidth")

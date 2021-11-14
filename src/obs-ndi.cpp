@@ -14,6 +14,7 @@
 
 #include "obs-ndi.h"
 #include "obs-ndi-input.h"
+#include "obs-ndi-output.h"
 #include "forms/SettingsDialog.h"
 
 OBS_DECLARE_MODULE()
@@ -93,6 +94,8 @@ bool obs_module_load(void)
 	blog(LOG_INFO, "[obs_module_load] NDI runtime loaded. Version: %s", ndiLib->NDIlib_version());
 
 	register_ndi_source_info();
+
+	//register_ndi_output_info();
 
 	blog(LOG_INFO, "[obs_module_load] Finished loading.");
 
