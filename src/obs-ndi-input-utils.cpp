@@ -32,6 +32,13 @@ enum video_format ndi_video_format_to_obs(enum NDIlib_FourCC_video_type_e in)
 	}
 }
 
+enum video_colorspace resolution_to_obs_colorspace(size_t x, size_t y)
+{
+	if (x > 720 || y > 576)
+		return VIDEO_CS_709
+	return VIDEO_CS_601
+}
+
 enum speaker_layout ndi_audio_layout_to_obs(size_t channel_count)
 {
 	switch (channel_count) {

@@ -66,7 +66,6 @@ void ndi_input::update(obs_data_t *settings)
 
 	audio_enable = true;
 	yuv_range = VIDEO_RANGE_PARTIAL;
-	yuv_colorspace = VIDEO_CS_709;
 
 	NDIlib_recv_create_v3_t recv_desc;
 	recv_desc.source_to_connect_to.p_ndi_name = obs_data_get_string(settings, P_SOURCE_NAME);
@@ -173,7 +172,8 @@ void ndi_input::ndi_video_thread()
 		obs_video_frame.linesize[0] = ndi_video_frame.line_stride_in_bytes;
 		obs_video_frame.data[0] = ndi_video_frame.p_data;
 
-		video_format_get_parameters(yuv_colorspace, yuv_range, obs_video_frame.color_matrix, obs_video_frame.color_range_min, obs_video_frame.color_range_max);
+		video_colorspace colorspace = resolution_to_obs_colorspace(ndi_video_frame.xres, ndi_video_frame.yres);
+		video_format_get_parameters(colorspace, yuv_range, obs_video_frame.color_matrix, obs_video_frame.color_range_min, obs_video_frame.color_range_max);
 
 		obs_source_output_video(source, &obs_video_frame);
 
