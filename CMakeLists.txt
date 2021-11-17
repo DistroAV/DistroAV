@@ -75,6 +75,7 @@ configure_file(
 # Include sources and headers
 set(obs-ndi_SOURCES
 	src/obs-ndi.cpp
+	src/obs-ndi-config.cpp
 	src/obs-ndi-input.cpp
 	src/obs-ndi-input-utils.cpp
 	src/obs-ndi-output.cpp
@@ -83,6 +84,7 @@ set(obs-ndi_SOURCES
 
 set(obs-ndi_HEADERS
 	src/obs-ndi.h
+	src/obs-ndi-config.h
 	src/obs-ndi-input.h
 	src/obs-ndi-output.h
 	src/forms/SettingsDialog.h

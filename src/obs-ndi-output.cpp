@@ -28,23 +28,33 @@ void ndi_output::stop(uint64_t ts)
 
 void ndi_output::raw_video(struct video_data *frame)
 {
-	;
+	if (!running)
+		return;
+
+	
 }
 
 void ndi_output::raw_audio(struct audio_data *frames)
 {
-	;
+	if (!running || !enable_audio)
+		return;
+
+	
 }
 
 void ndi_output::update(obs_data_t *settings)
 {
-	;
+	source_name = obs_data_get_string(settings, P_OUTPUT_SOURCE_NAME);
+	enable_video = obs_data_get_bool(settings, P_ENABLE_VIDEO);
+	enable_audio = obs_data_get_bool(settings, P_ENABLE_AUDIO);
 }
 
 // Static
 void ndi_output::defaults(obs_data_t *settings)
 {
 	obs_data_set_default_string(settings, P_OUTPUT_SOURCE_NAME, T_OUTPUT_SOURCE_NAME_DEFAULT);
+	obs_data_set_default_bool(settings, P_ENABLE_VIDEO, true);
+	obs_data_set_default_bool(settings, P_ENABLE_AUDIO, true);
 }
 
 obs_properties_t *ndi_output::properties()

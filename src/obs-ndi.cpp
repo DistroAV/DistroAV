@@ -13,6 +13,7 @@
 #include <util/platform.h>
 
 #include "obs-ndi.h"
+#include "obs-ndi-config.h"
 #include "obs-ndi-input.h"
 #include "obs-ndi-output.h"
 #include "forms/SettingsDialog.h"
@@ -20,6 +21,7 @@
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
+config_ptr _config;
 SettingsDialog *_settingsDialog = nullptr;
 
 // Global NDILib pointer
@@ -35,16 +37,19 @@ bool obs_module_load(void)
 {
 	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version: %s | Linked NDIlib Version: %s)", OBS_NDI_VERSION, NDILIB_HEADERS_VERSION);
 
+	_config = config_ptr(new obs_ndi_config());
+	_config->load();
+
 	// Get main window pointer
-	QMainWindow *mainWindow = (QMainWindow*)obs_frontend_get_main_window();
-	if (!mainWindow) {
-		blog(LOG_ERROR, "[obs_module_load] MainWindow not found! Cannot load.");
+	QMainWindow *main_window = (QMainWindow*)obs_frontend_get_main_window();
+	if (!main_window) {
+		blog(LOG_ERROR, "[obs_module_load] main_window not found! Cannot load.");
 		return false;
 	}
 
 	// Create the Settings Dialog
 	obs_frontend_push_ui_translation(obs_module_get_string);
-	_settingsDialog = new SettingsDialog(mainWindow);
+	_settingsDialog = new SettingsDialog(main_window);
 	obs_frontend_pop_ui_translation();
 
 	// Add the settings dialog as a menu action the the Tools menu
@@ -66,7 +71,7 @@ bool obs_module_load(void)
 		error_string_id += "Linux";
 #endif
 
-		QMessageBox::critical(mainWindow,
+		QMessageBox::critical(main_window,
 			obs_module_text("Plugin.Load.LibError.Title"),
 			obs_module_text(error_string_id.c_str()),
 			QMessageBox::Ok, QMessageBox::NoButton);
