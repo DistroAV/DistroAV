@@ -1,9 +1,11 @@
-#include <QtWidgets/QMessageBox>
+#include <QPushButton>
+#include <QMessageBox>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 
 #include "SettingsDialog.h"
 #include "../obs-ndi.h"
+#include "../obs-ndi-config.h"
 
 QString GetToolTipIconHtml()
 {
@@ -24,6 +26,9 @@ SettingsDialog::SettingsDialog(QWidget* parent) :
 
 	// Set the appropriate tooltip icon for the theme
 	//ui->enableDebugLoggingToolTipLabel->setText(GetToolTipIconHtml());
+
+	connect(ui->buttonBox, &QDialogButtonBox::clicked,
+		this, &SettingsDialog::DialogButtonClicked);
 }
 
 SettingsDialog::~SettingsDialog()
@@ -33,14 +38,14 @@ SettingsDialog::~SettingsDialog()
 
 void SettingsDialog::showEvent(QShowEvent *event)
 {
-	//auto conf = GetConfig();
-	//if (!conf) {
-	//	blog(LOG_ERROR, "[SettingsDialog::showEvent] Unable to retreive config!");
-	//	return;
-	//}
+	auto conf = get_config();
+	if (!conf) {
+		blog(LOG_ERROR, "[SettingsDialog::showEvent] Unable to retreive config!");
+		return;
+	}
 }
 
-void SettingsDialog::closeEvent(QCloseEvent *event)
+void SettingsDialog::hideEvent(QHideEvent *event)
 {
 }
 
@@ -50,4 +55,27 @@ void SettingsDialog::ToggleShowHide()
 		setVisible(true);
 	else
 		setVisible(false);
+}
+
+void SettingsDialog::DialogButtonClicked(QAbstractButton *button)
+{
+	if (button != ui->buttonBox->button(QDialogButtonBox::Cancel))
+		SaveFormData();
+}
+
+void SettingsDialog::SaveFormData()
+{
+	auto conf = get_config();
+	if (!conf) {
+		blog(LOG_ERROR, "[SettingsDialog::SaveFormData] Unable to retreive config!");
+		return;
+	}
+
+	bool extra_ips_changed = conf->ndi_extra_ips == ui->ndiExtraIpsLineEdit->text().toStdString();
+	conf->ndi_extra_ips = ui->ndiExtraIpsLineEdit->text().toStdString();
+
+	conf->save();
+
+	if (extra_ips_changed)
+		restart_ndi_finder();
 }
