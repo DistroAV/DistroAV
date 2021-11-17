@@ -85,16 +85,8 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	NDIlib_find_create_t find_desc = {0};
-	find_desc.show_local_sources = true;
-	find_desc.p_groups = NULL;
-	ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
-	if (ndi_finder) {
-		blog(LOG_DEBUG, "[obs_module_load] Initialized NDI Finder.");
-	} else {
-		blog(LOG_ERROR, "[obs_module_load] Failed to initialize NDI finder. Plugin disabled.");
+	if (!restart_ndi_finder())
 		return false;
-	}
 
 	blog(LOG_INFO, "[obs_module_load] NDI runtime loaded. Version: %s", ndiLib->NDIlib_version());
 
@@ -172,4 +164,33 @@ const NDIlib_v5 *load_ndilib()
 
 	blog(LOG_ERROR, "[load_ndilib] Can't find the NDI 5 library!");
 	return nullptr;
+}
+
+bool restart_ndi_finder()
+{
+	if (!ndiLib || !_config)
+		return false;
+
+	if (ndi_finder) {
+		ndiLib->NDIlib_find_destroy(ndi_finder);
+		ndi_finder = nullptr;
+	}
+
+	NDIlib_find_create_t find_desc = {0};
+	find_desc.show_local_sources = true;
+	find_desc.p_groups = NULL;
+	find_desc.p_extra_ips = _config->ndi_extra_ips.c_str();
+	ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
+	if (!ndi_finder) {
+		blog(LOG_ERROR, "[restart_ndi_finder] Failed to create NDI finder. Plugin disabled.");
+		return false;
+	}
+
+	blog(LOG_DEBUG, "[restart_ndi_finder] Created NDI Finder.");
+	return true;
+}
+
+config_ptr get_config()
+{
+	return _config;
 }

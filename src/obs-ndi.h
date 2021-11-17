@@ -15,6 +15,8 @@ extern const NDIlib_v5* ndiLib;
 
 extern NDIlib_find_instance_t ndi_finder;
 
+bool restart_ndi_finder();
+
 class obs_ndi_config;
 typedef std::shared_ptr<obs_ndi_config> config_ptr;
 
