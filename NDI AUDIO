@@ -1,0 +1,491 @@
+20:26:49.849: ================================
+20:26:49.849: Warning: OBS is already running!
+20:26:49.849: ================================
+20:26:49.849: User is now running multiple instances of OBS!
+20:26:49.849: CoInitializeEx succeeded: 0x00000001
+20:26:49.849: CPU Name: Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz
+20:26:49.849: CPU Speed: 4008MHz
+20:26:49.849: Physical Cores: 4, Logical Cores: 8
+20:26:49.849: Physical Memory: 32706MB Total, 26849MB Free
+20:26:49.849: Windows Version: 10.0 Build 18363 (release: 1909; revision: 959; 64-bit)
+20:26:49.849: Running as administrator: false
+20:26:49.849: Aero is Enabled (Aero is always on for windows 8 and above)
+20:26:49.849: Windows 10 Gaming Features:
+20:26:49.850: 	Game DVR: On
+20:26:49.850: 	Game Mode: Off
+20:26:49.850: Sec. Software Status:
+20:26:49.852: 	Windows Defender Antivirus: enabled (AV)
+20:26:49.852: 	Windows Firewall: enabled (FW)
+20:26:49.852: Current Date/Time: 2020-07-17, 20:26:49
+20:26:49.852: Browser Hardware Acceleration: true
+20:26:49.852: Portable mode: false
+20:26:49.870: OBS 25.0.8 (64-bit, windows)
+20:26:49.870: ---------------------------------
+20:26:49.878: ---------------------------------
+20:26:49.878: audio settings reset:
+20:26:49.878: 	samples per sec: 44100
+20:26:49.878: 	speakers:        2
+20:26:49.879: ---------------------------------
+20:26:49.879: Initializing D3D11...
+20:26:49.879: Available Video Adapters: 
+20:26:49.880: 	Adapter 0: NVIDIA GeForce GTX 1650
+20:26:49.880: 	  Dedicated VRAM: 4154458112
+20:26:49.880: 	  Shared VRAM:    4262907904
+20:26:49.880: 	  PCI ID:         10de:1f82
+20:26:49.881: 	  Driver Version: 26.21.14.4219
+20:26:49.881: 	  output 0: pos={0, 0}, size={2560, 1440}, attached=true, refresh=32, name=
+20:26:49.883: Loading up D3D11 on adapter NVIDIA GeForce GTX 1650 (0)
+20:26:49.924: D3D11 loaded successfully, feature level used: b000
+20:26:49.924: DXGI increase maximum frame latency success
+20:26:49.924: D3D11 GPU priority setup failed (not admin?)
+20:26:50.301: ---------------------------------
+20:26:50.301: video settings reset:
+20:26:50.301: 	base resolution:   1920x1080
+20:26:50.301: 	output resolution: 1920x1080
+20:26:50.301: 	downscale filter:  Lanczos
+20:26:50.301: 	fps:               30/1
+20:26:50.301: 	format:            NV12
+20:26:50.301: 	YUV mode:          601/Partial
+20:26:50.301: NV12 texture support enabled
+20:26:50.302: Audio monitoring device:
+20:26:50.302: 	name: Default
+20:26:50.302: 	id: default
+20:26:50.302: ---------------------------------
+20:26:50.305: [CoreAudio encoder]: CoreAudio AAC encoder not installed on the system or couldn't be loaded
+20:26:50.306: Failed to load 'en-US' text for module: 'decklink-ouput-ui.dll'
+20:26:50.331: [AMF] Unable to load 'amfrt64.dll', error code 126.
+20:26:50.332: [AMF] AMF Test failed due to one or more errors.
+20:26:50.332: Failed to initialize module 'enc-amf.dll'
+20:26:50.348: [obs-browser]: Version 2.8.6
+20:26:50.351: NVENC supported
+20:26:50.352: [obs-ndi] hello ! (version 4.8.0)
+20:26:50.352: [obs-ndi] Trying 'C:\Program Files\NewTek\NDI 4 Runtime\v4'
+20:26:50.352: [obs-ndi] Found NDI library at 'C:/Program Files/NewTek/NDI 4 Runtime/v4/Processing.NDI.Lib.x64.dll'
+20:26:50.355: [obs-ndi] NDI runtime loaded successfully
+20:26:50.357: [obs-ndi] NDI library initialized successfully (NDI SDK WIN64 06:20:19 Apr  1 2020 4.5.1.0)
+20:26:50.428: Failed to load 'en-US' text for module: 'StreamDeckPlugin.dll'
+20:26:50.432: Couldn't find VLC installation, VLC video source disabled
+20:26:50.437: A DeckLink iterator could not be created.  The DeckLink drivers may not be installed
+20:26:50.439: No blackmagic support
+20:26:50.443: ---------------------------------
+20:26:50.443:   Loaded Modules:
+20:26:50.443:     win-wasapi.dll
+20:26:50.443:     win-mf.dll
+20:26:50.443:     win-dshow.dll
+20:26:50.443:     win-decklink.dll
+20:26:50.443:     win-capture.dll
+20:26:50.443:     vlc-video.dll
+20:26:50.443:     text-freetype2.dll
+20:26:50.443:     StreamDeckPlugin.dll
+20:26:50.443:     rtmp-services.dll
+20:26:50.443:     obs-x264.dll
+20:26:50.443:     obs-vst.dll
+20:26:50.443:     obs-transitions.dll
+20:26:50.443:     obs-text.dll
+20:26:50.443:     obs-qsv11.dll
+20:26:50.443:     obs-outputs.dll
+20:26:50.443:     obs-ndi.dll
+20:26:50.443:     obs-filters.dll
+20:26:50.443:     obs-ffmpeg.dll
+20:26:50.443:     obs-browser.dll
+20:26:50.443:     logi_obs_plugin_x64.dll
+20:26:50.443:     image-source.dll
+20:26:50.443:     frontend-tools.dll
+20:26:50.443:     enc-amf.dll
+20:26:50.443:     decklink-ouput-ui.dll
+20:26:50.443:     coreaudio-encoder.dll
+20:26:50.443:     advanced-scene-switcher.dll
+20:26:50.443: ---------------------------------
+20:26:50.453: ==== Startup complete ===============================================
+20:26:50.464: All scene data cleared
+20:26:50.464: ------------------------------------------------
+20:26:50.469: [Media Source 'Cat Cam audio']: settings:
+20:26:50.469: 	input:                   http://192.168.1.27:8080/audio.opus
+20:26:50.469: 	input_format:            http://192.168.1.27:8080/audio.opus
+20:26:50.469: 	speed:                   100
+20:26:50.469: 	is_looping:              no
+20:26:50.469: 	is_hw_decoding:          no
+20:26:50.469: 	is_clear_on_media_end:   yes
+20:26:50.469: 	restart_on_activate:     yes
+20:26:50.469: 	close_when_inactive:     yes
+20:26:50.469: [Media Source 'Cat Cam Phone Cciles']: settings:
+20:26:50.469: 	input:                   http://192.168.1.27:8080/video
+20:26:50.469: 	input_format:            http://192.168.1.27:8080/video
+20:26:50.469: 	speed:                   100
+20:26:50.469: 	is_looping:              no
+20:26:50.469: 	is_hw_decoding:          no
+20:26:50.469: 	is_clear_on_media_end:   yes
+20:26:50.469: 	restart_on_activate:     yes
+20:26:50.469: 	close_when_inactive:     yes
+20:26:50.655: [Media Source 'Starting_Vid']: settings:
+20:26:50.655: 	input:                   C:/_StreamStuff/Brand_stuff/Video Files/Opening.avi
+20:26:50.655: 	input_format:            (null)
+20:26:50.655: 	speed:                   100
+20:26:50.655: 	is_looping:              no
+20:26:50.655: 	is_hw_decoding:          no
+20:26:50.655: 	is_clear_on_media_end:   no
+20:26:50.655: 	restart_on_activate:     yes
+20:26:50.655: 	close_when_inactive:     no
+20:26:50.656: [Media Source 'Ending_Vid']: settings:
+20:26:50.656: 	input:                   C:/_StreamStuff/Brand_stuff/Video Files/Ending.avi
+20:26:50.656: 	input_format:            (null)
+20:26:50.656: 	speed:                   100
+20:26:50.656: 	is_looping:              no
+20:26:50.656: 	is_hw_decoding:          no
+20:26:50.656: 	is_clear_on_media_end:   no
+20:26:50.656: 	restart_on_activate:     yes
+20:26:50.656: 	close_when_inactive:     no
+20:26:50.817: [Media Source 'Scrolling_Background']: settings:
+20:26:50.817: 	input:                   C:/_StreamStuff/Brand_stuff/Video Files/Purple Slow 120 FPS.mp4
+20:26:50.817: 	input_format:            (null)
+20:26:50.817: 	speed:                   100
+20:26:50.817: 	is_looping:              yes
+20:26:50.817: 	is_hw_decoding:          no
+20:26:50.817: 	is_clear_on_media_end:   yes
+20:26:50.817: 	restart_on_activate:     yes
+20:26:50.817: 	close_when_inactive:     no
+20:26:50.819: [obs-ndi] started A/V threads for source 'XCILES-PC (OBS Xciles)'
+20:26:50.819: [obs-ndi] A/V thread for 'Xciles - Video' started
+20:26:50.819: [obs-ndi] started A/V threads for source 'XCILES-PC (NDI - Xciles - AudioIn)'
+20:26:50.820: [obs-ndi] A/V thread for 'Xciles - Microphone' started
+20:26:50.820: [obs-ndi] started A/V threads for source 'XCILES-PC (NDI - Xciles - Audio)'
+20:26:50.820: [obs-ndi] A/V thread for 'Xciles - Sound' started
+20:26:50.820: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDDI - Celestral)'
+20:26:50.821: [obs-ndi] A/V thread for 'Celestral - Video' started
+20:26:50.821: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDI - Celestral - AudioOut)'
+20:26:50.821: [obs-ndi] A/V thread for 'Celestral - Sound' started
+20:26:50.821: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDI - Celestral - AudioIn)'
+20:26:50.822: [obs-ndi] A/V thread for 'Celestral - Microphone' started
+20:26:51.018: WASAPI: Device 'Remote Audio' [44100 Hz] initialized
+20:26:51.440: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDI - Celestral WebCam)'
+20:26:51.440: [obs-ndi] A/V thread for 'Celestral - WebCam' started
+20:26:51.440: [obs-ndi] started A/V threads for source 'XCILES-PC (NDI Xciles - Webcam)'
+20:26:51.441: [obs-ndi] A/V thread for 'Xciles - Webcam' started
+20:26:51.607: device_texture_create (D3D11): Failed to create 2D texture (80070057)
+20:26:51.607: device_texture_create (D3D11): Failed to create 2D texture (80070057)
+20:26:51.607: device_texture_create (D3D11): Failed to create 2D texture (80070057)
+20:26:51.608: device_texture_create (D3D11): Failed to create 2D texture (80070057)
+20:26:51.618: Switched to scene 'Starting - Countdown'
+20:26:51.638: [Media Source 'Stinger_Ending (Stinger)']: settings:
+20:26:51.638: 	input:                   C:/_StreamStuff/Brand_stuff/Video Files/Ending.avi
+20:26:51.638: 	input_format:            (null)
+20:26:51.638: 	speed:                   100
+20:26:51.638: 	is_looping:              no
+20:26:51.638: 	is_hw_decoding:          no
+20:26:51.638: 	is_clear_on_media_end:   yes
+20:26:51.638: 	restart_on_activate:     yes
+20:26:51.638: 	close_when_inactive:     no
+20:26:51.638: [Media Source 'Stinger_Start (Stinger)']: settings:
+20:26:51.638: 	input:                   C:/_StreamStuff/Brand_stuff/Video Files/Opening.avi
+20:26:51.638: 	input_format:            (null)
+20:26:51.638: 	speed:                   100
+20:26:51.638: 	is_looping:              no
+20:26:51.638: 	is_hw_decoding:          no
+20:26:51.638: 	is_clear_on_media_end:   yes
+20:26:51.638: 	restart_on_activate:     yes
+20:26:51.638: 	close_when_inactive:     no
+20:26:51.641: ------------------------------------------------
+20:26:51.641: Loaded scenes:
+20:26:51.641: - scene '-------INTRO---------':
+20:26:51.641: - scene 'Starting - Countdown':
+20:26:51.641:     - source: 'Scrolling_Background' (ffmpeg_source)
+20:26:51.641:     - source: 'Starting_Soon' (image_source)
+20:26:51.641:     - source: 'Starting_Countdown' (text_gdiplus_v2)
+20:26:51.641: - scene 'Starting - Animation':
+20:26:51.641:     - source: 'Scrolling_Background' (ffmpeg_source)
+20:26:51.641:     - source: 'Starting_Vid' (ffmpeg_source)
+20:26:51.641: - scene 'Starting - Fade to Main':
+20:26:51.641:     - source: 'Scrolling_Background' (ffmpeg_source)
+20:26:51.641: - scene '--------MAIN--------':
+20:26:51.641: - scene 'Main':
+20:26:51.641:     - source: 'Server_Desktop' (wasapi_output_capture)
+20:26:51.641:     - source: 'Background.png' (image_source)
+20:26:51.641:     - source: 'Main Overlay - Reverse.png' (image_source)
+20:26:51.641:     - source: 'WebCams_M' (group)
+20:26:51.641:         - source: 'Celestral - WebCam' (ndi_source)
+20:26:51.641:             - filter: 'Apply LUT' (clut_filter)
+20:26:51.641:         - source: 'Xciles - Webcam' (ndi_source)
+20:26:51.641:             - filter: 'Apply LUT' (clut_filter)
+20:26:51.641:         - source: 'Celestral_CamBackground' (image_source)
+20:26:51.642:         - source: 'Xciles_CamBackground' (image_source)
+20:26:51.642:     - source: 'Sources' (group)
+20:26:51.642:         - source: 'Xciles - Video' (ndi_source)
+20:26:51.642:         - source: 'Xciles - Microphone' (ndi_source)
+20:26:51.642:         - source: 'Xciles - Sound' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Video' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Sound' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Microphone' (ndi_source)
+20:26:51.642:     - source: 'Text Logo With Shadow.png 2' (image_source)
+20:26:51.642:     - source: 'Chat_Small' (browser_source)
+20:26:51.642:     - source: 'Alerts' (browser_source)
+20:26:51.642:     - source: 'Special Effects' (scene)
+20:26:51.642:     - source: 'Slingers' (scene)
+20:26:51.642: - scene 'Main - Celestral':
+20:26:51.642:     - source: 'Server_Desktop' (wasapi_output_capture)
+20:26:51.642:     - source: 'Main_Split 2' (image_source)
+20:26:51.642:     - source: 'Main_Split' (image_source)
+20:26:51.642:     - source: 'Sources C' (group)
+20:26:51.642:         - source: 'Xciles - Video' (ndi_source)
+20:26:51.642:         - source: 'Xciles - Microphone' (ndi_source)
+20:26:51.642:         - source: 'Xciles - Sound' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Video' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Sound' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Microphone' (ndi_source)
+20:26:51.642:     - source: 'WebCams' (group)
+20:26:51.642:         - source: 'Celestral - WebCam' (ndi_source)
+20:26:51.642:             - filter: 'Apply LUT' (clut_filter)
+20:26:51.642:         - source: 'Xciles - Webcam' (ndi_source)
+20:26:51.642:             - filter: 'Apply LUT' (clut_filter)
+20:26:51.642:     - source: 'Labels' (group)
+20:26:51.642:         - source: 'Player_Indicator' (image_source)
+20:26:51.642:         - source: 'Celestral_Text' (image_source)
+20:26:51.642:         - source: 'Xciles_Text' (image_source)
+20:26:51.642:     - source: 'Player_Name' (text_gdiplus_v2)
+20:26:51.642:     - source: 'Streamlabs' (group)
+20:26:51.642:         - source: 'Chat_Long' (browser_source)
+20:26:51.642:         - source: 'Alerts' (browser_source)
+20:26:51.642:     - source: 'Special Effects' (scene)
+20:26:51.642:     - source: 'Slingers' (scene)
+20:26:51.642: - scene 'Main - Xciles':
+20:26:51.642:     - source: 'Server_Desktop' (wasapi_output_capture)
+20:26:51.642:     - source: 'Main_Split 2' (image_source)
+20:26:51.642:     - source: 'Main_Split' (image_source)
+20:26:51.642:     - source: 'Sources X' (group)
+20:26:51.642:         - source: 'Xciles - Video' (ndi_source)
+20:26:51.642:         - source: 'Xciles - Microphone' (ndi_source)
+20:26:51.642:         - source: 'Xciles - Sound' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Video' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Sound' (ndi_source)
+20:26:51.642:         - source: 'Celestral - Microphone' (ndi_source)
+20:26:51.642:     - source: 'Labels' (group)
+20:26:51.642:         - source: 'Player_Indicator' (image_source)
+20:26:51.642:         - source: 'Celestral_Text' (image_source)
+20:26:51.642:         - source: 'Xciles_Text' (image_source)
+20:26:51.642:     - source: 'WebCams' (group)
+20:26:51.642:         - source: 'Celestral - WebCam' (ndi_source)
+20:26:51.642:             - filter: 'Apply LUT' (clut_filter)
+20:26:51.642:         - source: 'Xciles - Webcam' (ndi_source)
+20:26:51.642:             - filter: 'Apply LUT' (clut_filter)
+20:26:51.642:     - source: 'Player_Name 2' (text_gdiplus_v2)
+20:26:51.642:     - source: 'Streamlabs' (group)
+20:26:51.642:         - source: 'Chat_Long' (browser_source)
+20:26:51.642:         - source: 'Alerts' (browser_source)
+20:26:51.642:     - source: 'Special Effects' (scene)
+20:26:51.642:     - source: 'Slingers' (scene)
+20:26:51.642:     - source: 'iwbtg' (group)
+20:26:51.642:         - source: 'Starting_Countdown 2' (text_gdiplus_v2)
+20:26:51.642:         - source: 'Starting_Countdown 2 2' (text_gdiplus_v2)
+20:26:51.642: - scene 'Ending':
+20:26:51.642:     - source: 'Scrolling_Background' (ffmpeg_source)
+20:26:51.642:     - source: 'Ending_Vid' (ffmpeg_source)
+20:26:51.642: - scene '--------EXTRA--------':
+20:26:51.642: - scene 'Slingers':
+20:26:51.642:     - source: 'Slinger A' (scene)
+20:26:51.642:     - source: 'Slinger A' (scene)
+20:26:51.642:     - source: 'Slinger A' (scene)
+20:26:51.642:     - source: 'Slinger A' (scene)
+20:26:51.642:     - source: 'Slinger A' (scene)
+20:26:51.642: - scene 'Special Effects':
+20:26:51.642:     - source: 'Party Poppers SFX' (scene)
+20:26:51.642:     - source: 'Menacing - Shake' (scene)
+20:26:51.642:     - source: 'Switch Places' (scene)
+20:26:51.642:     - source: 'Cat Cam' (scene)
+20:26:51.642: - scene 'Party Poppers SFX':
+20:26:51.642: - scene 'Switch Places':
+20:26:51.642:     - source: 'switch arrows.png' (image_source)
+20:26:51.642:     - source: 'Places Switched' (text_gdiplus_v2)
+20:26:51.642:     - source: '?' (text_gdiplus_v2)
+20:26:51.642:     - source: '? 2' (text_gdiplus_v2)
+20:26:51.642: - scene 'Menacing - Shake':
+20:26:51.642: - scene '--------OTHER--------':
+20:26:51.642: - scene 'Slinger A':
+20:26:51.642:     - source: 'streamers-clipart-3.png' (image_source)
+20:26:51.642: - scene 'Cat Cam':
+20:26:51.642:     - source: 'Cat Cam Phone Cciles' (ffmpeg_source)
+20:26:51.642:     - source: 'Cat Cam audio' (ffmpeg_source)
+20:26:51.642: ------------------------------------------------
+20:26:51.681: adding 46 milliseconds of audio buffering, total audio buffering is now 46 milliseconds (source: Scrolling_Background)
+20:26:51.681: 
+20:26:53.948: User switched to scene 'Starting - Animation'
+20:26:53.960: User switched to scene 'Main - Celestral'
+20:26:54.032: obs-browser: Uncaught (in promise) Something went wrong. (source: https://streamlabs.com/widgets/chat-box/v1/77386C5C16F71B46060A:0)
+20:26:54.032: obs-browser: Uncaught (in promise) Something went wrong. (source: https://streamlabs.com/widgets/chat-box/v1/77386C5C16F71B46060A:0)
+20:26:59.668: [jim-nvenc: 'streaming_h264'] settings:
+20:26:59.668: 	rate_control: CBR
+20:26:59.668: 	bitrate:      5500
+20:26:59.668: 	cqp:          20
+20:26:59.668: 	keyint:       60
+20:26:59.668: 	preset:       hq
+20:26:59.668: 	profile:      high
+20:26:59.668: 	width:        1920
+20:26:59.668: 	height:       1080
+20:26:59.668: 	2-pass:       false
+20:26:59.668: 	b-frames:     2
+20:26:59.668: 	lookahead:    false
+20:26:59.668: 	psycho_aq:    true
+20:26:59.668: 
+20:26:59.677: ---------------------------------
+20:26:59.677: [FFmpeg aac encoder: 'avc_aac_stream'] bitrate: 320, channels: 2, channel_layout: 3
+20:26:59.677: 
+20:26:59.678: [rtmp stream: 'adv_stream'] Dynamic bitrate enabled.  Dropped frames begone!
+20:26:59.678: [rtmp stream: 'adv_stream'] Connecting to RTMP URL rtmp://live-ams.twitch.tv/app...
+20:26:59.684: [rtmp stream: 'adv_stream'] Interface: Intel(R) Ethernet Connection (2) I219-V (ethernet, 1000 mbps)
+20:27:24.010: RTMPSockBuf_Fill, remote host closed connection
+20:27:24.010: [rtmp stream: 'adv_stream'] Connection to rtmp://live-ams.twitch.tv/app failed: -3
+20:27:24.013: ==== Streaming Stop ================================================
+20:27:53.493: [rtmp stream: 'adv_stream'] Dynamic bitrate enabled.  Dropped frames begone!
+20:27:53.493: [rtmp stream: 'adv_stream'] Connecting to RTMP URL rtmp://live-ams.twitch.tv/app...
+20:27:53.494: [rtmp stream: 'adv_stream'] Interface: Intel(R) Ethernet Connection (2) I219-V (ethernet, 1000 mbps)
+20:27:54.888: [rtmp stream: 'adv_stream'] Connection to rtmp://live-ams.twitch.tv/app successful
+20:27:54.892: ==== Streaming Start ===============================================
+20:30:24.234: User switched to scene 'Main'
+20:32:08.157: adding 23 milliseconds of audio buffering, total audio buffering is now 69 milliseconds (source: Xciles - Video)
+20:32:08.157: 
+21:15:57.473: [rtmp stream: 'adv_stream'] bitrate decreased to: 5300
+21:16:27.490: [rtmp stream: 'adv_stream'] bitrate increased to: 5500, done
+21:16:47.047: [rtmp stream: 'adv_stream'] bitrate decreased to: 4800
+21:17:17.061: [rtmp stream: 'adv_stream'] bitrate increased to: 5350, waiting
+21:17:47.070: [rtmp stream: 'adv_stream'] bitrate increased to: 5500, done
+21:18:09.700: User switched to scene 'Main - Celestral'
+21:18:13.562: User switched to scene 'Main - Xciles'
+21:18:31.789: User switched to scene 'Main'
+21:20:11.610: [rtmp stream: 'adv_stream'] bitrate decreased to: 4400
+21:20:41.616: [rtmp stream: 'adv_stream'] bitrate increased to: 4950, waiting
+21:21:11.637: [rtmp stream: 'adv_stream'] bitrate increased to: 5500, done
+22:17:11.718: [rtmp stream: 'adv_stream'] bitrate decreased to: 5300
+22:17:41.737: [rtmp stream: 'adv_stream'] bitrate increased to: 5500, done
+22:22:45.412: [rtmp stream: 'adv_stream'] bitrate decreased to: 4900
+22:23:15.457: [rtmp stream: 'adv_stream'] bitrate increased to: 5450, waiting
+22:23:45.473: [rtmp stream: 'adv_stream'] bitrate increased to: 5500, done
+22:25:47.193: User switched to scene 'Main - Celestral'
+22:25:51.171: User switched to scene 'Main'
+22:31:09.577: [obs-ndi] audio thread for 'Xciles - Video' completed
+22:31:09.581: [obs-ndi] started A/V threads for source 'XCILES-PC (OBS Xciles)'
+22:31:09.581: [obs-ndi] A/V thread for 'Xciles - Video' started
+22:31:16.509: [obs-ndi] audio thread for 'Xciles - Microphone' completed
+22:31:16.510: [obs-ndi] started A/V threads for source 'XCILES-PC (NDI - Xciles - AudioIn)'
+22:31:16.510: [obs-ndi] A/V thread for 'Xciles - Microphone' started
+22:31:21.869: [obs-ndi] audio thread for 'Xciles - Sound' completed
+22:31:21.872: [obs-ndi] started A/V threads for source 'XCILES-PC (NDI - Xciles - Audio)'
+22:31:21.872: [obs-ndi] A/V thread for 'Xciles - Sound' started
+22:31:27.291: [obs-ndi] audio thread for 'Xciles - Webcam' completed
+22:31:27.296: [obs-ndi] started A/V threads for source 'XCILES-PC (NDI Xciles - Webcam)'
+22:31:27.296: [obs-ndi] A/V thread for 'Xciles - Webcam' started
+22:31:34.026: [obs-ndi] audio thread for 'Celestral - WebCam' completed
+22:31:34.030: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDI - Celestral WebCam)'
+22:31:34.030: [obs-ndi] A/V thread for 'Celestral - WebCam' started
+22:31:38.633: [obs-ndi] audio thread for 'Celestral - Video' completed
+22:31:38.636: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDDI - Celestral)'
+22:31:38.636: [obs-ndi] A/V thread for 'Celestral - Video' started
+22:31:43.041: [obs-ndi] audio thread for 'Celestral - Sound' completed
+22:31:43.042: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDI - Celestral - AudioOut)'
+22:31:43.042: [obs-ndi] A/V thread for 'Celestral - Sound' started
+22:31:47.673: [obs-ndi] audio thread for 'Celestral - Microphone' completed
+22:31:47.675: [obs-ndi] started A/V threads for source 'DESKTOP-JG9BHOQ (NDI - Celestral - AudioIn)'
+22:31:47.675: [obs-ndi] A/V thread for 'Celestral - Microphone' started
+22:31:56.999: adding 232 milliseconds of audio buffering, total audio buffering is now 301 milliseconds (source: Xciles - Microphone)
+22:31:56.999: 
+23:11:55.585: adding 92 milliseconds of audio buffering, total audio buffering is now 394 milliseconds (source: Xciles - Sound)
+23:11:55.585: 
+23:24:28.807: adding 534 milliseconds of audio buffering, total audio buffering is now 928 milliseconds (source: Celestral - Sound)
+23:24:28.807: 
+23:30:27.297: adding 23 milliseconds of audio buffering, total audio buffering is now 952 milliseconds (source: Xciles - Microphone)
+23:30:27.297: 
+23:31:32.295: Max audio buffering reached!
+23:31:32.295: adding 92 milliseconds of audio buffering, total audio buffering is now 1044 milliseconds (source: Xciles - Sound)
+23:31:32.295: 
+00:06:48.835: [rtmp stream: 'adv_stream'] bitrate decreased to: 5200
+00:07:18.847: [rtmp stream: 'adv_stream'] bitrate increased to: 5500, done
+00:33:58.216: User switched to scene 'Main - Xciles'
+00:37:04.652: User switched to scene 'Ending'
+00:37:13.862: [rtmp stream: 'adv_stream'] User stopped the stream
+00:37:13.862: Output 'adv_stream': stopping
+00:37:13.862: Output 'adv_stream': Total frames output: 448736
+00:37:13.862: Output 'adv_stream': Total drawn frames: 448811
+00:37:13.865: ==== Streaming Stop ================================================
+00:46:35.009: User switched to scene 'Main'
+01:14:25.621: ==== Shutting down ==================================================
+01:14:26.424: Switched to scene '(null)'
+01:14:26.473: WASAPI: Device 'Remote Audio' Terminated
+01:14:26.667: [obs-ndi] audio thread for 'Celestral - WebCam' completed
+01:14:26.868: [obs-ndi] audio thread for 'Xciles - Webcam' completed
+01:14:27.039: [obs-ndi] audio thread for 'Xciles - Video' completed
+01:14:27.070: [obs-ndi] audio thread for 'Xciles - Microphone' completed
+01:14:27.085: [obs-ndi] audio thread for 'Xciles - Sound' completed
+01:14:27.171: [obs-ndi] audio thread for 'Celestral - Video' completed
+01:14:27.225: [obs-ndi] audio thread for 'Celestral - Sound' completed
+01:14:27.413: [obs-ndi] audio thread for 'Celestral - Microphone' completed
+01:14:27.442: All scene data cleared
+01:14:27.442: ------------------------------------------------
+01:14:27.590: Freeing OBS context data
+01:14:27.595: 	1 output(s) were remaining
+01:14:27.616: [obs-ndi] goodbye !
+01:14:27.648: [Scripting] Total detached callbacks: 0
+01:14:27.665: == Profiler Results =============================
+01:14:27.665: run_program_init: 4407.16 ms
+01:14:27.665:  ┣OBSApp::AppInit: 10.274 ms
+01:14:27.665:  ┃ ┗OBSApp::InitLocale: 0.916 ms
+01:14:27.665:  ┗OBSApp::OBSInit: 2212.81 ms
+01:14:27.665:    ┣obs_startup: 3.234 ms
+01:14:27.665:    ┗OBSBasic::OBSInit: 2184.09 ms
+01:14:27.665:      ┣OBSBasic::InitBasicConfig: 0.403 ms
+01:14:27.665:      ┣OBSBasic::ResetAudio: 0.153 ms
+01:14:27.665:      ┣OBSBasic::ResetVideo: 423.533 ms
+01:14:27.665:      ┣OBSBasic::InitOBSCallbacks: 0.005 ms
+01:14:27.665:      ┣OBSBasic::InitHotkeys: 0.034 ms
+01:14:27.665:      ┣obs_load_all_modules: 140.871 ms
+01:14:27.665:      ┃ ┣obs_init_module(advanced-scene-switcher.dll): 0.151 ms
+01:14:27.665:      ┃ ┣obs_init_module(coreaudio-encoder.dll): 0.814 ms
+01:14:27.665:      ┃ ┣obs_init_module(decklink-ouput-ui.dll): 0.407 ms
+01:14:27.665:      ┃ ┣obs_init_module(enc-amf.dll): 25.58 ms
+01:14:27.665:      ┃ ┣obs_init_module(frontend-tools.dll): 2.922 ms
+01:14:27.665:      ┃ ┣obs_init_module(image-source.dll): 0.004 ms
+01:14:27.665:      ┃ ┣obs_init_module(logi_obs_plugin_x64.dll): 1.125 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-browser.dll): 0.455 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-ffmpeg.dll): 0.861 ms
+01:14:27.665:      ┃ ┃ ┗nvenc_check: 0.828 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-filters.dll): 0.01 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-ndi.dll): 8.24 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-outputs.dll): 0.006 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-qsv11.dll): 62.253 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-text.dll): 0.182 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-transitions.dll): 0.005 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-vst.dll): 0.001 ms
+01:14:27.665:      ┃ ┣obs_init_module(obs-x264.dll): 0.002 ms
+01:14:27.665:      ┃ ┣obs_init_module(rtmp-services.dll): 0.281 ms
+01:14:27.665:      ┃ ┣obs_init_module(StreamDeckPlugin.dll): 1.822 ms
+01:14:27.665:      ┃ ┣obs_init_module(text-freetype2.dll): 0.044 ms
+01:14:27.665:      ┃ ┣obs_init_module(vlc-video.dll): 0.034 ms
+01:14:27.665:      ┃ ┣obs_init_module(win-capture.dll): 1.387 ms
+01:14:27.665:      ┃ ┣obs_init_module(win-decklink.dll): 3.98 ms
+01:14:27.665:      ┃ ┣obs_init_module(win-dshow.dll): 2.424 ms
+01:14:27.666:      ┃ ┣obs_init_module(win-mf.dll): 0 ms
+01:14:27.666:      ┃ ┣obs_init_module(win-wasapi.dll): 0.006 ms
+01:14:27.666:      ┃ ┗reset_win32_symbol_paths: 0.057 ms
+01:14:27.666:      ┣OBSBasic::ResetOutputs: 0.345 ms
+01:14:27.666:      ┣OBSBasic::CreateHotkeys: 0.027 ms
+01:14:27.666:      ┣OBSBasic::InitService: 2.118 ms
+01:14:27.666:      ┣OBSBasic::InitPrimitives: 0.076 ms
+01:14:27.666:      ┗OBSBasic::Load: 1232.03 ms
+01:14:27.666: obs_hotkey_thread(25 ms): min=0.003 ms, median=0.008 ms, max=33.022 ms, 99th percentile=0.055 ms, 99.9994% below 25 ms
+01:14:27.666: audio_thread(Audio): min=0 ms, median=0.545 ms, max=30.958 ms, 99th percentile=3.618 ms
+01:14:27.666:  ┗receive_audio: min=0.002 ms, median=0.526 ms, max=30.881 ms, 99th percentile=3.199 ms, 0.873658 calls per parent call
+01:14:27.666:    ┣buffer_audio: min=0 ms, median=0 ms, max=0.065 ms, 99th percentile=0.001 ms
+01:14:27.666:    ┗do_encode: min=0.024 ms, median=0.523 ms, max=30.878 ms, 99th percentile=3.196 ms
+01:14:27.666:      ┗encode(avc_aac_stream): min=0.02 ms, median=0.51 ms, max=30.871 ms, 99th percentile=3.182 ms
+01:14:27.666: obs_graphics_thread(33.3333 ms): min=0.04 ms, median=1.805 ms, max=1145.78 ms, 99th percentile=2.817 ms, 99.9992% below 33.333 ms
+01:14:27.666:  ┣tick_sources: min=0.001 ms, median=0.029 ms, max=1145.44 ms, 99th percentile=0.586 ms
+01:14:27.666:  ┣output_frame: min=0.036 ms, median=1.377 ms, max=39.292 ms, 99th percentile=2.055 ms
+01:14:27.666:  ┃ ┗gs_context(video->graphics): min=0.036 ms, median=1.377 ms, max=39.291 ms, 99th percentile=2.054 ms
+01:14:27.666:  ┃   ┣render_video: min=0.004 ms, median=1.348 ms, max=32.335 ms, 99th percentile=2.022 ms
+01:14:27.666:  ┃   ┃ ┣render_main_texture: min=0.002 ms, median=1.227 ms, max=32.083 ms, 99th percentile=1.865 ms
+01:14:27.666:  ┃   ┃ ┣render_convert_texture: min=0.007 ms, median=0.009 ms, max=0.119 ms, 99th percentile=0.018 ms, 0.866877 calls per parent call
+01:14:27.666:  ┃   ┃ ┗output_gpu_encoders: min=0 ms, median=0.031 ms, max=0.311 ms, 99th percentile=0.05 ms, 0.866877 calls per parent call
+01:14:27.666:  ┃   ┗gs_flush: min=0.014 ms, median=0.027 ms, max=39.216 ms, 99th percentile=0.134 ms
+01:14:27.666:  ┗render_displays: min=0 ms, median=0.38 ms, max=17.701 ms, 99th percentile=0.867 ms
+01:14:27.666: =================================================
+01:14:27.666: == Profiler Time Between Calls ==================
+01:14:27.666: obs_hotkey_thread(25 ms): min=24.793 ms, median=25.931 ms, max=97.974 ms, 0.176099% within ±2% of 25 ms (0% lower, 99.8239% higher)
+01:14:27.666: obs_graphics_thread(33.3333 ms): min=19.982 ms, median=33.333 ms, max=1145.79 ms, 99.9911% within ±2% of 33.333 ms (0.00444286% lower, 0.00444286% higher)
+01:14:27.666: =================================================
+01:14:27.812: Number of memory leaks: 10
