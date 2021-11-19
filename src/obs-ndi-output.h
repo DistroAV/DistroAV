@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <atomic>
 #include <util/platform.h>
 
