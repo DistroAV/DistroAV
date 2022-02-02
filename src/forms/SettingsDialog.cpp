@@ -71,7 +71,7 @@ void SettingsDialog::SaveFormData()
 		return;
 	}
 
-	bool extra_ips_changed = conf->ndi_extra_ips == ui->ndiExtraIpsLineEdit->text().toStdString();
+	bool extra_ips_changed = conf->ndi_extra_ips != ui->ndiExtraIpsLineEdit->text().toStdString();
 	conf->ndi_extra_ips = ui->ndiExtraIpsLineEdit->text().toStdString();
 
 	conf->save();
