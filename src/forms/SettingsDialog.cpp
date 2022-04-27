@@ -7,14 +7,6 @@
 #include "../obs-ndi.h"
 #include "../obs-ndi-config.h"
 
-QString GetToolTipIconHtml()
-{
-	bool lightTheme = QApplication::palette().text().color().redF() < 0.5;
-	QString iconFile = lightTheme ? ":toolTip/images/help.svg" : ":toolTip/images/help_light.svg";
-	QString iconTemplate = "<html> <img src='%1' style=' vertical-align: bottom; ' /></html>";
-	return iconTemplate.arg(iconFile);
-}
-
 SettingsDialog::SettingsDialog(QWidget* parent) :
 	QDialog(parent, Qt::Dialog),
 	ui(new Ui::SettingsDialog)
@@ -23,9 +15,6 @@ SettingsDialog::SettingsDialog(QWidget* parent) :
 
 	// Remove the ? button on dialogs on Windows
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-
-	// Set the appropriate tooltip icon for the theme
-	//ui->enableDebugLoggingToolTipLabel->setText(GetToolTipIconHtml());
 
 	connect(ui->buttonBox, &QDialogButtonBox::clicked,
 		this, &SettingsDialog::DialogButtonClicked);

@@ -3,7 +3,7 @@
 #include <memory>
 #include <Processing.NDI.Lib.h>
 
-#include "obs-ndi-macros.generated.h"
+#include "plugin-macros.generated.h"
 
 // For translations
 #define T_(text) obs_module_text(text)

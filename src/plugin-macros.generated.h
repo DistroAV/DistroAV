@@ -22,6 +22,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
 
-#define OBS_NDI_VERSION "@OBS_NDI_VERSION@"
+#define OBS_NDI_VERSION "5.0.0"
 
-#define NDILIB_HEADERS_VERSION "@NDILIB_HEADERS_VERSION@"
+#define NDILIB_HEADERS_VERSION "5.0.10"
