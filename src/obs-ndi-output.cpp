@@ -256,6 +256,13 @@ void ndi_output_destroy(void* data)
 	bfree(o);
 }
 
+// Define this in a more appropriate place and make this a settable option in the UI
+typedef enum HxMode {
+	None,
+	H264,
+	HEVC
+} HxMode;
+
 void ndi_output_rawvideo(void* data, struct video_data* frame)
 {
 	auto o = (struct ndi_output*)data;
@@ -287,7 +294,22 @@ void ndi_output_rawvideo(void* data, struct video_data* frame)
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
 
-	ndiLib->send_send_video_v2(o->ndi_sender, &video_frame);
+	// TODO:(pv) Option for HX H264/HEVC using NDI Advanced SDK example's send_send_video_scatter_async
+	//	Double-check that above format conversion code is compatible
+	HxMode hxMode = HxMode.H264;
+	switch(hxMode) {
+		case HxMode.None:
+			ndiLib->send_send_video_v2(o->ndi_sender, &video_frame);
+			break;
+		case HxMode.H264:
+			// Find way to reuse https://github.com/obsproject/obs-studio/blob/master/plugins/obs-x264/
+			// C:\Program Files\NDI\NDI 5 Advanced SDK\Examples\C++ (HX2)\NDIlib_Send_H264
+			break;
+		case HxMode.HEVC:
+			// Find way to reuse https://github.com/obsproject/obs-studio/blob/master/libobs/obs-hevc.c
+			// C:\Program Files\NDI\NDI 5 Advanced SDK\Examples\C++ (HX2)\NDIlib_Send_HEVC
+			break;
+	}
 }
 
 void ndi_output_rawaudio(void* data, struct audio_data* frame)
