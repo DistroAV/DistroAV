@@ -10,7 +10,7 @@
 void fill_ndi_sources(obs_property_t *list)
 {
 	uint32_t source_count = 0;
-	const NDIlib_source_t *sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder, &source_count);
+	const NDIlib_source_t *sources = ndiLib->find_get_current_sources(ndi_finder, &source_count);
 
 	obs_property_list_clear(list);
 	for (uint32_t i = 0; i < source_count; ++i) {
@@ -91,7 +91,7 @@ void ndi_input::update(obs_data_t *settings)
 	recv_desc.allow_video_fields = true;
 	recv_desc.p_ndi_recv_name = obs_source_get_name(source);
 
-	ndi_recv = ndiLib->NDIlib_recv_create_v3(&recv_desc);
+	ndi_recv = ndiLib->recv_create_v3(&recv_desc);
 	if (!ndi_recv) {
 		do_log(LOG_ERROR, "[ndi_input::update] Failed to create new NDI receiver.");
 		return;
@@ -126,14 +126,14 @@ void ndi_input::update(obs_data_t *settings)
 
 	tally.on_preview = obs_source_active(source);
 	tally.on_program = obs_source_showing(source);
-	ndiLib->NDIlib_recv_set_tally(ndi_recv, &tally);
+	ndiLib->recv_set_tally(ndi_recv, &tally);
 }
 
 void ndi_input::activate()
 {
 	if (running && ndi_recv) {
 		tally.on_program = true;
-		ndiLib->NDIlib_recv_set_tally(ndi_recv, &tally);
+		ndiLib->recv_set_tally(ndi_recv, &tally);
 	}
 }
 
@@ -141,7 +141,7 @@ void ndi_input::deactivate()
 {
 	if (running && ndi_recv) {
 		tally.on_program = false;
-		ndiLib->NDIlib_recv_set_tally(ndi_recv, &tally);
+		ndiLib->recv_set_tally(ndi_recv, &tally);
 	}
 }
 
@@ -149,7 +149,7 @@ void ndi_input::show()
 {
 	if (running && ndi_recv) {
 		tally.on_preview = true;
-		ndiLib->NDIlib_recv_set_tally(ndi_recv, &tally);
+		ndiLib->recv_set_tally(ndi_recv, &tally);
 	}
 }
 
@@ -157,7 +157,7 @@ void ndi_input::hide()
 {
 	if (running && ndi_recv) {
 		tally.on_preview = false;
-		ndiLib->NDIlib_recv_set_tally(ndi_recv, &tally);
+		ndiLib->recv_set_tally(ndi_recv, &tally);
 	}
 }
 
@@ -170,7 +170,7 @@ void ndi_input::stop_recv()
 		audio_thread.join();
 
 	if (ndi_recv) {
-		ndiLib->NDIlib_recv_destroy(ndi_recv);
+		ndiLib->recv_destroy(ndi_recv);
 		ndi_recv = nullptr;
 	}
 }
@@ -195,7 +195,7 @@ void ndi_input::ndi_video_thread()
 			continue;
 		}
 
-		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, &ndi_video_frame, nullptr, nullptr, 50) != NDIlib_frame_type_video)
+		if (ndiLib->recv_capture_v3(ndi_recv, &ndi_video_frame, nullptr, nullptr, 50) != NDIlib_frame_type_video)
 			continue;
 
 		last_frame = true;
@@ -213,7 +213,7 @@ void ndi_input::ndi_video_thread()
 
 		obs_source_output_video(source, &obs_video_frame);
 
-		ndiLib->NDIlib_recv_free_video_v2(ndi_recv, &ndi_video_frame);
+		ndiLib->recv_free_video_v2(ndi_recv, &ndi_video_frame);
 	}
 
 	os_end_high_performance(perf_token);
@@ -231,7 +231,7 @@ void ndi_input::ndi_audio_thread()
 			continue;
 		}
 
-		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, nullptr, &ndi_audio_frame, nullptr, 50) != NDIlib_frame_type_audio)
+		if (ndiLib->recv_capture_v3(ndi_recv, nullptr, &ndi_audio_frame, nullptr, 50) != NDIlib_frame_type_audio)
 			continue;
 
 		// Reports seem to suggest that NDI can provide audio without timestamps.
@@ -251,7 +251,7 @@ void ndi_input::ndi_audio_thread()
 
 		obs_source_output_audio(source, &obs_audio_frame);
 
-		ndiLib->NDIlib_recv_free_audio_v3(ndi_recv, &ndi_audio_frame);
+		ndiLib->recv_free_audio_v3(ndi_recv, &ndi_audio_frame);
 	}
 }
 

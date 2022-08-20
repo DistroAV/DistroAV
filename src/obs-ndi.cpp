@@ -77,7 +77,7 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	if (ndiLib->NDIlib_initialize()) {
+	if (ndiLib->initialize()) {
 		blog(LOG_DEBUG, "[obs_module_load] Initialized NDIlib.");
 	} else {
 		blog(LOG_ERROR, "[obs_module_load] NDIlib failed to initialize. Plugin disabled. Your CPU may not be supported.");
@@ -87,7 +87,7 @@ bool obs_module_load(void)
 	if (!restart_ndi_finder())
 		return false;
 
-	blog(LOG_INFO, "[obs_module_load] NDI runtime loaded. Version: %s", ndiLib->NDIlib_version());
+	blog(LOG_INFO, "[obs_module_load] NDI runtime loaded. Version: %s", ndiLib->version());
 
 	register_ndi_source_info();
 
@@ -104,8 +104,8 @@ void obs_module_unload()
 
 	if (ndiLib) {
 		if (ndi_finder)
-			ndiLib->NDIlib_find_destroy(ndi_finder);
-		ndiLib->NDIlib_destroy();
+			ndiLib->find_destroy(ndi_finder);
+		ndiLib->destroy();
 	}
 
 	if (loaded_lib) {
@@ -169,7 +169,7 @@ bool restart_ndi_finder()
 		return false;
 
 	if (ndi_finder) {
-		ndiLib->NDIlib_find_destroy(ndi_finder);
+		ndiLib->find_destroy(ndi_finder);
 		ndi_finder = nullptr;
 	}
 
@@ -177,7 +177,7 @@ bool restart_ndi_finder()
 	find_desc.show_local_sources = true;
 	find_desc.p_groups = NULL;
 	find_desc.p_extra_ips = _config->ndi_extra_ips.c_str();
-	ndi_finder = ndiLib->NDIlib_find_create_v2(&find_desc);
+	ndi_finder = ndiLib->find_create_v2(&find_desc);
 	if (!ndi_finder) {
 		blog(LOG_ERROR, "[restart_ndi_finder] Failed to create NDI finder. Plugin disabled.");
 		return false;
