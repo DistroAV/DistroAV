@@ -1,411 +1,388 @@
-name: "CI Multiplatform Build"
+name: Plugin Build
 
 on:
   push:
     paths-ignore:
       - '**.md'
     branches:
+      - master
       - rewrite
     tags:
-      - '[45].[0-9]+.[0-9]+*'
+      - '*'
   pull_request:
     paths-ignore:
       - '**.md'
     branches:
+      - master
       - rewrite
 
+env:
+  PLUGIN_NAME: 'obs-ndi'
+
 jobs:
-  windows:
-    name: 'Windows 32/64-bit'
-    runs-on: [windows-latest]
-    if: contains(github.event.head_commit.message, '[skip ci]') != true
+  clang_check:
+    name: 01 - Code Format Check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install clang-format
+        run: sudo apt-get install -y clang-format-13
+
+      - name: Run clang-format
+        run: ./.github/scripts/check-format.sh && ./.github/scripts/check-changes.sh
+
+      - name: Install cmake-format
+        run: sudo pip install cmakelang
+
+      - name: Run cmake-format
+        run: ./.github/scripts/check-cmake.sh
+
+  macos_build:
+    name: 02 - macOS
+    runs-on: macos-12
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [x86_64, arm64, universal]
+    if: always()
+    needs: [clang_check]
+    outputs:
+      commitHash: ${{ steps.setup.outputs.commitHash }}
     env:
-      QT_CACHE_VERSION: '1' # Change whenever updating OBS dependencies URL, in order to force a cache reset
-      QT_VERSION: '5.15.2'
-      WINDOWS_DEPS_CACHE_VERSION: '1' # Change whenever updating Qt dependency URL, in order to force a cache reset
-      WINDOWS_DEPS_VERSION: '2019'
-      CMAKE_GENERATOR: "Visual Studio 16 2019"
-      CMAKE_SYSTEM_VERSION: "10.0"
+      CODESIGN_IDENT: '-'
+      CODESIGN_IDENT_INSTALLER: ''
+      MACOSX_DEPLOYMENT_TARGET: '10.15'
+    defaults:
+      run:
+        shell: zsh {0}
     steps:
-      - name: 'Add msbuild to PATH'
-        uses: microsoft/setup-msbuild@v1.0.2
-      - name: 'Checkout obs-ndi'
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          path: ${{ github.workspace }}/obs-ndi
-          submodules: 'recursive'
-      - name: 'Checkout OBS-Studio'
-        uses: actions/checkout@v2
+          path: plugin
+          submodules: recursive
+
+      - name: Checkout obs-studio
+        uses: actions/checkout@v3
         with:
-          repository: obsproject/obs-studio
-          path: ${{ github.workspace }}/obs-studio
-          submodules: 'recursive'
-      - name: 'Get OBS-Studio Git Info'
-        shell: bash
-        working-directory: ${{ github.workspace }}/obs-studio
+          repository: 'obsproject/obs-studio'
+          path: obs-studio
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Environment
+        id: setup
+        working-directory: ${{ github.workspace }}/plugin
         run: |
-          git fetch --prune --unshallow
-          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
-      - name: 'Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})'
-        shell: bash
-        working-directory: ${{ github.workspace }}/obs-studio
-        run: |
-          git checkout ${{ env.OBS_GIT_TAG }}
-          git submodule update
-      - name: 'Get obs-ndi Git Info'
-        shell: bash
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: |
-          git fetch --prune --unshallow
-          GIT_HASH=$(git rev-parse --short HEAD)
-          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
-          GIT_TAG=$(git describe --exact-match --tags --abbrev=0) || GIT_TAG=""
-          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
-          if [ "$GIT_TAG" ] ; then \
-            VERSION="$GIT_TAG" \
-            VERSION_SUFFIX=$(echo "$GIT_TAG" | cut -c6-20) ; \
-          else \
-            VERSION="$GIT_HASH-git" \
-            VERSION_SUFFIX="-$GIT_HASH-git" ; \
-          fi
-          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "CMAKE_VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
-      - name: 'Restore Cached Qt'
-        id: qtcache
-        uses: actions/cache@v2
+          ## SETUP ENVIRONMENT SCRIPT
+          print '::group::Clean Homebrew Environment'
+          typeset -a to_remove=()
+
+          for formula (speexdsp curl php) {
+            if [[ -d ${HOMEBREW_PREFIX}/opt/${formula} ]] to_remove+=(${formula})
+          }
+
+          if (( #to_remove > 0 )) brew uninstall --ignore-dependencies ${to_remove}
+          print '::endgroup::'
+
+          print '::group::Set up code signing'
+          if [[ '${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}' != '' && \
+                '${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}' != '' && \
+                '${{ secrets.MACOS_SIGNING_CERT }}' != '' ]] {
+            print '::set-output name=haveCodesignIdent::true'
+          } else {
+            print '::set-output name=haveCodesignIdent::false'
+          }
+
+          if [[ '${{ secrets.MACOS_NOTARIZATION_USERNAME }}' != '' && \
+                '${{ secrets.MACOS_NOTARIZATION_PASSWORD }}' != '' ]] {
+            print '::set-output name=haveNotarizationUser::true'
+          } else {
+            print '::set-output name=haveNotarizationUser::false'
+          }
+          print '::endgroup::'
+
+          print "::set-output name=ccacheDate::$(date +"%Y-%m-%d")"
+          print "::set-output name=commitHash::${"$(git rev-parse HEAD)"[0,9]}"
+
+      - name: Restore Compilation Cache
+        id: ccache-cache
+        uses: actions/cache@v2.1.7
         with:
-          path: Qt_${{ env.QT_VERSION }}.7z
-          key: 'qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}'
+          path: ${{ github.workspace }}/.ccache
+          key: macos-${{ matrix.arch }}-ccache-plugin-${{ steps.setup.outputs.ccacheDate }}
           restore-keys: |
-            qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}
-      - name: 'Download Prerequisite: Qt'
-        if: steps.qtcache.outputs.cache-hit != 'true'
+            macos-${{ matrix.arch }}-ccache-plugin-
+
+      - name: Check for GitHub Labels
+        id: seekingTesters
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          curl -kLO https://tt2468.net/dl/Qt_${{ env.QT_VERSION }}.7z -f --retry 5 -C -
-      - name: 'Extract Prerequisite: Qt'
-        run: |
-          7z x Qt_${{ env.QT_VERSION }}.7z -o"${{ github.workspace }}\cmbuild\QT"
-      - name: 'Restore Cached OBS-Studio Dependencies'
-        id: obscache
-        uses: actions/cache@v2
+          if [[ -n "$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s "${{ github.event.pull_request.url }}" | jq -e '.labels[] | select(.name == "Seeking Testers")')" ]] {
+            print '::set-output name=found::true'
+          } else {
+            print '::set-output name=found::false'
+          }
+
+      - name: Install Apple Developer Certificate
+        if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
+        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
         with:
-          path: ${{ github.workspace }}\cmbuild\deps\**
-          key: 'obsdep-${{ env.WINDOWS_DEPS_CACHE_VERSION }} | ${{ runner.os }}'
-          restore-keys: |
-            obsdep-${{ env.WINDOWS_DEPS_CACHE_VERSION }} | ${{ runner.os }}
-      - name: 'Install Prerequisite: Pre-built OBS-Studio dependencies'
-        if: steps.obscache.outputs.cache-hit != 'true'
+          keychain-password: ${{ github.run_id }}
+          p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
+          p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+
+      - name: Set Signing Identity
+        if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
         run: |
-          curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -f --retry 5 -C -
-          7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}\cmbuild\deps"
-      - name: 'Restore OBS-Studio 32-bit Build ${{ env.OBS_GIT_HASH }} (v${{ env.OBS_GIT_TAG }}) from Cache'
-        id: build-cache-obs-32
-        uses: actions/cache@v2
-        env:
-          CACHE_NAME: 'build-cache-obs-32'
+          print "CODESIGN_IDENT=${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}" >> $GITHUB_ENV
+          print "CODESIGN_IDENT_INSTALLER=${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}" >> $GITHUB_ENV
+
+      - name: Build Plugin
+        uses: ./plugin/.github/actions/build-plugin
         with:
-          path: ${{ github.workspace }}/obs-studio/build32
-          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
-      - name: 'Configure OBS-Studio 32-bit'
-        if: steps.build-cache-obs-32.outputs.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/obs-studio
-        run: |
-          if(!(Test-Path -Path ".\build32")){New-Item -ItemType directory -Path .\build32}
-          cd .\build32
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A Win32 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019" -DDepsPath="${{ github.workspace }}\cmbuild\deps\win32" -DCOPIED_DEPENDENCIES=NO -DCOPY_DEPENDENCIES=YES -DBUILD_BROWSER=OFF ..
-      - name: 'Build OBS-Studio 32-bit'
-        if: steps.build-cache-obs-32.outputs.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/obs-studio
-        run: |
-          msbuild /m /p:Configuration=RelWithDebInfo .\build32\libobs\libobs.vcxproj
-          msbuild /m /p:Configuration=RelWithDebInfo .\build32\UI\obs-frontend-api\obs-frontend-api.vcxproj
-      - name: 'Restore OBS-Studio 64-bit Build ${{ env.OBS_GIT_HASH }} (v${{ env.OBS_GIT_TAG }}) from Cache'
-        id: build-cache-obs-64
-        uses: actions/cache@v1
-        env:
-          CACHE_NAME: 'build-cache-obs-64'
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+          codesign: 'true'
+          codesignIdent: ${{ env.CODESIGN_IDENT }}
+
+      - name: Package Plugin
+        uses: ./plugin/.github/actions/package-plugin
         with:
-          path: ${{ github.workspace }}/obs-studio/build64
-          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_HASH }}
-      - name: 'Configure OBS-Studio 64-bit'
-        if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/obs-studio
-        run: |
-          if(!(Test-Path -Path ".\build64")){New-Item -ItemType directory -Path .\build64}
-          cd .\build64
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCOPIED_DEPENDENCIES=NO -DCOPY_DEPENDENCIES=YES -DBUILD_BROWSER=OFF ..
-      - name: 'Build OBS-Studio 64-bit'
-        if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
-        working-directory: ${{ github.workspace }}/obs-studio
-        run: |
-          msbuild /m /p:Configuration=RelWithDebInfo .\build64\libobs\libobs.vcxproj
-          msbuild /m /p:Configuration=RelWithDebInfo .\build64\UI\obs-frontend-api\obs-frontend-api.vcxproj
-      - name: 'Configure obs-ndi 32-bit'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: |
-          mkdir .\build32
-          cd .\build32
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A Win32 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build32\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build32\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build32\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" ..
-      - name: 'Configure obs-ndi 64-bit'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: |
-          mkdir .\build64
-          cd .\build64
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" ..
-      - name: 'Build obs-ndi 32-bit'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: msbuild /m /p:Configuration=RelWithDebInfo .\build32\obs-ndi.sln
-      - name: 'Build obs-ndi 64-bit'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ndi.sln
-      - name: 'Set CI Artifact Filename'
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+          codesign: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
+          notarize: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && steps.setup.outputs.haveNotarizationUser == 'true' }}
+          codesignIdent: ${{ env.CODESIGN_IDENT }}
+          installerIdent: ${{ env.CODESIGN_IDENT_INSTALLER }}
+          codesignUser: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+          codesignPass: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+
+      - name: Upload Build Artifact
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PLUGIN_NAME }}-macos-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-macos-${{ matrix.arch }}.pkg
+
+  linux_build:
+    name: 02 - Linux
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [x86_64]
+    if: always()
+    needs: [clang_check]
+    outputs:
+      commitHash: ${{ steps.setup.outputs.commitHash }}
+    defaults:
+      run:
         shell: bash
-        run: |
-          echo "WIN_FILENAME=obs-websocket-${{ env.PACKAGE_VERSION }}-Windows" >> $GITHUB_ENV
-      - name: 'Package obs-ndi'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: |
-          mkdir package
-          cd package
-          7z a "${{ env.WIN_FILENAME }}.zip"  "..\release\*"
-          iscc ..\installer\installer-windows.generated.iss /O. /F"${{ env.WIN_FILENAME }}-Installer"
-      - name: 'Publish ${{ env.WIN_FILENAME }}.zip'
-        if: success()
-        uses: actions/upload-artifact@v2-preview
-        with:
-          name: 'obs-ndi-${{ env.PACKAGE_VERSION }}-Windows'
-          path: ${{ github.workspace }}/obs-ndi/package/*.zip
-      - name: 'Publish ${{ env.WIN_FILENAME }}-Installer.exe'
-        if: success()
-        uses: actions/upload-artifact@v2-preview
-        with:
-          name: 'obs-ndi-${{ env.PACKAGE_VERSION }}-Windows-Installer'
-          path: ${{ github.workspace }}/obs-ndi/package/*.exe
-  ubuntu64:
-    name: "Linux/Ubuntu 64-bit"
-    runs-on: [ubuntu-latest]
-    if: contains(github.event.head_commit.message, '[skip ci]') != true
     steps:
-      - name: 'Checkout obs-ndi'
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          path: ${{ github.workspace }}/obs-ndi
-          submodules: 'recursive'
-      - name: 'Checkout OBS-Studio'
-        uses: actions/checkout@v2
+          path: plugin
+          submodules: recursive
+
+      - name: Checkout obs-studio
+        uses: actions/checkout@v3
         with:
-          repository: obsproject/obs-studio
-          path: ${{ github.workspace }}/obs-studio
-          submodules: 'recursive'
-      - name: 'Get OBS-Studio Git Info'
-        shell: bash
-        working-directory: ${{ github.workspace }}/obs-studio
+          repository: 'obsproject/obs-studio'
+          path: obs-studio
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Environment
+        working-directory: ${{ github.workspace }}/plugin
+        id: setup
         run: |
-          git fetch --prune --unshallow
-          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
-      - name: 'Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})'
-        shell: bash
-        working-directory: ${{ github.workspace }}/obs-studio
-        run: |
-          git checkout ${{ env.OBS_GIT_TAG }}
-          git submodule update
-      - name: 'Get obs-ndi git info'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        run: |
-          git fetch --prune --unshallow
-          GIT_HASH=$(git rev-parse --short HEAD)
-          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
-          GIT_TAG=$(git describe --exact-match --tags --abbrev=0) || GIT_TAG=""
-          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
-          if [ "$GIT_TAG" ] ; then \
-            VERSION="$GIT_TAG" \
-            VERSION_SUFFIX=$(echo "$GIT_TAG" | cut -c6-20) ; \
-          else \
-            VERSION="$GIT_HASH-git" \
-            VERSION_SUFFIX="-$GIT_HASH-git" ; \
-          fi
-          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "CMAKE_VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
-      - name: 'Install prerequisites (Apt)'
-        shell: bash
-        run: |
-          sudo dpkg --add-architecture amd64
-          sudo apt-get -qq update
-          sudo apt-get install -y \
-           build-essential \
-           checkinstall \
-           cmake \
-           libasound2-dev \
-           libavcodec-dev \
-           libavdevice-dev \
-           libavfilter-dev \
-           libavformat-dev \
-           libavutil-dev \
-           libcurl4-openssl-dev \
-           libfdk-aac-dev \
-           libfontconfig-dev \
-           libfreetype6-dev \
-           libgl1-mesa-dev \
-           libjack-jackd2-dev \
-           libjansson-dev \
-           libluajit-5.1-dev \
-           libpulse-dev \
-           libqt5x11extras5-dev \
-           libspeexdsp-dev \
-           libswresample-dev \
-           libswscale-dev \
-           libudev-dev \
-           libv4l-dev \
-           libva-dev \
-           libvlc-dev \
-           libx11-dev \
-           libx264-dev \
-           libxcb-randr0-dev \
-           libxcb-shm0-dev \
-           libxcb-xinerama0-dev \
-           libxcomposite-dev \
-           libxinerama-dev \
-           libmbedtls-dev \
-           pkg-config \
-           python3-dev \
-           qtbase5-dev \
-           qtbase5-private-dev \
-           libqt5svg5-dev \
-           swig \
-           libxcb-randr0-dev \
-           libxcb-xfixes0-dev \
-           libx11-xcb-dev \
-           libxcb1-dev \
-           libxss-dev \
-      - name: 'Configure OBS-Studio'
-        working-directory: ${{ github.workspace }}/obs-studio
-        shell: bash
-        run: |
-          mkdir ./build
-          cd ./build
-          cmake -DDISABLE_PLUGINS=YES -DENABLE_SCRIPTING=NO -DUNIX_STRUCTURE=YES -DCMAKE_INSTALL_PREFIX=/usr ..
-      - name: 'Build OBS-Studio'
-        working-directory: ${{ github.workspace }}/obs-studio
-        shell: bash
-        run: |
-          set -e
-          cd ./build
-          make -j4 libobs obs-frontend-api
-      - name: 'Install OBS-Studio'
-        working-directory: ${{ github.workspace }}/obs-studio
-        shell: bash
-        run: |
-          cd ./build
-          sudo cp ./libobs/libobs.so /usr/lib
-          sudo cp ./UI/obs-frontend-api/libobs-frontend-api.so /usr/lib
-          sudo mkdir -p /usr/include/obs
-          sudo cp ../UI/obs-frontend-api/obs-frontend-api.h /usr/include/obs/obs-frontend-api.h
-      - name: 'Configure obs-ndi'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        shell: bash
-        run: |
-          mkdir ./build
-          cd ./build
-          if [ "${{ env.GIT_TAG }}" ] ; then \
-            cmake -DLIBOBS_INCLUDE_DIR=${{ github.workspace }}/obs-studio/libobs -DCMAKE_INSTALL_PREFIX=/usr -DUSE_UBUNTU_FIX=TRUE -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" -DCMAKE_BUILD_TYPE=Release ..
-          else \
-            cmake -DLIBOBS_INCLUDE_DIR=${{ github.workspace }}/obs-studio/libobs -DCMAKE_INSTALL_PREFIX=/usr -DUSE_UBUNTU_FIX=TRUE -DOBS_NDI_VERSION_SUFFIX="${{ env.CMAKE_VERSION_SUFFIX }}" ..
-          fi
-      - name: 'Build obs-ndi'
-        working-directory: ${{ github.workspace }}/obs-ndi
-        shell: bash
-        run: |
-          set -e
-          cd ./build
-          make -j4
-      - name: 'Set CI Artifact Filename'
-        shell: bash
-        run: |
-          echo "LINUX_FILENAME=obs-ndi-${{ env.PACKAGE_VERSION }}-Ubuntu64.deb" >> $GITHUB_ENV
-      - name: 'Package ${{ env.LINUX_FILENAME }}'
-        if: success()
-        working-directory: ${{ github.workspace }}/obs-ndi
-        shell: bash
-        run: |
-          if [ "${{ env.GIT_TAG }}" ] ; then \
-            CHECKINSTALL_VERSION="${{ env.PACKAGE_VERSION }}" ; \
-          else \
-            CHECKINSTALL_VERSION="1-${{ env.PACKAGE_VERSION }}" ; \
-          fi
-          cd ./build
-          sudo checkinstall -y --type=debian --fstrans=no -nodoc \
-              --backup=no --deldoc=yes --install=no --pkgname=obs-ndi --pkgversion="$CHECKINSTALL_VERSION" \
-              --pkglicense="GPLv2.0" --maintainer="${{ github.event.pusher.email }}" --pkggroup="video" \
-              --pkgsource="${{ github.event.repository.html_url }}" \
-              --requires="obs-studio,libqt5core5a,libqt5widgets5,libqt5network5" \
-              --pakdir="../package"
-          sudo chmod ao+r ../package/*
-          sudo mv ../package/* ../package/${{ env.LINUX_FILENAME }}
-          cd -
-      - name: 'Publish ${{ env.LINUX_FILENAME }}'
-        if: success()
-        uses: actions/upload-artifact@v2-preview
+          ## SETUP ENVIRONMENT SCRIPT
+          echo "::set-output name=ccacheDate::$(date +"%Y-%m-%d")"
+          echo "::set-output name=commitHash::$(git rev-parse HEAD | cut -c1-9)"
+
+      - name: Restore Compilation Cache
+        id: ccache-cache
+        uses: actions/cache@v2.1.7
         with:
-          name: 'obs-ndi-${{ env.PACKAGE_VERSION }}-Ubuntu64'
-          path: '${{ github.workspace }}/obs-ndi/package/*.deb'
-  ubuntu64-ndi-runtime:
-    name: 'Package NDI Runtime [Ubuntu]'
-    runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/rewrite' }}
-    env:
-      NDILIB_VERSION: "5.0.10"
-      SDK_DOWNLOAD_URL: "https://tt2468.net/dl/ndi/Install_NDI_SDK_v5_Linux.tar.gz"
+          path: ${{ github.workspace }}/.ccache
+          key: linux-${{ matrix.arch }}-ccache-plugin-${{ steps.setup.outputs.ccacheDate }}
+          restore-keys: |
+            linux-${{ matrix.arch }}-ccache-plugin-
+
+      - name: Check for GitHub Labels
+        id: seekingTesters
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          ## GITHUB LABEL SCRIPT
+          if [[ -n "$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s "${{ github.event.pull_request.url }}" | jq -e '.labels[] | select(.name == "Seeking Testers")')" ]]; then
+            echo '::set-output name=found::true'
+          else
+            echo '::set-output name=found::false'
+          fi
+
+      - name: Build Plugin
+        uses: ./plugin/.github/actions/build-plugin
+        with:
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+
+      - name: Package Plugin
+        uses: ./plugin/.github/actions/package-plugin
+        with:
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+
+      - name: Upload Build Artifact
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PLUGIN_NAME }}-linux-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-linux-${{ matrix.arch }}.*
+
+  windows_build:
+    name: 02 - Windows
+    runs-on: windows-2022
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [x86, x64]
+    if: always()
+    needs: [clang_check]
+    outputs:
+      commitHash: ${{ steps.setup.outputs.commitHash }}
+    defaults:
+      run:
+        shell: pwsh
     steps:
-      - name: 'Checkout obs-ndi'
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          path: ${{ github.workspace }}/obs-ndi
-          submodules: 'recursive'
-      - name: 'Install prerequisites (Apt)'
+          path: plugin
+          submodules: recursive
+
+      - name: Checkout obs-studio
+        uses: actions/checkout@v3
+        with:
+          repository: 'obsproject/obs-studio'
+          path: obs-studio
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Environment
+        working-directory: ${{ github.workspace }}/plugin
+        id: setup
+        run: |
+          ## SETUP ENVIRONMENT SCRIPT
+          $CommitHash = (git rev-parse HEAD)[0..8] -join ''
+          Write-Output "::set-output name=commitHash::${CommitHash}"
+
+      - name: Check for GitHub Labels
+        id: seekingTesters
+        working-directory: ${{ github.workspace }}/plugin
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          ## GITHUB LABEL SCRIPT
+          $LabelFound = try {
+            $Params = @{
+              Authentication = 'Bearer'
+              Token = (ConvertTo-SecureString '${{ secrets.GITHUB_TOKEN }}' -AsPlainText)
+              Uri = '${{ github.event.pull_request.url }}'
+              UseBasicParsing = $true
+            }
+
+            (Invoke-RestMethod @Params).labels.name.contains('Seeking Testers')
+          } catch {
+            $false
+          }
+
+          Write-Output "::set-output name=found::$(([string]${LabelFound}).ToLower())"
+
+      - name: Build Plugin
+        uses: ./plugin/.github/actions/build-plugin
+        with:
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+          visualStudio: 'Visual Studio 17 2022'
+
+      - name: Package Plugin
+        uses: ./plugin/.github/actions/package-plugin
+        with:
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+
+      - name: Upload Build Artifact
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PLUGIN_NAME }}-windows-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*.zip
+
+      - name: Package Plugin Installer
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
+        uses: ./plugin/.github/actions/package-plugin
+        with:
+          workingDirectory: ${{ github.workspace }}/plugin
+          target: ${{ matrix.arch }}
+          config: RelWithDebInfo
+          createInstaller: true
+
+      - name: Upload Installer Artifact
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PLUGIN_NAME }}-windows-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}-installer
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*.exe
+
+  make-release:
+    name: 03 - Create and upload release
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    needs: [macos_build, linux_build, windows_build]
+    defaults:
+      run:
         shell: bash
+    steps:
+      - name: Get Metadata
+        id: metadata
         run: |
-          sudo dpkg --add-architecture amd64
-          sudo apt-get -qq update
-          sudo apt-get install -y \
-           build-essential \
-           checkinstall
-      - name: 'Download and Extract SDK'
+          ## METADATA SCRIPT
+          echo "::set-output name=version::${GITHUB_REF/refs\/tags\//}"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate Checksums
         run: |
-          curl -kL -o ndi_sdk.tar.gz ${{ env.SDK_DOWNLOAD_URL }} -f --retry 5
-          tar -xvf ndi_sdk.tar.gz
-          chmod +x Install_NDI_SDK_v5_Linux.sh
-          yes | PAGER="cat" bash Install_NDI_SDK_v5_Linux.sh
-          rm -rf /tmp/ndisdk
-          mv "NDI SDK for Linux" /tmp/ndisdk
-      - name: 'Package SDK Binaries'
-        run: |
-          chmod +x ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
-          PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
-            --backup=no --deldoc=yes --install=no \
-            --pkgname=libndi5 --replaces=libndi4 --pkgversion="${{ env.NDILIB_VERSION }}" \
-            --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
-           	--pkggroup="video" \
-            --pkgsource="http://ndi.newtek.com" \
-            --pakdir="package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-deb.sh
-      - name: 'Package Dev SDK Binaries'
-        run: |
-          chmod +x ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
-          PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
-            --backup=no --deldoc=yes --install=no \
-            --pkgname=libndi5-dev --pkgversion="${{ env.NDILIB_VERSION }}" --requires="libndi5 \(\>= ${{ env.NDILIB_VERSION }}\)" \
-            --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
-            --pkggroup="video" \
-            --pkgsource="http://ndi.newtek.com" \
-            --pakdir="package" ${{ github.workspace }}/obs-ndi/CI/create-libndi-dev-deb.sh
-      - name: 'Publish Artifacts'
-        if: success()
-        uses: actions/upload-artifact@v2-preview
+          ## CHECKSUM GENERATION SCRIPT
+          shopt -s extglob
+          echo "### Checksums" > ${{ github.workspace }}/CHECKSUMS.txt
+          for file in ${{ github.workspace }}/**/@(*.pkg|*.exe|*.deb|*.zip); do
+            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" >> ${{ github.workspace }}/CHECKSUMS.txt
+          done
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
         with:
-          name: 'libndi-${{ env.NDILIB_VERSION }}-Ubuntu64'
-          path: 'package/*.deb'
+          draft: false
+          prerelease: ${{ contains(steps.metadata.outputs.version, 'rc') || contains(steps.metadata.outputs.version, 'beta') }}
+          tag_name: ${{ steps.metadata.outputs.version }}
+          name: "${{ env.PLUGIN_NAME }} ${{ steps.metadata.outputs.version }}"
+          body_path: ${{ github.workspace }}/CHECKSUMS.txt
+          files: |
+            ${{ github.workspace }}/**/*.zip
+            ${{ github.workspace }}/**/*.exe
+            ${{ github.workspace }}/**/*.deb
+            ${{ github.workspace }}/**/*.pkg

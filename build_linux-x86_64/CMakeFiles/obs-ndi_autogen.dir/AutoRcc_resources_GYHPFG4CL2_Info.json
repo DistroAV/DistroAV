@@ -1,0 +1,23 @@
+{
+	"BUILD_DIR" : "/home/tt2468/obs-ndi/build_linux-x86_64/obs-ndi_autogen",
+	"CMAKE_BINARY_DIR" : "/home/tt2468/obs-ndi/build_linux-x86_64",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/tt2468/obs-ndi/build_linux-x86_64",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/tt2468/obs-ndi",
+	"CMAKE_SOURCE_DIR" : "/home/tt2468/obs-ndi",
+	"INCLUDE_DIR" : "/home/tt2468/obs-ndi/build_linux-x86_64/obs-ndi_autogen/include",
+	"INPUTS" : 
+	[
+		"/home/tt2468/obs-ndi/src/forms/images/help.svg",
+		"/home/tt2468/obs-ndi/src/forms/images/help_light.svg"
+	],
+	"LOCK_FILE" : "/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/obs-ndi_autogen.dir/AutoRcc_resources_GYHPFG4CL2_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "-name", "resources" ],
+	"OUTPUT_CHECKSUM" : "GYHPFG4CL2",
+	"OUTPUT_NAME" : "qrc_resources.cpp",
+	"RCC_EXECUTABLE" : "/usr/lib/qt5/bin/rcc",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/obs-ndi_autogen.dir/AutoRcc_resources_GYHPFG4CL2_Used.txt",
+	"SOURCE" : "/home/tt2468/obs-ndi/src/forms/resources.qrc",
+	"VERBOSITY" : 0
+}

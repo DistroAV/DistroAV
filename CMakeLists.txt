@@ -1,227 +1,103 @@
-cmake_minimum_required(VERSION 3.16...3.20)
+cmake_minimum_required(VERSION 3.16...3.21)
 
-# Version variables
 project(obs-ndi VERSION 5.0.0)
+add_library(obs-ndi MODULE)
 set(NDILIB_HEADERS_VERSION 5.0.10)
 
+set(PLUGIN_AUTHOR "tt2468")
 
-# Set correct version string
-if(DEFINED OBS_NDI_VERSION_SUFFIX AND NOT OBS_NDI_VERSION_SUFFIX STREQUAL "")
-	set(OBS_NDI_VERSION "${CMAKE_PROJECT_VERSION}${OBS_NDI_VERSION_SUFFIX}")
-	message(WARNING "-----------------------------------\nVersion Suffix provided. OBS_NDI_VERSION is now ${OBS_NDI_VERSION}\n-----------------------------------")
+set(MACOS_BUNDLEID "net.tt2468.obs-ndi")
+
+set(LINUX_MAINTAINER_EMAIL "tt2468@irltoolkit.com")
+
+set(OBS_NDI_VERSION "${CMAKE_PROJECT_VERSION}")
+
+#----------------------------------------------------------------------
+
+target_sources(
+  obs-ndi
+  PRIVATE src/obs-ndi.cpp
+          src/obs-ndi.h
+          src/obs-ndi-config.cpp
+          src/obs-ndi-config.h
+		  src/obs-ndi-input.cpp
+		  src/obs-ndi-input.h
+		  src/obs-ndi-input-utils.cpp
+		  src/obs-ndi-output.cpp
+		  src/obs-ndi-output.h
+		  src/plugin-macros.generated.h)
+
+target_sources(
+  obs-ndi
+  PRIVATE src/forms/SettingsDialog.cpp src/forms/SettingsDialog.h
+          src/forms/resources.qrc)
+
+target_include_directories(
+  obs-ndi
+  PRIVATE ${CMAKE_SOURCE_DIR}/src
+          ${CMAKE_SOURCE_DIR}/lib/ndi)
+
+#----------------------------------------------------------------------
+
+find_package(libobs REQUIRED)
+find_package(obs-frontend-api REQUIRED)
+include(cmake/ObsPluginHelpers.cmake)
+find_qt(COMPONENTS Widgets Core)
+
+configure_file(src/plugin-macros.h.in
+               ${CMAKE_SOURCE_DIR}/src/plugin-macros.generated.h)
+
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/plugin-macros.generated.h)
+
+target_include_directories(obs-ndi PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+target_link_libraries(
+  obs-ndi
+  OBS::libobs
+  OBS::obs-frontend-api
+  Qt::Core
+  Qt::Widgets)
+
+set_target_properties(
+  obs-ndi
+  PROPERTIES AUTOMOC ON
+             AUTOUIC ON
+             AUTORCC ON)
+
+target_compile_features(obs-ndi PRIVATE cxx_std_17)
+
+#----------------------------------------------------------------------
+
+# --- Windows-specific build settings and tasks ---
+if(OS_WINDOWS)
+  configure_file(cmake/bundle/windows/installer-Windows.iss.in
+                 ${CMAKE_BINARY_DIR}/installer-Windows.generated.iss)
+
+  if(MSVC)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
+  endif()
+  # --- End of section ---
+
+  # -- macOS specific build settings and tasks --
+elseif(OS_MACOS)
+  configure_file(cmake/bundle/macos/installer-macos.pkgproj.in
+                 ${CMAKE_BINARY_DIR}/installer-macos.generated.pkgproj)
+
+  set(MACOSX_PLUGIN_GUI_IDENTIFIER "${MACOS_BUNDLEID}")
+  set(MACOSX_PLUGIN_BUNDLE_VERSION "${CMAKE_PROJECT_VERSION}")
+  set(MACOSX_PLUGIN_SHORT_VERSION_STRING "1")
+
+  target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall)
+
+  set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES PREFIX "")
+  # --- End of section ---
+
+  # --- Linux-specific build settings and tasks ---
 else()
-	set(OBS_NDI_VERSION "${CMAKE_PROJECT_VERSION}")
+  target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall)
+
+  set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES PREFIX "")
 endif()
+# --- End of section ---
 
-
-# Prohibit in-source builds
-file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" _LOC_PATH)
-if(EXISTS "${LOC_PATH}")
-	message(FATAL_ERROR "obs-ndi: You cannot build in a source directory (or any directory with "
-						"CMakeLists.txt file). Please make a build subdirectory. Feel free to "
-						"remove CMakeCache.txt and CMakeFiles.")
-endif()
-unset(_LOC_PATH)
-
-
-# Allow selection of common build types via UI
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING
-		"OBS build type [Release, RelWithDebInfo, Debug, MinSizeRel]" FORCE)
-	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release RelWithDebInfo Debug MinSizeRel)
-endif()
-
-
-# C++ build stuff
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-
-# Qt build stuff
-set(CMAKE_PREFIX_PATH "${QTDIR}")
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON) # For resources.qrc
-
-
-# Arm build fixes
-if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-	set(CMAKE_CXX_FLAGS "-mfpu=neon")
-endif()
-
-
-# Find libobs
-if (WIN32 OR APPLE)
-	include(cmake/FindLibObs.cmake)
-endif()
-find_package(LibObs REQUIRED)
-
-
-# Find Qt5
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
-
-
-# Configure files
-configure_file(
-	src/obs-ndi-macros.h.in
-	../src/obs-ndi-macros.generated.h
-)
-configure_file(
-	installer/installer-windows.iss.in
-	../installer/installer-windows.generated.iss)
-
-
-# Include sources and headers
-set(obs-ndi_SOURCES
-	src/obs-ndi.cpp
-	src/obs-ndi-config.cpp
-	src/obs-ndi-input.cpp
-	src/obs-ndi-input-utils.cpp
-	src/obs-ndi-output.cpp
-	src/forms/SettingsDialog.cpp
-	src/forms/resources.qrc)
-
-set(obs-ndi_HEADERS
-	src/obs-ndi.h
-	src/obs-ndi-config.h
-	src/obs-ndi-input.h
-	src/obs-ndi-output.h
-	src/forms/SettingsDialog.h
-	src/obs-ndi-macros.generated.h)
-
-
-# Platform-independent build settings
-add_library(obs-ndi MODULE
-	${obs-ndi_SOURCES}
-	${obs-ndi_HEADERS})
-
-include_directories(
-    "${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
-	${Qt5Core_INCLUDES}
-	${Qt5Widgets_INCLUDES}
-    "lib/ndi")
-
-target_link_libraries(obs-ndi
-	libobs
-	Qt5::Core
-	Qt5::Widgets)
-
-# Windows-specific build settings and tasks
-if(WIN32)
-	if(NOT DEFINED OBS_FRONTEND_LIB)
-		set(OBS_FRONTEND_LIB "OBS_FRONTEND_LIB-NOTFOUND" CACHE FILEPATH "OBS frontend library")
-		message(FATAL_ERROR "Could not find OBS Frontend API's library!")
-	endif()
-
-	if(MSVC)
-		# Enable Multicore Builds and disable FH4 (to not depend on VCRUNTIME140_1.DLL)
-		add_definitions(/MP /d2FH4-)
-	endif()
-
-	add_definitions(/O2)
-    string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-	message("${CMAKE_CXX_FLAGS_RELEASE}")
-
-	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(ARCH_NAME "64bit")
-		set(OBS_BUILDDIR_ARCH "build64")
-	else()
-		set(ARCH_NAME "32bit")
-		set(OBS_BUILDDIR_ARCH "build32")
-	endif()
-
-	target_link_libraries(obs-ndi
-		"${OBS_FRONTEND_LIB}")
-
-	# Release package helper
-	# The "release" folder has a structure similar OBS' one on Windows
-	set(RELEASE_DIR "${PROJECT_SOURCE_DIR}/release")
-
-	add_custom_command(TARGET obs-ndi POST_BUILD
-		# If config is Release or RelWithDebInfo, package release files
-		COMMAND if $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>==1 (
-			"${CMAKE_COMMAND}" -E make_directory
-			"${RELEASE_DIR}/obs-plugins/${ARCH_NAME}"
-		)
-
-		COMMAND if $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>==1 (
-			"${CMAKE_COMMAND}" -E copy_directory
-			"${PROJECT_SOURCE_DIR}/data"
-			"${RELEASE_DIR}/data/obs-plugins/obs-ndi"
-		)
-
-		COMMAND if $<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>==1 (
-			"${CMAKE_COMMAND}" -E copy
-			"$<TARGET_FILE:obs-ndi>"
-			"${RELEASE_DIR}/obs-plugins/${ARCH_NAME}"
-		)
-
-		# If config is RelWithDebInfo, package PDB file for target
-		COMMAND if $<CONFIG:RelWithDebInfo>==1 (
-			"${CMAKE_COMMAND}" -E copy
-			"$<TARGET_PDB_FILE:obs-ndi>"
-			"${RELEASE_DIR}/obs-plugins/${ARCH_NAME}"
-		)
-
-		# In the Debug configuration, copy to obs-studio dev environment for immediate testing
-		COMMAND if $<CONFIG:Debug>==1 (
-			"${CMAKE_COMMAND}" -E copy
-				"$<TARGET_FILE:obs-ndi>"
-				"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/obs-plugins/${ARCH_NAME}"
-		)
-
-		COMMAND if $<CONFIG:Debug>==1 (
-			"${CMAKE_COMMAND}" -E copy
-			"$<TARGET_PDB_FILE:obs-ndi>"
-			"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/obs-plugins/${ARCH_NAME}"
-		)
-
-		COMMAND if $<CONFIG:Debug>==1 (
-			"${CMAKE_COMMAND}" -E make_directory
-			"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/data/obs-plugins/obs-ndi"
-		)
-
-		COMMAND if $<CONFIG:Debug>==1 (
-			"${CMAKE_COMMAND}" -E copy_directory
-			"${PROJECT_SOURCE_DIR}/data"
-			"${LIBOBS_INCLUDE_DIR}/../${OBS_BUILDDIR_ARCH}/rundir/$<CONFIG>/data/obs-plugins/obs-ndi"
-		)
-	)
-endif()
-
-# Linux-specific build settings
-if(UNIX AND NOT APPLE)
-	include(GNUInstallDirs)
-
-    set_target_properties(obs-ndi PROPERTIES PREFIX "")
-	target_link_libraries(obs-ndi obs-frontend-api)
-
-    # ARM optimizations
-	if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") 
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -mtune=arm7 -Ofast")
-	else()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -mtune=core2 -Ofast")
-	endif()
-
-	# Manually set permissions for locales
-	file(GLOB locale_files data/locale/*.ini)
-		set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
-		OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-    # Set target binary install directory
-	install(TARGETS obs-ndi LIBRARY
-		DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/obs-plugins"
-		PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ) # Manually set file permissions for binary
-
-    # OBS on Ubuntu installs into a different directory than most linux distros
-	if(${USE_UBUNTU_FIX})
-		install(TARGETS obs-ndi LIBRARY
-			DESTINATION "/usr/lib/obs-plugins"
-			PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
-	endif()
-
-    # Set target locale install directory
-	install(FILES ${locale_files}
-		DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/obs/obs-plugins/obs-ndi/locale")
-endif()
+setup_plugin_target(${CMAKE_PROJECT_NAME})

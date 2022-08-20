@@ -33,7 +33,6 @@ ndi_input::~ndi_input()
 	stop_recv();
 }
 
-// Static
 void ndi_input::defaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, P_BANDWIDTH, OBS_NDI_BANDWIDTH_HIGHEST);
@@ -99,7 +98,7 @@ void ndi_input::update(obs_data_t *settings)
 	}
 
 	// TODO: Hardware accel
-	bool enable_hardware_accel = obs_data_get_bool(settings, P_HARDWARE_ACCEL);
+	//bool enable_hardware_accel = obs_data_get_bool(settings, P_HARDWARE_ACCEL);
 
 	running = true;
 	video_thread = std::thread([this](){
@@ -176,7 +175,7 @@ void ndi_input::ndi_video_thread()
 	perf_token = os_request_high_performance("NDI 5 Receiver Video Thread");
 
 	NDIlib_video_frame_v2_t ndi_video_frame;
-	obs_source_frame obs_video_frame = {0};
+	obs_source_frame obs_video_frame = {};
 
 	bool last_frame = false;
 
@@ -217,7 +216,7 @@ void ndi_input::ndi_video_thread()
 void ndi_input::ndi_audio_thread()
 {
 	NDIlib_audio_frame_v3_t ndi_audio_frame;
-	obs_source_audio obs_audio_frame = {0};
+	obs_source_audio obs_audio_frame = {};
 
 	while (running) {
 		if (ndiLib->recv_get_no_connections(ndi_recv) == 0) {
@@ -232,7 +231,7 @@ void ndi_input::ndi_audio_thread()
 		if (!ndi_audio_frame.timestamp)
 			do_log(LOG_WARNING, "[ndi_input::ndi_audio_thread] Missing timestamp from NDI!");
 
-		size_t channel_count = (size_t)std::fmin(8, ndi_audio_frame.no_channels);
+		size_t channel_count = std::min(8, ndi_audio_frame.no_channels);
 
 		obs_audio_frame.speakers = ndi_audio_layout_to_obs(channel_count);
 		obs_audio_frame.timestamp = (uint64_t)(ndi_audio_frame.timestamp * 100);

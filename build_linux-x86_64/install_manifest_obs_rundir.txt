@@ -1,0 +1,2 @@
+/home/tt2468/obs-ndi/build_linux-x86_64/rundir/RelWithDebInfo/obs-plugins/64bit/obs-ndi.so
+/home/tt2468/obs-ndi/build_linux-x86_64/rundir/RelWithDebInfo/data/obs-plugins/obs-ndi/data/locale/en-US.ini

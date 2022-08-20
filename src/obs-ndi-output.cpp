@@ -146,7 +146,7 @@ bool ndi_output::start()
 }
 
 // Todo
-void ndi_output::stop(uint64_t ts)
+void ndi_output::stop(uint64_t)
 {
 	running = false;
 

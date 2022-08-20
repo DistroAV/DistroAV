@@ -25,7 +25,7 @@ SettingsDialog::~SettingsDialog()
 	delete ui;
 }
 
-void SettingsDialog::showEvent(QShowEvent *event)
+void SettingsDialog::showEvent(QShowEvent *)
 {
 	auto conf = get_config();
 	if (!conf) {
@@ -34,7 +34,7 @@ void SettingsDialog::showEvent(QShowEvent *event)
 	}
 }
 
-void SettingsDialog::hideEvent(QHideEvent *event)
+void SettingsDialog::hideEvent(QHideEvent *)
 {
 }
 

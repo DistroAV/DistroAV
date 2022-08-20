@@ -1,0 +1,10 @@
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/obs-ndi.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/package.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/package_source.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/edit_cache.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/rebuild_cache.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/list_install_components.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/install.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/install/local.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/install/strip.dir
+/home/tt2468/obs-ndi/build_linux-x86_64/CMakeFiles/obs-ndi_autogen.dir
