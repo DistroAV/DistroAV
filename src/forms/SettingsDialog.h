@@ -10,6 +10,7 @@ class SettingsDialog : public QDialog {
 public:
 	explicit SettingsDialog(QWidget *parent = 0);
 	~SettingsDialog();
+
 	void showEvent(QShowEvent *event);
 	void hideEvent(QHideEvent *event);
 	void ToggleShowHide();

@@ -5,7 +5,8 @@
 
 #include "SettingsDialog.h"
 #include "../obs-ndi.h"
-#include "../obs-ndi-config.h"
+#include "../config.h"
+#include "../output-manager.h"
 
 SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent, Qt::Dialog), ui(new Ui::SettingsDialog)
 {
@@ -25,20 +26,21 @@ SettingsDialog::~SettingsDialog()
 void SettingsDialog::showEvent(QShowEvent *)
 {
 	auto conf = get_config();
-	if (!conf) {
-		blog(LOG_ERROR, "[SettingsDialog::showEvent] Unable to retreive config!");
+	if (!conf)
 		return;
-	}
+
+	ui->ndiExtraIpsLineEdit->setText(QString::fromStdString(conf->ndi_extra_ips));
+	ui->programOutputGroupBox->setChecked(conf->program_output_enabled);
+	ui->programOutputSenderNameLineEdit->setText(QString::fromStdString(conf->program_output_name));
+	ui->previewOutputGroupBox->setChecked(conf->preview_output_enabled);
+	ui->previewOutputSenderNameLineEdit->setText(QString::fromStdString(conf->preview_output_name));
 }
 
 void SettingsDialog::hideEvent(QHideEvent *) {}
 
 void SettingsDialog::ToggleShowHide()
 {
-	if (!isVisible())
-		setVisible(true);
-	else
-		setVisible(false);
+	setVisible(!isVisible());
 }
 
 void SettingsDialog::DialogButtonClicked(QAbstractButton *button)
@@ -50,16 +52,23 @@ void SettingsDialog::DialogButtonClicked(QAbstractButton *button)
 void SettingsDialog::SaveFormData()
 {
 	auto conf = get_config();
-	if (!conf) {
-		blog(LOG_ERROR, "[SettingsDialog::SaveFormData] Unable to retreive config!");
+	if (!conf)
 		return;
-	}
+
+	auto output_manager = get_output_manager();
+	if (!output_manager)
+		return;
 
 	bool extra_ips_changed = conf->ndi_extra_ips != ui->ndiExtraIpsLineEdit->text().toStdString();
 	conf->ndi_extra_ips = ui->ndiExtraIpsLineEdit->text().toStdString();
+
+	conf->program_output_enabled = ui->programOutputGroupBox->isChecked();
+	conf->program_output_name = ui->programOutputSenderNameLineEdit->text().toStdString();
 
 	conf->save();
 
 	if (extra_ips_changed)
 		restart_ndi_finder();
+
+	output_manager->update_program_output();
 }

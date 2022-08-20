@@ -13,29 +13,31 @@
 #include <util/platform.h>
 
 #include "obs-ndi.h"
-#include "obs-ndi-config.h"
-#include "obs-ndi-input.h"
-#include "obs-ndi-output.h"
+#include "config.h"
+#include "input.h"
+#include "output.h"
+#include "output-manager.h"
 #include "forms/SettingsDialog.h"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-ndi", "en-US")
 
 config_ptr _config;
+output_manager_ptr _output_manager;
 SettingsDialog *_settingsDialog = nullptr;
 
-// Global NDILib pointer
+// Global NDI pointer
 const NDIlib_v5 *ndiLib = nullptr;
-// QLibrary pointer for the loaded NDILib binary file
+// QLibrary pointer for the loaded NDI binary blob
 QLibrary *loaded_lib = nullptr;
-// Define NDILib load function
+// Define NDI load function
 const NDIlib_v5 *load_ndilib();
 
 NDIlib_find_instance_t ndi_finder = nullptr;
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version: %s | Linked NDIlib Version: %s)", OBS_NDI_VERSION,
+	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version: %s | Linked NDI Version: %s)", OBS_NDI_VERSION,
 	     NDILIB_HEADERS_VERSION);
 
 	_config = config_ptr(new obs_ndi_config());
@@ -48,22 +50,12 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	// Create the Settings Dialog
-	obs_frontend_push_ui_translation(obs_module_get_string);
-	_settingsDialog = new SettingsDialog(main_window);
-	obs_frontend_pop_ui_translation();
-
-	// Add the settings dialog as a menu action the the Tools menu
-	const char *menuActionText = obs_module_text("Settings.Title");
-	QAction *menuAction = (QAction *)obs_frontend_add_tools_menu_qaction(menuActionText);
-	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
-
+	// Load the binary blob
 	ndiLib = load_ndilib();
 	if (ndiLib) { // TODO: Show messagebox after OBS finishes loading
 		blog(LOG_DEBUG, "[obs_module_load] Loaded NDIlib binary.");
 	} else {
 		std::string error_string_id = "Plugin.Load.LibError.Message.";
-
 #if defined(_MSC_VER)
 		error_string_id += "Windows";
 #elif defined(__APPLE__)
@@ -71,12 +63,12 @@ bool obs_module_load(void)
 #else
 		error_string_id += "Linux";
 #endif
-
 		QMessageBox::critical(main_window, obs_module_text("Plugin.Load.LibError.Title"),
 				      obs_module_text(error_string_id.c_str()), QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
 
+	// Initialize NDI
 	if (ndiLib->initialize()) {
 		blog(LOG_DEBUG, "[obs_module_load] Initialized NDIlib.");
 	} else {
@@ -87,11 +79,22 @@ bool obs_module_load(void)
 	if (!restart_ndi_finder())
 		return false;
 
-	blog(LOG_INFO, "[obs_module_load] NDI runtime loaded. Version: %s", ndiLib->version());
+	blog(LOG_INFO, "[obs_module_load] NDI runtime finished loading. Version: %s", ndiLib->version());
 
-	register_ndi_source_info();
+	register_ndi_input_info();
+	register_ndi_output_info();
 
-	//register_ndi_output_info();
+	_output_manager = output_manager_ptr(new output_manager());
+
+	// Create the Settings Dialog
+	obs_frontend_push_ui_translation(obs_module_get_string);
+	_settingsDialog = new SettingsDialog(main_window);
+	obs_frontend_pop_ui_translation();
+
+	// Add the settings dialog as a menu action the the Tools menu
+	const char *menuActionText = obs_module_text("SettingsDialog.Title");
+	QAction *menuAction = (QAction *)obs_frontend_add_tools_menu_qaction(menuActionText);
+	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
 
 	blog(LOG_INFO, "[obs_module_load] Finished loading.");
 
@@ -101,6 +104,9 @@ bool obs_module_load(void)
 void obs_module_unload()
 {
 	blog(LOG_INFO, "[obs_module_unload] Goodbye!");
+
+	if (_output_manager)
+		_output_manager.reset();
 
 	if (ndiLib) {
 		if (ndi_finder)
@@ -171,6 +177,7 @@ bool restart_ndi_finder()
 	if (ndi_finder) {
 		ndiLib->find_destroy(ndi_finder);
 		ndi_finder = nullptr;
+		blog(LOG_DEBUG, "[restart_ndi_finder] Destroyed NDI finder.");
 	}
 
 	NDIlib_find_create_t find_desc = {0};
@@ -183,11 +190,16 @@ bool restart_ndi_finder()
 		return false;
 	}
 
-	blog(LOG_DEBUG, "[restart_ndi_finder] Created NDI Finder.");
+	blog(LOG_DEBUG, "[restart_ndi_finder] Created NDI finder.");
 	return true;
 }
 
 config_ptr get_config()
 {
 	return _config;
+}
+
+output_manager_ptr get_output_manager()
+{
+	return _output_manager;
 }

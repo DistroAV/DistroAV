@@ -1,7 +1,7 @@
 #include <obs-module.h>
 
 #include "obs-ndi.h"
-#include "obs-ndi-input.h"
+#include "input.h"
 
 enum NDIlib_recv_bandwidth_e input_bandwidth_to_ndi(enum ndi_input_bandwidth in)
 {

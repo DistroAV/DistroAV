@@ -11,13 +11,13 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>OBSNdi.SettingsDialog.Title</string>
+   <string>SettingsDialog.Title</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QGroupBox" name="settingsGroupBox">
      <property name="title">
-      <string>Settings.SettingsGroupBox.Title</string>
+      <string>SettingsDialog.SettingsGroupBox.Title</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
@@ -25,7 +25,7 @@
         <item row="0" column="0">
          <widget class="QLabel" name="label">
           <property name="text">
-           <string>Settings.SettingsGroupBox.NdiExtraIps</string>
+           <string>SettingsDialog.SettingsGroupBox.NdiExtraIps</string>
           </property>
          </widget>
         </item>
@@ -40,13 +40,13 @@
    <item>
     <widget class="QGroupBox" name="outputsGroupBox">
      <property name="title">
-      <string>Settings.OutputsGroupBox.Title</string>
+      <string>SettingsDialog.OutputsGroupBox.Title</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">
        <widget class="QGroupBox" name="programOutputGroupBox">
         <property name="title">
-         <string>Settings.ProgramOutputGroupBox.Title</string>
+         <string>SettingsDialog.ProgramOutputGroupBox.Title</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -58,7 +58,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="programOutputSenderNameLabel">
            <property name="text">
-            <string>Settings.ProgramOutputGroupBox.SenderName</string>
+            <string>SettingsDialog.ProgramOutputGroupBox.SenderName</string>
            </property>
           </widget>
          </item>
@@ -71,7 +71,7 @@
       <item row="1" column="0">
        <widget class="QGroupBox" name="previewOutputGroupBox">
         <property name="title">
-         <string>Settings.PreviewOutputGroupBox.Title</string>
+         <string>SettingsDialog.PreviewOutputGroupBox.Title</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -83,7 +83,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="previewOutputSenderNameLabel">
            <property name="text">
-            <string>Settings.PreviewOutputGroupBox.SenderName</string>
+            <string>SettingsDialog.PreviewOutputGroupBox.SenderName</string>
            </property>
           </widget>
          </item>

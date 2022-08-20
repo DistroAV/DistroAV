@@ -6,6 +6,10 @@
 #include <deque>
 #include <thread>
 #include <atomic>
+
+extern "C" {
+#include <media-io/video-frame.h>
+}
 #include <util/platform.h>
 
 #include "obs-ndi.h"
@@ -17,33 +21,22 @@
 #define T_OUTPUT_SOURCE_NAME T_("Output.Properties.SourceName")
 #define T_OUTPUT_SOURCE_NAME_DEFAULT T_("Output.Properties.SourceName.Default")
 
-#define VIDEO_QUEUE_MAX_SIZE 15
-#define AUDIO_QUEUE_MAX_SIZE 96
-
-typedef std::deque<struct video_data> video_queue_t;
-typedef std::deque<struct audio_data> audio_queue_t;
-
 struct ndi_output {
 	obs_output_t *output;
 
 	NDIlib_send_instance_t ndi_send;
-	std::thread ndi_send_thread;
 
 	std::atomic<bool> running;
 
-	std::mutex video_mutex;
-	std::unique_ptr<video_queue_t> video_queue;
-	std::mutex audio_mutex;
-	std::unique_ptr<audio_queue_t> audio_queue;
+	bool last_video_frame;
+	enum video_format v_format;
+	struct video_frame *obs_video_frame_a;
+	std::unique_ptr<NDIlib_video_frame_v2_t> video_frame_a;
+	struct video_frame *obs_video_frame_b;
+	std::unique_ptr<NDIlib_video_frame_v2_t> video_frame_b;
 
-	NDIlib_FourCC_video_type_e video_frame_fourcc;
-	uint32_t video_frame_width;
-	uint32_t video_frame_height;
-	uint32_t video_framerate_num;
-	uint32_t video_framerate_den;
-
-	size_t audio_channels;
-	uint32_t audio_samplerate;
+	std::unique_ptr<NDIlib_audio_frame_v3_t> audio_frame;
+	size_t audio_frame_buf_size;
 
 	std::string send_name;
 	bool enable_video;
@@ -56,16 +49,11 @@ struct ndi_output {
 	void stop(uint64_t ts);
 
 	void raw_video(struct video_data *frame);
-	void raw_audio(struct audio_data *frames);
+	void raw_audio(struct audio_data *frame);
 
 	void update(obs_data_t *settings);
 	static void defaults(obs_data_t *settings);
 	obs_properties_t *properties();
-
-	void clear_video_queue();
-	void clear_audio_queue();
-
-	void ndi_send_thread_work();
 };
 
-static void register_ndi_output_info();
+void register_ndi_output_info();
