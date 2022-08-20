@@ -91,7 +91,7 @@ bool ndi_output::start()
 		audio_frame = std::make_unique<NDIlib_audio_frame_v3_t>();
 		audio_frame->sample_rate = audio_output_get_sample_rate(audio);
 		audio_frame->FourCC = NDIlib_FourCC_audio_type_FLTP;
-		audio_frame->no_channels = audio_output_get_channels(audio);
+		audio_frame->no_channels = (int)audio_output_get_channels(audio);
 		flags |= OBS_OUTPUT_AUDIO;
 	}
 
