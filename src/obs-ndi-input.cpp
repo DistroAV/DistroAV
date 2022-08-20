@@ -189,7 +189,7 @@ void ndi_input::ndi_video_thread()
 			continue;
 		}
 
-		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, &ndi_video_frame, nullptr, nullptr, 200) != NDIlib_frame_type_video)
+		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, &ndi_video_frame, nullptr, nullptr, 50) != NDIlib_frame_type_video)
 			continue;
 
 		last_frame = true;
@@ -224,7 +224,7 @@ void ndi_input::ndi_audio_thread()
 			continue;
 		}
 
-		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, nullptr, &ndi_audio_frame, nullptr, 200) != NDIlib_frame_type_audio)
+		if (ndiLib->NDIlib_recv_capture_v3(ndi_recv, nullptr, &ndi_audio_frame, nullptr, 50) != NDIlib_frame_type_audio)
 			continue;
 
 		// Reports seem to suggest that NDI can provide audio without timestamps.
