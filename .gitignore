@@ -1,10 +1,13 @@
+*~
+.DS_Store
 /build/
-/build32/
-/build64/
+/build_*/
 /release/
 /installer/Output/
-/installer/installer-windows.generated.iss
-/src/obs-ndi-macros.generated.h
-.DS_Store
-.idea
+
 .vscode
+.idea
+
+# ignore generated files
+*.generated.*
+**/.Brewfile.lock.json

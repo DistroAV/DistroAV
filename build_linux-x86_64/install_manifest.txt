@@ -1,2 +1,0 @@
-/usr/obs-plugins/64bit/obs-ndi.so
-/usr/data/obs-plugins/obs-ndi/locale/en-US.ini
