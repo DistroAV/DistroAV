@@ -5,26 +5,26 @@
 #include <string>
 #include <util/platform.h>
 
-#define P_SOURCE_NAME      "source_name"
-#define P_REFRESH_SOURCES  "refresh_sources"
-#define P_BANDWIDTH        "bandwidth"
+#define P_SOURCE_NAME "source_name"
+#define P_REFRESH_SOURCES "refresh_sources"
+#define P_BANDWIDTH "bandwidth"
 #define P_INPUT_UNBUFFERED "input_unbuffered"
-#define P_HARDWARE_ACCEL   "hardware_accel"
-#define P_AUDIO            "audio"
-#define P_COLOR_RANGE      "color_range"
+#define P_HARDWARE_ACCEL "hardware_accel"
+#define P_AUDIO "audio"
+#define P_COLOR_RANGE "color_range"
 
-#define T_SOURCE_NAME          T_("Input.Properties.SourceName")
-#define T_REFRESH_SOURCES      T_("Input.Properties.RefreshSources")
-#define T_BANDWIDTH            T_("Input.Properties.Bandwidth")
-#define T_BANDWIDTH_HIGHEST    T_("Input.Properties.Bandwidth.Highest")
-#define T_BANDWIDTH_LOWEST     T_("Input.Properties.Bandwidth.Lowest")
+#define T_SOURCE_NAME T_("Input.Properties.SourceName")
+#define T_REFRESH_SOURCES T_("Input.Properties.RefreshSources")
+#define T_BANDWIDTH T_("Input.Properties.Bandwidth")
+#define T_BANDWIDTH_HIGHEST T_("Input.Properties.Bandwidth.Highest")
+#define T_BANDWIDTH_LOWEST T_("Input.Properties.Bandwidth.Lowest")
 #define T_BANDWIDTH_AUDIO_ONLY T_("Input.Properties.Bandwidth.AudioOnly")
-#define T_INPUT_UNBUFFERED     T_("Input.Properties.InputUnbuffered")
-#define T_HARDWARE_ACCEL       T_("Input.Properties.EnableHardwareAccel")
-#define T_AUDIO                T_("Input.Properties.EnableAudio")
-#define T_COLOR_RANGE          T_("Input.Properties.ColorRange")
-#define T_COLOR_RANGE_PARTIAL  T_("Input.Properties.ColorRange.Partial")
-#define T_COLOR_RANGE_FULL     T_("Input.Properties.ColorRange.Full")
+#define T_INPUT_UNBUFFERED T_("Input.Properties.InputUnbuffered")
+#define T_HARDWARE_ACCEL T_("Input.Properties.EnableHardwareAccel")
+#define T_AUDIO T_("Input.Properties.EnableAudio")
+#define T_COLOR_RANGE T_("Input.Properties.ColorRange")
+#define T_COLOR_RANGE_PARTIAL T_("Input.Properties.ColorRange.Partial")
+#define T_COLOR_RANGE_FULL T_("Input.Properties.ColorRange.Full")
 
 enum ndi_input_bandwidth {
 	OBS_NDI_BANDWIDTH_HIGHEST = 0,
@@ -38,16 +38,15 @@ enum ndi_input_color_range {
 	OBS_NDI_COLOR_RANGE_FULL = 1,
 };
 
-struct ndi_input
-{
-	obs_source_t* source;
+struct ndi_input {
+	obs_source_t *source;
 
 	NDIlib_recv_instance_t ndi_recv;
 
 	std::thread video_thread;
 	std::thread audio_thread;
 	std::atomic<bool> running;
-	os_performance_token_t* perf_token;
+	os_performance_token_t *perf_token;
 
 	NDIlib_tally_t tally;
 

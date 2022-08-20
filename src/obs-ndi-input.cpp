@@ -10,7 +10,7 @@
 void fill_ndi_sources(obs_property_t *list)
 {
 	uint32_t source_count = 0;
-	const NDIlib_source_t* sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder, &source_count);
+	const NDIlib_source_t *sources = ndiLib->NDIlib_find_get_current_sources(ndi_finder, &source_count);
 
 	obs_property_list_clear(list);
 	for (uint32_t i = 0; i < source_count; ++i) {
@@ -19,11 +19,8 @@ void fill_ndi_sources(obs_property_t *list)
 	}
 }
 
-ndi_input::ndi_input(obs_data_t *settings, obs_source_t *source) :
-	source(source),
-	ndi_recv(nullptr),
-	running(false),
-	perf_token(nullptr)
+ndi_input::ndi_input(obs_data_t *settings, obs_source_t *source)
+	: source(source), ndi_recv(nullptr), running(false), perf_token(nullptr)
 {
 	update(settings);
 }
@@ -44,20 +41,22 @@ void ndi_input::defaults(obs_data_t *settings)
 
 obs_properties_t *ndi_input::properties()
 {
-	obs_properties_t* props = obs_properties_create();
+	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_property_t* source_list = obs_properties_add_list(props, P_SOURCE_NAME, T_SOURCE_NAME, OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
+	obs_property_t *source_list =
+		obs_properties_add_list(props, P_SOURCE_NAME, T_SOURCE_NAME, OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
 	fill_ndi_sources(source_list);
 
-	obs_properties_add_button(props, P_REFRESH_SOURCES, T_REFRESH_SOURCES, [](obs_properties_t *ppts, obs_property_t *, void*)
-	{
-		obs_property_t* source_list = obs_properties_get(ppts, P_SOURCE_NAME);
-		fill_ndi_sources(source_list);
-		return true;
-	});
+	obs_properties_add_button(props, P_REFRESH_SOURCES, T_REFRESH_SOURCES,
+				  [](obs_properties_t *ppts, obs_property_t *, void *) {
+					  obs_property_t *source_list = obs_properties_get(ppts, P_SOURCE_NAME);
+					  fill_ndi_sources(source_list);
+					  return true;
+				  });
 
-	obs_property_t *bw_list = obs_properties_add_list(props, P_BANDWIDTH, T_BANDWIDTH, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_t *bw_list =
+		obs_properties_add_list(props, P_BANDWIDTH, T_BANDWIDTH, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(bw_list, T_BANDWIDTH_HIGHEST, OBS_NDI_BANDWIDTH_HIGHEST);
 	obs_property_list_add_int(bw_list, T_BANDWIDTH_LOWEST, OBS_NDI_BANDWIDTH_LOWEST);
 	obs_property_list_add_int(bw_list, T_BANDWIDTH_AUDIO_ONLY, OBS_NDI_BANDWIDTH_AUDIO_ONLY);
@@ -66,7 +65,8 @@ obs_properties_t *ndi_input::properties()
 	obs_properties_add_bool(props, P_HARDWARE_ACCEL, T_HARDWARE_ACCEL);
 	obs_properties_add_bool(props, P_AUDIO, T_AUDIO);
 
-	obs_property_t *color_range_list = obs_properties_add_list(props, P_COLOR_RANGE, T_COLOR_RANGE, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_t *color_range_list =
+		obs_properties_add_list(props, P_COLOR_RANGE, T_COLOR_RANGE, OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(color_range_list, T_COLOR_RANGE_PARTIAL, OBS_NDI_COLOR_RANGE_PARTIAL);
 	obs_property_list_add_int(color_range_list, T_COLOR_RANGE_FULL, OBS_NDI_COLOR_RANGE_FULL);
 
@@ -82,7 +82,7 @@ void ndi_input::update(obs_data_t *settings)
 
 	enum ndi_input_color_range color_range = (ndi_input_color_range)obs_data_get_int(settings, P_COLOR_RANGE);
 	yuv_range = input_color_range_to_obs(color_range);
-	
+
 	NDIlib_recv_create_v3_t recv_desc;
 	recv_desc.source_to_connect_to.p_ndi_name = obs_data_get_string(settings, P_SOURCE_NAME);
 	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
@@ -101,18 +101,24 @@ void ndi_input::update(obs_data_t *settings)
 	//bool enable_hardware_accel = obs_data_get_bool(settings, P_HARDWARE_ACCEL);
 
 	running = true;
-	video_thread = std::thread([this](){
-		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread started.", obs_source_get_name(source));
+	video_thread = std::thread([this]() {
+		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread started.",
+		     obs_source_get_name(source));
 		this->ndi_video_thread();
-		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread stopped.", obs_source_get_name(source));
-		obs_source_output_video(source, nullptr); // If OBS has a large frame buffer (like 25 frames), this could prematurely cut off video.
+		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread stopped.",
+		     obs_source_get_name(source));
+		obs_source_output_video(
+			source,
+			nullptr); // If OBS has a large frame buffer (like 25 frames), this could prematurely cut off video.
 	});
 	bool enable_audio = obs_data_get_bool(settings, P_AUDIO);
 	if (enable_audio) {
-		audio_thread = std::thread([this](){
-			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread started.", obs_source_get_name(source));
+		audio_thread = std::thread([this]() {
+			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread started.",
+			     obs_source_get_name(source));
 			this->ndi_audio_thread();
-			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread stopped.", obs_source_get_name(source));
+			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread stopped.",
+			     obs_source_get_name(source));
 		});
 	} else {
 		do_log(LOG_DEBUG, "[ndi_input::update] Not starting audio thread because audio is disabled.");
@@ -202,7 +208,8 @@ void ndi_input::ndi_video_thread()
 		obs_video_frame.data[0] = ndi_video_frame.p_data;
 
 		video_colorspace colorspace = resolution_to_obs_colorspace(ndi_video_frame.xres, ndi_video_frame.yres);
-		video_format_get_parameters(colorspace, yuv_range, obs_video_frame.color_matrix, obs_video_frame.color_range_min, obs_video_frame.color_range_max);
+		video_format_get_parameters(colorspace, yuv_range, obs_video_frame.color_matrix, obs_video_frame.color_range_min,
+					    obs_video_frame.color_range_max);
 
 		obs_source_output_video(source, &obs_video_frame);
 
@@ -240,7 +247,7 @@ void ndi_input::ndi_audio_thread()
 		obs_audio_frame.frames = ndi_audio_frame.no_samples;
 
 		for (size_t i = 0; i < channel_count; ++i)
-			obs_audio_frame.data[i] = (uint8_t*)(&ndi_audio_frame.p_data[i * ndi_audio_frame.no_samples]);
+			obs_audio_frame.data[i] = (uint8_t *)(&ndi_audio_frame.p_data[i * ndi_audio_frame.no_samples]);
 
 		obs_source_output_audio(source, &obs_audio_frame);
 
@@ -251,19 +258,19 @@ void ndi_input::ndi_audio_thread()
 void register_ndi_source_info()
 {
 	struct obs_source_info info = {};
-	info.id				= "ndi_input_v5";
-	info.type			= OBS_SOURCE_TYPE_INPUT;
-	info.output_flags	= OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE;
-	info.get_name		= [](void *) { return obs_module_text("Input.Name"); };
-	info.create			= [](obs_data_t *settings, obs_source_t *source) -> void * { return new ndi_input(settings, source); };
-	info.destroy		= [](void *data) { delete static_cast<ndi_input *>(data); };
-	info.get_defaults	= ndi_input::defaults;
-	info.get_properties	= [](void *data) -> obs_properties_t * { return static_cast<ndi_input *>(data)->properties(); };
-	info.update			= [](void *data, obs_data_t *settings) { static_cast<ndi_input *>(data)->update(settings); };
-	info.activate		= [](void *data) { static_cast<ndi_input *>(data)->activate(); };
-	info.deactivate		= [](void *data) { static_cast<ndi_input *>(data)->deactivate(); };
-	info.show			= [](void *data) { static_cast<ndi_input *>(data)->show(); };
-	info.hide			= [](void *data) { static_cast<ndi_input *>(data)->hide(); };
+	info.id = "ndi_input_v5";
+	info.type = OBS_SOURCE_TYPE_INPUT;
+	info.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE;
+	info.get_name = [](void *) { return obs_module_text("Input.Name"); };
+	info.create = [](obs_data_t *settings, obs_source_t *source) -> void * { return new ndi_input(settings, source); };
+	info.destroy = [](void *data) { delete static_cast<ndi_input *>(data); };
+	info.get_defaults = ndi_input::defaults;
+	info.get_properties = [](void *data) -> obs_properties_t * { return static_cast<ndi_input *>(data)->properties(); };
+	info.update = [](void *data, obs_data_t *settings) { static_cast<ndi_input *>(data)->update(settings); };
+	info.activate = [](void *data) { static_cast<ndi_input *>(data)->activate(); };
+	info.deactivate = [](void *data) { static_cast<ndi_input *>(data)->deactivate(); };
+	info.show = [](void *data) { static_cast<ndi_input *>(data)->show(); };
+	info.hide = [](void *data) { static_cast<ndi_input *>(data)->hide(); };
 
 	obs_register_source(&info);
 }

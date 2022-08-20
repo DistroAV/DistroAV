@@ -12,7 +12,7 @@ set(LINUX_MAINTAINER_EMAIL "tt2468@irltoolkit.com")
 
 set(OBS_NDI_VERSION "${CMAKE_PROJECT_VERSION}")
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 target_sources(
   obs-ndi
@@ -20,43 +20,32 @@ target_sources(
           src/obs-ndi.h
           src/obs-ndi-config.cpp
           src/obs-ndi-config.h
-		  src/obs-ndi-input.cpp
-		  src/obs-ndi-input.h
-		  src/obs-ndi-input-utils.cpp
-		  src/obs-ndi-output.cpp
-		  src/obs-ndi-output.h
-		  src/plugin-macros.generated.h)
+          src/obs-ndi-input.cpp
+          src/obs-ndi-input.h
+          src/obs-ndi-input-utils.cpp
+          src/obs-ndi-output.cpp
+          src/obs-ndi-output.h
+          src/plugin-macros.generated.h)
 
-target_sources(
-  obs-ndi
-  PRIVATE src/forms/SettingsDialog.cpp src/forms/SettingsDialog.h
-          src/forms/resources.qrc)
+target_sources(obs-ndi PRIVATE src/forms/SettingsDialog.cpp src/forms/SettingsDialog.h
+                               src/forms/resources.qrc)
 
-target_include_directories(
-  obs-ndi
-  PRIVATE ${CMAKE_SOURCE_DIR}/src
-          ${CMAKE_SOURCE_DIR}/lib/ndi)
+target_include_directories(obs-ndi PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/lib/ndi)
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 find_package(libobs REQUIRED)
 find_package(obs-frontend-api REQUIRED)
 include(cmake/ObsPluginHelpers.cmake)
 find_qt(COMPONENTS Widgets Core)
 
-configure_file(src/plugin-macros.h.in
-               ${CMAKE_SOURCE_DIR}/src/plugin-macros.generated.h)
+configure_file(src/plugin-macros.h.in ${CMAKE_SOURCE_DIR}/src/plugin-macros.generated.h)
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/plugin-macros.generated.h)
 
 target_include_directories(obs-ndi PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-target_link_libraries(
-  obs-ndi
-  OBS::libobs
-  OBS::obs-frontend-api
-  Qt::Core
-  Qt::Widgets)
+target_link_libraries(obs-ndi OBS::libobs OBS::obs-frontend-api Qt::Core Qt::Widgets)
 
 set_target_properties(
   obs-ndi
@@ -66,7 +55,7 @@ set_target_properties(
 
 target_compile_features(obs-ndi PRIVATE cxx_std_17)
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 # --- Windows-specific build settings and tasks ---
 if(OS_WINDOWS)

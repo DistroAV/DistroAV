@@ -35,13 +35,14 @@ NDIlib_find_instance_t ndi_finder = nullptr;
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version: %s | Linked NDIlib Version: %s)", OBS_NDI_VERSION, NDILIB_HEADERS_VERSION);
+	blog(LOG_INFO, "[obs_module_load] Hello! (Plugin Version: %s | Linked NDIlib Version: %s)", OBS_NDI_VERSION,
+	     NDILIB_HEADERS_VERSION);
 
 	_config = config_ptr(new obs_ndi_config());
 	_config->load();
 
 	// Get main window pointer
-	QMainWindow *main_window = (QMainWindow*)obs_frontend_get_main_window();
+	QMainWindow *main_window = (QMainWindow *)obs_frontend_get_main_window();
 	if (!main_window) {
 		blog(LOG_ERROR, "[obs_module_load] main_window not found! Cannot load.");
 		return false;
@@ -53,8 +54,8 @@ bool obs_module_load(void)
 	obs_frontend_pop_ui_translation();
 
 	// Add the settings dialog as a menu action the the Tools menu
-	const char* menuActionText = obs_module_text("Settings.Title");
-	QAction *menuAction = (QAction*)obs_frontend_add_tools_menu_qaction(menuActionText);
+	const char *menuActionText = obs_module_text("Settings.Title");
+	QAction *menuAction = (QAction *)obs_frontend_add_tools_menu_qaction(menuActionText);
 	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
 
 	ndiLib = load_ndilib();
@@ -71,10 +72,8 @@ bool obs_module_load(void)
 		error_string_id += "Linux";
 #endif
 
-		QMessageBox::critical(main_window,
-			obs_module_text("Plugin.Load.LibError.Title"),
-			obs_module_text(error_string_id.c_str()),
-			QMessageBox::Ok, QMessageBox::NoButton);
+		QMessageBox::critical(main_window, obs_module_text("Plugin.Load.LibError.Title"),
+				      obs_module_text(error_string_id.c_str()), QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
 
@@ -114,7 +113,7 @@ void obs_module_unload()
 	}
 }
 
-const char* obs_module_description()
+const char *obs_module_description()
 {
 	return "NDI input/output integration for OBS Studio";
 }
@@ -124,7 +123,7 @@ typedef const NDIlib_v5 *(*NDIlib_v5_load_)(void);
 const NDIlib_v5 *load_ndilib()
 {
 	std::vector<std::string> libraryLocations;
-	const char* redistFolder = std::getenv(NDILIB_REDIST_FOLDER);
+	const char *redistFolder = std::getenv(NDILIB_REDIST_FOLDER);
 	if (redistFolder)
 		libraryLocations.push_back(redistFolder);
 #if defined(__linux__) || defined(__APPLE__)
@@ -141,8 +140,7 @@ const NDIlib_v5 *load_ndilib()
 
 		if (libPath.exists() && libPath.isFile()) {
 			QString libFilePath = libPath.absoluteFilePath();
-			blog(LOG_INFO, "[load_ndilib] Found NDI library file at '%s'",
-				libFilePath.toUtf8().constData());
+			blog(LOG_INFO, "[load_ndilib] Found NDI library file at '%s'", libFilePath.toUtf8().constData());
 
 			loaded_lib = new QLibrary(libFilePath, nullptr);
 			if (loaded_lib->load()) {
@@ -154,8 +152,7 @@ const NDIlib_v5 *load_ndilib()
 					return lib_load();
 				else
 					blog(LOG_ERROR, "[load_ndilib] NDIlib_v5_load not found in loaded library.");
-			}
-			else {
+			} else {
 				delete loaded_lib;
 				loaded_lib = nullptr;
 			}

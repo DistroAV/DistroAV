@@ -10,12 +10,12 @@
 
 #include "obs-ndi.h"
 
-#define P_OUTPUT_SOURCE_NAME      "source_name"
-#define P_ENABLE_VIDEO            "enable_video"
-#define P_ENABLE_AUDIO            "enable_audio"
+#define P_OUTPUT_SOURCE_NAME "source_name"
+#define P_ENABLE_VIDEO "enable_video"
+#define P_ENABLE_AUDIO "enable_audio"
 
-#define T_OUTPUT_SOURCE_NAME          T_("Output.Properties.SourceName")
-#define T_OUTPUT_SOURCE_NAME_DEFAULT  T_("Output.Properties.SourceName.Default")
+#define T_OUTPUT_SOURCE_NAME T_("Output.Properties.SourceName")
+#define T_OUTPUT_SOURCE_NAME_DEFAULT T_("Output.Properties.SourceName.Default")
 
 #define VIDEO_QUEUE_MAX_SIZE 15
 #define AUDIO_QUEUE_MAX_SIZE 96
@@ -23,9 +23,8 @@
 typedef std::deque<struct video_data> video_queue_t;
 typedef std::deque<struct audio_data> audio_queue_t;
 
-struct ndi_output
-{
-	obs_output_t* output;
+struct ndi_output {
+	obs_output_t *output;
 
 	NDIlib_send_instance_t ndi_send;
 	std::thread ndi_send_thread;

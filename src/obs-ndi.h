@@ -11,7 +11,7 @@
 // Temporary debug override
 #define LOG_DEBUG LOG_INFO
 
-extern const NDIlib_v5* ndiLib;
+extern const NDIlib_v5 *ndiLib;
 
 extern NDIlib_find_instance_t ndi_finder;
 

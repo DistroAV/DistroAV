@@ -9,7 +9,7 @@ static void copy_video_data(struct video_data *src, struct video_data *dst, size
 	if (!src->data[0])
 		return;
 
-	dst->data[0] = (uint8_t*)bmemdup(src->data[0], size);
+	dst->data[0] = (uint8_t *)bmemdup(src->data[0], size);
 }
 
 static void free_video_data(struct video_data *frame)
@@ -27,7 +27,7 @@ static void copy_audio_data(struct audio_data *src, struct audio_data *dst, size
 	if (!src->data[0])
 		return;
 
-	dst->data[0] = (uint8_t*)bmemdup(src->data[0], size);
+	dst->data[0] = (uint8_t *)bmemdup(src->data[0], size);
 }
 
 static void free_audio_data(struct audio_data *frames)
@@ -39,16 +39,16 @@ static void free_audio_data(struct audio_data *frames)
 	memset(frames, 0, sizeof(*frames));
 }
 
-ndi_output::ndi_output(obs_data_t *settings, obs_output_t *output) :
-	output{output},
-	ndi_send{nullptr},
-	running{false},
-	video_frame_width{0},
-	video_frame_height{0},
-	video_framerate_num{0},
-	video_framerate_den{0},
-	audio_channels{0},
-	audio_samplerate{0}
+ndi_output::ndi_output(obs_data_t *settings, obs_output_t *output)
+	: output{output},
+	  ndi_send{nullptr},
+	  running{false},
+	  video_frame_width{0},
+	  video_frame_height{0},
+	  video_framerate_num{0},
+	  video_framerate_den{0},
+	  audio_channels{0},
+	  audio_samplerate{0}
 {
 	video_queue = std::make_unique<video_queue_t>();
 	audio_queue = std::make_unique<audio_queue_t>();
@@ -78,8 +78,8 @@ bool ndi_output::start()
 		return false;
 
 	uint32_t flags = 0;
-	video_t* video = obs_output_video(output);
-	audio_t* audio = obs_output_audio(output);
+	video_t *video = obs_output_video(output);
+	audio_t *audio = obs_output_audio(output);
 
 	if (!video && !audio)
 		return false;
@@ -87,24 +87,24 @@ bool ndi_output::start()
 	if (video && enable_video) {
 		video_format format = video_output_get_format(video);
 		switch (format) {
-			case VIDEO_FORMAT_NV12:
-				video_frame_fourcc = NDIlib_FourCC_video_type_NV12;
-				break;
-			case VIDEO_FORMAT_I420:
-				video_frame_fourcc = NDIlib_FourCC_video_type_I420;
-				break;
-			case VIDEO_FORMAT_RGBA:
-				video_frame_fourcc = NDIlib_FourCC_video_type_RGBA;
-				break;
-			case VIDEO_FORMAT_BGRA:
-				video_frame_fourcc = NDIlib_FourCC_video_type_BGRA;
-				break;
-			case VIDEO_FORMAT_BGRX:
-				video_frame_fourcc = NDIlib_FourCC_video_type_BGRX;
-				break;
-			default:
-				blog(LOG_WARNING, "Unsupported pixel format: %d", format);
-				return false;
+		case VIDEO_FORMAT_NV12:
+			video_frame_fourcc = NDIlib_FourCC_video_type_NV12;
+			break;
+		case VIDEO_FORMAT_I420:
+			video_frame_fourcc = NDIlib_FourCC_video_type_I420;
+			break;
+		case VIDEO_FORMAT_RGBA:
+			video_frame_fourcc = NDIlib_FourCC_video_type_RGBA;
+			break;
+		case VIDEO_FORMAT_BGRA:
+			video_frame_fourcc = NDIlib_FourCC_video_type_BGRA;
+			break;
+		case VIDEO_FORMAT_BGRX:
+			video_frame_fourcc = NDIlib_FourCC_video_type_BGRX;
+			break;
+		default:
+			blog(LOG_WARNING, "Unsupported pixel format: %d", format);
+			return false;
 		}
 
 		video_frame_width = video_output_get_width(video);
@@ -212,7 +212,7 @@ void ndi_output::defaults(obs_data_t *settings)
 
 obs_properties_t *ndi_output::properties()
 {
-	obs_properties_t* props = obs_properties_create();
+	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
 	obs_properties_add_text(props, P_OUTPUT_SOURCE_NAME, T_OUTPUT_SOURCE_NAME, OBS_TEXT_DEFAULT);
@@ -294,18 +294,18 @@ void ndi_output::ndi_send_thread_work()
 void register_ndi_output_info()
 {
 	struct obs_output_info info = {};
-	info.id				= "ndi_output_v5";
-	info.flags			= OBS_OUTPUT_AV;
-	info.get_name		= [](void *) { return obs_module_text("Output.Name"); };
-	info.create			= [](obs_data_t *settings, obs_output_t *output) -> void * { return new ndi_output(settings, output); };
-	info.destroy		= [](void *data) { delete static_cast<ndi_output *>(data); };
-	info.start			= [](void *data) -> bool { return static_cast<ndi_output *>(data)->start(); };
-	info.stop			= [](void *data, uint64_t ts) { static_cast<ndi_output *>(data)->stop(ts); };
-	info.raw_video		= [](void *data, struct video_data *frame) { static_cast<ndi_output *>(data)->raw_video(frame); };
-	info.raw_audio		= [](void *data, struct audio_data *frames) { static_cast<ndi_output *>(data)->raw_audio(frames); };
-	info.update			= [](void *data, obs_data_t *settings) { static_cast<ndi_output *>(data)->update(settings); };
-	info.get_defaults	= ndi_output::defaults;
-	info.get_properties	= [](void *data) -> obs_properties_t * { return static_cast<ndi_output *>(data)->properties(); };
+	info.id = "ndi_output_v5";
+	info.flags = OBS_OUTPUT_AV;
+	info.get_name = [](void *) { return obs_module_text("Output.Name"); };
+	info.create = [](obs_data_t *settings, obs_output_t *output) -> void * { return new ndi_output(settings, output); };
+	info.destroy = [](void *data) { delete static_cast<ndi_output *>(data); };
+	info.start = [](void *data) -> bool { return static_cast<ndi_output *>(data)->start(); };
+	info.stop = [](void *data, uint64_t ts) { static_cast<ndi_output *>(data)->stop(ts); };
+	info.raw_video = [](void *data, struct video_data *frame) { static_cast<ndi_output *>(data)->raw_video(frame); };
+	info.raw_audio = [](void *data, struct audio_data *frames) { static_cast<ndi_output *>(data)->raw_audio(frames); };
+	info.update = [](void *data, obs_data_t *settings) { static_cast<ndi_output *>(data)->update(settings); };
+	info.get_defaults = ndi_output::defaults;
+	info.get_properties = [](void *data) -> obs_properties_t * { return static_cast<ndi_output *>(data)->properties(); };
 
 	obs_register_output(&info);
 }

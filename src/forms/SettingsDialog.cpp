@@ -7,17 +7,14 @@
 #include "../obs-ndi.h"
 #include "../obs-ndi-config.h"
 
-SettingsDialog::SettingsDialog(QWidget* parent) :
-	QDialog(parent, Qt::Dialog),
-	ui(new Ui::SettingsDialog)
+SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent, Qt::Dialog), ui(new Ui::SettingsDialog)
 {
 	ui->setupUi(this);
 
 	// Remove the ? button on dialogs on Windows
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-	connect(ui->buttonBox, &QDialogButtonBox::clicked,
-		this, &SettingsDialog::DialogButtonClicked);
+	connect(ui->buttonBox, &QDialogButtonBox::clicked, this, &SettingsDialog::DialogButtonClicked);
 }
 
 SettingsDialog::~SettingsDialog()
@@ -34,9 +31,7 @@ void SettingsDialog::showEvent(QShowEvent *)
 	}
 }
 
-void SettingsDialog::hideEvent(QHideEvent *)
-{
-}
+void SettingsDialog::hideEvent(QHideEvent *) {}
 
 void SettingsDialog::ToggleShowHide()
 {
