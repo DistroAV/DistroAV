@@ -231,8 +231,10 @@ void ndi_input::ndi_audio_thread()
 			continue;
 
 		// Reports seem to suggest that NDI can provide audio without timestamps.
-		if (!ndi_audio_frame.timestamp)
+		if (!ndi_audio_frame.timestamp || ndi_audio_frame.timestamp == NDIlib_recv_timestamp_undefined) {
 			do_log(LOG_WARNING, "[ndi_input::ndi_audio_thread] Missing timestamp from NDI!");
+			ndi_audio_frame.timestamp = 0;
+		}
 
 		size_t channel_count = std::min(8, ndi_audio_frame.no_channels);
 
