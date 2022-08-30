@@ -343,7 +343,7 @@ void* ndi_source_poll_audio_video(void* data)
 
 				for (int i = 0; i < channelCount; ++i) {
 					obs_audio_frame.data[i] =
-						(uint8_t*)(&audio_frame.p_data[i * audio_frame.no_samples]);
+						(uint8_t*)(&audio_frame.p_data[i * audio_frame.channel_stride_in_bytes]);
 				}
 
 				obs_source_output_audio(s->source, &obs_audio_frame);
