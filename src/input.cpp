@@ -245,7 +245,7 @@ void ndi_input::ndi_audio_thread()
 		obs_audio_frame.frames = ndi_audio_frame.no_samples;
 
 		for (size_t i = 0; i < channel_count; ++i)
-			obs_audio_frame.data[i] = (uint8_t *)(&ndi_audio_frame.p_data[i * ndi_audio_frame.no_samples]);
+			obs_audio_frame.data[i] = (uint8_t *)(&ndi_audio_frame.p_data[i * ndi_audio_frame.channel_stride_in_bytes]);
 
 		obs_source_output_audio(source, &obs_audio_frame);
 
