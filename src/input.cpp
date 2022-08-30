@@ -102,11 +102,9 @@ void ndi_input::update(obs_data_t *settings)
 
 	running = true;
 	video_thread = std::thread([this]() {
-		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread started.",
-		     obs_source_get_name(source));
+		do_log(LOG_INFO, "[ndi_input::ndi_video_thread] Video thread started.");
 		this->ndi_video_thread();
-		blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_video_thread] Video thread stopped.",
-		     obs_source_get_name(source));
+		do_log(LOG_INFO, "[ndi_input::ndi_video_thread] Video thread stopped.");
 		obs_source_output_video(
 			source,
 			nullptr); // If OBS has a large frame buffer (like 25 frames), this could prematurely cut off video.
@@ -114,11 +112,9 @@ void ndi_input::update(obs_data_t *settings)
 	bool enable_audio = obs_data_get_bool(settings, P_AUDIO);
 	if (enable_audio) {
 		audio_thread = std::thread([this]() {
-			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread started.",
-			     obs_source_get_name(source));
+			do_log(LOG_INFO, "[ndi_input::ndi_audio_thread] Audio thread started.");
 			this->ndi_audio_thread();
-			blog(LOG_INFO, "[ndi_input_v5: '%s'] [ndi_input::ndi_audio_thread] Audio thread stopped.",
-			     obs_source_get_name(source));
+			do_log(LOG_INFO, "[ndi_input::ndi_audio_thread] Audio thread stopped.");
 		});
 	} else {
 		do_log(LOG_DEBUG, "[ndi_input::update] Not starting audio thread because audio is disabled.");
