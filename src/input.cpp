@@ -62,7 +62,9 @@ obs_properties_t *ndi_input::properties()
 	obs_property_list_add_int(bw_list, T_BANDWIDTH_AUDIO_ONLY, OBS_NDI_BANDWIDTH_AUDIO_ONLY);
 
 	obs_properties_add_bool(props, P_INPUT_UNBUFFERED, T_INPUT_UNBUFFERED);
-	obs_properties_add_bool(props, P_HARDWARE_ACCEL, T_HARDWARE_ACCEL);
+	//obs_properties_add_bool(props, P_HARDWARE_ACCEL, T_HARDWARE_ACCEL);
+
+	// TODO: Turn into dropdown. Audio Only, Video Only, A+V
 	obs_properties_add_bool(props, P_AUDIO, T_AUDIO);
 
 	obs_property_t *color_range_list =
@@ -233,7 +235,8 @@ void ndi_input::ndi_audio_thread()
 		// Reports seem to suggest that NDI can provide audio without timestamps.
 		if (!ndi_audio_frame.timestamp || ndi_audio_frame.timestamp == NDIlib_recv_timestamp_undefined) {
 			do_log(LOG_WARNING, "[ndi_input::ndi_audio_thread] Missing timestamp from NDI!");
-			ndi_audio_frame.timestamp = 0;
+			ndiLib->recv_free_audio_v3(ndi_recv, &ndi_audio_frame);
+			continue;
 		}
 
 		size_t channel_count = std::min(8, ndi_audio_frame.no_channels);
