@@ -18,8 +18,8 @@ target_sources(
   obs-ndi
   PRIVATE src/obs-ndi.cpp
           src/obs-ndi.h
-		  src/output-manager.cpp
-		  src/output-manager.h
+          src/output-manager.cpp
+          src/output-manager.h
           src/config.cpp
           src/config.h
           src/input.cpp
@@ -27,6 +27,8 @@ target_sources(
           src/input-utils.cpp
           src/output.cpp
           src/output.h
+          src/aux-output.cpp
+          src/aux-output.h
           src/plugin-macros.generated.h)
 
 target_sources(obs-ndi PRIVATE src/forms/SettingsDialog.cpp src/forms/SettingsDialog.h
