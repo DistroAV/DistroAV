@@ -31,7 +31,7 @@ void output_manager::update_program_output()
 	OBSDataAutoRelease settings = obs_output_get_settings(_program_output);
 
 	if (conf->program_output_enabled == was_running &&
-		conf->program_output_name == obs_data_get_string(settings, "source_name"))
+	    conf->program_output_name == obs_data_get_string(settings, "source_name"))
 		return;
 
 	if (was_running)

@@ -157,7 +157,7 @@ void ndi_output::raw_video(struct video_data *frame)
 	video_frame->timecode = frame->timestamp / 100;
 
 	// This one is true evil.
-	struct video_frame *in_frame = reinterpret_cast<struct video_frame*>(frame);
+	struct video_frame *in_frame = reinterpret_cast<struct video_frame *>(frame);
 
 	// Copy data to the OBS buffer that sits underneath the NDI frame
 	video_frame_copy(obs_video_frame, in_frame, v_format, video_frame->yres);
@@ -190,7 +190,8 @@ void ndi_output::raw_audio(struct audio_data *frame)
 
 	// Copy audio data to buffer
 	for (int i = 0; i < audio_frame->no_channels; ++i)
-		memcpy(audio_frame->p_data + (i * audio_frame->channel_stride_in_bytes), frame->data[i], audio_frame->channel_stride_in_bytes);
+		memcpy(audio_frame->p_data + (i * audio_frame->channel_stride_in_bytes), frame->data[i],
+		       audio_frame->channel_stride_in_bytes);
 
 	// Send audio synchronously, to avoid more buffer complication
 	ndiLib->send_send_audio_v3(ndi_send, audio_frame.get());
@@ -223,18 +224,18 @@ obs_properties_t *ndi_output::properties()
 void register_ndi_output_info()
 {
 	struct obs_output_info info = {};
-	info.id =				"ndi_output_v5";
-	info.flags =			OBS_OUTPUT_AV;
-	info.get_name =			[](void *) { return obs_module_text("Output.Name"); };
-	info.create =			[](obs_data_t *settings, obs_output_t *output) -> void * { return new ndi_output(settings, output); };
-	info.destroy =			[](void *data) { delete static_cast<ndi_output *>(data); };
-	info.start =			[](void *data) -> bool { return static_cast<ndi_output *>(data)->start(); };
-	info.stop =				[](void *data, uint64_t ts) { static_cast<ndi_output *>(data)->stop(ts); };
-	info.raw_video =		[](void *data, struct video_data *frame) { static_cast<ndi_output *>(data)->raw_video(frame); };
-	info.raw_audio =		[](void *data, struct audio_data *frames) { static_cast<ndi_output *>(data)->raw_audio(frames); };
-	info.update =			[](void *data, obs_data_t *settings) { static_cast<ndi_output *>(data)->update(settings); };
-	info.get_defaults =		ndi_output::defaults;
-	info.get_properties =	[](void *data) -> obs_properties_t * { return static_cast<ndi_output *>(data)->properties(); };
+	info.id = "ndi_output_v5";
+	info.flags = OBS_OUTPUT_AV;
+	info.get_name = [](void *) { return obs_module_text("Output.Name"); };
+	info.create = [](obs_data_t *settings, obs_output_t *output) -> void * { return new ndi_output(settings, output); };
+	info.destroy = [](void *data) { delete static_cast<ndi_output *>(data); };
+	info.start = [](void *data) -> bool { return static_cast<ndi_output *>(data)->start(); };
+	info.stop = [](void *data, uint64_t ts) { static_cast<ndi_output *>(data)->stop(ts); };
+	info.raw_video = [](void *data, struct video_data *frame) { static_cast<ndi_output *>(data)->raw_video(frame); };
+	info.raw_audio = [](void *data, struct audio_data *frames) { static_cast<ndi_output *>(data)->raw_audio(frames); };
+	info.update = [](void *data, obs_data_t *settings) { static_cast<ndi_output *>(data)->update(settings); };
+	info.get_defaults = ndi_output::defaults;
+	info.get_properties = [](void *data) -> obs_properties_t * { return static_cast<ndi_output *>(data)->properties(); };
 
 	obs_register_output(&info);
 }

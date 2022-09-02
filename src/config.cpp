@@ -11,12 +11,12 @@
 #define PARAM_PREVIEW_OUTPUT_ENABLED "preview_output_enabled"
 #define PARAM_PREVIEW_OUTPUT_NAME "preview_output_name"
 
-obs_ndi_config::obs_ndi_config() :
-	ndi_extra_ips(""),
-	program_output_enabled(false),
-	program_output_name("obs-ndi Program Mix"),
-	preview_output_enabled(false),
-	preview_output_name("obs-ndi Preview Mix")
+obs_ndi_config::obs_ndi_config()
+	: ndi_extra_ips(""),
+	  program_output_enabled(false),
+	  program_output_name("obs-ndi Program Mix"),
+	  preview_output_enabled(false),
+	  preview_output_name("obs-ndi Preview Mix")
 {
 	set_defaults();
 }

@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C)2014-2021, NewTek, inc.
+// Copyright (C)2014-2022, NewTek, inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -103,7 +103,7 @@
 #	endif // __cplusplus
 #endif // NDILIB_CPP_DEFAULT_VALUE
 
-// Data structures shared by multiple SDKs
+// Data structures shared by multiple SDKs.
 #include "Processing.NDI.compat.h"
 #include "Processing.NDI.structs.h"
 
@@ -126,34 +126,34 @@ const char* NDIlib_version(void);
 PROCESSINGNDILIB_API
 bool NDIlib_is_supported_CPU(void);
 
-// The finding (discovery API)
+// The finding (discovery API).
 #include "Processing.NDI.Find.h"
 
-// The receiving video and audio API
+// The receiving video and audio API.
 #include "Processing.NDI.Recv.h"
 
 // Extensions to support PTZ control, etc...
 #include "Processing.NDI.Recv.ex.h"
 
-// The sending video API
+// The sending video API.
 #include "Processing.NDI.Send.h"
 
-// The routing of inputs API
+// The routing of inputs API.
 #include "Processing.NDI.Routing.h"
 
-// Utility functions
+// Utility functions.
 #include "Processing.NDI.utilities.h"
 
-// Deprecated structures and functions
+// Deprecated structures and functions.
 #include "Processing.NDI.deprecated.h"
 
-// The frame synchronizer
+// The frame synchronizer.
 #include "Processing.NDI.FrameSync.h"
 
-// Dynamic loading used for OSS libraries
+// Dynamic loading used for OSS libraries.
 #include "Processing.NDI.DynamicLoad.h"
 
-// The C++ implementations
+// The C++ implementations.
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
 #include "Processing.NDI.Lib.cplusplus.h"
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
