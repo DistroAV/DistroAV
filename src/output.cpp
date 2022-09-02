@@ -41,24 +41,24 @@ bool ndi_output::start()
 		// TODO: Add more supported video formats
 		v_format = video_output_get_format(video);
 		switch (v_format) {
-			case VIDEO_FORMAT_NV12:
-				video_frame.FourCC = NDIlib_FourCC_video_type_NV12;
-				break;
-			case VIDEO_FORMAT_I420:
-				video_frame.FourCC = NDIlib_FourCC_video_type_I420;
-				break;
-			case VIDEO_FORMAT_RGBA:
-				video_frame.FourCC = NDIlib_FourCC_video_type_RGBA;
-				break;
-			case VIDEO_FORMAT_BGRA:
-				video_frame.FourCC = NDIlib_FourCC_video_type_BGRA;
-				break;
-			case VIDEO_FORMAT_BGRX:
-				video_frame.FourCC = NDIlib_FourCC_video_type_BGRX;
-				break;
-			default:
-				blog(LOG_WARNING, "Unsupported pixel format: %d", v_format);
-				return false;
+		case VIDEO_FORMAT_NV12:
+			video_frame.FourCC = NDIlib_FourCC_video_type_NV12;
+			break;
+		case VIDEO_FORMAT_I420:
+			video_frame.FourCC = NDIlib_FourCC_video_type_I420;
+			break;
+		case VIDEO_FORMAT_RGBA:
+			video_frame.FourCC = NDIlib_FourCC_video_type_RGBA;
+			break;
+		case VIDEO_FORMAT_BGRA:
+			video_frame.FourCC = NDIlib_FourCC_video_type_BGRA;
+			break;
+		case VIDEO_FORMAT_BGRX:
+			video_frame.FourCC = NDIlib_FourCC_video_type_BGRX;
+			break;
+		default:
+			blog(LOG_WARNING, "Unsupported pixel format: %d", v_format);
+			return false;
 		}
 
 		auto info = video_output_get_info(video);
