@@ -65,10 +65,14 @@ void SettingsDialog::SaveFormData()
 	conf->program_output_enabled = ui->programOutputGroupBox->isChecked();
 	conf->program_output_name = ui->programOutputSenderNameLineEdit->text().toStdString();
 
+	conf->preview_output_enabled = ui->previewOutputGroupBox->isChecked();
+	conf->preview_output_name = ui->previewOutputSenderNameLineEdit->text().toStdString();
+
 	conf->save();
 
 	if (extra_ips_changed)
 		restart_ndi_finder();
 
 	output_manager->update_program_output();
+	output_manager->update_preview_output();
 }
