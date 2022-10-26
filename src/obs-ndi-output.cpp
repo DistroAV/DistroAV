@@ -29,18 +29,18 @@ static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
 	return a < b ? a : b;
 }
 
-typedef void (*uyvy_conv_function)(uint8_t* input[], uint32_t in_linesize[],
-							  uint32_t start_y, uint32_t end_y,
-							  uint8_t* output, uint32_t out_linesize);
+typedef void (*uyvy_conv_function)(uint8_t *input[], uint32_t in_linesize[],
+				   uint32_t start_y, uint32_t end_y,
+				   uint8_t *output, uint32_t out_linesize);
 
-static void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
-						  uint32_t start_y, uint32_t end_y,
-						  uint8_t* output, uint32_t out_linesize)
+static void convert_i444_to_uyvy(uint8_t *input[], uint32_t in_linesize[],
+				 uint32_t start_y, uint32_t end_y,
+				 uint8_t *output, uint32_t out_linesize)
 {
-	uint8_t* _Y;
-	uint8_t* _U;
-	uint8_t* _V;
-	uint8_t* _out;
+	uint8_t *_Y;
+	uint8_t *_U;
+	uint8_t *_V;
+	uint8_t *_out;
 	uint32_t width = min_uint32(in_linesize[0], out_linesize);
 	for (uint32_t y = start_y; y < end_y; ++y) {
 		_Y = input[0] + ((size_t)y * (size_t)in_linesize[0]);
@@ -51,18 +51,19 @@ static void convert_i444_to_uyvy(uint8_t* input[], uint32_t in_linesize[],
 
 		for (uint32_t x = 0; x < width; x += 2) {
 			// Quality loss here. Some chroma samples are ignored.
-			*(_out++) = *(_U++); _U++;
+			*(_out++) = *(_U++);
+			_U++;
 			*(_out++) = *(_Y++);
-			*(_out++) = *(_V++); _V++;
+			*(_out++) = *(_V++);
+			_V++;
 			*(_out++) = *(_Y++);
 		}
 	}
 }
 
-struct ndi_output
-{
+struct ndi_output {
 	obs_output_t *output;
-	const char* ndi_name;
+	const char *ndi_name;
 	bool uses_video;
 	bool uses_audio;
 
@@ -77,53 +78,56 @@ struct ndi_output
 	size_t audio_channels;
 	uint32_t audio_samplerate;
 
-	uint8_t* conv_buffer;
+	uint8_t *conv_buffer;
 	uint32_t conv_linesize;
 	uyvy_conv_function conv_function;
 
-	uint8_t* audio_conv_buffer;
+	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
 
-	os_performance_token_t* perf_token;
+	os_performance_token_t *perf_token;
 };
 
-const char* ndi_output_getname(void* data)
+const char *ndi_output_getname(void *data)
 {
 	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.OutputName");
 }
 
-obs_properties_t* ndi_output_getproperties(void* data)
+obs_properties_t *ndi_output_getproperties(void *data)
 {
 	UNUSED_PARAMETER(data);
 
-	obs_properties_t* props = obs_properties_create();
+	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_properties_add_text(props, "ndi_name",
-		obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
+	obs_properties_add_text(
+		props, "ndi_name",
+		obs_module_text("NDIPlugin.OutputProps.NDIName"),
+		OBS_TEXT_DEFAULT);
 
 	return props;
 }
 
-void ndi_output_getdefaults(obs_data_t* settings)
+void ndi_output_getdefaults(obs_data_t *settings)
 {
-	obs_data_set_default_string(settings,
-								"ndi_name", "obs-ndi output (changeme)");
+	obs_data_set_default_string(settings, "ndi_name",
+				    "obs-ndi output (changeme)");
 	obs_data_set_default_bool(settings, "uses_video", true);
 	obs_data_set_default_bool(settings, "uses_audio", true);
 }
 
-bool ndi_output_start(void* data)
+bool ndi_output_start(void *data)
 {
-	auto o = (struct ndi_output*)data;
+	auto o = (struct ndi_output *)data;
 
 	uint32_t flags = 0;
-	video_t* video = obs_output_video(o->output);
-	audio_t* audio = obs_output_audio(o->output);
+	video_t *video = obs_output_video(o->output);
+	audio_t *audio = obs_output_audio(o->output);
 
 	if (!video && !audio) {
-		blog(LOG_ERROR, "'%s': no video and audio available", o->ndi_name);
+		blog(LOG_ERROR, "'%s': no video and audio available",
+		     o->ndi_name);
 		return false;
 	}
 
@@ -133,36 +137,39 @@ bool ndi_output_start(void* data)
 		uint32_t height = video_output_get_height(video);
 
 		switch (format) {
-			case VIDEO_FORMAT_I444:
-				o->conv_function = convert_i444_to_uyvy;
-				o->frame_fourcc = NDIlib_FourCC_video_type_UYVY;
-				o->conv_linesize = width * 2;
-				o->conv_buffer = new uint8_t[(size_t)height * (size_t)o->conv_linesize * 2]();
-				break;
+		case VIDEO_FORMAT_I444:
+			o->conv_function = convert_i444_to_uyvy;
+			o->frame_fourcc = NDIlib_FourCC_video_type_UYVY;
+			o->conv_linesize = width * 2;
+			o->conv_buffer =
+				new uint8_t[(size_t)height *
+					    (size_t)o->conv_linesize * 2]();
+			break;
 
-			case VIDEO_FORMAT_NV12:
-				o->frame_fourcc = NDIlib_FourCC_video_type_NV12;
-				break;
+		case VIDEO_FORMAT_NV12:
+			o->frame_fourcc = NDIlib_FourCC_video_type_NV12;
+			break;
 
-			case VIDEO_FORMAT_I420:
-				o->frame_fourcc = NDIlib_FourCC_video_type_I420;
-				break;
+		case VIDEO_FORMAT_I420:
+			o->frame_fourcc = NDIlib_FourCC_video_type_I420;
+			break;
 
-			case VIDEO_FORMAT_RGBA:
-				o->frame_fourcc = NDIlib_FourCC_video_type_RGBA;
-				break;
+		case VIDEO_FORMAT_RGBA:
+			o->frame_fourcc = NDIlib_FourCC_video_type_RGBA;
+			break;
 
-			case VIDEO_FORMAT_BGRA:
-				o->frame_fourcc = NDIlib_FourCC_video_type_BGRA;
-				break;
+		case VIDEO_FORMAT_BGRA:
+			o->frame_fourcc = NDIlib_FourCC_video_type_BGRA;
+			break;
 
-			case VIDEO_FORMAT_BGRX:
-				o->frame_fourcc = NDIlib_FourCC_video_type_BGRX;
-				break;
+		case VIDEO_FORMAT_BGRX:
+			o->frame_fourcc = NDIlib_FourCC_video_type_BGRX;
+			break;
 
-			default:
-				blog(LOG_WARNING, "unsupported pixel format %d", format);
-				return false;
+		default:
+			blog(LOG_WARNING, "unsupported pixel format %d",
+			     format);
+			return false;
 		}
 
 		o->frame_width = width;
@@ -194,7 +201,8 @@ bool ndi_output_start(void* data)
 		if (o->started) {
 			blog(LOG_INFO, "'%s': ndi output started", o->ndi_name);
 		} else {
-			blog(LOG_ERROR, "'%s': data capture start failed", o->ndi_name);
+			blog(LOG_ERROR, "'%s': data capture start failed",
+			     o->ndi_name);
 		}
 	} else {
 		blog(LOG_ERROR, "'%s': ndi sender init failed", o->ndi_name);
@@ -203,9 +211,9 @@ bool ndi_output_start(void* data)
 	return o->started;
 }
 
-void ndi_output_stop(void* data, uint64_t ts)
+void ndi_output_stop(void *data, uint64_t ts)
 {
-	auto o = (struct ndi_output*)data;
+	auto o = (struct ndi_output *)data;
 
 	o->started = false;
 	obs_output_end_data_capture(o->output);
@@ -227,17 +235,17 @@ void ndi_output_stop(void* data, uint64_t ts)
 	o->audio_samplerate = 0;
 }
 
-void ndi_output_update(void* data, obs_data_t* settings)
+void ndi_output_update(void *data, obs_data_t *settings)
 {
-	auto o = (struct ndi_output*)data;
+	auto o = (struct ndi_output *)data;
 	o->ndi_name = obs_data_get_string(settings, "ndi_name");
 	o->uses_video = obs_data_get_bool(settings, "uses_video");
 	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
 }
 
-void* ndi_output_create(obs_data_t* settings, obs_output_t* output)
+void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 {
-	auto o = (struct ndi_output*)bzalloc(sizeof(struct ndi_output));
+	auto o = (struct ndi_output *)bzalloc(sizeof(struct ndi_output));
 	o->output = output;
 	o->started = false;
 	o->audio_conv_buffer = nullptr;
@@ -247,18 +255,18 @@ void* ndi_output_create(obs_data_t* settings, obs_output_t* output)
 	return o;
 }
 
-void ndi_output_destroy(void* data)
+void ndi_output_destroy(void *data)
 {
-	auto o = (struct ndi_output*)data;
+	auto o = (struct ndi_output *)data;
 	if (o->audio_conv_buffer) {
 		bfree(o->audio_conv_buffer);
 	}
 	bfree(o);
 }
 
-void ndi_output_rawvideo(void* data, struct video_data* frame)
+void ndi_output_rawvideo(void *data, struct video_data *frame)
 {
-	auto o = (struct ndi_output*)data;
+	auto o = (struct ndi_output *)data;
 
 	if (!o->started || !o->frame_width || !o->frame_height)
 		return;
@@ -270,19 +278,18 @@ void ndi_output_rawvideo(void* data, struct video_data* frame)
 	video_frame.xres = width;
 	video_frame.yres = height;
 	video_frame.frame_rate_N = (int)(o->video_framerate * 100);
-	video_frame.frame_rate_D = 100; // TODO fixme: broken on fractional framerates
+	video_frame.frame_rate_D =
+		100; // TODO fixme: broken on fractional framerates
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 	video_frame.timecode = (int64_t)(frame->timestamp / 100);
 	video_frame.FourCC = o->frame_fourcc;
 
 	if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
-		o->conv_function(frame->data, frame->linesize,
-							 0, height,
-							 o->conv_buffer, o->conv_linesize);
+		o->conv_function(frame->data, frame->linesize, 0, height,
+				 o->conv_buffer, o->conv_linesize);
 		video_frame.p_data = o->conv_buffer;
 		video_frame.line_stride_in_bytes = o->conv_linesize;
-	}
-	else {
+	} else {
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
@@ -290,9 +297,9 @@ void ndi_output_rawvideo(void* data, struct video_data* frame)
 	ndiLib->send_send_video_v2(o->ndi_sender, &video_frame);
 }
 
-void ndi_output_rawaudio(void* data, struct audio_data* frame)
+void ndi_output_rawaudio(void *data, struct audio_data *frame)
 {
-	auto o = (struct ndi_output*)data;
+	auto o = (struct ndi_output *)data;
 
 	if (!o->started || !o->audio_samplerate || !o->audio_channels)
 		return;
@@ -304,20 +311,21 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
-	const size_t data_size =
-		(size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
+	const size_t data_size = (size_t)audio_frame.no_channels *
+				 (size_t)audio_frame.channel_stride_in_bytes;
 	if (data_size > o->audio_conv_buffer_size) {
 		if (o->audio_conv_buffer) {
 			bfree(o->audio_conv_buffer);
 		}
-		o->audio_conv_buffer = (uint8_t*)bmalloc(data_size);
+		o->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
 		o->audio_conv_buffer_size = data_size;
 	}
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(o->audio_conv_buffer + ((size_t)i * (size_t)audio_frame.channel_stride_in_bytes),
-			frame->data[i],
-			audio_frame.channel_stride_in_bytes);
+		memcpy(o->audio_conv_buffer +
+			       ((size_t)i *
+				(size_t)audio_frame.channel_stride_in_bytes),
+		       frame->data[i], audio_frame.channel_stride_in_bytes);
 	}
 
 	audio_frame.p_data = o->audio_conv_buffer;
@@ -329,18 +337,18 @@ void ndi_output_rawaudio(void* data, struct audio_data* frame)
 struct obs_output_info create_ndi_output_info()
 {
 	struct obs_output_info ndi_output_info = {};
-	ndi_output_info.id				= "ndi_output";
-	ndi_output_info.flags			= OBS_OUTPUT_AV;
-	ndi_output_info.get_name		= ndi_output_getname;
-	ndi_output_info.get_properties	= ndi_output_getproperties;
-	ndi_output_info.get_defaults	= ndi_output_getdefaults;
-	ndi_output_info.create			= ndi_output_create;
-	ndi_output_info.destroy			= ndi_output_destroy;
-	ndi_output_info.update			= ndi_output_update;
-	ndi_output_info.start			= ndi_output_start;
-	ndi_output_info.stop			= ndi_output_stop;
-	ndi_output_info.raw_video		= ndi_output_rawvideo;
-	ndi_output_info.raw_audio		= ndi_output_rawaudio;
+	ndi_output_info.id = "ndi_output";
+	ndi_output_info.flags = OBS_OUTPUT_AV;
+	ndi_output_info.get_name = ndi_output_getname;
+	ndi_output_info.get_properties = ndi_output_getproperties;
+	ndi_output_info.get_defaults = ndi_output_getdefaults;
+	ndi_output_info.create = ndi_output_create;
+	ndi_output_info.destroy = ndi_output_destroy;
+	ndi_output_info.update = ndi_output_update;
+	ndi_output_info.start = ndi_output_start;
+	ndi_output_info.stop = ndi_output_stop;
+	ndi_output_info.raw_video = ndi_output_rawvideo;
+	ndi_output_info.raw_audio = ndi_output_rawaudio;
 
 	return ndi_output_info;
 }

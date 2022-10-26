@@ -21,15 +21,12 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 #include <Processing.NDI.Lib.h>
 
-#define OBS_NDI_VERSION "4.9.1"
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
-#define blog(level, msg, ...) blog(level, "[obs-ndi] " msg, ##__VA_ARGS__)
-
-void main_output_start(const char* output_name);
+void main_output_start(const char *output_name);
 void main_output_stop();
 bool main_output_is_running();
 
-extern const NDIlib_v4* ndiLib;
+extern const NDIlib_v4 *ndiLib;
 
 #endif // OBSNDI_H
