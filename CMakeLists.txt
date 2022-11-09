@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16...3.21)
 
-project(obs-ndi VERSION 4.10.0)
+project(obs-ndi VERSION 4.10.1)
 add_library(${CMAKE_PROJECT_NAME} MODULE)
 
 set(PLUGIN_AUTHOR "tt2468")
