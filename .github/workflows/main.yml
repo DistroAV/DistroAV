@@ -33,7 +33,7 @@ jobs:
         run: sudo apt-get install -y clang-format-13
 
       - name: Run clang-format
-        run: ./.github/scripts/check-format.sh 1 && ./.github/scripts/check-changes.sh
+        run: ./.github/scripts/check-format.sh && ./.github/scripts/check-changes.sh
 
       - name: Install cmake-format
         run: sudo pip install cmakelang
@@ -374,7 +374,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
         with:
           draft: false
           prerelease: ${{ contains(steps.metadata.outputs.version, 'rc') || contains(steps.metadata.outputs.version, 'beta') }}

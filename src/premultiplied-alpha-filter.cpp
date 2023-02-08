@@ -21,69 +21,69 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "obs-ndi.h"
 
 struct alpha_filter {
-	obs_source_t *context;
-	gs_effect_t *effect;
+    obs_source_t *context;
+    gs_effect_t *effect;
 };
 
 const char *alpha_filter_getname(void *data)
 {
-	UNUSED_PARAMETER(data);
-	return obs_module_text("NDIPlugin.PremultipliedAlphaFilterName");
+    UNUSED_PARAMETER(data);
+    return obs_module_text("NDIPlugin.PremultipliedAlphaFilterName");
 }
 
 obs_properties_t *alpha_filter_getproperties(void *data)
 {
-	UNUSED_PARAMETER(data);
-	obs_properties_t *props = obs_properties_create();
-	return props;
+    UNUSED_PARAMETER(data);
+    obs_properties_t *props = obs_properties_create();
+    return props;
 }
 
 void alpha_filter_update(void *data, obs_data_t *settings)
 {
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(settings);
+    UNUSED_PARAMETER(data);
+    UNUSED_PARAMETER(settings);
 }
 
 void *alpha_filter_create(obs_data_t *settings, obs_source_t *source)
 {
     UNUSED_PARAMETER(settings);
-	struct alpha_filter *s =
-		(struct alpha_filter *)bzalloc(sizeof(struct alpha_filter));
-	s->context = source;
-	s->effect = obs_get_base_effect(OBS_EFFECT_PREMULTIPLIED_ALPHA);
-	return s;
+    struct alpha_filter *s =
+        (struct alpha_filter *)bzalloc(sizeof(struct alpha_filter));
+    s->context = source;
+    s->effect = obs_get_base_effect(OBS_EFFECT_PREMULTIPLIED_ALPHA);
+    return s;
 }
 
 void alpha_filter_destroy(void *data)
 {
-	struct alpha_filter *s = (struct alpha_filter *)data;
-	bfree(s);
+    struct alpha_filter *s = (struct alpha_filter *)data;
+    bfree(s);
 }
 
 void alpha_filter_videorender(void *data, gs_effect_t *effect)
 {
-	UNUSED_PARAMETER(effect);
-	struct alpha_filter *s = (struct alpha_filter *)data;
+    UNUSED_PARAMETER(effect);
+    struct alpha_filter *s = (struct alpha_filter *)data;
 
-	if (!obs_source_process_filter_begin(s->context, GS_RGBA,
-					     OBS_ALLOW_DIRECT_RENDERING))
-		return;
+    if (!obs_source_process_filter_begin(s->context, GS_RGBA,
+                                         OBS_ALLOW_DIRECT_RENDERING))
+        return;
 
-	obs_source_process_filter_end(s->context, s->effect, 0, 0);
+    obs_source_process_filter_end(s->context, s->effect, 0, 0);
 }
 
 struct obs_source_info create_alpha_filter_info()
 {
-	struct obs_source_info alpha_filter_info = {};
-	alpha_filter_info.id = OBS_NDI_ALPHA_FILTER_ID;
-	alpha_filter_info.type = OBS_SOURCE_TYPE_FILTER;
-	alpha_filter_info.output_flags = OBS_SOURCE_VIDEO;
-	alpha_filter_info.get_name = alpha_filter_getname;
-	alpha_filter_info.get_properties = alpha_filter_getproperties;
-	alpha_filter_info.create = alpha_filter_create;
-	alpha_filter_info.destroy = alpha_filter_destroy;
-	alpha_filter_info.update = alpha_filter_update;
-	alpha_filter_info.video_render = alpha_filter_videorender;
+    struct obs_source_info alpha_filter_info = {};
+    alpha_filter_info.id = OBS_NDI_ALPHA_FILTER_ID;
+    alpha_filter_info.type = OBS_SOURCE_TYPE_FILTER;
+    alpha_filter_info.output_flags = OBS_SOURCE_VIDEO;
+    alpha_filter_info.get_name = alpha_filter_getname;
+    alpha_filter_info.get_properties = alpha_filter_getproperties;
+    alpha_filter_info.create = alpha_filter_create;
+    alpha_filter_info.destroy = alpha_filter_destroy;
+    alpha_filter_info.update = alpha_filter_update;
+    alpha_filter_info.video_render = alpha_filter_videorender;
 
-	return alpha_filter_info;
+    return alpha_filter_info;
 }

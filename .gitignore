@@ -1,8 +1,5 @@
-/build/
-/build32/
-/build64/
+/build_x64/
 /release/
-/installer/Output/
 .DS_Store
 .idea
 .vscode
