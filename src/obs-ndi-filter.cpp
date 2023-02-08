@@ -71,7 +71,7 @@ void ndi_filter_update(void *data, obs_data_t *settings);
 
 obs_properties_t *ndi_filter_getproperties(void *data)
 {
-	auto s = (struct ndi_filter *)data;
+	UNUSED_PARAMETER(data);
 
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
@@ -84,8 +84,11 @@ obs_properties_t *ndi_filter_getproperties(void *data)
 	obs_properties_add_button(
 		props, "ndi_apply",
 		obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
-		[](obs_properties_t *pps, obs_property_t *prop,
+		[](obs_properties_t *pps,
+		   obs_property_t *prop,
 		   void *private_data) {
+			UNUSED_PARAMETER(pps);
+			UNUSED_PARAMETER(prop);
 			struct ndi_filter *s =
 				(struct ndi_filter *)private_data;
 			obs_data_t *settings =
@@ -95,20 +98,25 @@ obs_properties_t *ndi_filter_getproperties(void *data)
 			return true;
 		});
 
-	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com",
-				  [](obs_properties_t *pps,
-				     obs_property_t *prop, void *private_data) {
+	obs_properties_add_button(
+		props, "ndi_website",
+		"NDI.NewTek.com",
+		[](obs_properties_t *pps,
+		   obs_property_t *prop,
+		   void *private_data) {
+			UNUSED_PARAMETER(pps);
+			UNUSED_PARAMETER(prop);
+			UNUSED_PARAMETER(private_data);
 #if defined(_WIN32)
-					  ShellExecute(NULL, L"open",
+			ShellExecute(NULL, L"open",
 						       L"http://ndi.newtek.com",
 						       NULL, NULL,
 						       SW_SHOWNORMAL);
 #elif defined(__linux__) || defined(__APPLE__)
 			int suppresswarning = system("open http://ndi.newtek.com");
 #endif
-
-					  return true;
-				  });
+			return true;
+		});
 
 	return props;
 }
@@ -146,6 +154,9 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 
 void ndi_filter_offscreen_render(void *data, uint32_t cx, uint32_t cy)
 {
+	UNUSED_PARAMETER(cx);
+	UNUSED_PARAMETER(cy);
+
 	auto s = (struct ndi_filter *)data;
 
 	obs_source_t *target = obs_filter_get_parent(s->context);
@@ -330,6 +341,7 @@ void ndi_filter_destroy_audioonly(void *data)
 
 void ndi_filter_tick(void *data, float seconds)
 {
+	UNUSED_PARAMETER(seconds);
 	auto s = (struct ndi_filter *)data;
 	obs_get_video_info(&s->ovi);
 }

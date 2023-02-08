@@ -6,3 +6,5 @@
 .DS_Store
 .idea
 .vscode
+
+src/plugin-macros.generated.h

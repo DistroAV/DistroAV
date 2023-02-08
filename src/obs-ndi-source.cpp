@@ -96,7 +96,7 @@ static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 
 			const char *id = obs_source_get_id(filter);
 			if (strcmp(id, filter_search->query) == 0) {
-				obs_source_addref(filter);
+				obs_source_get_ref(filter);
 				filter_search->result = filter;
 			}
 		},
@@ -169,7 +169,7 @@ const char *ndi_source_getname(void *data)
 
 obs_properties_t *ndi_source_getproperties(void *data)
 {
-	auto s = (struct ndi_source *)data;
+	UNUSED_PARAMETER(data);
 
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
@@ -206,6 +206,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_property_set_modified_callback(
 		bw_modes, [](obs_properties_t *props, obs_property_t *property,
 			     obs_data_t *settings) {
+			UNUSED_PARAMETER(property);
 			bool is_audio_only =
 				(obs_data_get_int(settings, PROP_BANDWIDTH) ==
 				 PROP_BW_AUDIO_ONLY);
@@ -281,20 +282,25 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_properties_add_bool(props, PROP_AUDIO,
 				obs_module_text("NDIPlugin.SourceProps.Audio"));
 
-	obs_properties_add_button(props, "ndi_website", "NDI.NewTek.com",
-				  [](obs_properties_t *pps,
-				     obs_property_t *prop, void *private_data) {
+	obs_properties_add_button(
+		props, "ndi_website",
+		"NDI.NewTek.com",
+		[](obs_properties_t *pps,
+			obs_property_t *prop,
+			void *private_data) {
+			UNUSED_PARAMETER(pps);
+			UNUSED_PARAMETER(prop);
+			UNUSED_PARAMETER(private_data);
 #if defined(_WIN32)
-					  ShellExecute(NULL, L"open",
-						       L"http://ndi.newtek.com",
-						       NULL, NULL,
-						       SW_SHOWNORMAL);
+			ShellExecute(NULL, L"open",
+							   L"http://ndi.newtek.com",
+							   NULL, NULL,
+							   SW_SHOWNORMAL);
 #elif defined(__linux__) || defined(__APPLE__)
 			int suppresswarning = system("open http://ndi.newtek.com");
 #endif
-
-					  return true;
-				  });
+			return true;
+		});
 
 	return props;
 }

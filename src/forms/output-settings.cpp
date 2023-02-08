@@ -70,6 +70,8 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *event)
 {
+	UNUSED_PARAMETER(event);
+
 	Config *conf = Config::Current();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
@@ -84,10 +86,7 @@ void OutputSettings::showEvent(QShowEvent *event)
 
 void OutputSettings::ToggleShowHide()
 {
-	if (!isVisible())
-		setVisible(true);
-	else
-		setVisible(false);
+	setVisible(!isVisible());
 }
 
 OutputSettings::~OutputSettings()

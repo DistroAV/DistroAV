@@ -33,7 +33,7 @@ jobs:
         run: sudo apt-get install -y clang-format-13
 
       - name: Run clang-format
-        run: ./.github/scripts/check-format.sh && ./.github/scripts/check-changes.sh
+        run: ./.github/scripts/check-format.sh 1 && ./.github/scripts/check-changes.sh
 
       - name: Install cmake-format
         run: sudo pip install cmakelang

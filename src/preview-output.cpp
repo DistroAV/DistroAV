@@ -99,6 +99,12 @@ void preview_output_start(const char *output_name)
 	ai.input_callback = [](void *param, uint64_t start_ts, uint64_t end_ts,
 			       uint64_t *new_ts, uint32_t active_mixers,
 			       struct audio_output_data *mixes) {
+        UNUSED_PARAMETER(param);
+        UNUSED_PARAMETER(start_ts);
+        UNUSED_PARAMETER(end_ts);
+        UNUSED_PARAMETER(new_ts);
+        UNUSED_PARAMETER(active_mixers);
+        UNUSED_PARAMETER(mixes);
 		return false;
 	};
 	ai.input_param = nullptr;
@@ -189,6 +195,9 @@ void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 
 void render_preview_source(void *param, uint32_t cx, uint32_t cy)
 {
+	UNUSED_PARAMETER(cx);
+	UNUSED_PARAMETER(cy);
+
 	auto ctx = (struct preview_output *)param;
 
 	if (!ctx->current_source)

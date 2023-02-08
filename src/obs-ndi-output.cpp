@@ -213,6 +213,8 @@ bool ndi_output_start(void *data)
 
 void ndi_output_stop(void *data, uint64_t ts)
 {
+	UNUSED_PARAMETER(ts);
+
 	auto o = (struct ndi_output *)data;
 
 	o->started = false;
