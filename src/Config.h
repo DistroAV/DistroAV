@@ -23,11 +23,11 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 
 class Config {
-  public:
+public:
 	Config();
-	static void OBSSaveCallback(obs_data_t* save_data,
-		bool saving, void* private_data);
-	static Config* Current();
+	static void OBSSaveCallback(obs_data_t *save_data, bool saving,
+				    void *private_data);
+	static Config *Current();
 	void Load();
 	void Save();
 
@@ -38,8 +38,8 @@ class Config {
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 
-  private:
-	static Config* _instance;
+private:
+	static Config *_instance;
 };
 
 #endif // CONFIG_H
