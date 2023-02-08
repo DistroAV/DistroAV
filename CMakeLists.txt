@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16...3.21)
 
-project(obs-ndi VERSION 4.10.1)
+project(obs-ndi VERSION 4.10.2)
 add_library(${CMAKE_PROJECT_NAME} MODULE)
 
 set(PLUGIN_AUTHOR "Stephane Lepin")
@@ -26,8 +26,6 @@ target_sources(
           src/preview-output.h
           src/Config.h
           src/forms/output-settings.h)
-
-target_compile_features(obs-ndi PRIVATE cxx_std_11)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 
@@ -70,8 +68,6 @@ if(OS_WINDOWS)
 
   if(MSVC)
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
-    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
   endif()
   # --- End of section ---
 

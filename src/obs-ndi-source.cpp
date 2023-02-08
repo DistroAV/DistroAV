@@ -278,7 +278,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
             ShellExecute(NULL, L"open", L"http://ndi.newtek.com", NULL, NULL,
                          SW_SHOWNORMAL);
 #elif defined(__linux__) || defined(__APPLE__)
-            !system("open http://ndi.newtek.com");
+            (void)!system("open http://ndi.newtek.com");
 #endif
             return true;
         });
