@@ -3,12 +3,12 @@ cmake_minimum_required(VERSION 3.16...3.21)
 project(obs-ndi VERSION 4.10.1)
 add_library(${CMAKE_PROJECT_NAME} MODULE)
 
-set(PLUGIN_AUTHOR "tt2468")
+set(PLUGIN_AUTHOR "Stephane Lepin")
+set(MACOS_BUNDLEID "fr.palakis.${CMAKE_PROJECT_NAME}")
+set(LINUX_MAINTAINER_EMAIL "stephane.lepin@gmail.com")
 
-set(MACOS_BUNDLEID "net.tt2468.obs-ndi")
-
-set(LINUX_MAINTAINER_EMAIL "tt2468@irltoolkit.com")
-
+# Add your custom source files here - header files are optional and only required for visibility
+# e.g. in Xcode or Visual Studio
 target_sources(
   ${CMAKE_PROJECT_NAME}
   PRIVATE src/obs-ndi.cpp
@@ -29,7 +29,7 @@ target_sources(
 
 target_compile_features(obs-ndi PRIVATE cxx_std_11)
 
-target_include_directories(obs-ndi PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/lib/ndi)
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 
 # Import libobs as main plugin dependency
 find_package(libobs REQUIRED)
