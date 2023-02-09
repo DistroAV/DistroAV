@@ -6,7 +6,7 @@ on:
       - '**.md'
     branches:
       - master
-      - main
+      - develop
     tags:
       - '*'
   pull_request:
@@ -14,7 +14,7 @@ on:
       - '**.md'
     branches:
       - master
-      - main
+      - develop
 
 env:
   PLUGIN_NAME: 'obs-ndi'
