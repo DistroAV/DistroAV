@@ -8,19 +8,19 @@ body:
     attributes:
       label: Operating System Version
       description: What Operation System version(s) does this happen on?
-      placeholder: [ex: MacOS Monterey 12.6.3, MacOS Ventura 13.2, Ubuntu 22.04.1, Windows 10 22H2, Windows 11 22H2, ...]
+      placeholder: "[ex: MacOS Monterey 12.6.3, MacOS Ventura 13.2, Ubuntu 22.04.1, Windows 10 22H2, Windows 11 22H2, ...]"
   - type: textarea
     id: obs-version
     attributes:
       label: OBS Version
       description: What OBS version(s) does this happen on?
-      placeholder: [ex: 27.2.4, 28.0, 29.0.2]
+      placeholder: "[ex: 27.2.4, 28.0, 29.0.2]"
   - type: textarea
     id: ndi-version
     attributes:
       label: NDI Tools Version
       description: What NDI Tools version(s) does this happen on?
-      placeholder: [ex: 4.x, 5.5.3.0]
+      placeholder: "[ex: 4.x, 5.5.3.0]"
   - type: textarea
     id: description
     attributes:
