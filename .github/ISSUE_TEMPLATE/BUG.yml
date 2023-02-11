@@ -32,9 +32,9 @@ body:
       label: Steps to reproduce
       description: What are the steps to reliably reproduce this error?
       placeholder: |
-        1. Go to '...'  
-        2. Click on '....'  
-        3. Scroll down to '....'  
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
         4. See error"
   - type: textarea
     id: expected
