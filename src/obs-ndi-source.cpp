@@ -341,9 +341,14 @@ void *ndi_source_poll_audio_video(void *data)
 			ndiLib->recv_capture_v3(s->ndi_receiver, &video_frame,
 						&audio_frame, nullptr, 100);
 
-		int channelCount = (int)fmin(8, audio_frame.no_channels);
 		if (frame_received == NDIlib_frame_type_audio) {
+
 			if (s->audio_enabled) {
+				const int channelCount =
+					audio_frame.no_channels > 8
+						? 8
+						: audio_frame.no_channels;
+
 				obs_audio_frame.speakers =
 					channel_count_to_layout(channelCount);
 
@@ -369,10 +374,8 @@ void *ndi_source_poll_audio_video(void *data)
 
 				for (int i = 0; i < channelCount; ++i) {
 					obs_audio_frame.data[i] =
-						(uint8_t *)(&audio_frame.p_data
-								     [i *
-								      audio_frame
-									      .no_samples]);
+						(uint8_t *)audio_frame.p_data +
+						i * audio_frame.channel_stride_in_bytes;
 				}
 
 				obs_source_output_audio(s->source,
