@@ -64,23 +64,25 @@ struct obs_source_info ndi_audiofilter_info;
 extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
-const NDIlib_v4 *load_ndilib();
+const NDIlib_v5 *load_ndilib();
 
-typedef const NDIlib_v4 *(*NDIlib_v4_load_)(void);
+typedef const NDIlib_v5 *(*NDIlib_v5_load_)(void);
 QLibrary *loaded_lib = nullptr;
 
-NDIlib_find_instance_t ndi_finder;
+NDIlib_find_instance_t ndi_finder = nullptr;
 
-OutputSettings *output_settings;
+OutputSettings *output_settings = nullptr;
 
 bool obs_module_load(void)
 {
-    blog(LOG_INFO, "hello ! (version %s)", PLUGIN_VERSION);
+    blog(LOG_INFO, "obs_module_load: hello ! (version %s)", PLUGIN_VERSION);
 
     QMainWindow *main_window = (QMainWindow *)obs_frontend_get_main_window();
 
     ndiLib = load_ndilib();
     if (!ndiLib) {
+        blog(LOG_ERROR, "obs_module_load: load_ndilib() failed; Module won't load.");
+
         const char *msg_string_name = "";
 #ifdef _MSC_VER
         // Windows
@@ -103,11 +105,11 @@ bool obs_module_load(void)
     }
 
     if (!ndiLib->initialize()) {
-        blog(LOG_ERROR, "CPU unsupported by NDI library. Module won't load.");
+        blog(LOG_ERROR, "obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
         return false;
     }
 
-    blog(LOG_INFO, "NDI library initialized successfully (%s)",
+    blog(LOG_INFO, "obs_module_load: NDI library initialized successfully (%s)",
          ndiLib->version());
 
     NDIlib_find_create_t find_desc = {0};
@@ -177,16 +179,24 @@ bool obs_module_load(void)
 
 void obs_module_unload()
 {
-    blog(LOG_INFO, "goodbye !");
+    blog(LOG_DEBUG, "+obs_module_unload()");
 
     if (ndiLib) {
-        ndiLib->find_destroy(ndi_finder);
+        if (ndi_finder) {
+            ndiLib->find_destroy(ndi_finder);
+            ndi_finder = nullptr;
+        }
         ndiLib->destroy();
+        ndiLib = nullptr;
     }
 
     if (loaded_lib) {
         delete loaded_lib;
     }
+
+    blog(LOG_INFO, "obs_module_unload: goodbye !");
+
+    blog(LOG_DEBUG, "-obs_module_unload()");
 }
 
 const char *obs_module_name()
@@ -209,26 +219,28 @@ const NDIlib_v4 *load_ndilib()
 #endif
 
     for (QString path : locations) {
-        blog(LOG_INFO, "Trying '%s'", path.toUtf8().constData());
+        blog(LOG_INFO, "load_ndilib: Trying '%s'", path.toUtf8().constData());
         QFileInfo libPath(QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME));
 
         if (libPath.exists() && libPath.isFile()) {
             QString libFilePath = libPath.absoluteFilePath();
-            blog(LOG_INFO, "Found NDI library at '%s'",
+            blog(LOG_INFO, "load_ndilib: Found NDI library at '%s'",
                  libFilePath.toUtf8().constData());
 
             loaded_lib = new QLibrary(libFilePath, nullptr);
             if (loaded_lib->load()) {
-                blog(LOG_INFO, "NDI runtime loaded successfully");
+                blog(LOG_INFO, "load_ndilib: NDI runtime loaded successfully");
 
-                NDIlib_v4_load_ lib_load =
-                    (NDIlib_v4_load_)loaded_lib->resolve("NDIlib_v4_load");
+                NDIlib_v5_load_ lib_load =
+                    (NDIlib_v5_load_)loaded_lib->resolve("NDIlib_v5_load");
 
                 if (lib_load != nullptr) {
+                    blog(LOG_INFO,
+                         "load_ndilib: NDIlib_v5_load found");
                     return lib_load();
                 } else {
-                    blog(LOG_INFO,
-                         "ERROR: NDIlib_v4_load not found in loaded library");
+                    blog(LOG_ERROR,
+                         "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
                 }
             } else {
                 delete loaded_lib;
@@ -237,6 +249,6 @@ const NDIlib_v4 *load_ndilib()
         }
     }
 
-    blog(LOG_ERROR, "Can't find the NDI library");
+    blog(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library");
     return nullptr;
 }

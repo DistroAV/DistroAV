@@ -1,4 +1,5 @@
 /build_x64/
+/build_arm64/
 /release/
 .DS_Store
 .idea
