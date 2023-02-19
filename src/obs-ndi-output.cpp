@@ -291,7 +291,8 @@ void ndi_output_rawvideo(void *data, struct video_data *frame)
         video_frame.line_stride_in_bytes = frame->linesize[0];
     }
 
-    ndiLib->send_send_video_v2(o->ndi_sender, &video_frame);
+    // TODO:(pv) implement code similar to `rewrite`'s alternating between `video_frame_a` & `video_frame_b`
+    ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
 void ndi_output_rawaudio(void *data, struct audio_data *frame)

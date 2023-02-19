@@ -81,7 +81,8 @@ bool obs_module_load(void)
 
     ndiLib = load_ndilib();
     if (!ndiLib) {
-        blog(LOG_ERROR, "obs_module_load: load_ndilib() failed; Module won't load.");
+        blog(LOG_ERROR,
+             "obs_module_load: load_ndilib() failed; Module won't load.");
 
         const char *msg_string_name = "";
 #ifdef _MSC_VER
@@ -105,7 +106,9 @@ bool obs_module_load(void)
     }
 
     if (!ndiLib->initialize()) {
-        blog(LOG_ERROR, "obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
+        blog(
+            LOG_ERROR,
+            "obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
         return false;
     }
 
@@ -235,12 +238,12 @@ const NDIlib_v4 *load_ndilib()
                     (NDIlib_v5_load_)loaded_lib->resolve("NDIlib_v5_load");
 
                 if (lib_load != nullptr) {
-                    blog(LOG_INFO,
-                         "load_ndilib: NDIlib_v5_load found");
+                    blog(LOG_INFO, "load_ndilib: NDIlib_v5_load found");
                     return lib_load();
                 } else {
-                    blog(LOG_ERROR,
-                         "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+                    blog(
+                        LOG_ERROR,
+                        "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
                 }
             } else {
                 delete loaded_lib;
