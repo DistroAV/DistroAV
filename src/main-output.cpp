@@ -43,7 +43,9 @@ void main_output_start(const char *output_name)
 	if (main_output_running || !main_out)
 		return;
 
-	blog(LOG_INFO, "starting NDI main output with name '%s'", output_name);
+	blog(LOG_INFO,
+	     "main_output_start: starting NDI main output with name '%s'",
+	     output_name);
 
 	obs_data_t *settings = obs_output_get_settings(main_out);
 	obs_data_set_string(settings, "ndi_name", output_name);
@@ -52,6 +54,8 @@ void main_output_start(const char *output_name)
 
 	obs_output_start(main_out);
 	main_output_running = true;
+
+	blog(LOG_INFO, "main_output_start: started NDI main output");
 }
 
 void main_output_stop()
@@ -59,17 +63,22 @@ void main_output_stop()
 	if (!main_output_running)
 		return;
 
-	blog(LOG_INFO, "stopping NDI main output");
+	blog(LOG_INFO, "main_output_stop: stopping NDI main output");
 
 	obs_output_stop(main_out);
+
 	main_output_running = false;
+
+	blog(LOG_INFO, "main_output_stop: stopped NDI main output");
 }
 
 void main_output_deinit()
 {
+	blog(LOG_INFO, "+main_output_deinit()");
 	obs_output_release(main_out);
 	main_out = nullptr;
 	main_output_running = false;
+	blog(LOG_INFO, "-main_output_deinit()");
 }
 
 bool main_output_is_running()

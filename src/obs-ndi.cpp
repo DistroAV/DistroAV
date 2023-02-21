@@ -192,7 +192,7 @@ bool obs_module_load(void)
 
 void obs_module_unload()
 {
-	blog(LOG_DEBUG, "+obs_module_unload()");
+	blog(LOG_INFO, "+obs_module_unload()");
 
 	if (ndiLib) {
 		if (ndi_finder) {
@@ -209,7 +209,7 @@ void obs_module_unload()
 
 	blog(LOG_INFO, "obs_module_unload: goodbye !");
 
-	blog(LOG_DEBUG, "-obs_module_unload()");
+	blog(LOG_INFO, "-obs_module_unload()");
 }
 
 const char *obs_module_name()

@@ -119,7 +119,14 @@ void ndi_output_getdefaults(obs_data_t *settings)
 
 bool ndi_output_start(void *data)
 {
+	blog(LOG_INFO, "+ndi_output_start(...)");
+
 	auto o = (struct ndi_output *)data;
+
+	if (o->started) {
+		blog(LOG_INFO, "-ndi_output_start()");
+		return false;
+	}
 
 	uint32_t flags = 0;
 	video_t *video = obs_output_video(o->output);
@@ -128,6 +135,7 @@ bool ndi_output_start(void *data)
 	if (!video && !audio) {
 		blog(LOG_ERROR, "'%s': no video and audio available",
 		     o->ndi_name);
+		blog(LOG_INFO, "-ndi_output_start()");
 		return false;
 	}
 
@@ -169,6 +177,7 @@ bool ndi_output_start(void *data)
 		default:
 			blog(LOG_WARNING, "unsupported pixel format %d",
 			     format);
+			blog(LOG_INFO, "-ndi_output_start()");
 			return false;
 		}
 
@@ -208,24 +217,43 @@ bool ndi_output_start(void *data)
 		blog(LOG_ERROR, "'%s': ndi sender init failed", o->ndi_name);
 	}
 
+	blog(LOG_INFO, "-ndi_output_start()");
+
 	return o->started;
 }
 
 void ndi_output_stop(void *data, uint64_t ts)
 {
+	blog(LOG_INFO, "+ndi_output_stop(...)");
+
 	UNUSED_PARAMETER(ts);
 
 	auto o = (struct ndi_output *)data;
 
+	if (!o->started) {
+		blog(LOG_INFO, "-ndi_output_stop(...)");
+		return;
+	}
+
 	o->started = false;
+
 	obs_output_end_data_capture(o->output);
 
-	os_end_high_performance(o->perf_token);
-	o->perf_token = NULL;
+	if (o->perf_token) {
+		os_end_high_performance(o->perf_token);
+		o->perf_token = nullptr;
+	}
 
-	ndiLib->send_destroy(o->ndi_sender);
+	if (o->ndi_sender) {
+		blog(LOG_INFO, "+ndiLib->send_destroy(o->ndi_sender)");
+		ndiLib->send_destroy(o->ndi_sender);
+		blog(LOG_INFO, "-ndiLib->send_destroy(o->ndi_sender)");
+		o->ndi_sender = nullptr;
+	}
+
 	if (o->conv_buffer) {
 		delete o->conv_buffer;
+		o->conv_buffer = nullptr;
 		o->conv_function = nullptr;
 	}
 
@@ -235,6 +263,8 @@ void ndi_output_stop(void *data, uint64_t ts)
 
 	o->audio_channels = 0;
 	o->audio_samplerate = 0;
+
+	blog(LOG_INFO, "-ndi_output_stop(...)");
 }
 
 void ndi_output_update(void *data, obs_data_t *settings)
@@ -259,11 +289,14 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 
 void ndi_output_destroy(void *data)
 {
+	blog(LOG_INFO, "+ndi_output_destroy(...)");
 	auto o = (struct ndi_output *)data;
 	if (o->audio_conv_buffer) {
 		bfree(o->audio_conv_buffer);
+		o->audio_conv_buffer = nullptr;
 	}
 	bfree(o);
+	blog(LOG_INFO, "-ndi_output_destroy(...)");
 }
 
 void ndi_output_rawvideo(void *data, struct video_data *frame)
@@ -351,6 +384,5 @@ struct obs_output_info create_ndi_output_info()
 	ndi_output_info.stop = ndi_output_stop;
 	ndi_output_info.raw_video = ndi_output_rawvideo;
 	ndi_output_info.raw_audio = ndi_output_rawaudio;
-
 	return ndi_output_info;
 }

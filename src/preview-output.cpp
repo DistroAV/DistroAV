@@ -47,6 +47,9 @@ void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
 void preview_output_init(const char *default_name)
 {
+	if (context.output)
+		return;
+
 	obs_data_t *output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
 	obs_data_set_bool(output_settings, "uses_audio", false);
@@ -60,7 +63,8 @@ void preview_output_start(const char *output_name)
 	if (context.enabled || !context.output)
 		return;
 
-	blog(LOG_INFO, "starting NDI preview output with name '%s'",
+	blog(LOG_INFO,
+	     "preview_output_start: starting NDI preview output with name '%s'",
 	     output_name);
 
 	obs_get_video_info(&context.ovi);
@@ -127,8 +131,11 @@ void preview_output_start(const char *output_name)
 
 	obs_output_set_media(context.output, context.video_queue,
 			     context.dummy_audio_queue);
+
 	obs_output_start(context.output);
 	context.enabled = true;
+
+	blog(LOG_INFO, "preview_output_start: started NDI preview output");
 }
 
 void preview_output_stop()
@@ -136,9 +143,10 @@ void preview_output_stop()
 	if (!context.enabled)
 		return;
 
-	blog(LOG_INFO, "stopping NDI preview output");
+	blog(LOG_INFO, "preview_output_stop: stopping NDI preview output");
 
 	obs_output_stop(context.output);
+
 	video_output_stop(context.video_queue);
 
 	obs_remove_main_render_callback(render_preview_source, &context);
@@ -154,6 +162,8 @@ void preview_output_stop()
 	video_output_close(context.video_queue);
 
 	context.enabled = false;
+
+	blog(LOG_INFO, "preview_output_stop: stopped NDI preview output");
 }
 
 void preview_output_deinit()
