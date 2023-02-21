@@ -1,7 +1,7 @@
 # please use clang-format version 8 or later
 
 Standard: Cpp11
-AccessModifierOffset: -4
+AccessModifierOffset: -8
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
@@ -47,8 +47,8 @@ BreakStringLiterals: false  # apparently unpredictable
 ColumnLimit: 80
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 8
+ContinuationIndentWidth: 8
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat: false
@@ -60,13 +60,13 @@ ForEachMacros:
 IncludeBlocks: Preserve
 IndentCaseLabels: false
 IndentPPDirectives: None
-IndentWidth: 4
+IndentWidth: 8
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: true
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 #ObjCBinPackProtocolList: Auto  # requires clang-format 7
-ObjCBlockIndentWidth: 4
+ObjCBlockIndentWidth: 8
 ObjCSpaceAfterProperty: true
 ObjCSpaceBeforeProtocolList: true
 
@@ -102,6 +102,6 @@ SpacesInSquareBrackets: false
 TabWidth: 8
 #TypenameMacros:  # requires clang-format 9
 #  - 'DARRAY'
-UseTab: Never
+UseTab: ForContinuationAndIndentation
 ---
 Language: ObjC

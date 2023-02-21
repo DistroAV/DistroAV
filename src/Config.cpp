@@ -33,85 +33,91 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 Config *Config::_instance = nullptr;
 
 Config::Config()
-    : OutputEnabled(false),
-      OutputName("OBS"),
-      PreviewOutputEnabled(false),
-      PreviewOutputName("OBS Preview"),
-      TallyProgramEnabled(true),
-      TallyPreviewEnabled(true)
+	: OutputEnabled(false),
+	  OutputName("OBS"),
+	  PreviewOutputEnabled(false),
+	  PreviewOutputName("OBS Preview"),
+	  TallyProgramEnabled(true),
+	  TallyPreviewEnabled(true)
 {
-    config_t *obs_config = obs_frontend_get_global_config();
-    if (obs_config) {
-        config_set_default_bool(obs_config, SECTION_NAME,
-                                PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
-        config_set_default_string(obs_config, SECTION_NAME,
-                                  PARAM_MAIN_OUTPUT_NAME,
-                                  OutputName.toUtf8().constData());
+	config_t *obs_config = obs_frontend_get_global_config();
+	if (obs_config) {
+		config_set_default_bool(obs_config, SECTION_NAME,
+					PARAM_MAIN_OUTPUT_ENABLED,
+					OutputEnabled);
+		config_set_default_string(obs_config, SECTION_NAME,
+					  PARAM_MAIN_OUTPUT_NAME,
+					  OutputName.toUtf8().constData());
 
-        config_set_default_bool(obs_config, SECTION_NAME,
-                                PARAM_PREVIEW_OUTPUT_ENABLED,
-                                PreviewOutputEnabled);
-        config_set_default_string(obs_config, SECTION_NAME,
-                                  PARAM_PREVIEW_OUTPUT_NAME,
-                                  PreviewOutputName.toUtf8().constData());
+		config_set_default_bool(obs_config, SECTION_NAME,
+					PARAM_PREVIEW_OUTPUT_ENABLED,
+					PreviewOutputEnabled);
+		config_set_default_string(
+			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME,
+			PreviewOutputName.toUtf8().constData());
 
-        config_set_default_bool(obs_config, SECTION_NAME,
-                                PARAM_TALLY_PROGRAM_ENABLED,
-                                TallyProgramEnabled);
-        config_set_default_bool(obs_config, SECTION_NAME,
-                                PARAM_TALLY_PREVIEW_ENABLED,
-                                TallyPreviewEnabled);
-    }
+		config_set_default_bool(obs_config, SECTION_NAME,
+					PARAM_TALLY_PROGRAM_ENABLED,
+					TallyProgramEnabled);
+		config_set_default_bool(obs_config, SECTION_NAME,
+					PARAM_TALLY_PREVIEW_ENABLED,
+					TallyPreviewEnabled);
+	}
 }
 
 void Config::Load()
 {
-    config_t *obs_config = obs_frontend_get_global_config();
-    if (obs_config) {
-        OutputEnabled = config_get_bool(obs_config, SECTION_NAME,
-                                        PARAM_MAIN_OUTPUT_ENABLED);
-        OutputName =
-            config_get_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
+	config_t *obs_config = obs_frontend_get_global_config();
+	if (obs_config) {
+		OutputEnabled = config_get_bool(obs_config, SECTION_NAME,
+						PARAM_MAIN_OUTPUT_ENABLED);
+		OutputName = config_get_string(obs_config, SECTION_NAME,
+					       PARAM_MAIN_OUTPUT_NAME);
 
-        PreviewOutputEnabled = config_get_bool(obs_config, SECTION_NAME,
-                                               PARAM_PREVIEW_OUTPUT_ENABLED);
-        PreviewOutputName = config_get_string(obs_config, SECTION_NAME,
-                                              PARAM_PREVIEW_OUTPUT_NAME);
+		PreviewOutputEnabled = config_get_bool(
+			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
+		PreviewOutputName = config_get_string(
+			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
 
-        TallyProgramEnabled = config_get_bool(obs_config, SECTION_NAME,
-                                              PARAM_TALLY_PROGRAM_ENABLED);
-        TallyPreviewEnabled = config_get_bool(obs_config, SECTION_NAME,
-                                              PARAM_TALLY_PREVIEW_ENABLED);
-    }
+		TallyProgramEnabled = config_get_bool(
+			obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED);
+		TallyPreviewEnabled = config_get_bool(
+			obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
+	}
 }
 
 void Config::Save()
 {
-    config_t *obs_config = obs_frontend_get_global_config();
-    if (obs_config) {
-        config_set_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED,
-                        OutputEnabled);
-        config_set_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME,
-                          OutputName.toUtf8().constData());
+	config_t *obs_config = obs_frontend_get_global_config();
+	if (obs_config) {
+		config_set_bool(obs_config, SECTION_NAME,
+				PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
+		config_set_string(obs_config, SECTION_NAME,
+				  PARAM_MAIN_OUTPUT_NAME,
+				  OutputName.toUtf8().constData());
 
-        config_set_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED,
-                        PreviewOutputEnabled);
-        config_set_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME,
-                          PreviewOutputName.toUtf8().constData());
+		config_set_bool(obs_config, SECTION_NAME,
+				PARAM_PREVIEW_OUTPUT_ENABLED,
+				PreviewOutputEnabled);
+		config_set_string(obs_config, SECTION_NAME,
+				  PARAM_PREVIEW_OUTPUT_NAME,
+				  PreviewOutputName.toUtf8().constData());
 
-        config_set_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED,
-                        TallyProgramEnabled);
-        config_set_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED,
-                        TallyPreviewEnabled);
+		config_set_bool(obs_config, SECTION_NAME,
+				PARAM_TALLY_PROGRAM_ENABLED,
+				TallyProgramEnabled);
+		config_set_bool(obs_config, SECTION_NAME,
+				PARAM_TALLY_PREVIEW_ENABLED,
+				TallyPreviewEnabled);
 
-        config_save(obs_config);
-    }
+		config_save(obs_config);
+	}
 }
 
 Config *Config::Current()
 {
-    if (!_instance) {
-        _instance = new Config();
-    }
-    return _instance;
+	if (!_instance) {
+		_instance = new Config();
+	}
+	return _instance;
 }
