@@ -497,7 +497,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	recv_desc.source_to_connect_to.p_ndi_name =
 		obs_data_get_string(settings, PROP_SOURCE);
 	recv_desc.allow_video_fields = true;
-	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
+	//recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
+	recv_desc.color_format = NDIlib_recv_color_format_fastest;
 
 	switch (obs_data_get_int(settings, PROP_BANDWIDTH)) {
 	case PROP_BW_HIGHEST:
