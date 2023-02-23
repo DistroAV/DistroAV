@@ -225,32 +225,31 @@ const char *obs_module_description()
 const NDIlib_v4 *load_ndilib()
 {
 	QStringList locations;
-	locations << QString(qgetenv(NDILIB_REDIST_FOLDER));
+	QString path = QString(qgetenv(NDILIB_REDIST_FOLDER));
+	if (!path.isEmpty()) {
+		locations << path;
+	}
 #if defined(__linux__) || defined(__APPLE__)
 	locations << "/usr/lib";
 	locations << "/usr/local/lib";
 #endif
-
-	for (QString path : locations) {
+	for (QString location : locations) {
+		path = QDir::cleanPath(
+			QDir(location).absoluteFilePath(NDILIB_LIBRARY_NAME));
 		blog(LOG_INFO, "load_ndilib: Trying '%s'",
 		     path.toUtf8().constData());
-		QFileInfo libPath(
-			QDir(path).absoluteFilePath(NDILIB_LIBRARY_NAME));
-
+		QFileInfo libPath(path);
 		if (libPath.exists() && libPath.isFile()) {
-			QString libFilePath = libPath.absoluteFilePath();
+			path = libPath.absoluteFilePath();
 			blog(LOG_INFO, "load_ndilib: Found NDI library at '%s'",
-			     libFilePath.toUtf8().constData());
-
-			loaded_lib = new QLibrary(libFilePath, nullptr);
+			     path.toUtf8().constData());
+			loaded_lib = new QLibrary(path, nullptr);
 			if (loaded_lib->load()) {
 				blog(LOG_INFO,
 				     "load_ndilib: NDI runtime loaded successfully");
-
 				NDIlib_v5_load_ lib_load =
 					(NDIlib_v5_load_)loaded_lib->resolve(
 						"NDIlib_v5_load");
-
 				if (lib_load != nullptr) {
 					blog(LOG_INFO,
 					     "load_ndilib: NDIlib_v5_load found");
@@ -265,7 +264,6 @@ const NDIlib_v4 *load_ndilib()
 			}
 		}
 	}
-
 	blog(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;
 }
