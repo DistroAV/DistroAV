@@ -249,6 +249,20 @@ jobs:
           name: ${{ env.PLUGIN_NAME }}-linux-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
           path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-linux-${{ matrix.arch }}.*
 
+      - name: Upload libndi
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: libndi5_5.5.3-1_amd64.deb
+          path: ${{ github.workspace }}/plugin/package/libndi5_5.5.3-1_amd64.deb
+
+      - name: Upload libndi-dev
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: libndi5-dev_5.5.3-1_amd64.deb
+          path: ${{ github.workspace }}/plugin/package/libndi5-dev_5.5.3-1_amd64.deb
+
   windows_build:
     name: 02 - Windows
     runs-on: windows-2022

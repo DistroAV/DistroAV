@@ -345,7 +345,6 @@ void *ndi_source_poll_audio_video(void *data)
 						&audio_frame, nullptr, 100);
 
 		if (frame_received == NDIlib_frame_type_audio) {
-
 			if (s->audio_enabled) {
 				const int channelCount =
 					audio_frame.no_channels > 8

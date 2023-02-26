@@ -72,10 +72,11 @@ runs:
           -t linux-${{ inputs.target }}
         )
         if [[ -n "${CI}" && -n "${RUNNER_DEBUG}" ]]; then
-          build_args+=(--debug)
+          package_args+=(--debug)
         fi
 
         ${{ inputs.workingDirectory }}/.github/scripts/package-linux.sh "${package_args[@]}"
+        ${{ inputs.workingDirectory }}/CI/libndi-package.sh
 
     - name: Run Windows packaging
       if: ${{ runner.os == 'Windows' }}
