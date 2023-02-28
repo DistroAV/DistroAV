@@ -82,5 +82,7 @@
         }
     },
     "name": "obs-ndi",
-    "version": "4.11.0"
+    "version": "4.11.0",
+    "author": "Stéphane Lepin",
+    "email": "stephane.lepin@gmail.com"
 }
