@@ -1,19 +1,19 @@
 /*
 obs-ndi
-Copyright (C) 2016-2018 St�phane Lepin <steph  name of author
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program; If not, see <https://www.gnu.org/licenses/>
+You should have received a copy of the GNU General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
 #include <obs.h>
@@ -27,14 +27,14 @@ along with this program; If not, see <https://www.gnu.org/licenses/>
 
 struct preview_output {
 	bool enabled;
-	obs_source_t* current_source;
-	obs_output_t* output;
+	obs_source_t *current_source;
+	obs_output_t *output;
 
-	video_t* video_queue;
-	audio_t* dummy_audio_queue; // unused for now
-	gs_texrender_t* texrender;
-	gs_stagesurf_t* stagesurface;
-	uint8_t* video_data;
+	video_t *video_queue;
+	audio_t *dummy_audio_queue; // unused for now
+	gs_texrender_t *texrender;
+	gs_stagesurf_t *stagesurface;
+	uint8_t *video_data;
 	uint32_t video_linesize;
 
 	obs_video_info ovi;
@@ -42,25 +42,30 @@ struct preview_output {
 
 static struct preview_output context = {0};
 
-void on_preview_scene_changed(enum obs_frontend_event event, void* param);
-void render_preview_source(void* param, uint32_t cx, uint32_t cy);
+void on_preview_scene_changed(enum obs_frontend_event event, void *param);
+void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
-void preview_output_init(const char* default_name)
+void preview_output_init(const char *default_name)
 {
-	obs_data_t* output_settings = obs_data_create();
+	if (context.output)
+		return;
+
+	obs_data_t *output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
 	obs_data_set_bool(output_settings, "uses_audio", false);
-	context.output = obs_output_create(
-			"ndi_output", "NDI Preview Output", output_settings, nullptr
-	);
+	context.output = obs_output_create("ndi_output", "NDI Preview Output",
+					   output_settings, nullptr);
 	obs_data_release(output_settings);
 }
 
-void preview_output_start(const char* output_name)
+void preview_output_start(const char *output_name)
 {
-	if (context.enabled || !context.output) return;
+	if (context.enabled || !context.output)
+		return;
 
-	blog(LOG_INFO, "starting NDI preview output with name '%s'", output_name);
+	blog(LOG_INFO,
+	     "preview_output_start: starting NDI preview output with name '%s'",
+	     output_name);
 
 	obs_get_video_info(&context.ovi);
 
@@ -72,10 +77,12 @@ void preview_output_start(const char* output_name)
 	context.stagesurface = gs_stagesurface_create(width, height, GS_BGRA);
 	obs_leave_graphics();
 
-	const video_output_info* mainVOI = video_output_get_info(obs_get_video());
-	const audio_output_info* mainAOI = audio_output_get_info(obs_get_audio());
+	const video_output_info *mainVOI =
+		video_output_get_info(obs_get_video());
+	const audio_output_info *mainAOI =
+		audio_output_get_info(obs_get_audio());
 
-	video_output_info vi = { 0 };
+	video_output_info vi = {0};
 	vi.name = output_name;
 	vi.format = VIDEO_FORMAT_BGRA;
 	vi.width = width;
@@ -88,12 +95,20 @@ void preview_output_start(const char* output_name)
 
 	video_output_open(&context.video_queue, &vi);
 
-	audio_output_info ai = { 0 };
+	audio_output_info ai = {0};
 	ai.name = output_name;
 	ai.format = mainAOI->format;
 	ai.samples_per_sec = mainAOI->samples_per_sec;
 	ai.speakers = mainAOI->speakers;
-	ai.input_callback = [](void* param, uint64_t start_ts, uint64_t end_ts, uint64_t* new_ts, uint32_t active_mixers, struct audio_output_data* mixes) {
+	ai.input_callback = [](void *param, uint64_t start_ts, uint64_t end_ts,
+			       uint64_t *new_ts, uint32_t active_mixers,
+			       struct audio_output_data *mixes) {
+		UNUSED_PARAMETER(param);
+		UNUSED_PARAMETER(start_ts);
+		UNUSED_PARAMETER(end_ts);
+		UNUSED_PARAMETER(new_ts);
+		UNUSED_PARAMETER(active_mixers);
+		UNUSED_PARAMETER(mixes);
 		return false;
 	};
 	ai.input_param = nullptr;
@@ -102,29 +117,36 @@ void preview_output_start(const char* output_name)
 
 	obs_frontend_add_event_callback(on_preview_scene_changed, &context);
 	if (obs_frontend_preview_program_mode_active()) {
-		context.current_source = obs_frontend_get_current_preview_scene();
+		context.current_source =
+			obs_frontend_get_current_preview_scene();
 	} else {
 		context.current_source = obs_frontend_get_current_scene();
 	}
 	obs_add_main_render_callback(render_preview_source, &context);
 
-	obs_data_t* settings = obs_output_get_settings(context.output);
+	obs_data_t *settings = obs_output_get_settings(context.output);
 	obs_data_set_string(settings, "ndi_name", output_name);
 	obs_output_update(context.output, settings);
 	obs_data_release(settings);
 
-	obs_output_set_media(context.output, context.video_queue, context.dummy_audio_queue);
+	obs_output_set_media(context.output, context.video_queue,
+			     context.dummy_audio_queue);
+
 	obs_output_start(context.output);
 	context.enabled = true;
+
+	blog(LOG_INFO, "preview_output_start: started NDI preview output");
 }
 
 void preview_output_stop()
-{	
-	if (!context.enabled) return;
+{
+	if (!context.enabled)
+		return;
 
-	blog(LOG_INFO, "stopping NDI preview output");
+	blog(LOG_INFO, "preview_output_stop: stopping NDI preview output");
 
 	obs_output_stop(context.output);
+
 	video_output_stop(context.video_queue);
 
 	obs_remove_main_render_callback(render_preview_source, &context);
@@ -140,6 +162,8 @@ void preview_output_stop()
 	video_output_close(context.video_queue);
 
 	context.enabled = false;
+
+	blog(LOG_INFO, "preview_output_stop: stopped NDI preview output");
 }
 
 void preview_output_deinit()
@@ -155,35 +179,39 @@ bool preview_output_is_enabled()
 	return context.enabled;
 }
 
-void on_preview_scene_changed(enum obs_frontend_event event, void* param)
+void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 {
-	auto ctx = (struct preview_output*)param;
+	auto ctx = (struct preview_output *)param;
 	switch (event) {
-		case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:
-		case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
-			obs_source_release(ctx->current_source);
-			ctx->current_source = obs_frontend_get_current_preview_scene();
-			break;
-		case OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED:
+	case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:
+	case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
+		obs_source_release(ctx->current_source);
+		ctx->current_source = obs_frontend_get_current_preview_scene();
+		break;
+	case OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED:
+		obs_source_release(ctx->current_source);
+		ctx->current_source = obs_frontend_get_current_scene();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_CHANGED:
+		if (!obs_frontend_preview_program_mode_active()) {
 			obs_source_release(ctx->current_source);
 			ctx->current_source = obs_frontend_get_current_scene();
-			break;
-		case OBS_FRONTEND_EVENT_SCENE_CHANGED:
-			if (!obs_frontend_preview_program_mode_active()) {
-				obs_source_release(ctx->current_source);
-				ctx->current_source = obs_frontend_get_current_scene();
-			}
-			break;
-		default:
-			break;
+		}
+		break;
+	default:
+		break;
 	}
 }
 
-void render_preview_source(void* param, uint32_t cx, uint32_t cy)
+void render_preview_source(void *param, uint32_t cx, uint32_t cy)
 {
-	auto ctx = (struct preview_output*)param;
+	UNUSED_PARAMETER(cx);
+	UNUSED_PARAMETER(cy);
 
-	if (!ctx->current_source) return;
+	auto ctx = (struct preview_output *)param;
+
+	if (!ctx->current_source)
+		return;
 
 	uint32_t width = obs_source_get_base_width(ctx->current_source);
 	uint32_t height = obs_source_get_base_height(ctx->current_source);
@@ -195,7 +223,8 @@ void render_preview_source(void* param, uint32_t cx, uint32_t cy)
 		vec4_zero(&background);
 
 		gs_clear(GS_CLEAR_COLOR, &background, 0.0f, 0);
-		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
+		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f,
+			 100.0f);
 
 		gs_blend_state_push();
 		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
@@ -206,19 +235,25 @@ void render_preview_source(void* param, uint32_t cx, uint32_t cy)
 		gs_texrender_end(ctx->texrender);
 
 		struct video_frame output_frame;
-		if (video_output_lock_frame(ctx->video_queue,
-			&output_frame, 1, os_gettime_ns()))
-		{
-			gs_stage_texture(ctx->stagesurface, gs_texrender_get_texture(ctx->texrender));
+		if (video_output_lock_frame(ctx->video_queue, &output_frame, 1,
+					    os_gettime_ns())) {
+			gs_stage_texture(
+				ctx->stagesurface,
+				gs_texrender_get_texture(ctx->texrender));
 
-			if (gs_stagesurface_map(ctx->stagesurface, &ctx->video_data, &ctx->video_linesize)) {
+			if (gs_stagesurface_map(ctx->stagesurface,
+						&ctx->video_data,
+						&ctx->video_linesize)) {
 				uint32_t linesize = output_frame.linesize[0];
-				for (uint32_t i = 0; i < ctx->ovi.base_height; i++) {
+				for (uint32_t i = 0; i < ctx->ovi.base_height;
+				     i++) {
 					uint32_t dst_offset = linesize * i;
-					uint32_t src_offset = ctx->video_linesize * i;
-					memcpy(output_frame.data[0] + dst_offset,
-						ctx->video_data + src_offset,
-						linesize);
+					uint32_t src_offset =
+						ctx->video_linesize * i;
+					memcpy(output_frame.data[0] +
+						       dst_offset,
+					       ctx->video_data + src_offset,
+					       linesize);
 				}
 
 				gs_stagesurface_unmap(ctx->stagesurface);

@@ -9,43 +9,79 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
-- **NDI Output** : transmit video and audio from OBS to NDI
-- **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single source or scene to NDI
+- **NDI Output** : transmit OBS video and audio to NDI
+- **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
 
 ## Downloads
 Binaries for Windows, macOS and Linux are available in the [Releases](https://github.com/Palakis/obs-ndi/releases) section.
 
 ## Compiling
-### Prerequisites
-You'll need CMake and a working development environment for OBS Studio installed on your computer.
 
 ### Windows
-In cmake-gui, you'll have to set these CMake variables:
-- **QTDIR** (path) : location of the Qt environment suited for your compiler and architecture
-- **LIBOBS_INCLUDE_DIR** (path) : location of the `libobs` subfolder in the source code of OBS Studio
-- **LIBOBS_LIB** (filepath) : location of the obs.lib file
-- **OBS_FRONTEND_LIB** (filepath) : location of the obs-frontend-api.lib file
-
-### Linux
-On Debian/Ubuntu:
+In PowerShell v5+ terminal:
 ```
-# Start by installing the latest libndi deb available [here](https://github.com/Palakis/obs-ndi/releases).
 git clone https://github.com/Palakis/obs-ndi.git
 cd obs-ndi
-mkdir build && cd build
-# If you are on Ubuntu, add the `-DUSE_UBUNTU_FIX=true` flag to your cmake command
-cmake -DLIBOBS_INCLUDE_DIR="<path to the libobs sub-folder in obs-studio's source code>" -DCMAKE_INSTALL_PREFIX=/usr ..
-make -j4
-sudo make install
+.github/scripts/Build-Windows.ps1
+...
+tbd...
+```
+
+### Linux
+NOTE: Only Debian and Ubuntu are officially supported
+
+In terminal:
+```
+git clone https://github.com/Palakis/obs-ndi.git
+cd obs-ndi
+.github/scripts/build-linux.sh
+...
+sudo cp -r release/obs-plugins/64bit/* /usr/local/lib/x86_64-linux-gnu/obs-plugins/
+...
+sudo cp -r release/data/obs-plugins/* /usr/local/share/obs/obs-plugins/
+...
+sudo ldconfig
 ```
 
 ### OS X
+In terminal:
 ```
 git clone https://github.com/Palakis/obs-ndi.git
 cd obs-ndi
-mkdir build && cd build
-cmake -DLIBOBS_INCLUDE_DIR=<path to the libobs sub-folder in obs-studio's source code> -DLIBOBS_LIB=<path to libobs.0.dylib> -DOBS_FRONTEND_LIB=<path to libobs-frontend-api.dylib> -DQt5Core_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Core -DQt5Widgets_DIR=/usr/local/opt/qt5/lib/cmake/Qt5Widgets ../
-make -j4
-# Copy libobs-ndi.so to the obs-plugins folder
-# Copy libndi.dylib from the NDI SDK to the obs-plugins folder too
+.github/scripts/build-macos.zsh
+...
+cp -r release/obs-ndi.plugin ~/Library/Application\ Support/obs-studio/plugins/
+...
 ```
+
+Subsequent builds can be sped up by using `build-macos.zsh --skip-deps`.  
+[For some reason `--skip-all` doesn't work.]  
+See `build-macos.zsh --help` for more details.
+
+### Formatting
+From a bash shell (confirmed also works on WSL):
+```
+.github/scripts/check-format.sh 1
+```
+NOTE: `obs-ndi` is based on [`obsplugin-template`](https://github.com/obsproject/obs-plugintemplate) that [requires `clang-format-13`](https://github.com/obsproject/obs-plugintemplate/blob/525650f97209450cf2dcc06ff28ad941cc1bbd7b/.github/scripts/check-format.sh#L29-L42):
+```
+if type clang-format-13 2> /dev/null ; then
+    CLANG_FORMAT=clang-format-13
+elif type clang-format 2> /dev/null ; then
+    # Clang format found, but need to check version
+    CLANG_FORMAT=clang-format
+    V=$(clang-format --version)
+    if [[ $V != *"version 13.0"* ]]; then
+        echo "clang-format is not 13.0 (returned ${V})"
+        exit 1
+    fi
+else
+    echo "No appropriate clang-format found (expected clang-format-13.0.0, or clang-format)"
+    exit 1
+fi
+```
+[MacOS brew only has formulaes for clang-format 15, 11, or 8.](https://formulae.brew.sh/formula/clang-format)
+If you want to check-format on MacOS then you will need to:
+1. brew install clang-format
+2. edit `.github/scripts/check-format.sh` and change all `13` to `15`
+3. !!DO NOT COMMIT THESE CHANGES!!

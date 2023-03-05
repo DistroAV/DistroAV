@@ -1,8 +1,10 @@
-/build/
-/build32/
-/build64/
+/build_x64/
+/build_arm64/
+/build_x86_64/
+/package/
 /release/
-/installer/Output/
 .DS_Store
 .idea
 .vscode
+
+src/plugin-macros.generated.h
