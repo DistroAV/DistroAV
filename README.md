@@ -13,14 +13,14 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
 
 ## Downloads
-Binaries for Windows, macOS and Linux are available in the [Releases](https://github.com/Palakis/obs-ndi/releases) section.
+Binaries for Windows, macOS and Linux are available in the [Releases](https://github.com/obs-ndi/obs-ndi/releases) section.
 
 ## Compiling
 
 ### Windows
 In PowerShell v5+ terminal:
 ```
-git clone https://github.com/Palakis/obs-ndi.git
+git clone https://github.com/obs-ndi/obs-ndi.git
 cd obs-ndi
 .github/scripts/Build-Windows.ps1
 ...
@@ -32,7 +32,7 @@ NOTE: Only Debian and Ubuntu are officially supported
 
 In terminal:
 ```
-git clone https://github.com/Palakis/obs-ndi.git
+git clone https://github.com/obs-ndi/obs-ndi.git
 cd obs-ndi
 .github/scripts/build-linux.sh
 ...
@@ -46,7 +46,7 @@ sudo ldconfig
 ### OS X
 In terminal:
 ```
-git clone https://github.com/Palakis/obs-ndi.git
+git clone https://github.com/obs-ndi/obs-ndi.git
 cd obs-ndi
 .github/scripts/build-macos.zsh
 ...
