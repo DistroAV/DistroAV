@@ -12,7 +12,7 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 - **NDI Output** : transmit OBS video and audio to NDI
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
 
-## Install
+# Install
 
 1. Download binaries/installers for Windows, MacOS, and Linux in [Releases](https://github.com/obs-ndi/obs-ndi/releases).
 2. Download NDI Tools from:
@@ -21,6 +21,8 @@ Network A/V in OBS Studio with NewTek's NDI technology.
     * Linux:
         * https://downloads.ndi.tv/SDK/NDI_SDK_Linux/Install_NDI_SDK_v5_Linux.tar.gz and manually install or...
         * https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh (this will be improved in the next version)
+
+## Development
 
 ## Compiling
 
@@ -65,7 +67,7 @@ Subsequent builds can be sped up by using `build-macos.zsh --skip-deps`.
 [For some reason `--skip-all` doesn't work.]  
 See `build-macos.zsh --help` for more details.
 
-### Formatting
+## Formatting
 From a bash shell (confirmed also works on WSL):
 ```
 .github/scripts/check-format.sh 1
