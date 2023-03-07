@@ -14,7 +14,7 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 - **NDI Output** : transmit OBS video and audio to NDI
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
 
-## Requirements:
+## Requirements
 * OBS >=28
 * NDI 5 Runtime (optionally installed via NDI Tools)
 
