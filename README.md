@@ -14,13 +14,13 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 
 ## Install
 
-1. Download binaries for Windows, macOS and Linux are available in the [Releases](https://github.com/obs-ndi/obs-ndi/releases) section.
+1. Download binaries/installers for Windows, MacOS, and Linux in [Releases](https://github.com/obs-ndi/obs-ndi/releases).
 2. Download NDI Tools from:
-  * Windows: https://go.ndi.tv/tools-for-windows
-  * Mac: https://go.ndi.tv/tools-for-mac
-  * Linux:
-    * https://downloads.ndi.tv/SDK/NDI_SDK_Linux/Install_NDI_SDK_v5_Linux.tar.gz and manually install or...
-    * https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh (this will be improved in the next version)
+    * Windows: https://go.ndi.tv/tools-for-windows
+    * Mac: https://go.ndi.tv/tools-for-mac
+    * Linux:
+        * https://downloads.ndi.tv/SDK/NDI_SDK_Linux/Install_NDI_SDK_v5_Linux.tar.gz and manually install or...
+        * https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh (this will be improved in the next version)
 
 ## Compiling
 
