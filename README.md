@@ -14,13 +14,21 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 - **NDI Output** : transmit OBS video and audio to NDI
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
 
-# Install
+## Requirements:
+* OBS >=28
+* NDI 5 Runtime (optionally installed via NDI Tools)
 
+# Install
 1. Download and install the Linux, MacOS, or Windows version at [Releases](https://github.com/obs-ndi/obs-ndi/releases).  
-   Replace `x.y.z` with the version number you downloaded.
-    * Linux: `sudo dpkg -i obs-ndi-x.y.z-linux-x86_64.deb`
-    * MacOS: Run `obs-ndi-x.y.z-macos-universal.pkg`
-    * Windows: Run `obs-ndi-x.y.z-windows-x64-Installer.exe`
+    * Linux:
+      1. Download [obs-ndi-4.11.0-linux-x86_64.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.0/obs-ndi-4.11.0-linux-x86_64.deb)
+      2. `sudo dpkg -i obs-ndi-4.11.0-linux-x86_64.deb`
+    * MacOS:
+      1. Download [obs-ndi-4.11.0-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.0/obs-ndi-4.11.0-macos-universal.pkg)
+      2. Run `obs-ndi-4.11.0-macos-universal.pkg`
+    * Windows:
+      1. Download [obs-ndi-4.11.0-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.0/obs-ndi-4.11.0-windows-x64-Installer.exe)
+      2. Run `obs-ndi-4.11.0-windows-x64-Installer.exe`
 2. Download and install the NDI 5 runtime from:
     * Linux:
       ```
