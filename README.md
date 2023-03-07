@@ -22,7 +22,7 @@ Network A/V in OBS Studio with NewTek's NDI technology.
         * https://downloads.ndi.tv/SDK/NDI_SDK_Linux/Install_NDI_SDK_v5_Linux.tar.gz and manually install or...
         * https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh (this will be improved in the next version)
 
-## Development
+# Development
 
 ## Compiling
 
