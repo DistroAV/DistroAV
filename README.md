@@ -46,6 +46,11 @@ Network A/V in OBS Studio with NewTek's NDI technology.
       ```
     * MacOS: https://go.ndi.tv/tools-for-mac
     * Windows: https://go.ndi.tv/tools-for-windows
+    
+NOTE: Normally we would recommend installing just the `NDI Runtime`, but the official short links are down right now:
+* Linux: None
+* MacOS: http://new.tk/NDIRedistV5Apple
+* Windows: http://new.tk/NDIRedistV5
         
 ## Uninstall
 
