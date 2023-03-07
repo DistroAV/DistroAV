@@ -3,9 +3,11 @@ obs-ndi
 
 Network A/V in OBS Studio with NewTek's NDI technology.
 
+<!--
 [![Build Status](https://dev.azure.com/Palakis/obs-ndi/_apis/build/status/Palakis.obs-ndi?branchName=master)](https://dev.azure.com/Palakis/obs-ndi/_build/latest?definitionId=1&branchName=master)
 [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/fold_left.svg?style=social&label=Follow%20%40LePalakis)](https://twitter.com/LePalakis)
 [![Financial Contributors on Open Collective](https://opencollective.com/obs-websocket/all/badge.svg?label=financial+contributors)](https://opencollective.com/obs-websocket)
+-->
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
@@ -14,13 +16,67 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 
 # Install
 
-1. Download binaries/installers for Windows, MacOS, and Linux in [Releases](https://github.com/obs-ndi/obs-ndi/releases).
+1. Download installer for Linux, MacOS, or Windows in [Releases](https://github.com/obs-ndi/obs-ndi/releases).
+2. Run the installer:
+   Replace `x.y.z` with the version number you downloaded.
+    * Linux: `sudo dpkg -i obs-ndi-x.y.z-linux-x86_64.deb`
+    * MacOS: Run `obs-ndi-x.y.z-macos-universal.pkg`
+    * Windows: Run `obs-ndi-x.y.z-windows-x64-Installer.exe`
 2. Download NDI Tools from:
-    * Windows: https://go.ndi.tv/tools-for-windows
-    * Mac: https://go.ndi.tv/tools-for-mac
     * Linux:
-        * https://downloads.ndi.tv/SDK/NDI_SDK_Linux/Install_NDI_SDK_v5_Linux.tar.gz and manually install or...
-        * https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh (this will be improved in the next version)
+      ```
+      #!/bin/bash
+      set -e
+      LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v5_Linux"
+      LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
+      LIBNDI_INSTALLER_SHA256="00d0bedc2c72736d82883fc0fd6bc1a544e7958c7e46db79f326633d44e15153"
+      pushd /tmp
+      sudo apt-get install curl
+      curl -L -o $LIBNDI_INSTALLER https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER -f --retry 5
+      echo "$LIBNDI_INSTALLER_SHA256 $LIBNDI_INSTALLER" | sha256sum -c
+      tar -xf $LIBNDI_INSTALLER
+      yes | PAGER="cat" sh $LIBNDI_INSTALLER_NAME.sh
+      rm -rf ndisdk
+      mv "NDI SDK for Linux" ndisdk
+      ls ndisdk
+      sudo cp -P ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
+      sudo ldconfig
+      rm -rf ndisdk
+      popd
+      ```
+    * MacOS: https://go.ndi.tv/tools-for-mac
+    * Windows: https://go.ndi.tv/tools-for-windows
+        
+## Uninstall
+
+Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
+
+### Linux
+
+1. `rm -rf ~/.config/obs-studio/plugins/obs-ndi`
+2. Optionally delete NDI Runtime:
+    1. ```
+       sudo rm /usr/local/lib/libndi*.*
+       sudo ldconfig
+       ```
+
+### MacOS
+
+1. Open Finder
+2. Show hidden files with `Command-Shift-.`
+3. Delete `~/Library/Application Support/obs-studio/plugins/obs-ndi.plugin`
+4. Optionally delete NDI Tools/Runtime:
+    1. Finder->Applications: Delete all `NDI *` applications
+    2. Delete `/Library/Application Support/NewTek/NDI`
+    2. Delete `/usr/local/lib/libndi.*`
+
+### Windows
+
+1. Add/Remove Programs
+2. Delete `%ProgramFiles%\obs-studio\obs-plugins\64-bit\obs-ndi.*`
+3. Optionally delete NDI Tools/Runtime:
+    1. TBD...
+
 
 # Development
 
