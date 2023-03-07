@@ -22,7 +22,7 @@ Network A/V in OBS Studio with NewTek's NDI technology.
     * Linux: `sudo dpkg -i obs-ndi-x.y.z-linux-x86_64.deb`
     * MacOS: Run `obs-ndi-x.y.z-macos-universal.pkg`
     * Windows: Run `obs-ndi-x.y.z-windows-x64-Installer.exe`
-2. Download NDI Tools from:
+2. Download the NDI 5 runtime from:
     * Linux:
       ```
       #!/bin/bash
@@ -38,19 +38,21 @@ Network A/V in OBS Studio with NewTek's NDI technology.
       yes | PAGER="cat" sh $LIBNDI_INSTALLER_NAME.sh
       rm -rf ndisdk
       mv "NDI SDK for Linux" ndisdk
-      ls ndisdk
       sudo cp -P ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
       sudo ldconfig
+      echo libndi installed to /usr/local/lib/
+      ls -la /usr/local/lib/libndi*
       rm -rf ndisdk
       popd
       ```
-    * MacOS: https://go.ndi.tv/tools-for-mac
-    * Windows: https://go.ndi.tv/tools-for-windows
-    
-NOTE: Normally we would recommend installing just the `NDI Runtime`, but the official short links are down right now:
-* Linux: None
-* MacOS: http://new.tk/NDIRedistV5Apple
-* Windows: http://new.tk/NDIRedistV5
+    * MacOS: http://new.tk/NDIRedistV5Apple
+    * Windows: http://new.tk/NDIRedistV5
+
+NOTE: The above official `NDI Runtime` links for MacOS and Windows are currently down. :/  
+The only other official way to get the NDI Runtime is by installing the NDI 5 SDK.
+Unofficially you can get them from this PR:
+  * MacOS: [libNDI_5.5.3_for_Mac.pkg](https://github.com/obs-ndi/obs-ndi/raw/d462e9f83f0e06837a83331b1f71053b2132e751/runtime/libNDI_5.5.3_for_Mac.pkg)
+  * Windows: [NDI 5.5.3 Runtime.exe](https://github.com/obs-ndi/obs-ndi/raw/d462e9f83f0e06837a83331b1f71053b2132e751/runtime/NDI%205.5.3%20Runtime.exe)
         
 ## Uninstall
 
