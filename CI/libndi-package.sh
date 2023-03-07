@@ -2,13 +2,13 @@
 
 set -e
 
-LIBNDI_VERSION="5.5.3"
-
 SCRIPT_DIR=$(dirname "$0")
 
 pushd $SCRIPT_DIR
 
-./libndi-get.sh
+../runtime/libndi-get.sh
+
+LIBNDI_VERSION=$(cat /tmp/ndisdk/Version.txt | awk '{print substr($4,2)}')
 
 GIT_HASH=$(git rev-parse --short HEAD)
 PKG_VERSION="1-$GIT_HASH-$BRANCH_SHORT_NAME-git"
