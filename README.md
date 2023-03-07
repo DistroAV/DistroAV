@@ -87,8 +87,9 @@ Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
 1. Add/Remove Programs
 2. Delete `%ProgramFiles%\obs-studio\obs-plugins\64-bit\obs-ndi.*`
 3. Optionally delete NDI Tools/Runtime:
-    1. TBD...
-
+    1. Add/Remove Programs
+    2. Delete `%ProgramFiles%\NDI\NDI 5 Runtime`
+    3. Delete `%ProgramFiles%\NDI\NDI 5 Tools`
 
 # Development
 
