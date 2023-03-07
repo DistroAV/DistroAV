@@ -17,7 +17,7 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 # Install
 
 1. Download installer for Linux, MacOS, or Windows in [Releases](https://github.com/obs-ndi/obs-ndi/releases).
-2. Run the installer:
+2. Run the installer:  
    Replace `x.y.z` with the version number you downloaded.
     * Linux: `sudo dpkg -i obs-ndi-x.y.z-linux-x86_64.deb`
     * MacOS: Run `obs-ndi-x.y.z-macos-universal.pkg`
