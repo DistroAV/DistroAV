@@ -21,14 +21,14 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 # Install
 1. Download and install the Linux, MacOS, or Windows version at [Releases](https://github.com/obs-ndi/obs-ndi/releases).  
     * Linux:
-      1. Download [obs-ndi-4.11.0-linux-x86_64.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.0/obs-ndi-4.11.0-linux-x86_64.deb)
-      2. `sudo dpkg -i obs-ndi-4.11.0-linux-x86_64.deb`
+      1. Download [obs-ndi-4.11.1-linux-x86_64.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.1/obs-ndi-4.11.1-linux-x86_64.deb)
+      2. `sudo dpkg -i obs-ndi-4.11.1-linux-x86_64.deb`
     * MacOS:
-      1. Download [obs-ndi-4.11.0-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.0/obs-ndi-4.11.0-macos-universal.pkg)
-      2. Run `obs-ndi-4.11.0-macos-universal.pkg`
+      1. Download [obs-ndi-4.11.1-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.1/obs-ndi-4.11.1-macos-universal.pkg)
+      2. Run `obs-ndi-4.11.1-macos-universal.pkg`
     * Windows:
-      1. Download [obs-ndi-4.11.0-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.0/obs-ndi-4.11.0-windows-x64-Installer.exe)
-      2. Run `obs-ndi-4.11.0-windows-x64-Installer.exe`
+      1. Download [obs-ndi-4.11.1-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.11.1/obs-ndi-4.11.1-windows-x64-Installer.exe)
+      2. Run `obs-ndi-4.11.1-windows-x64-Installer.exe`
 2. Download and install the NDI 5 runtime from:
     * Linux:
       ```
