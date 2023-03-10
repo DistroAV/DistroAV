@@ -1,7 +1,7 @@
 #define MyAppName "@CMAKE_PROJECT_NAME@"
 #define MyAppVersion "@CMAKE_PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
-#define MyAppURL "http://www.mywebsite.com"
+#define MyAppURL "https://obsproject.com/forum/resources/obs-ndi-newtek-ndi%E2%84%A2-integration-into-obs-studio.528"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
