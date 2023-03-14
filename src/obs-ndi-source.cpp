@@ -501,7 +501,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	recv_desc.source_to_connect_to.p_ndi_name =
 		obs_data_get_string(settings, PROP_SOURCE);
 	recv_desc.allow_video_fields = true;
-	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_NORMAL) 
+	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_NORMAL)
 		recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
 	else
 		recv_desc.color_format = NDIlib_recv_color_format_fastest;
@@ -529,14 +529,13 @@ void ndi_source_update(void *data, obs_data_t *settings)
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
 
-	
 	s->yuv_range = prop_to_range_type(
 		(int)obs_data_get_int(settings, PROP_YUV_RANGE));
 	s->yuv_colorspace = prop_to_colorspace(
 		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
-	
+
 	// disable OBS buffering only for "Lowest" latency mode
-	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOWEST) 
+	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOWEST)
 		obs_source_set_async_unbuffered(s->source, is_unbuffered);
 
 	s->audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
