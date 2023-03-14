@@ -361,15 +361,13 @@ void *ndi_source_poll_audio_video(void *data)
 
 				switch (s->sync_mode) {
 				case PROP_SYNC_NDI_TIMESTAMP:
-					obs_audio_frame.timestamp =
-						(uint64_t)(audio_frame.timestamp *
-							   100);
+					obs_audio_frame.timestamp = (uint64_t)(
+						audio_frame.timestamp * 100);
 					break;
 
 				case PROP_SYNC_NDI_SOURCE_TIMECODE:
-					obs_audio_frame.timestamp =
-						(uint64_t)(audio_frame.timecode *
-							   100);
+					obs_audio_frame.timestamp = (uint64_t)(
+						audio_frame.timecode * 100);
 					break;
 				}
 
@@ -535,8 +533,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
 	// disable OBS buffering only for "Lowest" latency mode
-	const bool is_unbuffered =
-    		(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOWEST);
+	const bool is_unbuffered = (obs_data_get_int(settings, PROP_LATENCY) ==
+				    PROP_LATENCY_LOWEST);
 	obs_source_set_async_unbuffered(s->source, is_unbuffered);
 
 	s->audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
