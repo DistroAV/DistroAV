@@ -57,6 +57,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #define PROP_LATENCY_NORMAL 0
 #define PROP_LATENCY_LOW 1
+#define PROP_LATENCY_LOWEST 2
 
 extern NDIlib_find_instance_t ndi_finder;
 
@@ -278,6 +279,10 @@ obs_properties_t *ndi_source_getproperties(void *data)
 		latency_modes,
 		obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
 		PROP_LATENCY_LOW);
+	obs_property_list_add_int(
+		latency_modes,
+		obs_module_text("NDIPlugin.SourceProps.Latency.Lowest"),
+		PROP_LATENCY_LOWEST);
 
 	obs_properties_add_bool(props, PROP_AUDIO,
 				obs_module_text("NDIPlugin.SourceProps.Audio"));
@@ -496,7 +501,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	recv_desc.source_to_connect_to.p_ndi_name =
 		obs_data_get_string(settings, PROP_SOURCE);
 	recv_desc.allow_video_fields = true;
-	recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
+	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_NORMAL) 
+		recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
+	else
+		recv_desc.color_format = NDIlib_recv_color_format_fastest;
 
 	switch (obs_data_get_int(settings, PROP_BANDWIDTH)) {
 	case PROP_BW_HIGHEST:
@@ -521,14 +529,15 @@ void ndi_source_update(void *data, obs_data_t *settings)
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
 
+	
 	s->yuv_range = prop_to_range_type(
 		(int)obs_data_get_int(settings, PROP_YUV_RANGE));
 	s->yuv_colorspace = prop_to_colorspace(
 		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
-
-	const bool is_unbuffered =
-		(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOW);
-	obs_source_set_async_unbuffered(s->source, is_unbuffered);
+	
+	// disable OBS buffering only for "Lowest" latency mode
+	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOWEST) 
+		obs_source_set_async_unbuffered(s->source, is_unbuffered);
 
 	s->audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 
