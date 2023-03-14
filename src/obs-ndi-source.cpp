@@ -535,8 +535,9 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
 	// disable OBS buffering only for "Lowest" latency mode
-	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOWEST)
-		obs_source_set_async_unbuffered(s->source, is_unbuffered);
+	const bool is_unbuffered =
+    		(obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_LOWEST);
+	obs_source_set_async_unbuffered(s->source, is_unbuffered);
 
 	s->audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 
