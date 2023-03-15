@@ -61,6 +61,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 extern NDIlib_find_instance_t ndi_finder;
 
+
 struct ndi_source {
 	obs_source_t *source;
 	NDIlib_recv_instance_t ndi_receiver;
