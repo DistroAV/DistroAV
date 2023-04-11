@@ -52,12 +52,13 @@ Network A/V in OBS Studio with NewTek's NDI technology.
       rm -rf ndisdk
       popd
       ```
+<!--
     * MacOS: [libNDI_5.5.3_for_Mac.pkg](https://github.com/obs-ndi/obs-ndi/raw/d462e9f83f0e06837a83331b1f71053b2132e751/runtime/libNDI_5.5.3_for_Mac.pkg)
     * Windows: [NDI 5.5.3 Runtime.exe](https://github.com/obs-ndi/obs-ndi/raw/d462e9f83f0e06837a83331b1f71053b2132e751/runtime/NDI%205.5.3%20Runtime.exe)
-<!--
-    * MacOS: http://new.tk/NDIRedistV5Apple
-    * Windows: http://new.tk/NDIRedistV5
 -->
+    * MacOS: http://ndi.link/NDIRedistV5Apple
+    * Windows: http://ndi.link/NDIRedistV5
+
         
 ## Uninstall
 
