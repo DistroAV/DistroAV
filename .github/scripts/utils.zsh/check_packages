@@ -25,7 +25,7 @@ if (( ! ${+commands[packagesbuild]} )) {
   mkcd ${project_root:h}/obs-build-dependencies
 
   local packages_url='http://s.sudre.free.fr/Software/files/Packages.dmg'
-  local packages_hash='6afdd25386295974dad8f078b8f1e41cabebd08e72d970bf92f707c7e48b16c9'
+  local packages_hash='9d9a73a64317ea6697a380014d2e5c8c8188b59d5fb8ce8872e56cec06cd78e8'
 
   if [[ ! -f Packages.dmg ]] {
     log_status 'Download Packages.app'
