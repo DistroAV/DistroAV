@@ -1,33 +1,45 @@
 {
     "dependencies": {
+        "note": [
+            "To update",
+            "1. Download obs-studio release version source for macos .tar.gz & windows-x64 .zip.",
+            "   Example for https://github.com/obsproject/obs-studio/releases/tag/29.1.3 commit c58e511",
+            "   https://github.com/obsproject/obs-studio/archive/refs/tags/29.1.3.tar.gz",
+            "   https://github.com/obsproject/obs-studio/archive/refs/tags/29.1.3.zip",
+            "2. sha256sum the macos .tar.gz & windows-x64 .zip",
+            "3. Update the obs-studio version and hashes below",
+            "4. Browse the obs-studio code buildspec.json **at that version commit** and copy the `prebuilt` and `qt6` versions and hashes to below",
+            "   Example https://github.com/obsproject/obs-studio/blob/c58e511/buildspec.json",
+            "5. Update libobs.patch following the instructions in ./cmake/common/buildspec_common.cmake ~ line 76-91"
+        ],
         "obs-studio": {
-            "version": "29.1.2",
+            "version": "29.1.3",
             "baseUrl": "https://github.com/obsproject/obs-studio/archive/refs/tags",
             "label": "OBS sources",
             "hashes": {
-                "macos": "215f1fa5772c5dd9f3d6e35b0cb573912b00320149666a77864f9d305525504b",
-                "windows-x64": "46d451f3f42b9d2c59339ec268165849c7b7904cdf1cc2a8d44c015815a9e37d"
+                "macos": "9d9cfbdbdd255f48a23feeefb60089769a65f52bbca24fa31d74125f3bbb0e90",
+                "windows-x64": "965334470e447dc164801f8812d583260761521e6e3c5ebee1da7cd8f6ec4a95"
             }
         },
         "prebuilt": {
-            "version": "2023-04-12",
+            "version": "2023-10-26",
             "baseUrl": "https://github.com/obsproject/obs-deps/releases/download",
             "label": "Pre-Built obs-deps",
             "hashes": {
-                "macos": "9535c6e1ad96f7d49960251e85a245774088d48da1d602bb82f734b10219125a",
-                "windows-x64": "c13a14a1acc4224b21304d97b63da4121de1ed6981297e50496fbc474abc0503"
+                "macos": "eebdcc77829206eb0fee46975f69cedcea8a67386d97f73ba277da4925ca0893",
+                "windows-x64": "58b3164d94fa69054a7cb0d54fef93d93c0a6304721dce4e6de3eaf3403877a6",
             }
         },
         "qt6": {
-            "version": "2023-04-12",
+            "version": "2023-10-26",
             "baseUrl": "https://github.com/obsproject/obs-deps/releases/download",
             "label": "Pre-Built Qt6",
             "hashes": {
-                "macos": "eb7614544ab4f3d2c6052c797635602280ca5b028a6b987523d8484222ce45d1",
-                "windows-x64": "4d39364b8a8dee5aa24fcebd8440d5c22bb4551c6b440ffeacce7d61f2ed1add"
+                "macos": "f0e842934a87cec3cd02630e393ed78768a7f9b205c5a59e40a28db8d4659a01",
+                "windows-x64": "6aad335e2d4632392895e46a8c31d73f6219ec0b71bec2c23ce42ac473d10a3e"
             },
             "debugSymbols": {
-                "windows-x64": "f34ee5067be19ed370268b15c53684b7b8aaa867dc800b68931df905d679e31f"
+                "windows-x64": "f9adeb05441f21afb0cbcf33f273a7cd2a588ff8216a11e17865e2a5dc9801af"
             }
         }
     },
