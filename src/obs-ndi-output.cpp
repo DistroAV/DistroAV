@@ -22,7 +22,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <util/profiler.h>
 #include <util/circlebuf.h>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
 {

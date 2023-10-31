@@ -18,7 +18,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include <obs-module.h>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 struct alpha_filter {
 	obs_source_t *context;

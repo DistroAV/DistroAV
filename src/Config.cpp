@@ -17,7 +17,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
 #include "Config.h"
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 #include <obs-frontend-api.h>
 #include <util/config-file.h>

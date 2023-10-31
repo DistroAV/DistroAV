@@ -23,7 +23,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <media-io/video-io.h>
 #include <media-io/video-frame.h>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 struct preview_output {
 	bool enabled;

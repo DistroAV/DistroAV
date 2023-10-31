@@ -2,13 +2,13 @@
 
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review
 // the SDK documentation for the description of the full license terms, which are also provided in the file
-// "NDI License Agreement.pdf" within the SDK or online at http://new.tk/ndisdk_license/. Your use of any
+// "NDI License Agreement.pdf" within the SDK or online at http://ndi.link/ndisdk_license. Your use of any
 // part of this SDK is acknowledgment that you agree to the SDK license terms. The full NDI SDK may be
-// downloaded at http://ndi.tv/
+// downloaded at http://ndi.video/
 //
 //***********************************************************************************************************
 //
-// Copyright (C)2014-2023, NewTek, inc.
+// Copyright (C) 2023 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -50,18 +50,18 @@
 #			ifdef _WIN64
 #				define NDILIB_LIBRARY_NAME  "Processing.NDI.Lib.x64.dll"
 #				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#				define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV5"
+#				define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV5"
 #			else // _WIN64
 #				define NDILIB_LIBRARY_NAME  "Processing.NDI.Lib.x86.dll"
 #				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#				define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV5"
+#				define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV5"
 #			endif // _WIN64
 #		endif // PROCESSINGNDILIB_EXPORTS
 #	else // _WIN32
 #		ifdef __APPLE__
 #			define NDILIB_LIBRARY_NAME  "libndi.dylib"
 #			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#			define NDILIB_REDIST_URL    "http://new.tk/NDIRedistV5Apple"
+#			define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV5Apple"
 #		else // __APPLE__
 #			define NDILIB_LIBRARY_NAME  "libndi.so.5"
 #			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"

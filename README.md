@@ -106,6 +106,11 @@ cd obs-ndi
 tbd...
 ```
 
+If you get `SecurityError/PSSecurityException/UnauthorizedAccess` error then:
+```
+PS ...\obs-ndi\obs-ndi> Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
+```
+
 ### Linux
 NOTE: Only Debian and Ubuntu are officially supported
 
