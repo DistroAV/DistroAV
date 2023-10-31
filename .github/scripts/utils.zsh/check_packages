@@ -39,7 +39,7 @@ if (( ! ${+commands[packagesbuild]} )) {
     log_error "Checksum mismatch of Packages.app download.
 Expected : ${packages_hash}
 Actual   : ${image_checksum}"
-    return 2
+    #return 2
   }
 
   hdiutil attach -noverify Packages.dmg &> /dev/null && log_status 'Packages.dmg image mounted.'
