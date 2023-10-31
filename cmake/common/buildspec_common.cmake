@@ -73,6 +73,24 @@ function(_setup_obs_studio)
     set(_cmake_version "3.0.0")
   endif()
 
+  message(STATUS "Patch libobs - begin")
+  # Idea shared by RoyShilkrot on OBS Discord #plugins-and-tools:
+  # https://github.com/occ-ai/obs-polyglot/blob/a86b5778cd200b6aeb4ef65a49e621905b18e823/cmake/common/buildspec_common.cmake#L77-L82
+  # To create/update libobs.patch:
+  # 1. Clone https://github.com/obsproject/obs-studio and cd in
+  # 2. Checkout the commit that matches buildspec.json dependencies obs-studio version
+  # 3. Edit libobs/CMakeLists.txt as desired
+  # 4. git diff libobs/CMakeLists.txt > libobs.patch
+  # 5. Copy libobs.patch to obs-ndi root, verify build success, commit+push
+  execute_process(
+    COMMAND patch --forward "libobs/CMakeLists.txt" "${CMAKE_CURRENT_SOURCE_DIR}/libobs.patch" #| grep "hunks failed" && [ $? -eq 0 ] && false
+    OUTPUT_VARIABLE _patch_output
+    WORKING_DIRECTORY "${dependencies_dir}/${_obs_destination}")
+  if (_patch_output MATCHES ".*hunks failed.*")
+    message(FATAL_ERROR "Patch libobs failed")
+  endif()
+  message(STATUS "Patch libobs - end")
+
   message(STATUS "Configure ${label} (${arch})")
   execute_process(
     COMMAND

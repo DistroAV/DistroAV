@@ -73,7 +73,8 @@ OutputSettings *output_settings = nullptr;
 
 bool obs_module_load(void)
 {
-	obs_log(LOG_INFO, "obs_module_load: hello ! (version %s)", PLUGIN_VERSION);
+	obs_log(LOG_INFO, "obs_module_load: hello ! (version %s)",
+		PLUGIN_VERSION);
 
 	QMainWindow *main_window =
 		(QMainWindow *)obs_frontend_get_main_window();
@@ -81,7 +82,7 @@ bool obs_module_load(void)
 	ndiLib = load_ndilib();
 	if (!ndiLib) {
 		obs_log(LOG_ERROR,
-		        "obs_module_load: load_ndilib() failed; Module won't load.");
+			"obs_module_load: load_ndilib() failed; Module won't load.");
 
 		const char *msg_string_name = "";
 #ifdef _MSC_VER
@@ -107,13 +108,13 @@ bool obs_module_load(void)
 
 	if (!ndiLib->initialize()) {
 		obs_log(LOG_ERROR,
-		        "obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
+			"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
 	obs_log(LOG_INFO,
-	        "obs_module_load: NDI library initialized successfully (%s)",
-	        ndiLib->version());
+		"obs_module_load: NDI library initialized successfully (%s)",
+		ndiLib->version());
 
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
@@ -158,10 +159,13 @@ bool obs_module_load(void)
 
 		obs_frontend_add_event_callback(
 			[](enum obs_frontend_event event, void *private_data) {
-				Config *conf = (Config *)private_data;
-
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+					Config *conf = static_cast<Config *>(
+						private_data);
+#pragma GCC diagnostic pop
 					if (conf->OutputEnabled) {
 						main_output_start(
 							conf->OutputName
@@ -182,7 +186,7 @@ bool obs_module_load(void)
 					main_output_deinit();
 				}
 			},
-			(void *)conf);
+			static_cast<void *>(conf));
 	}
 
 	return true;
@@ -235,26 +239,27 @@ const NDIlib_v4 *load_ndilib()
 		path = QDir::cleanPath(
 			QDir(location).absoluteFilePath(NDILIB_LIBRARY_NAME));
 		obs_log(LOG_INFO, "load_ndilib: Trying '%s'",
-		        path.toUtf8().constData());
+			path.toUtf8().constData());
 		QFileInfo libPath(path);
 		if (libPath.exists() && libPath.isFile()) {
 			path = libPath.absoluteFilePath();
-			obs_log(LOG_INFO, "load_ndilib: Found NDI library at '%s'",
-			        path.toUtf8().constData());
+			obs_log(LOG_INFO,
+				"load_ndilib: Found NDI library at '%s'",
+				path.toUtf8().constData());
 			loaded_lib = new QLibrary(path, nullptr);
 			if (loaded_lib->load()) {
 				obs_log(LOG_INFO,
-				        "load_ndilib: NDI runtime loaded successfully");
+					"load_ndilib: NDI runtime loaded successfully");
 				NDIlib_v5_load_ lib_load =
 					(NDIlib_v5_load_)loaded_lib->resolve(
 						"NDIlib_v5_load");
 				if (lib_load != nullptr) {
 					obs_log(LOG_INFO,
-					        "load_ndilib: NDIlib_v5_load found");
+						"load_ndilib: NDIlib_v5_load found");
 					return lib_load();
 				} else {
 					obs_log(LOG_ERROR,
-					        "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+						"load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 				}
 			} else {
 				delete loaded_lib;
