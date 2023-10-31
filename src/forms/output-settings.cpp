@@ -19,7 +19,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "output-settings.h"
 
 #include "../Config.h"
-#include "../obs-ndi.h"
+#include "../plugin-main.h"
 #include "../preview-output.h"
 
 OutputSettings::OutputSettings(QWidget *parent)

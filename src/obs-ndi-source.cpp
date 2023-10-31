@@ -27,7 +27,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <thread>
 #include <algorithm>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 #include "Config.h"
 
 #define PROP_SOURCE "ndi_source_name"

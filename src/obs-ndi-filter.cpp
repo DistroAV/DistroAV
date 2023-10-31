@@ -28,7 +28,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <media-io/video-frame.h>
 #include <media-io/audio-resampler.h>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 #define TEXFORMAT GS_BGRA
 #define FLT_PROP_NAME "ndi_filter_ndiname"
