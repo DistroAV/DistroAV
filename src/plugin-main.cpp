@@ -113,7 +113,7 @@ bool obs_module_load(void)
 	}
 
 	obs_log(LOG_INFO,
-		"obs_module_load: NDI library initialized successfully (%s)",
+		"obs_module_load: NDI library initialized successfully ('%s')",
 		ndiLib->version());
 
 	NDIlib_find_create_t find_desc = {0};
@@ -194,7 +194,7 @@ bool obs_module_load(void)
 	return true;
 }
 
-void obs_module_unload()
+void obs_module_unload(void)
 {
 	obs_log(LOG_INFO, "+obs_module_unload()");
 

@@ -68,10 +68,8 @@ void OutputSettings::onFormAccepted()
 	}
 }
 
-void OutputSettings::showEvent(QShowEvent *event)
+void OutputSettings::showEvent(QShowEvent *)
 {
-	UNUSED_PARAMETER(event);
-
 	Config *conf = Config::Current();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
