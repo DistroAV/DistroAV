@@ -207,24 +207,27 @@ obs_properties_t *ndi_source_getproperties(void *data)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
-	obs_property_set_modified_callback(bw_modes, [](obs_properties_t *props,
-							obs_property_t *,
-							obs_data_t *settings) {
+	obs_property_set_modified_callback(
+		bw_modes,
+		[](obs_properties_t *props,
+			obs_property_t *, obs_data_t *settings) {
 #pragma GCC diagnostic pop
-		bool is_audio_only =
-			(obs_data_get_int(settings, PROP_BANDWIDTH) ==
-			 PROP_BW_AUDIO_ONLY);
 
-		obs_property_t *yuv_range =
-			obs_properties_get(props, PROP_YUV_RANGE);
-		obs_property_t *yuv_colorspace =
-			obs_properties_get(props, PROP_YUV_COLORSPACE);
+			bool is_audio_only =
+				(obs_data_get_int(settings, PROP_BANDWIDTH) ==
+				 PROP_BW_AUDIO_ONLY);
 
-		obs_property_set_visible(yuv_range, !is_audio_only);
-		obs_property_set_visible(yuv_colorspace, !is_audio_only);
+			obs_property_t *yuv_range =
+				obs_properties_get(props, PROP_YUV_RANGE);
+			obs_property_t *yuv_colorspace =
+				obs_properties_get(props, PROP_YUV_COLORSPACE);
 
-		return true;
-	});
+			obs_property_set_visible(yuv_range, !is_audio_only);
+			obs_property_set_visible(yuv_colorspace,
+						 !is_audio_only);
+
+			return true;
+		});
 
 	obs_property_t *sync_modes = obs_properties_add_list(
 		props, PROP_SYNC, obs_module_text("NDIPlugin.SourceProps.Sync"),
