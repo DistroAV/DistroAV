@@ -158,10 +158,11 @@ bool obs_module_load(void)
 
 		obs_frontend_add_event_callback(
 			[](enum obs_frontend_event event, void *private_data) {
-				Config *conf = (Config *)private_data;
-
-				if (event ==
-				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+				if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+					#pragma GCC diagnostic push
+					#pragma GCC diagnostic ignored "-Wshadow"
+					Config *conf = static_cast<Config *>(private_data);
+					#pragma GCC diagnostic pop
 					if (conf->OutputEnabled) {
 						main_output_start(
 							conf->OutputName
@@ -182,7 +183,7 @@ bool obs_module_load(void)
 					main_output_deinit();
 				}
 			},
-			(void *)conf);
+			static_cast<void *>(conf));
 	}
 
 	return true;

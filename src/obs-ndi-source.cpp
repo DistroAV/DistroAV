@@ -91,10 +91,11 @@ static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 	obs_source_enum_filters(
 		context,
 		[](obs_source_t *, obs_source_t *filter, void *param) {
-			struct search_context *filter_search =
-				(struct search_context *)param;
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+			struct search_context *filter_search = static_cast<search_context *>(param);
 			const char *id = obs_source_get_id(filter);
+#pragma GCC diagnostic pop
 			if (strcmp(id, filter_search->query) == 0) {
 				obs_source_get_ref(filter);
 				filter_search->result = filter;
@@ -203,10 +204,14 @@ obs_properties_t *ndi_source_getproperties(void *data)
 				  obs_module_text("NDIPlugin.BWMode.AudioOnly"),
 				  PROP_BW_AUDIO_ONLY);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
 	obs_property_set_modified_callback(
-		bw_modes, [](obs_properties_t *props, obs_property_t *property,
-			     obs_data_t *settings) {
-			UNUSED_PARAMETER(property);
+		bw_modes,
+		[](obs_properties_t *props,
+			obs_property_t *, obs_data_t *settings) {
+#pragma GCC diagnostic pop
+
 			bool is_audio_only =
 				(obs_data_get_int(settings, PROP_BANDWIDTH) ==
 				 PROP_BW_AUDIO_ONLY);
