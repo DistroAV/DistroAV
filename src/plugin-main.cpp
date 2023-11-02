@@ -161,11 +161,15 @@ bool obs_module_load(void)
 			[](enum obs_frontend_event event, void *private_data) {
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
+#if defined(__linux__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
+#endif
 					Config *conf = static_cast<Config *>(
 						private_data);
+#if defined(__linux__)
 #pragma GCC diagnostic pop
+#endif
 					if (conf->OutputEnabled) {
 						main_output_start(
 							conf->OutputName

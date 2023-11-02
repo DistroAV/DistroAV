@@ -91,12 +91,16 @@ static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 	obs_source_enum_filters(
 		context,
 		[](obs_source_t *, obs_source_t *filter, void *param) {
+#if defined(__linux__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
+#endif
 			struct search_context *filter_search =
 				static_cast<search_context *>(param);
 			const char *id = obs_source_get_id(filter);
+#if defined(__linux__)
 #pragma GCC diagnostic pop
+#endif
 			if (strcmp(id, filter_search->query) == 0) {
 				obs_source_get_ref(filter);
 				filter_search->result = filter;
@@ -205,29 +209,30 @@ obs_properties_t *ndi_source_getproperties(void *data)
 				  obs_module_text("NDIPlugin.BWMode.AudioOnly"),
 				  PROP_BW_AUDIO_ONLY);
 
+#if defined(__linux__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
-	obs_property_set_modified_callback(
-		bw_modes,
-		[](obs_properties_t *props,
-			obs_property_t *, obs_data_t *settings) {
+#endif
+	obs_property_set_modified_callback(bw_modes, [](obs_properties_t *props,
+							obs_property_t *,
+							obs_data_t *settings) {
+#if defined(__linux__)
 #pragma GCC diagnostic pop
+#endif
+		bool is_audio_only =
+			(obs_data_get_int(settings, PROP_BANDWIDTH) ==
+			 PROP_BW_AUDIO_ONLY);
 
-			bool is_audio_only =
-				(obs_data_get_int(settings, PROP_BANDWIDTH) ==
-				 PROP_BW_AUDIO_ONLY);
+		obs_property_t *yuv_range =
+			obs_properties_get(props, PROP_YUV_RANGE);
+		obs_property_t *yuv_colorspace =
+			obs_properties_get(props, PROP_YUV_COLORSPACE);
 
-			obs_property_t *yuv_range =
-				obs_properties_get(props, PROP_YUV_RANGE);
-			obs_property_t *yuv_colorspace =
-				obs_properties_get(props, PROP_YUV_COLORSPACE);
+		obs_property_set_visible(yuv_range, !is_audio_only);
+		obs_property_set_visible(yuv_colorspace, !is_audio_only);
 
-			obs_property_set_visible(yuv_range, !is_audio_only);
-			obs_property_set_visible(yuv_colorspace,
-						 !is_audio_only);
-
-			return true;
-		});
+		return true;
+	});
 
 	obs_property_t *sync_modes = obs_properties_add_list(
 		props, PROP_SYNC, obs_module_text("NDIPlugin.SourceProps.Sync"),
