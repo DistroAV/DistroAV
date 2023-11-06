@@ -140,7 +140,6 @@ bool obs_module_load(void)
 		Config *conf = Config::Current();
 		conf->Load();
 
-		main_output_init(conf->OutputName.toUtf8().constData());
 		preview_output_init(
 			conf->PreviewOutputName.toUtf8().constData());
 
@@ -187,7 +186,6 @@ bool obs_module_load(void)
 					main_output_stop();
 
 					preview_output_deinit();
-					main_output_deinit();
 				}
 			},
 			static_cast<void *>(conf));
