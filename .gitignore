@@ -1,10 +1,30 @@
-/build_x64/
-/build_arm64/
-/build_x86_64/
-/package/
-/release/
+# Exclude everything
+/*
+
+# Except for default project files
+!/.github
+!/build-aux
+!/cmake
+!/data
+!/src
+!.clang-format
+!.cmake-format.json
+!.gitignore
+!buildspec.json
+!CMakeLists.txt
+!CMakePresets.json
+!LICENSE
+!README.md
+
+!libobs.patch
+
+# Exclude lock files
+*.lock.json
+
+# Exclude macOS legacy resource forks
 .DS_Store
 .idea
 .vscode
 
-src/plugin-macros.generated.h
+# Exclude CMake build number cache
+/cmake/.CMakeBuildNumber

@@ -19,7 +19,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "output-settings.h"
 
 #include "../Config.h"
-#include "../obs-ndi.h"
+#include "../plugin-main.h"
 #include "../preview-output.h"
 
 OutputSettings::OutputSettings(QWidget *parent)
@@ -68,10 +68,8 @@ void OutputSettings::onFormAccepted()
 	}
 }
 
-void OutputSettings::showEvent(QShowEvent *event)
+void OutputSettings::showEvent(QShowEvent *)
 {
-	UNUSED_PARAMETER(event);
-
 	Config *conf = Config::Current();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);

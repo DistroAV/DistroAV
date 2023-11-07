@@ -23,7 +23,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <media-io/video-io.h>
 #include <media-io/video-frame.h>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 struct preview_output {
 	bool enabled;
@@ -50,6 +50,8 @@ void preview_output_init(const char *default_name)
 	if (context.output)
 		return;
 
+	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s')", default_name);
+
 	obs_data_t *output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
 	obs_data_set_bool(output_settings, "uses_audio", false);
@@ -64,7 +66,7 @@ void preview_output_start(const char *output_name)
 		return;
 
 	blog(LOG_INFO,
-	     "preview_output_start: starting NDI preview output with name '%s'",
+	     "[obs-ndi] preview_output_start: starting NDI preview output with name '%s'",
 	     output_name);
 
 	obs_get_video_info(&context.ovi);
@@ -82,38 +84,30 @@ void preview_output_start(const char *output_name)
 	const audio_output_info *mainAOI =
 		audio_output_get_info(obs_get_audio());
 
-	video_output_info vi = {0};
-	vi.name = output_name;
-	vi.format = VIDEO_FORMAT_BGRA;
-	vi.width = width;
-	vi.height = height;
-	vi.fps_den = context.ovi.fps_den;
-	vi.fps_num = context.ovi.fps_num;
-	vi.cache_size = 16;
-	vi.colorspace = mainVOI->colorspace;
-	vi.range = mainVOI->range;
+	video_output_info voi = {0};
+	voi.name = output_name;
+	voi.format = VIDEO_FORMAT_BGRA;
+	voi.width = width;
+	voi.height = height;
+	voi.fps_den = context.ovi.fps_den;
+	voi.fps_num = context.ovi.fps_num;
+	voi.cache_size = 16;
+	voi.colorspace = mainVOI->colorspace;
+	voi.range = mainVOI->range;
 
-	video_output_open(&context.video_queue, &vi);
+	video_output_open(&context.video_queue, &voi);
 
-	audio_output_info ai = {0};
-	ai.name = output_name;
-	ai.format = mainAOI->format;
-	ai.samples_per_sec = mainAOI->samples_per_sec;
-	ai.speakers = mainAOI->speakers;
-	ai.input_callback = [](void *param, uint64_t start_ts, uint64_t end_ts,
-			       uint64_t *new_ts, uint32_t active_mixers,
-			       struct audio_output_data *mixes) {
-		UNUSED_PARAMETER(param);
-		UNUSED_PARAMETER(start_ts);
-		UNUSED_PARAMETER(end_ts);
-		UNUSED_PARAMETER(new_ts);
-		UNUSED_PARAMETER(active_mixers);
-		UNUSED_PARAMETER(mixes);
-		return false;
-	};
-	ai.input_param = nullptr;
+	audio_output_info aoi = {0};
+	aoi.name = output_name;
+	aoi.format = mainAOI->format;
+	aoi.samples_per_sec = mainAOI->samples_per_sec;
+	aoi.speakers = mainAOI->speakers;
+	aoi.input_callback = [](void *, uint64_t, uint64_t, uint64_t *,
+				uint32_t,
+				struct audio_output_data *) { return false; };
+	aoi.input_param = nullptr;
 
-	audio_output_open(&context.dummy_audio_queue, &ai);
+	audio_output_open(&context.dummy_audio_queue, &aoi);
 
 	obs_frontend_add_event_callback(on_preview_scene_changed, &context);
 	if (obs_frontend_preview_program_mode_active()) {
@@ -135,7 +129,8 @@ void preview_output_start(const char *output_name)
 	obs_output_start(context.output);
 	context.enabled = true;
 
-	blog(LOG_INFO, "preview_output_start: started NDI preview output");
+	blog(LOG_INFO,
+	     "[obs-ndi] preview_output_start: started NDI preview output");
 }
 
 void preview_output_stop()
@@ -143,7 +138,8 @@ void preview_output_stop()
 	if (!context.enabled)
 		return;
 
-	blog(LOG_INFO, "preview_output_stop: stopping NDI preview output");
+	blog(LOG_INFO,
+	     "[obs-ndi] preview_output_stop: stopping NDI preview output");
 
 	obs_output_stop(context.output);
 
@@ -163,11 +159,14 @@ void preview_output_stop()
 
 	context.enabled = false;
 
-	blog(LOG_INFO, "preview_output_stop: stopped NDI preview output");
+	blog(LOG_INFO,
+	     "[obs-ndi] preview_output_stop: stopped NDI preview output");
 }
 
 void preview_output_deinit()
 {
+	blog(LOG_INFO, "[obs-ndi] preview_output_deinit()");
+
 	obs_output_release(context.output);
 
 	context.output = nullptr;
@@ -181,6 +180,7 @@ bool preview_output_is_enabled()
 
 void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 {
+	blog(LOG_INFO, "[obs-ndi] on_preview_scene_changed(%d)", event);
 	auto ctx = (struct preview_output *)param;
 	switch (event) {
 	case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:
@@ -203,13 +203,9 @@ void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 	}
 }
 
-void render_preview_source(void *param, uint32_t cx, uint32_t cy)
+void render_preview_source(void *param, uint32_t, uint32_t)
 {
-	UNUSED_PARAMETER(cx);
-	UNUSED_PARAMETER(cy);
-
 	auto ctx = (struct preview_output *)param;
-
 	if (!ctx->current_source)
 		return;
 

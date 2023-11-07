@@ -2,13 +2,13 @@
 
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review
 // the SDK documentation for the description of the full license terms, which are also provided in the file
-// "NDI License Agreement.pdf" within the SDK or online at http://new.tk/ndisdk_license/. Your use of any
+// "NDI License Agreement.pdf" within the SDK or online at http://ndi.link/ndisdk_license. Your use of any
 // part of this SDK is acknowledgment that you agree to the SDK license terms. The full NDI SDK may be
-// downloaded at http://ndi.tv/
+// downloaded at http://ndi.video/
 //
 //***********************************************************************************************************
 //
-// Copyright (C)2014-2023, NewTek, inc.
+// Copyright (C) 2023 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -108,38 +108,24 @@ void NDIlib_framesync_destroy(NDIlib_framesync_instance_t p_instance);
 //
 PROCESSINGNDILIB_API
 void NDIlib_framesync_capture_audio(
-	// The frame sync instance data.
 	NDIlib_framesync_instance_t p_instance,
-	// The destination audio buffer that you wish to have filled in.
 	NDIlib_audio_frame_v2_t* p_audio_data,
-	// Your desired sample rate, number of channels and the number of desired samples.
 	int sample_rate, int no_channels, int no_samples
 );
 PROCESSINGNDILIB_API
 void NDIlib_framesync_capture_audio_v2(
-	// The frame sync instance data.
 	NDIlib_framesync_instance_t p_instance,
-	// The destination audio buffer that you wish to have filled in.
 	NDIlib_audio_frame_v3_t* p_audio_data,
-	// Your desired sample rate, number of channels and the number of desired samples.
 	int sample_rate, int no_channels, int no_samples
 );
 
 // Free audio returned by NDIlib_framesync_capture_audio.
 PROCESSINGNDILIB_API
-void NDIlib_framesync_free_audio(
-	// The frame sync instance data.
-	NDIlib_framesync_instance_t p_instance,
-	// The destination audio buffer that you wish to have filled in.
-	NDIlib_audio_frame_v2_t* p_audio_data
-);
+void NDIlib_framesync_free_audio(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v2_t* p_audio_data);
+
+// Free audio returned by NDIlib_framesync_capture_audio_v2.
 PROCESSINGNDILIB_API
-void NDIlib_framesync_free_audio_v2(
-	// The frame sync instance data.
-	NDIlib_framesync_instance_t p_instance,
-	// The destination audio buffer that you wish to have filled in.
-	NDIlib_audio_frame_v3_t* p_audio_data
-);
+void NDIlib_framesync_free_audio_v2(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v3_t* p_audio_data);
 
 // This function will tell you the approximate current depth of the audio queue to give you an indication
 // of the number of audio samples you can request. Note that if you should treat the results of this function
@@ -176,20 +162,11 @@ int NDIlib_framesync_audio_queue_depth(NDIlib_framesync_instance_t p_instance);
 //
 PROCESSINGNDILIB_API
 void NDIlib_framesync_capture_video(
-	// The frame sync instance data.
 	NDIlib_framesync_instance_t p_instance,
-	// The destination video buffer that you wish to have filled in.
 	NDIlib_video_frame_v2_t* p_video_data,
-	// The frame type that you would prefer, all effort is made to match these.
 	NDIlib_frame_format_type_e field_type NDILIB_CPP_DEFAULT_VALUE(NDIlib_frame_format_type_progressive)
 );
 
 // Free audio returned by NDIlib_framesync_capture_video.
-//
 PROCESSINGNDILIB_API
-void NDIlib_framesync_free_video(
-	// The frame sync instance data.
-	NDIlib_framesync_instance_t p_instance,
-	// The destination video buffer that you wish to have filled in.
-	NDIlib_video_frame_v2_t* p_video_data
-);
+void NDIlib_framesync_free_video(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data);

@@ -18,35 +18,28 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include <obs-module.h>
 
-#include "obs-ndi.h"
+#include "plugin-main.h"
 
 struct alpha_filter {
 	obs_source_t *context;
 	gs_effect_t *effect;
 };
 
-const char *alpha_filter_getname(void *data)
+const char *alpha_filter_getname(void *)
 {
-	UNUSED_PARAMETER(data);
 	return obs_module_text("NDIPlugin.PremultipliedAlphaFilterName");
 }
 
-obs_properties_t *alpha_filter_getproperties(void *data)
+obs_properties_t *alpha_filter_getproperties(void *)
 {
-	UNUSED_PARAMETER(data);
 	obs_properties_t *props = obs_properties_create();
 	return props;
 }
 
-void alpha_filter_update(void *data, obs_data_t *settings)
-{
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(settings);
-}
+void alpha_filter_update(void *, obs_data_t *) {}
 
-void *alpha_filter_create(obs_data_t *settings, obs_source_t *source)
+void *alpha_filter_create(obs_data_t *, obs_source_t *source)
 {
-	UNUSED_PARAMETER(settings);
 	struct alpha_filter *s =
 		(struct alpha_filter *)bzalloc(sizeof(struct alpha_filter));
 	s->context = source;
@@ -60,9 +53,8 @@ void alpha_filter_destroy(void *data)
 	bfree(s);
 }
 
-void alpha_filter_videorender(void *data, gs_effect_t *effect)
+void alpha_filter_videorender(void *data, gs_effect_t *)
 {
-	UNUSED_PARAMETER(effect);
 	struct alpha_filter *s = (struct alpha_filter *)data;
 
 	if (!obs_source_process_filter_begin(s->context, GS_RGBA,

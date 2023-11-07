@@ -2,13 +2,13 @@
 
 // NOTE : The following MIT license applies to this file ONLY and not to the SDK as a whole. Please review
 // the SDK documentation for the description of the full license terms, which are also provided in the file
-// "NDI License Agreement.pdf" within the SDK or online at http://new.tk/ndisdk_license/. Your use of any
+// "NDI License Agreement.pdf" within the SDK or online at http://ndi.link/ndisdk_license. Your use of any
 // part of this SDK is acknowledgment that you agree to the SDK license terms. The full NDI SDK may be
-// downloaded at http://ndi.tv/
+// downloaded at http://ndi.video/
 //
 //***********************************************************************************************************
 //
-// Copyright (C)2014-2023, NewTek, inc.
+// Copyright (C) 2023 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -252,7 +252,10 @@ bool NDIlib_recv_set_tally(NDIlib_recv_instance_t p_instance, const NDIlib_tally
 // structure will give you the total frame counts received, the dropped structure will tell you how many
 // frames have been dropped. Either of these could be NULL.
 PROCESSINGNDILIB_API
-void NDIlib_recv_get_performance(NDIlib_recv_instance_t p_instance, NDIlib_recv_performance_t* p_total, NDIlib_recv_performance_t* p_dropped);
+void NDIlib_recv_get_performance(
+	NDIlib_recv_instance_t p_instance,
+	NDIlib_recv_performance_t* p_total, NDIlib_recv_performance_t* p_dropped
+);
 
 // This will allow you to determine the current queue depth for all of the frame sources at any time.
 PROCESSINGNDILIB_API
