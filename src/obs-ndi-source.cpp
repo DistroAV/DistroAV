@@ -26,6 +26,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <QString>
 
 #include "plugin-main.h"
 #include "Config.h"
@@ -76,9 +77,6 @@ struct ndi_source {
 	NDIlib_tally_t tally;
 	bool alpha_filter_enabled;
 	bool audio_enabled;
-	char *ndi_name;
-	int bandwidth;
-	bool hwAccelEnabled;
 };
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -240,7 +238,6 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_property_t *sync_modes = obs_properties_add_list(
 		props, PROP_SYNC, obs_module_text("NDIPlugin.SourceProps.Sync"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-
 	obs_property_list_add_int(
 		sync_modes, obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
 		PROP_SYNC_NDI_TIMESTAMP);
@@ -261,7 +258,6 @@ obs_properties_t *ndi_source_getproperties(void *)
 		props, PROP_YUV_RANGE,
 		obs_module_text("NDIPlugin.SourceProps.ColorRange"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-
 	obs_property_list_add_int(
 		yuv_ranges,
 		obs_module_text("NDIPlugin.SourceProps.ColorRange.Partial"),
@@ -275,7 +271,6 @@ obs_properties_t *ndi_source_getproperties(void *)
 		props, PROP_YUV_COLORSPACE,
 		obs_module_text("NDIPlugin.SourceProps.ColorSpace"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
 
@@ -283,7 +278,6 @@ obs_properties_t *ndi_source_getproperties(void *)
 		props, PROP_LATENCY,
 		obs_module_text("NDIPlugin.SourceProps.Latency"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-
 	obs_property_list_add_int(
 		latency_modes,
 		obs_module_text("NDIPlugin.SourceProps.Latency.Normal"),
@@ -300,21 +294,20 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_properties_add_bool(props, PROP_AUDIO,
 				obs_module_text("NDIPlugin.SourceProps.Audio"));
 
-	obs_properties_t *group = obs_properties_create();
-
+	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(
-		group, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"),
-		-1.0, 1.0, 0.001);
+		group_ptz, PROP_PAN,
+		obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0, 0.001);
 	obs_properties_add_float_slider(
-		group, PROP_TILT, obs_module_text("NDIPlugin.SourceProps.Tilt"),
-		-1.0, 1.0, 0.001);
+		group_ptz, PROP_TILT,
+		obs_module_text("NDIPlugin.SourceProps.Tilt"), -1.0, 1.0,
+		0.001);
 	obs_properties_add_float_slider(
-		group, PROP_ZOOM, obs_module_text("NDIPlugin.SourceProps.Zoom"),
-		0.0, 1.0, 0.001);
-
+		group_ptz, PROP_ZOOM,
+		obs_module_text("NDIPlugin.SourceProps.Zoom"), 0.0, 1.0, 0.001);
 	obs_properties_add_group(props, PROP_PTZ,
 				 obs_module_text("NDIPlugin.SourceProps.PTZ"),
-				 OBS_GROUP_CHECKABLE, group);
+				 OBS_GROUP_CHECKABLE, group_ptz);
 
 	obs_properties_add_button(
 		props, "ndi_website", "NDI.NewTek.com",
@@ -346,29 +339,53 @@ void ndi_source_getdefaults(obs_data_t *settings)
 
 void ndi_source_ptz(struct ndi_source *s, obs_data_t *settings)
 {
-	if (!obs_data_get_bool(settings, PROP_PTZ))
+	if (!obs_data_get_bool(settings, PROP_PTZ)) {
 		return;
+	}
+
+	if (!s->ndi_receiver) {
+		blog(LOG_WARNING, "[obs-ndi] ndi_source_ptz: No NDI receiver");
+		return;
+	}
+
+	if (!ndiLib->recv_ptz_is_supported(s->ndi_receiver)) {
+		blog(LOG_INFO,
+		     "[obs-ndi] ndi_source_ptz: PTZ is not supported by this source receiver");
+		return;
+	}
+
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
 	ndiLib->recv_ptz_pan_tilt(s->ndi_receiver, pan, tilt);
+
 	float zoom = (float)obs_data_get_double(settings, PROP_ZOOM);
 	ndiLib->recv_ptz_zoom(s->ndi_receiver, zoom);
 }
 
+void processAudio(struct ndi_source *s,
+		  NDIlib_audio_frame_v3_t *ndi_audio_frame,
+		  obs_source_audio *obs_audio_frame);
+
+void processVideo(struct ndi_source *s,
+		  NDIlib_video_frame_v2_t *ndi_video_frame,
+		  obs_source_frame *obs_video_frame);
+
 void *ndi_source_poll_audio_video(void *data)
 {
 	auto s = (struct ndi_source *)data;
-
-	blog(LOG_INFO, "[obs-ndi] A/V thread for '%s' started",
-	     obs_source_get_name(s->source));
+	auto name = obs_source_get_name(s->source);
+	blog(LOG_INFO, "[obs-ndi] +ndi_source_poll_audio_video('%s'...)", name);
 
 	NDIlib_audio_frame_v3_t audio_frame;
 	obs_source_audio obs_audio_frame = {};
+
 	NDIlib_video_frame_v2_t video_frame;
 	obs_source_frame obs_video_frame = {};
+
 	bool connected = false;
 
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
+
 	while (s->running) {
 
 		//
@@ -376,12 +393,14 @@ void *ndi_source_poll_audio_video(void *data)
 		//
 
 		if (ndiLib->recv_get_no_connections(s->ndi_receiver) == 0) {
-			if (connected)
+			if (connected) {
 				connected = false;
+			}
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds(100));
 			continue;
 		}
+
 		if (!connected) {
 			connected = true;
 			obs_data_t *settings =
@@ -395,116 +414,142 @@ void *ndi_source_poll_audio_video(void *data)
 						&audio_frame, nullptr, 100);
 
 		if (frame_received == NDIlib_frame_type_audio) {
-			if (s->audio_enabled) {
-				const int channelCount =
-					audio_frame.no_channels > 8
-						? 8
-						: audio_frame.no_channels;
-
-				obs_audio_frame.speakers =
-					channel_count_to_layout(channelCount);
-
-				switch (s->sync_mode) {
-				case PROP_SYNC_NDI_TIMESTAMP:
-					obs_audio_frame.timestamp =
-						(uint64_t)(audio_frame.timestamp *
-							   100);
-					break;
-
-				case PROP_SYNC_NDI_SOURCE_TIMECODE:
-					obs_audio_frame.timestamp =
-						(uint64_t)(audio_frame.timecode *
-							   100);
-					break;
-				}
-
-				obs_audio_frame.samples_per_sec =
-					audio_frame.sample_rate;
-				obs_audio_frame.format =
-					AUDIO_FORMAT_FLOAT_PLANAR;
-				obs_audio_frame.frames = audio_frame.no_samples;
-
-				for (int i = 0; i < channelCount; ++i) {
-					obs_audio_frame.data[i] =
-						(uint8_t *)audio_frame.p_data +
-						i * audio_frame.channel_stride_in_bytes;
-				}
-
-				obs_source_output_audio(s->source,
-							&obs_audio_frame);
-			}
+			processAudio(s, &audio_frame, &obs_audio_frame);
 			ndiLib->recv_free_audio_v3(s->ndi_receiver,
 						   &audio_frame);
+			continue;
 		}
 
 		if (frame_received == NDIlib_frame_type_video) {
-			switch (video_frame.FourCC) {
-			case NDIlib_FourCC_type_BGRA:
-				obs_video_frame.format = VIDEO_FORMAT_BGRA;
-				break;
-
-			case NDIlib_FourCC_type_BGRX:
-				obs_video_frame.format = VIDEO_FORMAT_BGRX;
-				break;
-
-			case NDIlib_FourCC_type_RGBA:
-			case NDIlib_FourCC_type_RGBX:
-				obs_video_frame.format = VIDEO_FORMAT_RGBA;
-				break;
-
-			case NDIlib_FourCC_type_UYVY:
-			case NDIlib_FourCC_type_UYVA:
-				obs_video_frame.format = VIDEO_FORMAT_UYVY;
-				break;
-
-			case NDIlib_FourCC_type_I420:
-				obs_video_frame.format = VIDEO_FORMAT_I420;
-				break;
-
-			case NDIlib_FourCC_type_NV12:
-				obs_video_frame.format = VIDEO_FORMAT_NV12;
-				break;
-
-			default:
-				blog(LOG_INFO,
-				     "[obs-ndi] warning: unsupported video pixel format: %d",
-				     video_frame.FourCC);
-				break;
-			}
-
-			switch (s->sync_mode) {
-			case PROP_SYNC_NDI_TIMESTAMP:
-				obs_video_frame.timestamp =
-					(uint64_t)(video_frame.timestamp * 100);
-				break;
-
-			case PROP_SYNC_NDI_SOURCE_TIMECODE:
-				obs_video_frame.timestamp =
-					(uint64_t)(video_frame.timecode * 100);
-				break;
-			}
-
-			obs_video_frame.width = video_frame.xres;
-			obs_video_frame.height = video_frame.yres;
-			obs_video_frame.linesize[0] =
-				video_frame.line_stride_in_bytes;
-			obs_video_frame.data[0] = video_frame.p_data;
-
-			video_format_get_parameters(
-				s->yuv_colorspace, s->yuv_range,
-				obs_video_frame.color_matrix,
-				obs_video_frame.color_range_min,
-				obs_video_frame.color_range_max);
-
-			obs_source_output_video(s->source, &obs_video_frame);
+			processVideo(s, &video_frame, &obs_video_frame);
 			ndiLib->recv_free_video_v2(s->ndi_receiver,
 						   &video_frame);
+			continue;
 		}
 	}
 
-	blog(LOG_INFO, "[obs-ndi] A/V thread for '%s' completed",
-	     obs_source_get_name(s->source));
+	blog(LOG_INFO, "[obs-ndi] -ndi_source_poll_audio_video('%s'...)", name);
 	return nullptr;
+}
+
+void processAudio(struct ndi_source *s,
+		  NDIlib_audio_frame_v3_t *ndi_audio_frame,
+		  obs_source_audio *obs_audio_frame)
+{
+	if (!s->audio_enabled) {
+		return;
+	}
+
+	const int channelCount = ndi_audio_frame->no_channels > 8
+					 ? 8
+					 : ndi_audio_frame->no_channels;
+
+	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
+
+	switch (s->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame->timestamp * 100);
+		break;
+
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame->timecode * 100);
+		break;
+	}
+
+	obs_audio_frame->samples_per_sec = ndi_audio_frame->sample_rate;
+	obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
+	obs_audio_frame->frames = ndi_audio_frame->no_samples;
+
+	for (int i = 0; i < channelCount; ++i) {
+		obs_audio_frame->data[i] =
+			(uint8_t *)ndi_audio_frame->p_data +
+			(i * ndi_audio_frame->channel_stride_in_bytes);
+	}
+
+	obs_source_output_audio(s->source, obs_audio_frame);
+}
+
+void processVideo(struct ndi_source *s,
+		  NDIlib_video_frame_v2_t *ndi_video_frame,
+		  obs_source_frame *obs_video_frame)
+{
+	switch (ndi_video_frame->FourCC) {
+	case NDIlib_FourCC_type_BGRA:
+		obs_video_frame->format = VIDEO_FORMAT_BGRA;
+		break;
+
+	case NDIlib_FourCC_type_BGRX:
+		obs_video_frame->format = VIDEO_FORMAT_BGRX;
+		break;
+
+	case NDIlib_FourCC_type_RGBA:
+	case NDIlib_FourCC_type_RGBX:
+		obs_video_frame->format = VIDEO_FORMAT_RGBA;
+		break;
+
+	case NDIlib_FourCC_type_UYVY:
+	case NDIlib_FourCC_type_UYVA:
+		obs_video_frame->format = VIDEO_FORMAT_UYVY;
+		break;
+
+	case NDIlib_FourCC_type_I420:
+		obs_video_frame->format = VIDEO_FORMAT_I420;
+		break;
+
+	case NDIlib_FourCC_type_NV12:
+		obs_video_frame->format = VIDEO_FORMAT_NV12;
+		break;
+
+	default:
+		blog(LOG_INFO,
+		     "[obs-ndi] warning: unsupported video pixel format: %d",
+		     ndi_video_frame->FourCC);
+		break;
+	}
+
+	switch (s->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_video_frame->timestamp =
+			(uint64_t)(ndi_video_frame->timestamp * 100);
+		break;
+
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_video_frame->timestamp =
+			(uint64_t)(ndi_video_frame->timecode * 100);
+		break;
+	}
+
+	obs_video_frame->width = ndi_video_frame->xres;
+	obs_video_frame->height = ndi_video_frame->yres;
+	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
+	obs_video_frame->data[0] = ndi_video_frame->p_data;
+
+	video_format_get_parameters(s->yuv_colorspace, s->yuv_range,
+				    obs_video_frame->color_matrix,
+				    obs_video_frame->color_range_min,
+				    obs_video_frame->color_range_max);
+
+	obs_source_output_video(s->source, obs_video_frame);
+}
+
+void ndi_source_thread_start(struct ndi_source *s)
+{
+	s->running = true;
+	pthread_create(&s->av_thread, nullptr, ndi_source_poll_audio_video, s);
+}
+
+void ndi_source_thread_stop(struct ndi_source *s)
+{
+	if (s->running) {
+		s->running = false;
+		pthread_join(s->av_thread, NULL);
+	}
+	if (s->ndi_receiver) {
+		ndiLib->recv_destroy(s->ndi_receiver);
+		s->ndi_receiver = nullptr;
+	}
 }
 
 void ndi_source_update(void *data, obs_data_t *settings)
@@ -513,94 +558,14 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	auto name = obs_source_get_name(s->source);
 	blog(LOG_INFO, "[obs-ndi] ndi_source_update('%s'...)", name);
 
-	const char *ndi_name = obs_data_get_string(settings, PROP_SOURCE);
-	long long bandwidth = obs_data_get_int(settings, PROP_BANDWIDTH);
-	bool hwAccelEnabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
-	if (!s->ndi_name || strcmp(ndi_name, s->ndi_name) != 0 ||
-	    s->bandwidth != bandwidth) {
-		s->bandwidth = bandwidth;
-		bfree(s->ndi_name);
-		s->ndi_name = bstrdup(ndi_name);
-		if (s->running) {
-			s->running = false;
-			pthread_join(s->av_thread, NULL);
-		}
-		s->running = false;
-		ndiLib->recv_destroy(s->ndi_receiver);
-
-		NDIlib_recv_create_v3_t recv_desc;
-		recv_desc.source_to_connect_to.p_ndi_name = ndi_name;
-		recv_desc.allow_video_fields = true;
-		recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
-
-		switch (obs_data_get_int(settings, PROP_BANDWIDTH)) {
-		case PROP_BW_HIGHEST:
-		default:
-			recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
-			break;
-		case PROP_BW_LOWEST:
-			recv_desc.bandwidth = NDIlib_recv_bandwidth_lowest;
-			break;
-		case PROP_BW_AUDIO_ONLY:
-			recv_desc.bandwidth = NDIlib_recv_bandwidth_audio_only;
-			obs_source_output_video(s->source, blank_video_frame());
-			break;
-		}
-
-		s->ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
-		if (s->ndi_receiver) {
-			if (hwAccelEnabled) {
-				NDIlib_metadata_frame_t hwAccelMetadata;
-				hwAccelMetadata.p_data =
-					(char *)"<ndi_hwaccel enabled=\"true\"/>";
-				ndiLib->recv_send_metadata(s->ndi_receiver,
-							   &hwAccelMetadata);
-			}
-			s->hwAccelEnabled = hwAccelEnabled;
-
-			s->running = true;
-			pthread_create(&s->av_thread, nullptr,
-				       ndi_source_poll_audio_video, data);
-
-			blog(LOG_INFO, "started A/V threads for source '%s'",
-			     recv_desc.source_to_connect_to.p_ndi_name);
-
-			// Update tally status
-			Config *conf = Config::Current();
-			s->tally.on_preview = conf->TallyPreviewEnabled &&
-					      obs_source_showing(s->source);
-			s->tally.on_program = conf->TallyProgramEnabled &&
-					      obs_source_active(s->source);
-			ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
-		} else {
-			blog(LOG_ERROR,
-			     "can't create a receiver for NDI source '%s'",
-			     ndi_name);
-		}
-	}
-	if (s->ndi_receiver) {
-		if (s->hwAccelEnabled != hwAccelEnabled) {
-			NDIlib_metadata_frame_t hwAccelMetadata;
-			hwAccelMetadata.p_data =
-				hwAccelEnabled
-					? (char *)"<ndi_hwaccel enabled=\"true\"/>"
-					: (char *)"<ndi_hwaccel enabled=\"false\"/>";
-			ndiLib->recv_send_metadata(s->ndi_receiver,
-						   &hwAccelMetadata);
-
-			s->hwAccelEnabled = hwAccelEnabled;
-		}
-		ndi_source_ptz(s, settings);
-	}
+	ndi_source_thread_stop(s);
 
 	s->alpha_filter_enabled = obs_data_get_bool(settings, PROP_FIX_ALPHA);
 	// Don't persist this value in settings
 	obs_data_set_bool(settings, PROP_FIX_ALPHA, false);
-
 	if (s->alpha_filter_enabled) {
 		obs_source_t *existing_filter =
 			find_filter_by_id(s->source, OBS_NDI_ALPHA_FILTER_ID);
-
 		if (!existing_filter) {
 			obs_source_t *new_filter = obs_source_create(
 				OBS_NDI_ALPHA_FILTER_ID,
@@ -611,6 +576,33 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			obs_source_release(new_filter);
 		}
 	}
+
+	const char *ndi_source_name =
+		obs_data_get_string(settings, PROP_SOURCE);
+
+	NDIlib_recv_create_v3_t recv_desc;
+	recv_desc.source_to_connect_to.p_ndi_name = ndi_source_name;
+	recv_desc.allow_video_fields = true;
+	if (obs_data_get_int(settings, PROP_LATENCY) == PROP_LATENCY_NORMAL)
+		recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
+	else
+		recv_desc.color_format = NDIlib_recv_color_format_fastest;
+
+	long long bandwidth = obs_data_get_int(settings, PROP_BANDWIDTH);
+	switch (bandwidth) {
+	case PROP_BW_HIGHEST:
+	default:
+		recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
+		break;
+	case PROP_BW_LOWEST:
+		recv_desc.bandwidth = NDIlib_recv_bandwidth_lowest;
+		break;
+	case PROP_BW_AUDIO_ONLY:
+		recv_desc.bandwidth = NDIlib_recv_bandwidth_audio_only;
+		obs_source_output_video(s->source, blank_video_frame());
+		break;
+	}
+
 	s->sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
 	// if sync mode is set to the unsupported "Internal" mode, set it
 	// to "Source Timing" mode and apply that change to the settings data
@@ -632,6 +624,37 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	s->audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 	obs_source_set_audio_active(s->source, s->audio_enabled);
+
+	s->ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
+	if (!s->ndi_receiver) {
+		blog(LOG_ERROR,
+		     "[obs-ndi] ndi_source_update: can't create a receiver for NDI source '%s'",
+		     recv_desc.source_to_connect_to.p_ndi_name);
+		return;
+	}
+
+	bool hwAccelEnabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
+	NDIlib_metadata_frame_t hwAccelMetadata;
+	hwAccelMetadata.p_data =
+		hwAccelEnabled ? (char *)"<ndi_hwaccel enabled=\"true\"/>"
+			       : (char *)"<ndi_hwaccel enabled=\"false\"/>";
+	ndiLib->recv_send_metadata(s->ndi_receiver, &hwAccelMetadata);
+
+	ndi_source_ptz(s, settings);
+
+	// Update tally status
+	Config *conf = Config::Current();
+	s->tally.on_preview = conf->TallyPreviewEnabled &&
+			      obs_source_showing(s->source);
+	s->tally.on_program = conf->TallyProgramEnabled &&
+			      obs_source_active(s->source);
+	ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
+
+	ndi_source_thread_start(s);
+
+	blog(LOG_INFO,
+	     "[obs-ndi] ndi_source_update: started A/V threads for source '%s'",
+	     recv_desc.source_to_connect_to.p_ndi_name);
 }
 
 void ndi_source_shown(void *data)
@@ -660,7 +683,7 @@ void ndi_source_activated(void *data)
 {
 	auto s = (struct ndi_source *)data;
 	auto name = obs_source_get_name(s->source);
-	blog(LOG_INFO, "[obs-ndi] ndi_source_activated'%s'...)", name);
+	blog(LOG_INFO, "[obs-ndi] ndi_source_activated('%s'...)", name);
 	if (s->ndi_receiver) {
 		s->tally.on_program = (Config::Current())->TallyProgramEnabled;
 		ndiLib->recv_set_tally(s->ndi_receiver, &s->tally);
@@ -684,7 +707,6 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *source)
 	blog(LOG_INFO, "[obs-ndi] ndi_source_create('%s'...)", name);
 	auto s = (struct ndi_source *)bzalloc(sizeof(struct ndi_source));
 	s->source = source;
-	s->running = false;
 	ndi_source_update(s, settings);
 	return s;
 }
@@ -694,14 +716,7 @@ void ndi_source_destroy(void *data)
 	auto s = (struct ndi_source *)data;
 	auto name = obs_source_get_name(s->source);
 	blog(LOG_INFO, "[obs-ndi] ndi_source_destroy('%s'...)", name);
-	if (s->running) {
-		s->running = false;
-		pthread_join(s->av_thread, NULL);
-	}
-	if (s->ndi_receiver) {
-		ndiLib->recv_destroy(s->ndi_receiver);
-		s->ndi_receiver = nullptr;
-	}
+	ndi_source_thread_stop(s);
 	bfree(s);
 }
 
