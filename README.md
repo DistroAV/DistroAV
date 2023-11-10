@@ -22,7 +22,6 @@ Network A/V in OBS Studio with NewTek's NDI technology.
   [NDI Tools](https://ndi.video/tools/), or the [NDI SDK](https://ndi.video/download-ndi-sdk/).
 
 # Install OBS-NDI
-
 Download and install the Linux, MacOS, or Windows version at [Releases](https://github.com/obs-ndi/obs-ndi/releases).
 
 * Linux
@@ -35,7 +34,14 @@ Download and install the Linux, MacOS, or Windows version at [Releases](https://
     ```
 * MacOS:
     1. Download [obs-ndi-4.12.0-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.12.0/obs-ndi-4.12.0-macos-universal.pkg)
-    2. Run `obs-ndi-4.12.0-macos-universal.pkg`
+    2. Run `obs-ndi-4.12.0-macos-universal.pkg`  
+       If MacOS complains about the file, either:
+        1. Allow it in `System Settings`->`Privacy & Security`  
+          -or-
+        2. Run
+        ```
+        % sudo xattr -r -d com.apple.quarantine obs-ndi-4.12.0-macos-universal.pkg
+        ```
 * Windows:
     1. Download [obs-ndi-4.12.0-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.12.0/obs-ndi-4.12.0-windows-x64-Installer.exe)
     2. Run `obs-ndi-4.12.0-windows-x64-Installer.exe`
@@ -80,7 +86,6 @@ popd
 
         
 ## Uninstall
-
 Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
 
 ### Linux
@@ -93,20 +98,20 @@ Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
        ```
 
 ### MacOS
-
 1. Open Finder
 2. Show hidden files with `Command-Shift-.`
-3. Delete `~/Library/Application Support/obs-studio/plugins/obs-ndi.plugin`
-4. Optionally delete NDI Tools/Runtime:
+3. Delete `~/Library/Application Support/obs-studio/obs-plugins/obs-ndi.plugin`
+4. Delete `~/Library/Application Support/obs-studio/data/obs-plugins/obs-ndi/`
+5. Optionally delete NDI Tools/Runtime:
     1. Finder->Applications: Delete all `NDI *` applications
     2. Delete `/Library/Application Support/NewTek/NDI`
     2. Delete `/usr/local/lib/libndi.*`
 
 ### Windows
-
 1. Add/Remove Programs
 2. Delete `%ProgramFiles%\obs-studio\obs-plugins\64-bit\obs-ndi.*`
-3. Optionally delete NDI Tools/Runtime:
+3. Delete `%ProgramFiles%\obs-studio\data\obs-plugins\obs-ndi\`
+4. Optionally delete NDI Tools/Runtime:
     1. Add/Remove Programs
     2. Delete `%ProgramFiles%\NDI\NDI 5 Runtime`
     3. Delete `%ProgramFiles%\NDI\NDI 5 Tools`
@@ -120,18 +125,27 @@ In PowerShell Core 7+ terminal:
 ```
 git clone https://github.com/obs-ndi/obs-ndi.git
 cd obs-ndi
-.github/scripts/Build-Windows.ps1
-...
-.github/scripts/Package-Windows.ps1 -BuildInstaller
 ```
+First build:
+```
+.github/scripts/Build-Windows.ps1 && .github/scripts/Package-Windows.ps1 -BuildInstaller
+```
+Subsequent builds:
+```
+.github/scripts/Build-Windows.ps1 -SkipDeps && .github/scripts/Package-Windows.ps1 -BuildInstaller
+```
+See `Help .github/scripts/Build-Windows.ps1` for more details.
 
 If you get `SecurityError/PSSecurityException/UnauthorizedAccess` error then:
 ```
 Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 
-Subsequent builds can be sped up by using `Build-Windows.ps1 -SkipDeps`.  
-See `Help .github/scripts/Build-Windows.ps1` for more details.
+<!--
+```
+.github/scripts/Build-Windows.ps1 -SkipDeps && .github/scripts/Package-Windows.ps1 -BuildInstaller && release\obs-ndi-4.12.0-windows-x64-Installer.exe
+```
+-->
 
 ### Linux
 NOTE: Only Debian and Ubuntu are officially supported
