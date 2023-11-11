@@ -351,6 +351,16 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 }
 
+#define NDI_FRAMESYNC 0
+
+#if NDI_FRAMESYNC
+void ndi_source_thread_process_audio2(
+	ndi_source_config_t *config, NDIlib_audio_frame_v2_t *ndi_audio_frame2,
+	NDIlib_audio_frame_interleaved_32f_t *audio_frame_interleaved_32f3,
+	size_t *audio_buffer_size, obs_source_t *obs_source,
+	obs_source_audio *obs_audio_frame);
+#endif
+
 void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
 				      obs_source_t *obs_source,
@@ -384,10 +394,21 @@ void *ndi_source_thread(void *data)
 	recv_desc.allow_video_fields = true;
 
 	NDIlib_recv_instance_t ndi_receiver = nullptr;
-	NDIlib_audio_frame_v3_t audio_frame3;
 	NDIlib_video_frame_v2_t video_frame2;
 
+#if NDI_FRAMESYNC
+	NDIlib_metadata_frame_t metadata_frame;
+	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
+	NDIlib_audio_frame_v2_t audio_frame2;
+	NDIlib_audio_frame_interleaved_32f_t audio_frame_interleaved_32f;
+	size_t audio_buffer_size = 0;
+	int64_t timestamp_audio = 0;
+	int64_t timestamp_video = 0;
+#else
+	NDIlib_audio_frame_v3_t audio_frame3;
+
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
+#endif
 
 	NDIlib_recv_create_v3_t *reset_recv_desc = &recv_desc;
 
@@ -478,6 +499,13 @@ void *ndi_source_thread(void *data)
 			     "[obs-ndi] ndi_source_thread: '%s' Resetting NDI receiver...",
 			     obs_source_ndi_receiver_name);
 
+#if NDI_FRAMESYNC
+			if (ndi_frame_sync) {
+				ndiLib->framesync_destroy(ndi_frame_sync);
+				ndi_frame_sync = nullptr;
+			}
+#endif
+
 			if (ndi_receiver) {
 #if 1
 				blog(LOG_INFO,
@@ -505,6 +533,16 @@ void *ndi_source_thread(void *data)
 				     recv_desc.source_to_connect_to.p_ndi_name);
 				break;
 			}
+
+#if NDI_FRAMESYNC
+			timestamp_audio = 0;
+			timestamp_video = 0;
+
+			ndi_frame_sync = ndiLib->framesync_create(ndi_receiver);
+			if (!ndi_frame_sync) {
+				break;
+			}
+#endif
 		}
 
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
@@ -581,6 +619,48 @@ void *ndi_source_thread(void *data)
 					       &config_most_recent.tally);
 		}
 
+#if NDI_FRAMESYNC
+		//
+		// AUDIO
+		//
+		audio_frame2 = {};
+		ndiLib->framesync_capture_audio(ndi_frame_sync, &audio_frame2,
+						0, //audioFormat.sampleRate(),
+						0, //audioFormat.channelCount(),
+						1024);
+		if (audio_frame2.p_data &&
+		    (audio_frame2.timestamp > timestamp_audio)) {
+			//blog(LOG_INFO, "a");//udio_frame";
+			timestamp_audio = audio_frame2.timestamp;
+			ndi_source_thread_process_audio2(
+				&config_most_recent, &audio_frame2,
+				&audio_frame_interleaved_32f,
+				&audio_buffer_size, obs_source,
+				&obs_audio_frame);
+		}
+		ndiLib->framesync_free_audio(ndi_frame_sync, &audio_frame2);
+
+		//
+		// VIDEO
+		//
+		video_frame2 = {};
+		ndiLib->framesync_capture_video(
+			ndi_frame_sync, &video_frame2,
+			NDIlib_frame_format_type_progressive);
+		if (video_frame2.p_data &&
+		    (video_frame2.timestamp > timestamp_video)) {
+			//blog(LOG_INFO, "v");//ideo_frame";
+			timestamp_video = video_frame2.timestamp;
+			ndi_source_thread_process_video2(&config_most_recent,
+							 &video_frame2,
+							 obs_source,
+							 &obs_video_frame);
+		}
+		ndiLib->framesync_free_video(ndi_frame_sync, &video_frame2);
+
+		// TODO: More accurate sleep that subtracts the duration of this loop iteration?
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+#else
 		frame_received =
 			ndiLib->recv_capture_v3(ndi_receiver, &video_frame2,
 						&audio_frame3, nullptr, 100);
@@ -602,18 +682,81 @@ void *ndi_source_thread(void *data)
 			ndiLib->recv_free_video_v2(ndi_receiver, &video_frame2);
 			continue;
 		}
+#endif
 	}
+
+#if NDI_FRAMESYNC
+	if (ndi_frame_sync) {
+		ndiLib->framesync_destroy(ndi_frame_sync);
+		ndi_frame_sync = nullptr;
+	}
+#endif
 
 	if (ndi_receiver) {
 		ndiLib->recv_destroy(ndi_receiver);
 		ndi_receiver = nullptr;
 	}
 
+#if NDI_FRAMESYNC
+	if (audio_frame_interleaved_32f.p_data) {
+		delete[] audio_frame_interleaved_32f.p_data;
+		audio_frame_interleaved_32f.p_data = nullptr;
+	}
+#endif
+
 	blog(LOG_INFO, "[obs-ndi] -ndi_source_thread('%s'...)",
 	     obs_source_ndi_receiver_name);
 
 	return nullptr;
 }
+
+#if NDI_FRAMESYNC
+
+void ndi_source_thread_process_audio2(
+	ndi_source_config_t *config, NDIlib_audio_frame_v2_t *ndi_audio_frame2,
+	NDIlib_audio_frame_interleaved_32f_t *, //audio_frame_interleaved_32f,
+	size_t *audio_buffer_size, obs_source_t *obs_source,
+	obs_source_audio *obs_audio_frame)
+{
+	if (!config->audio_enabled) {
+		return;
+	}
+
+	size_t this_audio_buffer_size = ndi_audio_frame2->no_samples *
+					ndi_audio_frame2->no_channels *
+					sizeof(float);
+
+	const int channelCount = ndi_audio_frame2->no_channels > 8
+					 ? 8
+					 : ndi_audio_frame2->no_channels;
+
+	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
+
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame2->timestamp * 100);
+		break;
+
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame2->timecode * 100);
+		break;
+	}
+
+	obs_audio_frame->samples_per_sec = ndi_audio_frame2->sample_rate;
+	obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
+	obs_audio_frame->frames = ndi_audio_frame2->no_samples;
+	for (int i = 0; i < channelCount; ++i) {
+		obs_audio_frame->data[i] =
+			(uint8_t *)ndi_audio_frame2->p_data +
+			(i * ndi_audio_frame2->channel_stride_in_bytes);
+	}
+
+	obs_source_output_audio(obs_source, obs_audio_frame);
+}
+
+#else
 
 void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
@@ -653,6 +796,8 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
+
+#endif
 
 void ndi_source_thread_process_video2(ndi_source_config_t *config,
 				      NDIlib_video_frame_v2_t *ndi_video_frame,
