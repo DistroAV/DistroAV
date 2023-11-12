@@ -4,9 +4,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCO
 
 project(${_name} VERSION ${_version})
 
-option(ENABLE_FRONTEND_API "Use obs-frontend-api for UI functionality" ON)
-option(ENABLE_QT "Use Qt functionality" ON)
-
 include(compilerconfig)
 include(defaults)
 include(helpers)
@@ -34,9 +31,13 @@ if(ENABLE_QT)
                AUTORCC ON)
 endif()
 
-# Add your custom source files here - header files are optional and only required for visibility
+# cmake-format: off
+# Add your custom source files here Header files are optional and only required for visibility.
 # e.g. in Xcode or Visual Studio
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/plugin-main.cpp
+# cmake-format: on
+target_sources(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE src/plugin-main.cpp
           src/plugin-main.h
           src/obs-ndi-source.cpp
           src/obs-ndi-output.cpp

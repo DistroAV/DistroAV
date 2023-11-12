@@ -1,8 +1,12 @@
 #!/bin/bash
 
+#
+# This script calls libndi-get.sh and then libndi-create-deb.sh and libndi-create-dev-deb.sh
+#
+
 set -e
 
-LIBNDI_VERSION="5.5.3"
+LIBNDI_VERSION="5.6.0"
 
 SCRIPT_DIR=$(dirname "$0")
 

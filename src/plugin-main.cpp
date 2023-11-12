@@ -45,6 +45,16 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
+const char *obs_module_name()
+{
+	return "obs-ndi";
+}
+
+const char *obs_module_description()
+{
+	return "NDI input/output integration for OBS Studio";
+}
+
 const NDIlib_v4 *ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
@@ -73,16 +83,19 @@ OutputSettings *output_settings = nullptr;
 
 bool obs_module_load(void)
 {
-	obs_log(LOG_INFO, "obs_module_load: hello ! (version %s)",
-		PLUGIN_VERSION);
+	blog(LOG_INFO,
+	     "[obs-ndi] obs_module_load: you can haz obs-ndi (Version %s)",
+	     PLUGIN_VERSION);
+	blog(LOG_INFO, "Qt Version: %s (runtime), %s (compiled)", qVersion(),
+	     QT_VERSION_STR);
 
 	QMainWindow *main_window =
 		(QMainWindow *)obs_frontend_get_main_window();
 
 	ndiLib = load_ndilib();
 	if (!ndiLib) {
-		obs_log(LOG_ERROR,
-			"obs_module_load: load_ndilib() failed; Module won't load.");
+		blog(LOG_ERROR,
+		     "[obs-ndi] obs_module_load: load_ndilib() failed; Module won't load.");
 
 		const char *msg_string_name = "";
 #ifdef _MSC_VER
@@ -107,14 +120,14 @@ bool obs_module_load(void)
 	}
 
 	if (!ndiLib->initialize()) {
-		obs_log(LOG_ERROR,
-			"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
+		blog(LOG_ERROR,
+		     "[obs-ndi] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
-	obs_log(LOG_INFO,
-		"obs_module_load: NDI library initialized successfully (%s)",
-		ndiLib->version());
+	blog(LOG_INFO,
+	     "[obs-ndi] obs_module_load: NDI library initialized successfully ('%s')",
+	     ndiLib->version());
 
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
@@ -194,9 +207,14 @@ bool obs_module_load(void)
 	return true;
 }
 
-void obs_module_unload()
+void obs_module_post_load(void)
 {
-	obs_log(LOG_INFO, "+obs_module_unload()");
+	blog(LOG_INFO, "[obs-ndi] obs_module_post_load: ...");
+}
+
+void obs_module_unload(void)
+{
+	blog(LOG_INFO, "[obs-ndi] +obs_module_unload()");
 
 	if (ndiLib) {
 		if (ndi_finder) {
@@ -211,19 +229,9 @@ void obs_module_unload()
 		delete loaded_lib;
 	}
 
-	obs_log(LOG_INFO, "obs_module_unload: goodbye !");
+	blog(LOG_INFO, "[obs-ndi] obs_module_unload: goodbye !");
 
-	obs_log(LOG_INFO, "-obs_module_unload()");
-}
-
-const char *obs_module_name()
-{
-	return "obs-ndi";
-}
-
-const char *obs_module_description()
-{
-	return "NDI input/output integration for OBS Studio";
+	blog(LOG_INFO, "[obs-ndi] -obs_module_unload()");
 }
 
 const NDIlib_v4 *load_ndilib()
@@ -240,28 +248,28 @@ const NDIlib_v4 *load_ndilib()
 	for (QString location : locations) {
 		path = QDir::cleanPath(
 			QDir(location).absoluteFilePath(NDILIB_LIBRARY_NAME));
-		obs_log(LOG_INFO, "load_ndilib: Trying '%s'",
-			path.toUtf8().constData());
+		blog(LOG_INFO, "[obs-ndi] load_ndilib: Trying '%s'",
+		     path.toUtf8().constData());
 		QFileInfo libPath(path);
 		if (libPath.exists() && libPath.isFile()) {
 			path = libPath.absoluteFilePath();
-			obs_log(LOG_INFO,
-				"load_ndilib: Found NDI library at '%s'",
-				path.toUtf8().constData());
+			blog(LOG_INFO,
+			     "[obs-ndi] load_ndilib: Found NDI library at '%s'",
+			     path.toUtf8().constData());
 			loaded_lib = new QLibrary(path, nullptr);
 			if (loaded_lib->load()) {
-				obs_log(LOG_INFO,
-					"load_ndilib: NDI runtime loaded successfully");
+				blog(LOG_INFO,
+				     "[obs-ndi] load_ndilib: NDI runtime loaded successfully");
 				NDIlib_v5_load_ lib_load =
 					(NDIlib_v5_load_)loaded_lib->resolve(
 						"NDIlib_v5_load");
 				if (lib_load != nullptr) {
-					obs_log(LOG_INFO,
-						"load_ndilib: NDIlib_v5_load found");
+					blog(LOG_INFO,
+					     "[obs-ndi] load_ndilib: NDIlib_v5_load found");
 					return lib_load();
 				} else {
-					obs_log(LOG_ERROR,
-						"load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+					blog(LOG_ERROR,
+					     "[obs-ndi] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 				}
 			} else {
 				delete loaded_lib;
@@ -269,6 +277,7 @@ const NDIlib_v4 *load_ndilib()
 			}
 		}
 	}
-	obs_log(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library");
+	blog(LOG_ERROR,
+	     "[obs-ndi] load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;
 }

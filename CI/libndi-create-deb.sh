@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# This script is called by CI/libndi-package.sh
+
 set -ex
 
 SDK_ROOT="/tmp/ndisdk"
