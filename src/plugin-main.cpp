@@ -86,9 +86,8 @@ bool obs_module_load(void)
 	blog(LOG_INFO,
 	     "[obs-ndi] obs_module_load: you can haz obs-ndi (Version %s)",
 	     PLUGIN_VERSION);
-	blog(LOG_INFO,
-	     "[obs-ndi] obs_module_load: Qt version (compile-time): %s | Qt version (run-time): %s",
-	     QT_VERSION_STR, qVersion());
+	blog(LOG_INFO, "Qt Version: %s (runtime), %s (compiled)", qVersion(),
+	     QT_VERSION_STR);
 
 	QMainWindow *main_window =
 		(QMainWindow *)obs_frontend_get_main_window();

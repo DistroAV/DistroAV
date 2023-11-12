@@ -34,6 +34,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BANDWIDTH "ndi_bw_mode"
 #define PROP_SYNC "ndi_sync"
+#define PROP_FRAMESYNC "ndi_framesync"
 #define PROP_HW_ACCEL "ndi_recv_hw_accel"
 #define PROP_FIX_ALPHA "ndi_fix_alpha_blending"
 #define PROP_YUV_RANGE "yuv_range"
@@ -80,6 +81,7 @@ typedef struct {
 	QByteArray ndi_source_name;
 	int bandwidth;
 	int sync_mode;
+	bool framesync_enabled;
 	bool hw_accel_enabled;
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
@@ -260,6 +262,9 @@ obs_properties_t *ndi_source_getproperties(void *)
 		obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
 		PROP_SYNC_NDI_SOURCE_TIMECODE);
 
+	obs_properties_add_bool(props, PROP_FRAMESYNC,
+				obs_module_text("NDIPlugin.NDIFrameSync"));
+
 	obs_properties_add_bool(
 		props, PROP_HW_ACCEL,
 		obs_module_text("NDIPlugin.SourceProps.HWAccel"));
@@ -351,15 +356,10 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 }
 
-#define NDI_FRAMESYNC 0
-
-#if NDI_FRAMESYNC
-void ndi_source_thread_process_audio2(
-	ndi_source_config_t *config, NDIlib_audio_frame_v2_t *ndi_audio_frame2,
-	NDIlib_audio_frame_interleaved_32f_t *audio_frame_interleaved_32f3,
-	size_t *audio_buffer_size, obs_source_t *obs_source,
-	obs_source_audio *obs_audio_frame);
-#endif
+void ndi_source_thread_process_audio2(ndi_source_config_t *config,
+				      NDIlib_audio_frame_v2_t *ndi_audio_frame2,
+				      obs_source_t *obs_source,
+				      obs_source_audio *obs_audio_frame);
 
 void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
@@ -396,19 +396,14 @@ void *ndi_source_thread(void *data)
 	NDIlib_recv_instance_t ndi_receiver = nullptr;
 	NDIlib_video_frame_v2_t video_frame2;
 
-#if NDI_FRAMESYNC
 	NDIlib_metadata_frame_t metadata_frame;
 	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
 	NDIlib_audio_frame_v2_t audio_frame2;
-	NDIlib_audio_frame_interleaved_32f_t audio_frame_interleaved_32f;
-	size_t audio_buffer_size = 0;
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
-#else
-	NDIlib_audio_frame_v3_t audio_frame3;
 
+	NDIlib_audio_frame_v3_t audio_frame3;
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
-#endif
 
 	NDIlib_recv_create_v3_t *reset_recv_desc = &recv_desc;
 
@@ -492,6 +487,18 @@ void *ndi_source_thread(void *data)
 			     obs_source_ndi_receiver_name,
 			     recv_desc.color_format);
 		}
+		if (config_most_recent.framesync_enabled !=
+		    config_last_used.framesync_enabled) {
+			config_last_used.framesync_enabled =
+				config_most_recent.framesync_enabled;
+
+			reset_recv_desc = &recv_desc;
+			blog(LOG_INFO,
+			     "[obs-ndi] ndi_source_thread: '%s' framesync changed to %s",
+			     obs_source_ndi_receiver_name,
+			     config_most_recent.framesync_enabled ? "enabled"
+								  : "disabled");
+		}
 		if (reset_recv_desc) {
 			reset_recv_desc = nullptr;
 
@@ -499,12 +506,10 @@ void *ndi_source_thread(void *data)
 			     "[obs-ndi] ndi_source_thread: '%s' Resetting NDI receiver...",
 			     obs_source_ndi_receiver_name);
 
-#if NDI_FRAMESYNC
 			if (ndi_frame_sync) {
 				ndiLib->framesync_destroy(ndi_frame_sync);
 				ndi_frame_sync = nullptr;
 			}
-#endif
 
 			if (ndi_receiver) {
 #if 1
@@ -534,15 +539,32 @@ void *ndi_source_thread(void *data)
 				break;
 			}
 
-#if NDI_FRAMESYNC
-			timestamp_audio = 0;
-			timestamp_video = 0;
+			if (config_most_recent.framesync_enabled) {
+				timestamp_audio = 0;
+				timestamp_video = 0;
 
-			ndi_frame_sync = ndiLib->framesync_create(ndi_receiver);
-			if (!ndi_frame_sync) {
-				break;
-			}
+#if 1
+				blog(LOG_INFO,
+				     "[obs-ndi] ndi_source_thread: '%s' +ndi_frame_sync = ndiLib->framesync_create(ndi_receiver)",
+				     obs_source_ndi_receiver_name);
 #endif
+				ndi_frame_sync =
+					ndiLib->framesync_create(ndi_receiver);
+#if 1
+				blog(LOG_INFO,
+				     "[obs-ndi] ndi_source_thread: '%s' -ndi_frame_sync = ndiLib->framesync_create(ndi_receiver); ndi_frame_sync=%p",
+				     obs_source_ndi_receiver_name,
+				     ndi_frame_sync);
+#endif
+				if (!ndi_frame_sync) {
+					blog(LOG_ERROR,
+					     "[obs-ndi] ndi_source_thread: '%s' Cannot create ndi_frame_sync for NDI source '%s'",
+					     obs_source_ndi_receiver_name,
+					     recv_desc.source_to_connect_to
+						     .p_ndi_name);
+					break;
+				}
+			}
 		}
 
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
@@ -619,90 +641,83 @@ void *ndi_source_thread(void *data)
 					       &config_most_recent.tally);
 		}
 
-#if NDI_FRAMESYNC
-		//
-		// AUDIO
-		//
-		audio_frame2 = {};
-		ndiLib->framesync_capture_audio(ndi_frame_sync, &audio_frame2,
-						0, //audioFormat.sampleRate(),
-						0, //audioFormat.channelCount(),
-						1024);
-		if (audio_frame2.p_data &&
-		    (audio_frame2.timestamp > timestamp_audio)) {
-			//blog(LOG_INFO, "a");//udio_frame";
-			timestamp_audio = audio_frame2.timestamp;
-			ndi_source_thread_process_audio2(
-				&config_most_recent, &audio_frame2,
-				&audio_frame_interleaved_32f,
-				&audio_buffer_size, obs_source,
-				&obs_audio_frame);
-		}
-		ndiLib->framesync_free_audio(ndi_frame_sync, &audio_frame2);
+		if (ndi_frame_sync) {
+			//
+			// AUDIO
+			//
+			audio_frame2 = {};
+			ndiLib->framesync_capture_audio(
+				ndi_frame_sync, &audio_frame2,
+				0, // "Your desired sample rate. 0 for “use source”."
+				0, // "Your desired channel count. 0 for “use source”."
+				1024);
+			if (audio_frame2.p_data &&
+			    (audio_frame2.timestamp > timestamp_audio)) {
+				//blog(LOG_INFO, "a");//udio_frame";
+				timestamp_audio = audio_frame2.timestamp;
+				ndi_source_thread_process_audio2(
+					&config_most_recent, &audio_frame2,
+					obs_source, &obs_audio_frame);
+			}
+			ndiLib->framesync_free_audio(ndi_frame_sync,
+						     &audio_frame2);
 
-		//
-		// VIDEO
-		//
-		video_frame2 = {};
-		ndiLib->framesync_capture_video(
-			ndi_frame_sync, &video_frame2,
-			NDIlib_frame_format_type_progressive);
-		if (video_frame2.p_data &&
-		    (video_frame2.timestamp > timestamp_video)) {
-			//blog(LOG_INFO, "v");//ideo_frame";
-			timestamp_video = video_frame2.timestamp;
-			ndi_source_thread_process_video2(&config_most_recent,
-							 &video_frame2,
-							 obs_source,
-							 &obs_video_frame);
-		}
-		ndiLib->framesync_free_video(ndi_frame_sync, &video_frame2);
+			//
+			// VIDEO
+			//
+			video_frame2 = {};
+			ndiLib->framesync_capture_video(
+				ndi_frame_sync, &video_frame2,
+				NDIlib_frame_format_type_progressive);
+			if (video_frame2.p_data &&
+			    (video_frame2.timestamp > timestamp_video)) {
+				//blog(LOG_INFO, "v");//ideo_frame";
+				timestamp_video = video_frame2.timestamp;
+				ndi_source_thread_process_video2(
+					&config_most_recent, &video_frame2,
+					obs_source, &obs_video_frame);
+			}
+			ndiLib->framesync_free_video(ndi_frame_sync,
+						     &video_frame2);
 
-		// TODO: More accurate sleep that subtracts the duration of this loop iteration?
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-#else
-		frame_received =
-			ndiLib->recv_capture_v3(ndi_receiver, &video_frame2,
-						&audio_frame3, nullptr, 100);
+			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
+			std::this_thread::sleep_for(
+				std::chrono::milliseconds(5));
+		} else {
+			frame_received = ndiLib->recv_capture_v3(ndi_receiver,
+								 &video_frame2,
+								 &audio_frame3,
+								 nullptr, 100);
 
-		if (frame_received == NDIlib_frame_type_audio) {
-			ndi_source_thread_process_audio3(&config_most_recent,
-							 &audio_frame3,
-							 obs_source,
-							 &obs_audio_frame);
-			ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame3);
-			continue;
-		}
+			if (frame_received == NDIlib_frame_type_audio) {
+				ndi_source_thread_process_audio3(
+					&config_most_recent, &audio_frame3,
+					obs_source, &obs_audio_frame);
+				ndiLib->recv_free_audio_v3(ndi_receiver,
+							   &audio_frame3);
+				continue;
+			}
 
-		if (frame_received == NDIlib_frame_type_video) {
-			ndi_source_thread_process_video2(&config_most_recent,
-							 &video_frame2,
-							 obs_source,
-							 &obs_video_frame);
-			ndiLib->recv_free_video_v2(ndi_receiver, &video_frame2);
-			continue;
+			if (frame_received == NDIlib_frame_type_video) {
+				ndi_source_thread_process_video2(
+					&config_most_recent, &video_frame2,
+					obs_source, &obs_video_frame);
+				ndiLib->recv_free_video_v2(ndi_receiver,
+							   &video_frame2);
+				continue;
+			}
 		}
-#endif
 	}
 
-#if NDI_FRAMESYNC
 	if (ndi_frame_sync) {
 		ndiLib->framesync_destroy(ndi_frame_sync);
 		ndi_frame_sync = nullptr;
 	}
-#endif
 
 	if (ndi_receiver) {
 		ndiLib->recv_destroy(ndi_receiver);
 		ndi_receiver = nullptr;
 	}
-
-#if NDI_FRAMESYNC
-	if (audio_frame_interleaved_32f.p_data) {
-		delete[] audio_frame_interleaved_32f.p_data;
-		audio_frame_interleaved_32f.p_data = nullptr;
-	}
-#endif
 
 	blog(LOG_INFO, "[obs-ndi] -ndi_source_thread('%s'...)",
 	     obs_source_ndi_receiver_name);
@@ -710,21 +725,14 @@ void *ndi_source_thread(void *data)
 	return nullptr;
 }
 
-#if NDI_FRAMESYNC
-
-void ndi_source_thread_process_audio2(
-	ndi_source_config_t *config, NDIlib_audio_frame_v2_t *ndi_audio_frame2,
-	NDIlib_audio_frame_interleaved_32f_t *, //audio_frame_interleaved_32f,
-	size_t *audio_buffer_size, obs_source_t *obs_source,
-	obs_source_audio *obs_audio_frame)
+void ndi_source_thread_process_audio2(ndi_source_config_t *config,
+				      NDIlib_audio_frame_v2_t *ndi_audio_frame2,
+				      obs_source_t *obs_source,
+				      obs_source_audio *obs_audio_frame)
 {
 	if (!config->audio_enabled) {
 		return;
 	}
-
-	size_t this_audio_buffer_size = ndi_audio_frame2->no_samples *
-					ndi_audio_frame2->no_channels *
-					sizeof(float);
 
 	const int channelCount = ndi_audio_frame2->no_channels > 8
 					 ? 8
@@ -755,8 +763,6 @@ void ndi_source_thread_process_audio2(
 
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
-
-#else
 
 void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
@@ -796,8 +802,6 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
-
-#endif
 
 void ndi_source_thread_process_video2(ndi_source_config_t *config,
 				      NDIlib_video_frame_v2_t *ndi_video_frame,
@@ -901,6 +905,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_data_set_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
+
+	config.framesync_enabled = obs_data_get_bool(settings, PROP_FRAMESYNC);
 
 	config.hw_accel_enabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
 
