@@ -22,10 +22,15 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "../plugin-main.h"
 #include "../preview-output.h"
 
+#include <QString>
+
 OutputSettings::OutputSettings(QWidget *parent)
 	: QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+	setWindowTitle(
+		QString("%1 %2 - %2")
+			.arg(PLUGIN_NAME, PLUGIN_VERSION, windowTitle()));
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
