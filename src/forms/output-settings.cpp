@@ -29,7 +29,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 {
 	ui->setupUi(this);
 	setWindowTitle(
-		QString("%1 %2 - %2")
+		QString("%1 %2 - %3")
 			.arg(PLUGIN_NAME, PLUGIN_VERSION, windowTitle()));
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
