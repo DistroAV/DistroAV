@@ -20,6 +20,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define OBSNDI_H
 
 #include "plugin-support.h"
+#include "Config.h"
 
 #include <Processing.NDI.Lib.h>
 
@@ -28,6 +29,11 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 void main_output_start(const char *output_name);
 void main_output_stop();
 bool main_output_is_running();
+
+struct Config;
+typedef std::shared_ptr<Config> ConfigPtr;
+
+ConfigPtr GetConfig();
 
 extern const NDIlib_v4 *ndiLib;
 
