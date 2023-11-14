@@ -93,6 +93,42 @@ Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
 
 ## Building
 
+### Linux
+NOTE: Only Debian and Ubuntu are officially supported
+
+In terminal:
+```
+git clone https://github.com/obs-ndi/obs-ndi.git
+cd obs-ndi
+.github/scripts/build-linux
+...
+.github/scripts/package-linux
+...
+sudo cp -r release/obs-plugins/64bit/* /usr/local/lib/x86_64-linux-gnu/obs-plugins/
+...
+sudo cp -r release/data/obs-plugins/* /usr/local/share/obs/obs-plugins/
+...
+sudo ldconfig
+```
+Subsequent builds can be sped up by using `build-linux --skip-deps`.  
+See `build-linux --help` for more details.
+
+### MacOS
+In terminal:
+```
+git clone https://github.com/obs-ndi/obs-ndi.git
+cd obs-ndi
+.github/scripts/build-macos
+...
+.github/scripts/package-macos
+...
+cp -r release/obs-ndi.plugin ~/Library/Application\ Support/obs-studio/plugins/
+...
+```
+
+Subsequent builds can be sped up by using `build-macos --skip-deps`.  
+See `build-macos --help` for more details.
+
 ### Windows
 In PowerShell Core 7+ terminal:
 ```
@@ -120,42 +156,6 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 -->
 
-### Linux
-NOTE: Only Debian and Ubuntu are officially supported
-
-In terminal:
-```
-git clone https://github.com/obs-ndi/obs-ndi.git
-cd obs-ndi
-.github/scripts/build-linux
-...
-.github/scripts/package-linux
-...
-sudo cp -r release/obs-plugins/64bit/* /usr/local/lib/x86_64-linux-gnu/obs-plugins/
-...
-sudo cp -r release/data/obs-plugins/* /usr/local/share/obs/obs-plugins/
-...
-sudo ldconfig
-```
-Subsequent builds can be sped up by using `build-linux --skip-deps`.  
-See `build-linux --help` for more details.
-
-### OS X
-In terminal:
-```
-git clone https://github.com/obs-ndi/obs-ndi.git
-cd obs-ndi
-.github/scripts/build-macos
-...
-.github/scripts/package-macos
-...
-cp -r release/obs-ndi.plugin ~/Library/Application\ Support/obs-studio/plugins/
-...
-```
-
-Subsequent builds can be sped up by using `build-macos --skip-deps`.  
-See `build-macos --help` for more details.
-
 ## Formatting
 Requires [obsproject/tools/]clang-format@13, cmakelang, and zsh installed.
 
@@ -164,6 +164,15 @@ From a Linux or MacOS terminal:
 ./build-aux/run-clang-format
 ./build-aux/run-cmake-format
 ```
+<!--
+```
+...
+clang-format -i src/obs-ndi-filter.cpp
+clang-format -i src/obs-ndi-source.cpp
+clang-format -i src/plugin-main.cpp
+...
+```
+-->
 
 <!--
 # TODOs
