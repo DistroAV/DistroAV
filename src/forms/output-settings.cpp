@@ -18,7 +18,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "output-settings.h"
 
-#include "../Config.h"
 #include "../plugin-main.h"
 #include "../preview-output.h"
 
@@ -39,7 +38,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 
 void OutputSettings::onFormAccepted()
 {
-	Config *conf = Config::Current();
+	auto conf = GetConfig().get();
 
 	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	conf->OutputName = ui->mainOutputName->text();
@@ -75,7 +74,7 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	Config *conf = Config::Current();
+	Config *conf = GetConfig().get();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);

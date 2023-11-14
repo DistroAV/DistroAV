@@ -422,6 +422,8 @@ void *ndi_source_thread(void *data)
 
 	NDIlib_recv_create_v3_t *reset_recv_desc = &recv_desc;
 
+	auto plugin_config = GetConfig().get();
+
 	while (s->running) {
 		//
 		// Main NDI receiver loop
@@ -668,7 +670,9 @@ void *ndi_source_thread(void *data)
 				1024);
 			if (audio_frame2.p_data &&
 			    (audio_frame2.timestamp > timestamp_audio)) {
-				//blog(LOG_INFO, "a");//udio_frame";
+				if (plugin_config->VerboseLog) {
+					blog(LOG_INFO, "a"); //udio_frame";
+				}
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
 					&config_most_recent, &audio_frame2,
@@ -686,7 +690,9 @@ void *ndi_source_thread(void *data)
 				NDIlib_frame_format_type_progressive);
 			if (video_frame2.p_data &&
 			    (video_frame2.timestamp > timestamp_video)) {
-				//blog(LOG_INFO, "v");//ideo_frame";
+				if (plugin_config->VerboseLog) {
+					blog(LOG_INFO, "v"); //ideo_frame";
+				}
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
@@ -962,10 +968,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	config.ptz = {ptz_enabled, pan, tilt, zoom};
 
 	// Update tally status
-	Config *conf = Config::Current();
-	config.tally.on_preview = conf->TallyPreviewEnabled &&
+	auto plugin_config = GetConfig().get();
+	config.tally.on_preview = plugin_config->TallyPreviewEnabled &&
 				  obs_source_showing(obs_source);
-	config.tally.on_program = conf->TallyProgramEnabled &&
+	config.tally.on_program = plugin_config->TallyProgramEnabled &&
 				  obs_source_active(obs_source);
 
 	s->config = config;
@@ -986,7 +992,7 @@ void ndi_source_shown(void *data)
 	auto s = (ndi_source_t *)data;
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[obs-ndi] ndi_source_shown('%s'...)", name);
-	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
+	s->config.tally.on_preview = GetConfig()->TallyPreviewEnabled;
 }
 
 void ndi_source_hidden(void *data)
@@ -1002,7 +1008,7 @@ void ndi_source_activated(void *data)
 	auto s = (ndi_source_t *)data;
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[obs-ndi] ndi_source_activated('%s'...)", name);
-	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
+	s->config.tally.on_program = GetConfig()->TallyProgramEnabled;
 }
 
 void ndi_source_deactivated(void *data)
