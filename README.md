@@ -1,7 +1,9 @@
 obs-ndi
 ==============
 
-Network A/V in OBS Studio with NewTek's NDI technology.
+[![Discord Shield](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)
+
+Network Audio/Video in OBS-Studio using NDI technology.
 
 <!--
 [![Build Status](https://dev.azure.com/Palakis/obs-ndi/_apis/build/status/Palakis.obs-ndi?branchName=master)](https://dev.azure.com/Palakis/obs-ndi/_build/latest?definitionId=1&branchName=master)
@@ -15,7 +17,7 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
 
 ## Requirements
-* OBS >=28
+* OBS >= 30.0.0 (Qt6 & x64)
 * NDI 5 Runtime  
   We are not allowed to directly distribute the NDI runtime here, but you can get it from either
   [the links below](#Download_&_Install_The_NDI_5_Runtime), or installing
@@ -25,96 +27,67 @@ Network A/V in OBS Studio with NewTek's NDI technology.
 Download and install the Linux, MacOS, or Windows version at [Releases](https://github.com/obs-ndi/obs-ndi/releases).
 
 * Linux
-    1. Download [obs-ndi-4.12.0-linux-x86_64.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.12.0/obs-ndi-4.12.0-linux-x86_64.deb)
-    2. `sudo dpkg -i obs-ndi-4.12.0-linux-x86_64.deb`
+    1. Download [obs-ndi-4.13.0-x86_64-linux-gnu.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.0/obs-ndi-4.13.0-x86_64-linux-gnu.deb)
+    2. `sudo dpkg -i obs-ndi-4.13.0-x86_64-linux-gnu.deb`
     3. If this does not work then try:
     ```
-    $ sudo ln -s /usr/local/lib/obs-plugins/obs-ndi.so /usr/lib/x86_64-linux-gnu/obs-plugins/obs-ndi.so
-    $ sudo ln -s /usr/local/share/obs/obs-plugins/obs-ndi/ /usr/share/obs/obs-plugins/obs-ndi
+    sudo ln -s /usr/lib/x86_64-linux-gnu/obs-plugins/obs-ndi.so /usr/local/lib/obs-plugins/obs-ndi.so
+    sudo ln -s /usr/share/obs/obs-plugins/obs-ndi/ /usr/local/share/obs/obs-plugins/obs-ndi
     ```
+    * Flatpak and similar installs of this plugin or OBS can cause complications; please experiment and report on our Discord server any problems and preferrably solutions.
 * MacOS:
-    1. Download [obs-ndi-4.12.0-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.12.0/obs-ndi-4.12.0-macos-universal.pkg)
-    2. Run `obs-ndi-4.12.0-macos-universal.pkg`  
+    1. Download [obs-ndi-4.13.0-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.0/obs-ndi-4.13.0-macos-universal.pkg)
+    2. Run `obs-ndi-4.13.0-macos-universal.pkg`  
        If MacOS complains about the file, either:
         1. Allow it in `System Settings`->`Privacy & Security`  
           -or-
-        2. Run
-        ```
-        % sudo xattr -r -d com.apple.quarantine obs-ndi-4.12.0-macos-universal.pkg
-        ```
+        2. `sudo xattr -r -d com.apple.quarantine obs-ndi-4.13.0-macos-universal.pkg`
 * Windows:
-    1. Download [obs-ndi-4.12.0-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.12.0/obs-ndi-4.12.0-windows-x64-Installer.exe)
-    2. Run `obs-ndi-4.12.0-windows-x64-Installer.exe`
+    1. Download [obs-ndi-4.13.0-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.0/obs-ndi-4.13.0-windows-x64-Installer.exe)
+    2. Run `obs-ndi-4.13.0-windows-x64-Installer.exe`
 
 # Download & Install The NDI 5 Runtime
-* Linux - there is no redist, so you have to do something like the following (also at [./CI/libndi-get.sh](./CI/libndi-get.sh))
-```
-#!/bin/bash
-
-set -e
-
-LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v5_Linux"
-LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
-LIBNDI_INSTALLER_SHA256="7e5c54693d6aee6b6f1d6d49f48d4effd7281abd216d9ff601be2d55af12f7f5"
-
-#sudo apt-get install curl
-
-pushd /tmp
-curl -L -o $LIBNDI_INSTALLER https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER -f --retry 5
-echo "$LIBNDI_INSTALLER_SHA256 $LIBNDI_INSTALLER" | sha256sum -c
-tar -xf $LIBNDI_INSTALLER
-yes | PAGER="cat" sh $LIBNDI_INSTALLER_NAME.sh
-
-rm -rf /tmp/ndisdk
-mv "/tmp/NDI SDK for Linux" /tmp/ndisdk
-ls /tmp/ndisdk
-
-if [ $1 == "install" ]; then
-    # NOTE: This does an actual local install...
-    sudo cp -P /tmp/ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
-    sudo ldconfig
-fi
-
-popd
-```
+* Linux: [./CI/libndi-get.sh](./CI/libndi-get.sh)
 * MacOS: http://ndi.link/NDIRedistV5Apple
 * Windows: http://ndi.link/NDIRedistV5
-<!--
-* MacOS: [libNDI_5.5.3_for_Mac.pkg](https://github.com/obs-ndi/obs-ndi/raw/d462e9f83f0e06837a83331b1f71053b2132e751/runtime/libNDI_5.5.3_for_Mac.pkg)
-* Windows: [NDI 5.5.3 Runtime.exe](https://github.com/obs-ndi/obs-ndi/raw/d462e9f83f0e06837a83331b1f71053b2132e751/runtime/NDI%205.5.3%20Runtime.exe)
--->
-
         
 ## Uninstall
 Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
 
 ### Linux
-
-1. `rm -rf ~/.config/obs-studio/plugins/obs-ndi`
+1. ```
+   sudo rm /usr/lib/x86_64-linux-gnu/obs-plugins/obs-ndi.so
+   sudo rm -rf /usr/share/obs/obs-plugins/obs-ndi/
+   ```
 2. Optionally delete NDI Runtime:
-    1. ```
-       sudo rm /usr/local/lib/libndi*.*
-       sudo ldconfig
-       ```
+   ```
+   sudo rm /usr/local/lib/libndi*
+   sudo ldconfig
+   ```
 
 ### MacOS
 1. Open Finder
 2. Show hidden files with `Command-Shift-.`
-3. Delete `~/Library/Application Support/obs-studio/obs-plugins/obs-ndi.plugin`
-4. Delete `~/Library/Application Support/obs-studio/data/obs-plugins/obs-ndi/`
-5. Optionally delete NDI Tools/Runtime:
+3. Delete `~/Library/Application Support/obs-studio/plugins/obs-ndi.plugin`
+4. Optionally delete NDI Tools/Runtime:
     1. Finder->Applications: Delete all `NDI *` applications
     2. Delete `/Library/Application Support/NewTek/NDI`
-    2. Delete `/usr/local/lib/libndi.*`
+    3. Delete `/usr/local/lib/libndi*`
 
 ### Windows
-1. Add/Remove Programs
-2. Delete `%ProgramFiles%\obs-studio\obs-plugins\64-bit\obs-ndi.*`
+1. Add/Remove Programs: obs-ndi
+2. Delete `%ProgramFiles%\obs-studio\obs-plugins\64bit\obs-ndi.*`
 3. Delete `%ProgramFiles%\obs-studio\data\obs-plugins\obs-ndi\`
 4. Optionally delete NDI Tools/Runtime:
-    1. Add/Remove Programs
+    1. Add/Remove Programs:
+        1. NDI 5 Runtime
+        2. NDI 5 Tools
+        3. NDI 5 SDK
+        4. NDI 5 Advanced SDK
     2. Delete `%ProgramFiles%\NDI\NDI 5 Runtime`
     3. Delete `%ProgramFiles%\NDI\NDI 5 Tools`
+    4. Delete `%ProgramFiles%\NDI\NDI 5 SDK`
+    5. Delete `%ProgramFiles%\NDI\NDI 5 Advanced SDK`
 
 # Development
 
@@ -143,7 +116,7 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 
 <!--
 ```
-.github/scripts/Build-Windows.ps1 -SkipDeps && .github/scripts/Package-Windows.ps1 -BuildInstaller && release\obs-ndi-4.12.0-windows-x64-Installer.exe
+.github/scripts/Build-Windows.ps1 -SkipDeps && .github/scripts/Package-Windows.ps1 -BuildInstaller && release\obs-ndi-4.13.0-windows-x64-Installer.exe
 ```
 -->
 

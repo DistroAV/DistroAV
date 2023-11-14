@@ -86,8 +86,9 @@ bool obs_module_load(void)
 	blog(LOG_INFO,
 	     "[obs-ndi] obs_module_load: you can haz obs-ndi (Version %s)",
 	     PLUGIN_VERSION);
-	blog(LOG_INFO, "Qt Version: %s (runtime), %s (compiled)", qVersion(),
-	     QT_VERSION_STR);
+	blog(LOG_INFO,
+	     "[obs-ndi] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
+	     qVersion(), QT_VERSION_STR);
 
 	QMainWindow *main_window =
 		(QMainWindow *)obs_frontend_get_main_window();
@@ -97,25 +98,27 @@ bool obs_module_load(void)
 		blog(LOG_ERROR,
 		     "[obs-ndi] obs_module_load: load_ndilib() failed; Module won't load.");
 
-		const char *msg_string_name = "";
+		const char *redist_url_name = "";
 #ifdef _MSC_VER
 		// Windows
-		msg_string_name = "NDIPlugin.LibError.Message.Win";
+		redist_url_name = "NDIPlugin.RedistUrl.Win";
 #else
 #ifdef __APPLE__
-		// macOS / OS X
-		msg_string_name = "NDIPlugin.LibError.Message.macOS";
+		// MacOS
+		redist_url_name = "NDIPlugin.RedistUrl.MacOS";
 #else
 		// Linux
-		msg_string_name = "NDIPlugin.LibError.Message.Linux";
+		redist_url_name = "NDIPlugin.RedistUrl.Linux";
 #endif
 #endif
+		QString redist_url = obs_module_text(redist_url_name);
+		QString message = obs_module_text("NDIPlugin.LibError.Message");
+		message += QString("<br><a href='%1'>%1</a>").arg(redist_url);
 
 		QMessageBox::critical(
 			main_window,
-			obs_module_text("NDIPlugin.LibError.Title"),
-			obs_module_text(msg_string_name), QMessageBox::Ok,
-			QMessageBox::NoButton);
+			obs_module_text("NDIPlugin.LibError.Title"), message,
+			QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
 
