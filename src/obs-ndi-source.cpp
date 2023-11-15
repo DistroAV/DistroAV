@@ -600,17 +600,17 @@ void *ndi_source_thread(void *data)
 			config_last_used.hw_accel_enabled =
 				config_most_recent.hw_accel_enabled;
 
-			NDIlib_metadata_frame_t hwAccelMetadata;
-			hwAccelMetadata.p_data =
-				config_most_recent.hw_accel_enabled
-					? (char *)"<ndi_hwaccel enabled=\"true\"/>"
-					: (char *)"<ndi_hwaccel enabled=\"false\"/>";
-			blog(LOG_INFO,
-			     "[obs-ndi] ndi_source_thread: '%s' hw_accel_enabled changed; Sending NDI metadata '%s'",
-			     obs_source_ndi_receiver_name,
-			     hwAccelMetadata.p_data);
-			ndiLib->recv_send_metadata(ndi_receiver,
-						   &hwAccelMetadata);
+			if (config_most_recent.hw_accel_enabled) {
+				NDIlib_metadata_frame_t hwAccelMetadata;
+				hwAccelMetadata.p_data =
+					"<ndi_video_codec type=\"hardware\"/>";
+				blog(LOG_INFO,
+				     "[obs-ndi] ndi_source_thread: '%s' hw_accel_enabled changed to enabled; Sending NDI metadata '%s'",
+				     obs_source_ndi_receiver_name,
+				     hwAccelMetadata.p_data);
+				ndiLib->recv_send_metadata(ndi_receiver,
+							   &hwAccelMetadata);
+			}
 		}
 
 		if (config_most_recent.ptz.enabled) {
