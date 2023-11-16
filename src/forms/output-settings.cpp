@@ -18,22 +18,108 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "output-settings.h"
 
+#include <obs-frontend-api.h>
 #include "../plugin-main.h"
 #include "../preview-output.h"
 
-#include <QString>
+#include <QDesktopServices>
+#include <QMessageBox>
+#include <QPushButton>
+
+// Copied from OBS UI/obs-app.hpp
+inline const char *Str(const char *lookup)
+{
+	// One line tweak/override
+	// to use obs_frontend_get_locale_string
+	// instead of ((OBSApp*)App())->GetString(lookup)
+	return obs_frontend_get_locale_string(lookup);
+}
+inline QString QTStr(const char *lookupVal)
+{
+	return QString::fromUtf8(Str(lookupVal));
+}
+
+// Copied from OBS UI/qt-wrappers.cpp OBSMessageBox::question
+QMessageBox::StandardButton question(QWidget *parent, const QString &title,
+				     const QString &text,
+				     QMessageBox::StandardButtons buttons,
+				     QMessageBox::StandardButton defaultButton)
+{
+	QMessageBox mb(QMessageBox::Question, title, text,
+		       QMessageBox::NoButton, parent);
+	mb.setDefaultButton(defaultButton);
+
+	if (buttons & QMessageBox::Ok) {
+		QPushButton *button = mb.addButton(QMessageBox::Ok);
+		button->setText(QTStr("OK"));
+	}
+#define add_button(x)                                               \
+	if (buttons & QMessageBox::x) {                             \
+		QPushButton *button = mb.addButton(QMessageBox::x); \
+		button->setText(QTStr(#x));                         \
+	}
+	add_button(Open);
+	add_button(Save);
+	add_button(Cancel);
+	add_button(Close);
+	add_button(Discard);
+	add_button(Apply);
+	add_button(Reset);
+	add_button(Yes);
+	add_button(No);
+	add_button(Abort);
+	add_button(Retry);
+	add_button(Ignore);
+#undef add_button
+	return (QMessageBox::StandardButton)mb.exec();
+}
+
+// Copied from OBS UI/properties-view.cpp WidgetInfo::ButtonClicked()
+// to behave like obs-ndi-filter & obs-ndi-source
+void ButtonUrlClicked(QWidget *view, char *savedUrl)
+{
+	QUrl url(savedUrl, QUrl::StrictMode);
+	if (url.isValid() && (url.scheme().compare("http") == 0 ||
+			      url.scheme().compare("https") == 0)) {
+		QString msg(QTStr("Basic.PropertiesView.UrlButton.Text"));
+		msg += "\n\n";
+		msg += QString(QTStr("Basic.PropertiesView.UrlButton.Text.Url"))
+			       .arg(savedUrl);
+
+		QMessageBox::StandardButton button = question(
+			view->window(),
+			QString(QTStr("Basic.PropertiesView.UrlButton.OpenUrl")),
+			msg, QMessageBox::Yes | QMessageBox::No,
+			QMessageBox::No);
+
+		if (button == QMessageBox::Yes)
+			QDesktopServices::openUrl(url);
+	}
+}
 
 OutputSettings::OutputSettings(QWidget *parent)
 	: QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
-	setWindowTitle(
-		QString("%1 %2 - %3")
-			.arg(PLUGIN_NAME, PLUGIN_VERSION, windowTitle()));
+
+	auto pluginNameUpperCase = QString("%1").arg(PLUGIN_NAME).toUpper();
+
+	setWindowTitle(QString("%1 %2 - %3")
+			       .arg(pluginNameUpperCase, PLUGIN_VERSION,
+				    windowTitle()));
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
 	ui->ndiVersionLabel->setText(ndiLib->version());
+
+	ui->discordHtml->setText(
+		QString("<a href=\"%1\">%2 Discord</a>")
+			.arg(PLUGIN_DISCORD, pluginNameUpperCase));
+	ui->discordHtml->connect(
+		ui->discordHtml, &QLabel::linkActivated,
+		[this](const QString &savedUrl) {
+			ButtonUrlClicked(this, savedUrl.toUtf8().data());
+		});
 }
 
 void OutputSettings::onFormAccepted()
