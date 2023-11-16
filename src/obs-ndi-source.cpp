@@ -581,7 +581,7 @@ void *ndi_source_thread(void *data)
 			if (config_most_recent.hw_accel_enabled) {
 				NDIlib_metadata_frame_t hwAccelMetadata;
 				hwAccelMetadata.p_data =
-					"<ndi_video_codec type=\"hardware\"/>";
+					(char *)"<ndi_video_codec type=\"hardware\"/>";
 				blog(LOG_INFO,
 				     "[obs-ndi] ndi_source_thread: '%s' hw_accel_enabled changed to enabled; Sending NDI metadata '%s'",
 				     obs_source_ndi_receiver_name,
