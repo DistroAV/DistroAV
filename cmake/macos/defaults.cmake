@@ -33,7 +33,7 @@ set_property(CACHE CMAKE_OSX_DEPLOYMENT_TARGET PROPERTY STRINGS 13.0 12.0 11.0)
 # Use Applications directory as default install destination
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX
-      "$ENV{HOME}/Library/Application Support/obs-studio/plugins;~/Library/Application Support/obs-studio/plugins"
+      "~/Library/Application Support/obs-studio/plugins"
       CACHE STRING "Directory to install OBS after building" FORCE)
 endif()
 
