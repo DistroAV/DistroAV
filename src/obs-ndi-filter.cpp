@@ -24,9 +24,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
 #include <util/threading.h>
-#include <media-io/video-io.h>
-#include <media-io/video-frame.h>
-#include <media-io/audio-resampler.h>
+#include <media-io/video-io.h>        // what uses this?
+#include <media-io/video-frame.h>     // what uses this?
+#include <media-io/audio-resampler.h> // what uses this?
 #include <QString>
 
 #include "plugin-main.h"
@@ -39,8 +39,8 @@ typedef struct {
 
 	NDIlib_send_instance_t ndi_sender;
 
-	pthread_mutex_t ndi_sender_video_mutex;
-	pthread_mutex_t ndi_sender_audio_mutex;
+	pthread_mutex_t ndi_sender_video_mutex; // NULL
+	pthread_mutex_t ndi_sender_audio_mutex; // NULL
 
 	obs_video_info ovi;
 	obs_audio_info oai;
@@ -224,7 +224,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 
 	NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
-	send_desc.p_groups = nullptr;
+	send_desc.p_groups = nullptr; // TODO: support groups
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
@@ -353,11 +353,13 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	obs_get_audio_info(&f->oai);
 
 	NDIlib_audio_frame_v2_t audio_frame = {0};
+	//NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
 	audio_frame.timecode = audio_data->timestamp / 100;
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.channel_stride_in_bytes = audio_frame.no_samples * 4;
+	//audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
 	const size_t data_size =
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
@@ -387,9 +389,11 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	}
 
 	audio_frame.p_data = (float *)f->audio_conv_buffer;
+	//audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	ndiLib->send_send_audio_v2(f->ndi_sender, &audio_frame);
+	//ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	return audio_data;
@@ -400,12 +404,14 @@ obs_source_info create_ndi_filter_info()
 	obs_source_info ndi_filter_info = {};
 	ndi_filter_info.id = "ndi_filter";
 	ndi_filter_info.type = OBS_SOURCE_TYPE_FILTER;
+	// What about filters on Scenes?
 	ndi_filter_info.output_flags = OBS_SOURCE_VIDEO;
 
 	ndi_filter_info.get_name = ndi_filter_getname;
 	ndi_filter_info.get_properties = ndi_filter_getproperties;
 	ndi_filter_info.get_defaults = ndi_filter_getdefaults;
 
+	// Does this properly stop streaming if hidden and start is shown?
 	ndi_filter_info.create = ndi_filter_create;
 	ndi_filter_info.destroy = ndi_filter_destroy;
 	ndi_filter_info.update = ndi_filter_update;
@@ -424,16 +430,19 @@ obs_source_info create_ndi_audiofilter_info()
 	obs_source_info ndi_filter_info = {};
 	ndi_filter_info.id = "ndi_audiofilter";
 	ndi_filter_info.type = OBS_SOURCE_TYPE_FILTER;
+	// What about filters on Scenes?
 	ndi_filter_info.output_flags = OBS_SOURCE_AUDIO;
 
 	ndi_filter_info.get_name = ndi_audiofilter_getname;
 	ndi_filter_info.get_properties = ndi_filter_getproperties;
 	ndi_filter_info.get_defaults = ndi_filter_getdefaults;
 
+	// Does this properly stop streaming if hidden and start is shown?
 	ndi_filter_info.create = ndi_filter_create_audioonly;
 	ndi_filter_info.update = ndi_filter_update;
 	ndi_filter_info.destroy = ndi_filter_destroy_audioonly;
 
+	// Audio is available only with async sources
 	ndi_filter_info.filter_audio = ndi_filter_asyncaudio;
 
 	return ndi_filter_info;

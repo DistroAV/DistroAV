@@ -157,6 +157,7 @@ bool obs_module_load(void)
 		return false;
 	}
 
+	// BUG? There are reports this does not initialize properly
 	if (!ndiLib->initialize()) {
 		blog(LOG_ERROR,
 		     "[obs-ndi] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
@@ -169,7 +170,7 @@ bool obs_module_load(void)
 
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
-	find_desc.p_groups = NULL;
+	find_desc.p_groups = NULL; // TODO: support groups here?
 	ndi_finder = ndiLib->find_create_v2(&find_desc);
 
 	ndi_source_info = create_ndi_source_info();
@@ -207,6 +208,12 @@ bool obs_module_load(void)
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
+		// TODO: Where is the code that handles sources/filters showing or hiding?
+		//	When a source shows, start it
+		//  When a source hides, stop it
+		//	When a filter shows, start it
+		//  When a filter hides, stop it
+
 		obs_frontend_add_event_callback(
 			[](enum obs_frontend_event event, void *) {
 				if (event ==
@@ -240,6 +247,8 @@ bool obs_module_load(void)
 void obs_module_post_load(void)
 {
 	blog(LOG_INFO, "[obs-ndi] obs_module_post_load: ...");
+	// TODO:(pv) What would be good to do immediately after loading?
+	//	...
 }
 
 void obs_module_unload(void)
@@ -259,6 +268,7 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
+	// Destroy the config manager
 	_config.reset();
 
 	blog(LOG_INFO, "[obs-ndi] obs_module_unload: goodbye !");

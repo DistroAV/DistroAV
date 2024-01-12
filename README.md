@@ -1,10 +1,36 @@
+TODO before 5.0.0
+0. Fix installer!
+    Get signed
+    Also provide .zip
+    Also provide flatpak
+        https://github.com/obs-ndi/obs-ndi/issues/724#issuecomment-1808136817
+    Get linux .deb installing to right location
+    Get Elgato NDI addon detecting obs-ndi
+0. Fix obs-ndi-source
+    Split into separate video and audio threads
+    Have separate A+B ndi & obs buffers as members of struct
+    Move audio buffer to member of struct
+1. put NDIlib_find_instance_t ndi_finder = nullptr; in plugin-main
+1. Fix preview-output
+2. Fix main-output
+
+Translations `master` [non-rewrite] branch to<->from `rewrite` branch:
+| =non-rewrite= | =rewrite= | =note= |
+| preview-output? | aux-output | |
+| config | config | |
+| ? | input-utils | |
+| obs-ndi-source | input | |
+| plugin-main | obs-ndi | |
+| | output-manager | |
+| obs-ndi-output | output | |
+| main-output | ? | |
+| obs-ndi-filter | ? | |
+
 obs-ndi
 ==============
 ### Discord
 [![Discord Shield](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)
 (English Speaking)
-
-Network Audio/Video in OBS-Studio using NDI technology.
 
 <!--
 [![Build Status](https://dev.azure.com/Palakis/obs-ndi/_apis/build/status/Palakis.obs-ndi?branchName=master)](https://dev.azure.com/Palakis/obs-ndi/_build/latest?definitionId=1&branchName=master)
@@ -13,6 +39,7 @@ Network Audio/Video in OBS-Studio using NDI technology.
 -->
 
 ## Features
+Network Audio/Video in OBS-Studio using NDI technology.
 - **NDI Source** : receive NDI video and audio in OBS
 - **NDI Output** : transmit OBS video and audio to NDI
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
@@ -21,8 +48,8 @@ Network Audio/Video in OBS-Studio using NDI technology.
 * OBS >= 30.0.0 (Qt6 & x64)
 * NDI 5 Runtime  
   We are not allowed to directly distribute the NDI runtime here, but you can get it from either
-  [the links below](#download--install-the-ndi-5-runtime), or installing
-  [NDI Tools](https://ndi.video/tools/), or the [NDI SDK](https://ndi.video/download-ndi-sdk/).
+  [the links below](#ndi-runtime), or installing [NDI Tools](https://ndi.video/tools/), or the
+  [NDI SDK](https://ndi.video/download-ndi-sdk/).
 
 # Install
 
@@ -53,7 +80,6 @@ Firewall rules taken from https://ndi.tv/tools/education/networking/best-practic
 
 ## Install OBS-NDI
 Download and install the Linux, MacOS, or Windows version at [Releases](https://github.com/obs-ndi/obs-ndi/releases).
-
 * Linux
     * Debian:
       1. Download [obs-ndi-4.14.0-x86_64-linux-gnu.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.14.0/obs-ndi-4.14.0-x86_64-linux-gnu.deb)
@@ -96,6 +122,8 @@ Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
    sudo rm /usr/local/lib/libndi*
    sudo ldconfig
    ```
+#### Flatpak
+TBD...
 
 #### Flatpak
 WIP...
@@ -144,6 +172,7 @@ Either:
 obs[64.exe] --obs-ndi-verbose --verbose
 ```
 
+
 # Development
 
 ## Building
@@ -168,6 +197,8 @@ sudo ldconfig
 Subsequent builds can be sped up by using `build-linux --skip-deps`.  
 See `build-linux --help` for more details.
 
+... linux package installer...
+
 ### MacOS
 In terminal:
 ```
@@ -183,6 +214,8 @@ cp -r release/obs-ndi.plugin ~/Library/Application\ Support/obs-studio/plugins/
 
 Subsequent builds can be sped up by using `build-macos --skip-deps`.  
 See `build-macos --help` for more details.
+
+... MacOS package installer...
 
 ### Windows
 In PowerShell Core 7+ terminal:
@@ -232,6 +265,7 @@ Requires [obsproject/tools/]clang-format@13, cmakelang, and zsh installed.
 
 Open a terminal:
 ```
+cd .../obs-ndi
 ./build-aux/run-clang-format
 ./build-aux/run-cmake-format
 ```
@@ -240,6 +274,7 @@ Open a terminal:
 
 Open a WSL Ubuntu terminal:
 ```
+cd .../obs-ndi
 ...
 clang-format-16 -i src/obs-ndi-filter.cpp
 clang-format-16 -i src/obs-ndi-source.cpp
@@ -323,6 +358,8 @@ To mitigate this:
 # TODOs
 - [ ] Generate readme from config file and set version number for install links.
   Similar to how https://github.com/cloudposse/build-harness does theirs.
+    https://github.com/cloudposse/build-harness/blob/master/README.yaml
+    https://github.com/cloudposse/build-harness/blob/master/.github/workflows/auto-readme.yml
 - [ ] Get build badges working again.
 - [ ] Expand usage of .github folder:
   Is supported content actually officially exhaustively documented anywhere?
@@ -333,3 +370,10 @@ To mitigate this:
 - [ ] Set up CODEOWNERS
     https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 -->
+<!--
+Idea for link variables that could be used above...
+...but markdown does not really support inline variable expansion, so this idea doesn't [yet] really work.
+-->
+[RELEASE_VERSION_LINUX]: https://github.com/obs-ndi/obs-ndi/releases/download/4.14.0/obs-ndi-4.14.0-linux-x86_64.deb
+[RELEASE_VERSION_MACOS]: https://github.com/obs-ndi/obs-ndi/releases/download/4.14.0/obs-ndi-4.14.0-macos-universal.pkg
+[RELEASE_VERSION_WINDOWS]: https://github.com/obs-ndi/obs-ndi/releases/download/4.14.0/obs-ndi-4.14.0-windows-x64-Installer.exe

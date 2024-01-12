@@ -208,6 +208,7 @@ obs_properties_t *ndi_source_getproperties(void *)
 	uint32_t nbSources = 0;
 	const NDIlib_source_t *sources =
 		ndiLib->find_get_current_sources(ndi_finder, &nbSources);
+	// BUG? There are reports this does not ever show known working NDI sources
 	for (uint32_t i = 0; i < nbSources; ++i) {
 		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
 					     sources[i].p_ndi_name);
@@ -386,6 +387,10 @@ void *ndi_source_thread(void *data)
 	config_last_used.bandwidth = PROP_BW_UNDEFINED;
 	config_last_used.latency = PROP_LATENCY_UNDEFINED;
 
+	// TODO: Compare to QtNdiMonitorCapture code...
+	//	https://github.com/NightVsKnight/QtNdiMonitorCapture/blob/main/lib/ndireceiverworker.cpp
+	// Compare to rewrite branch...
+
 	obs_source_audio obs_audio_frame = {};
 	obs_source_frame obs_video_frame = {};
 
@@ -398,6 +403,8 @@ void *ndi_source_thread(void *data)
 	NDIlib_metadata_frame_t metadata_frame;
 	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
 	NDIlib_audio_frame_v2_t audio_frame2;
+	NDIlib_audio_frame_interleaved_32f_t audio_frame_interleaved_32f;
+	size_t audio_buffer_size = 0;
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
 
@@ -585,6 +592,18 @@ void *ndi_source_thread(void *data)
 			config_last_used.hw_accel_enabled =
 				config_most_recent.hw_accel_enabled;
 
+			// TODO: TCP vs UDP
+			//	https://docs.ndi.video/docs/sdk/6.-performance-and-implementation#reliable-udp
+
+			// TODO: Other improvements?
+			//	https://docs.ndi.video/docs/sdk/6.-performance-and-implementation#receiving-video
+
+			// My USB 2.5Gbe NIC properties to test:
+			//	Receive URBs (USB Request Blocks): default = 8
+			//	NS Offload
+			//  UDP Checksum
+			//  TCP Checksum
+
 			if (config_most_recent.hw_accel_enabled) {
 				NDIlib_metadata_frame_t hwAccelMetadata;
 				hwAccelMetadata.p_data =
@@ -624,6 +643,16 @@ void *ndi_source_thread(void *data)
 					ndiLib->recv_ptz_zoom(
 						ndi_receiver,
 						config_most_recent.ptz.zoom);
+					// TODO:
+					//ndiLib->recv_ptz_auto_focus
+					//ndiLib->recv_ptz_exposure_*
+					//ndiLib->recv_ptz_pan_tilt_speed
+					//ndiLib->recv_ptz_store_preset
+					//ndiLib->recv_ptz_recall_preset
+					//ndiLib->recv_ptz_white_balance_*
+					//ndiLib->recv_ptz_pan_tilt_speed
+					//ndiLib->recv_ptz_zoom_speed
+					//ndiLib->recv_ptz_focus_speed
 				}
 			}
 		}
@@ -644,19 +673,24 @@ void *ndi_source_thread(void *data)
 		}
 
 		if (ndi_frame_sync) {
+			//blog(LOG_INFO, ".");
+
 			//
 			// AUDIO
 			//
 			audio_frame2 = {};
+			//qDebug() << "pNdi->framesync_capture_audio";
 			ndiLib->framesync_capture_audio(
 				ndi_frame_sync, &audio_frame2,
 				0, // "Your desired sample rate. 0 for “use source”."
 				0, // "Your desired channel count. 0 for “use source”."
 				1024);
+			//qDebug() << "audio_frame.p_data=" << audio_frame.p_data;
 			if (audio_frame2.p_data &&
 			    (audio_frame2.timestamp > timestamp_audio)) {
 				if (plugin_config->VerboseLog) {
 					blog(LOG_INFO, "a"); //udio_frame";
+					// TODO: report a few more one-time details about the audio frame
 				}
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
@@ -670,13 +704,16 @@ void *ndi_source_thread(void *data)
 			// VIDEO
 			//
 			video_frame2 = {};
+			//qDebug() << "pNdi->framesync_capture_video";
 			ndiLib->framesync_capture_video(
 				ndi_frame_sync, &video_frame2,
 				NDIlib_frame_format_type_progressive);
+			//qDebug() << "video_frame.p_data=" << video_frame.p_data;
 			if (video_frame2.p_data &&
 			    (video_frame2.timestamp > timestamp_video)) {
 				if (plugin_config->VerboseLog) {
 					blog(LOG_INFO, "v"); //ideo_frame";
+					// TODO: report a few more one-time details about the video frame
 				}
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
@@ -685,6 +722,47 @@ void *ndi_source_thread(void *data)
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync,
 						     &video_frame2);
+
+			/*
+			//
+			// METADATA RECV
+			//
+			switch (ndiLib->recv_capture_v2(ndi_receiver, nullptr, nullptr,
+							&metadata_frame, 0)) {
+			case NDIlib_frame_type_e::NDIlib_frame_type_metadata: {
+				//qDebug() << "m";//"etadata_frame";
+				blog(LOG_INFO, "m");//"etadata_frame";
+				auto metadata =
+					QString::fromUtf8(metadata_frame.p_data);
+				ndiLib->recv_free_metadata(ndi_receiver,
+							&metadata_frame);
+				//qDebug() << "pNdi->recv_capture_v2 NDIlib_frame_type_metadata" << metadata;
+				//emit onMetadataReceived(metadata);
+				break;
+			}
+			case NDIlib_frame_type_e::NDIlib_frame_type_status_change:
+				//qDebug() << "pNdi->recv_capture_v2 NDIlib_frame_type_status_change";
+				break;
+			default:
+				// ignore
+				break;
+			}
+			*/
+
+			/*
+			//
+			// METADATA SEND
+			//
+			if (!m_listMetadatasToSend.isEmpty())
+			{
+				metadataSend = m_listMetadatasToSend.takeFirst();
+				NDIlib_metadata_frame_t metadata_frame;
+				auto utf8 = metadataSend.toUtf8();
+				metadata_frame.p_data = (char*)utf8.constData();
+				qDebug() << "pNdi->recv_send_metadata" << metadataSend;
+				pNdi->recv_send_metadata(pNdiRecv, &metadata_frame);
+			}
+			*/
 
 			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
 			std::this_thread::sleep_for(
@@ -698,6 +776,7 @@ void *ndi_source_thread(void *data)
 			if (frame_received == NDIlib_frame_type_audio) {
 				if (plugin_config->VerboseLog) {
 					blog(LOG_INFO, "a"); //udio_frame";
+					// TODO: report a few more one-time details about the audio frame
 				}
 				ndi_source_thread_process_audio3(
 					&config_most_recent, &audio_frame3,
@@ -710,6 +789,7 @@ void *ndi_source_thread(void *data)
 			if (frame_received == NDIlib_frame_type_video) {
 				if (plugin_config->VerboseLog) {
 					blog(LOG_INFO, "v"); //ideo_frame";
+					// TODO: report a few more one-time details about the video frame
 				}
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
@@ -731,6 +811,11 @@ void *ndi_source_thread(void *data)
 		ndi_receiver = nullptr;
 	}
 
+	if (audio_frame_interleaved_32f.p_data) {
+		delete[] audio_frame_interleaved_32f.p_data;
+		audio_frame_interleaved_32f.p_data = nullptr;
+	}
+
 	blog(LOG_INFO, "[obs-ndi] -ndi_source_thread('%s'...)",
 	     obs_source_ndi_receiver_name);
 
@@ -745,6 +830,24 @@ void ndi_source_thread_process_audio2(ndi_source_config_t *config,
 	if (!config->audio_enabled) {
 		return;
 	}
+
+	/*
+	size_t this_audio_buffer_size = ndi_audio_frame2->no_samples *
+					ndi_audio_frame2->no_channels *
+					sizeof(float);
+
+	if (*audio_buffer_size < this_audio_buffer_size) {
+		//qDebug() << "growing pA32f->p_data from" << *audio_buffer_size << "to" << this_audio_buffer_size << "bytes";
+		*audio_buffer_size = this_audio_buffer_size;
+		if (audio_frame_interleaved_32f3->p_data) {
+			delete[] audio_frame_interleaved_32f3->p_data;
+		}
+		audio_frame_interleaved_32f3->p_data =
+			new float[this_audio_buffer_size];
+	}
+	ndiLib->util_audio_to_interleaved_32f_v2(ndi_audio_frame2,
+						 audio_frame_interleaved_32f3);
+	*/
 
 	const int channelCount = ndi_audio_frame2->no_channels > 8
 					 ? 8
@@ -897,6 +1000,15 @@ void ndi_source_thread_stop(ndi_source_t *s)
 	}
 }
 
+float frange(float x, float min, float max)
+{
+	if (x < min)
+		return min;
+	else if (x > max)
+		return max;
+	return x;
+}
+
 void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = (ndi_source_t *)data;
@@ -956,6 +1068,9 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
 	float zoom = (float)obs_data_get_double(settings, PROP_ZOOM);
+	// float pan = frange((float)obs_data_get_double(settings, PROP_PAN), -1.0f, 1.0f);
+	// float tilt = frange((float)obs_data_get_double(settings, PROP_TILT), -1.0f, 1.0f);
+	// float zoom = frange((float)obs_data_get_double(settings, PROP_ZOOM), 0.0f, 1.0f);
 	config.ptz = {ptz_enabled, pan, tilt, zoom};
 
 	// Update tally status
@@ -969,6 +1084,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	if (!config.ndi_source_name.isEmpty()) {
 		if (!s->running) {
+			// TODO:(pv) Eventually only if showing in any view...
 			ndi_source_thread_start(s);
 		}
 	} else {
@@ -1031,6 +1147,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
+	//signal_handler_connect(sh, "item_visible", ndi_source_visibility_changed, s);
 
 	ndi_source_update(s, settings);
 
@@ -1047,6 +1164,7 @@ void ndi_source_destroy(void *data)
 
 	signal_handler_disconnect(obs_source_get_signal_handler(s->obs_source),
 				  "rename", ndi_source_renamed, s);
+	//signal_handler_disconnect(sh, "item_visible", ndi_source_visibility_changed, s);
 
 	ndi_source_thread_stop(s);
 
@@ -1058,11 +1176,13 @@ void ndi_source_destroy(void *data)
 obs_source_info create_ndi_source_info()
 {
 	obs_source_info ndi_source_info = {};
-	ndi_source_info.id = "ndi_source";
+	ndi_source_info.id = "ndi_source"; // consider "obs-ndi-source"?
 	ndi_source_info.type = OBS_SOURCE_TYPE_INPUT;
 	ndi_source_info.output_flags = OBS_SOURCE_ASYNC_VIDEO |
 				       OBS_SOURCE_AUDIO |
 				       OBS_SOURCE_DO_NOT_DUPLICATE;
+
+	//ndi_source_info.icon_type = ??;
 
 	ndi_source_info.get_name = ndi_source_getname;
 	ndi_source_info.get_properties = ndi_source_getproperties;
@@ -1075,6 +1195,14 @@ obs_source_info create_ndi_source_info()
 	ndi_source_info.hide = ndi_source_hidden;
 	ndi_source_info.deactivate = ndi_source_deactivated;
 	ndi_source_info.destroy = ndi_source_destroy;
+
+	// Is there a spefic "enable" or "visible" function?
+	//ndi_source_info.enable = nullptr;
+
+	ndi_source_info.missing_files = nullptr;    // TODO:(pv) debug...
+	ndi_source_info.media_play_pause = nullptr; // TODO:(pv) debug...
+	ndi_source_info.media_restart = nullptr;    // TODO:(pv) debug...
+	ndi_source_info.media_stop = nullptr;       // TODO:(pv) debug...
 
 	return ndi_source_info;
 }

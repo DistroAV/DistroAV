@@ -27,6 +27,7 @@ function(set_target_properties_plugin target)
   install(
     TARGETS ${target}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    # Something right around here may be supposedly where the install dir is not correct
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/obs-plugins)
 
   if(TARGET plugin-support)

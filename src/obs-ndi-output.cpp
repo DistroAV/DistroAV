@@ -21,6 +21,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <util/threading.h>
 #include <util/profiler.h>
 #include <util/circlebuf.h>
+#include <media-io/video-frame.h>
 
 #include "plugin-main.h"
 
@@ -136,6 +137,8 @@ bool ndi_output_start(void *data)
 		return false;
 	}
 
+	// Does this properly stop streaming if hidden and start is shown?
+
 	uint32_t flags = 0;
 	video_t *video = obs_output_video(o->output);
 	audio_t *audio = obs_output_audio(o->output);
@@ -184,6 +187,7 @@ bool ndi_output_start(void *data)
 			break;
 
 		default:
+			// BUG: https://github.com/obs-ndi/obs-ndi/issues/908
 			blog(LOG_WARNING,
 			     "[obs-ndi] warning: unsupported pixel format %d",
 			     format);
@@ -191,6 +195,8 @@ bool ndi_output_start(void *data)
 			     o->ndi_name);
 			return false;
 		}
+
+		// TODO: Use A & B buffers similar to rewrite branch
 
 		o->frame_width = width;
 		o->frame_height = height;
@@ -206,7 +212,7 @@ bool ndi_output_start(void *data)
 
 	NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = o->ndi_name;
-	send_desc.p_groups = nullptr;
+	send_desc.p_groups = nullptr; // TODO: support groups
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
@@ -249,6 +255,8 @@ void ndi_output_stop(void *data, uint64_t)
 		     o->ndi_name);
 		return;
 	}
+
+	// Does this properly stop streaming if hidden and start is shown?
 
 	o->started = false;
 
@@ -323,6 +331,10 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
 
+	// "If you call this and then free the pointer, your application
+	// will most likely crash in an NDI thread"
+	// This is why the rewrite branch uses `media-io/video-frame::video_frame_copy` here
+
 	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
@@ -334,10 +346,12 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	if (!o->started || !o->audio_samplerate || !o->audio_channels)
 		return;
 
+	// Make this a member of struct
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
+	//audio_frame.timecode = frame->timestamp / 100;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
@@ -370,7 +384,9 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 
 	audio_frame.p_data = o->audio_conv_buffer;
 
+	// TODO lock a audio send mutex?
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
+	// TODO unlock a audio send mutex?
 }
 
 obs_output_info create_ndi_output_info()
