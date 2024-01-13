@@ -58,7 +58,7 @@ body:
       placeholder: "[ex: .exe, .dep, apt, brew, PPA, Flatpak, Snap, winget, ...]"
     validations:
       required: true
-  - type: markdown
+  - type: textarea
     id: install-steps
     attributes:
       label: "[Extra] Installation Steps"
@@ -77,14 +77,14 @@ body:
       placeholder: "[ex: 4.x, 5.5.3.0]"
     validations:
       required: true
-  - type: markdown
+  - type: textarea
     id: description
     attributes:
       label: Describe the bug
       description: A clear and concise description of what the bug is.
     validations:
       required: true
-  - type: markdown
+  - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce the problem
@@ -94,17 +94,17 @@ body:
         2. Click on ...
         3. Scroll down to ...
         4. See error
-  - type: markdown
+  - type: textarea
     id: expected
     attributes:
       label: Expected behavior
       description: A clear and concise description of what you expected to happen.
-  - type: markdown
+  - type: textarea
     id: screenshots
     attributes:
       label: Screenshots
       description: If applicable, paste screenshots here to help explain your problem.
-  - type: markdown
+  - type: textarea
     id: additional
     attributes:
       label: Additional context
