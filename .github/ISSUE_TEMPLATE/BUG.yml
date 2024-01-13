@@ -61,12 +61,12 @@ body:
   - type: markdown
     id: install-steps
     attributes:
-      label: [Extra] Installation Steps
+      label: "[Extra] Installation Steps"
       description: "Any noteworthy [extra] installation steps that you performed."
   - type: input
     id: obs-log
     attributes:
-      label: OBS Log [URL]
+      label: "OBS Log [URL]"
       description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here. Or you could just paste the whole log here."
       placeholder: "[ex: https://obsproject.com/logs/xp0aosczLhVjs...]"
   - type: input
