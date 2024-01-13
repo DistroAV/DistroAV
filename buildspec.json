@@ -13,12 +13,12 @@
             "5. Update libobs.patch following the instructions in ./cmake/common/buildspec_common.cmake ~ line 76-91"
         ],
         "obs-studio": {
-            "version": "30.0.0",
+            "version": "30.0.2",
             "baseUrl": "https://github.com/obsproject/obs-studio/archive/refs/tags",
             "label": "OBS sources",
             "hashes": {
-                "macos": "c23dd463862b1a8f40365d84fd52105d7eafc3614fb3d470b695ba28a6e4da06",
-                "windows-x64": "2bfdadf5f46ba56276d588b77653a10b9e2b2e3c05d8029b27a25b8ada9ab474"
+                "macos": "be12c3ad0a85713750d8325e4b1db75086223402d7080d0e3c2833d7c5e83c27",
+                "windows-x64": "970058c49322cfa9cd6d620abb393fed89743ba7e74bd9dbb6ebe0ea8141d9c7"
             }
         },
         "prebuilt": {
@@ -49,6 +49,7 @@
         }
     },
     "name": "obs-ndi",
+    "displayName": "OBS-NDI",
     "version": "4.14.0",
     "website": "https://obsproject.com/forum/resources/obs-ndi-newtek-ndi%E2%84%A2-integration-into-obs-studio.528/",
     "author": "Stéphane Lepin",
