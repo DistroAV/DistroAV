@@ -94,7 +94,8 @@ obs_properties_t *ndi_filter_getproperties(void *)
 		});
 
 	auto ndi_website = obs_module_text("NDIPlugin.NDIWebsite");
-	auto ndi_website_button = obs_properties_add_button(props, "ndi_website", ndi_website, nullptr);
+	auto ndi_website_button = obs_properties_add_button(
+		props, "ndi_website", ndi_website, nullptr);
 	obs_property_button_set_type(ndi_website_button, OBS_BUTTON_URL);
 	obs_property_button_set_url(ndi_website_button, (char *)ndi_website);
 

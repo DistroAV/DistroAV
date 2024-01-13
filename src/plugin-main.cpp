@@ -103,13 +103,18 @@ bool obs_module_load(void)
 	QMainWindow *main_window =
 		static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+	// This code is not unreachable; I have seen logs showing QT_VERSION < 6.0.0
+#endif
 	if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) {
 		QString message =
 			QString(obs_module_text(
 					"NDIPlugin.QtVersionError.Message"))
 				.arg(PLUGIN_NAME, PLUGIN_VERSION, qVersion());
 
-		blog(LOG_ERROR, "[obs-ndi] obs_module_load: %0",
+		blog(LOG_ERROR, "[obs-ndi] obs_module_load: %s",
 		     message.toUtf8().constData());
 
 		QMessageBox::critical(
@@ -118,6 +123,9 @@ bool obs_module_load(void)
 			message, QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 	ndiLib = load_ndilib();
 	if (!ndiLib) {
