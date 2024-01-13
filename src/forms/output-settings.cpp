@@ -98,7 +98,8 @@ void ButtonUrlClicked(QWidget *view, char *savedUrl)
 }
 
 OutputSettings::OutputSettings(QWidget *parent)
-	: QDialog(parent), ui(new Ui::OutputSettings)
+	: QDialog(parent),
+	  ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
 

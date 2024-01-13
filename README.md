@@ -162,22 +162,33 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 -->
 
 ## Formatting
-Requires [obsproject/tools/]clang-format@13, cmakelang, and zsh installed.
+Requires [obsproject/tools/]clang-format@16, cmakelang, and zsh installed.
+From https://brew.sh/ ...
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+...then follow the instructions printed out at the end of install.
 
-From a Linux or MacOS terminal:
+From .github\actions\run-clang-format\action.yaml...
+```
+brew install --quiet obsproject/tools/clang-format@16
+```
+...then follow the instructions printed out at the end of install.zub
+
+### Linux & MacOS
 ```
 ./build-aux/run-clang-format
 ./build-aux/run-cmake-format
 ```
-<!--
+
+### Windows (WSL)
 ```
 ...
-clang-format -i src/obs-ndi-filter.cpp
-clang-format -i src/obs-ndi-source.cpp
-clang-format -i src/plugin-main.cpp
+clang-format-16 -i src/obs-ndi-filter.cpp
+clang-format-16 -i src/obs-ndi-source.cpp
+clang-format-16 -i src/plugin-main.cpp
 ...
 ```
--->
 
 <!--
 # TODOs

@@ -103,8 +103,9 @@ void preview_output_start(const char *output_name)
 	aoi.samples_per_sec = mainAOI->samples_per_sec;
 	aoi.speakers = mainAOI->speakers;
 	aoi.input_callback = [](void *, uint64_t, uint64_t, uint64_t *,
-				uint32_t,
-				struct audio_output_data *) { return false; };
+				uint32_t, struct audio_output_data *) {
+		return false;
+	};
 	aoi.input_param = nullptr;
 
 	audio_output_open(&context.dummy_audio_queue, &aoi);
