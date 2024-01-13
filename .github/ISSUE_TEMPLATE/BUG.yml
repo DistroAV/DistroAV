@@ -62,7 +62,7 @@ body:
     id: install-steps
     attributes:
       label: [Extra] Installation Steps
-      description: Any noteworthy [extra] installation steps that you performed.
+      description: "Any noteworthy [extra] installation steps that you performed."
   - type: input
     id: obs-log
     attributes:
