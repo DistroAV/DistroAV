@@ -472,7 +472,7 @@ void *ndi_source_thread(void *data)
 			config_last_used.latency = config_most_recent.latency;
 
 			reset_recv_desc = &recv_desc;
-			if (config_most_recent.latency == PROP_LATENCY_NORMAL)
+			if (config_most_recent.latency == PROP_LATENCY_NORMAL || config_most_recent.latency == PROP_LATENCY_LOW)
 				recv_desc.color_format =
 					NDIlib_recv_color_format_UYVY_BGRA;
 			else
