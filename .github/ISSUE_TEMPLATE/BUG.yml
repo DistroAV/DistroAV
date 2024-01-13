@@ -67,7 +67,7 @@ body:
     id: obs-log
     attributes:
       label: "OBS Log [URL]"
-      description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here. Or you could just paste the whole log here."
+      description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here."
       placeholder: "[ex: https://obsproject.com/logs/xp0aosczLhVjs...]"
   - type: input
     id: ndi-version
