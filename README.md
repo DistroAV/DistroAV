@@ -2,6 +2,7 @@ obs-ndi
 ==============
 
 [![Discord Shield](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)
+(English Speaking)
 
 Network Audio/Video in OBS-Studio using NDI technology.
 

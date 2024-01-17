@@ -112,7 +112,7 @@ bool obs_module_load(void)
 		QString message =
 			QString(obs_module_text(
 					"NDIPlugin.QtVersionError.Message"))
-				.arg(PLUGIN_NAME, PLUGIN_VERSION, qVersion());
+				.arg(PLUGIN_NAME, PLUGIN_VERSION, "Qt6", qVersion());
 
 		blog(LOG_ERROR, "[obs-ndi] obs_module_load: %s",
 		     message.toUtf8().constData());

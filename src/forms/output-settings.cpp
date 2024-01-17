@@ -34,6 +34,7 @@ inline const char *Str(const char *lookup)
 	// instead of ((OBSApp*)App())->GetString(lookup)
 	return obs_frontend_get_locale_string(lookup);
 }
+
 inline QString QTStr(const char *lookupVal)
 {
 	return QString::fromUtf8(Str(lookupVal));
