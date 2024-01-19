@@ -1,36 +1,10 @@
-TODO before 5.0.0
-0. Fix installer!
-    Get signed
-    Also provide .zip
-    Also provide flatpak
-        https://github.com/obs-ndi/obs-ndi/issues/724#issuecomment-1808136817
-    Get linux .deb installing to right location
-    Get Elgato NDI addon detecting obs-ndi
-0. Fix obs-ndi-source
-    Split into separate video and audio threads
-    Have separate A+B ndi & obs buffers as members of struct
-    Move audio buffer to member of struct
-1. put NDIlib_find_instance_t ndi_finder = nullptr; in plugin-main
-1. Fix preview-output
-2. Fix main-output
-
-Translations `master` [non-rewrite] branch to<->from `rewrite` branch:
-| =non-rewrite= | =rewrite= | =note= |
-| preview-output? | aux-output | |
-| config | config | |
-| ? | input-utils | |
-| obs-ndi-source | input | |
-| plugin-main | obs-ndi | |
-| | output-manager | |
-| obs-ndi-output | output | |
-| main-output | ? | |
-| obs-ndi-filter | ? | |
-
 obs-ndi
 ==============
 ### Discord
 [![Discord Shield](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)
 (English Speaking)
+
+Network Audio/Video in OBS-Studio using NDI technology.
 
 <!--
 [![Build Status](https://dev.azure.com/Palakis/obs-ndi/_apis/build/status/Palakis.obs-ndi?branchName=master)](https://dev.azure.com/Palakis/obs-ndi/_build/latest?definitionId=1&branchName=master)
@@ -39,7 +13,6 @@ obs-ndi
 -->
 
 ## Features
-Network Audio/Video in OBS-Studio using NDI technology.
 - **NDI Source** : receive NDI video and audio in OBS
 - **NDI Output** : transmit OBS video and audio to NDI
 - **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
@@ -48,8 +21,8 @@ Network Audio/Video in OBS-Studio using NDI technology.
 * OBS >= 30.0.0 (Qt6 & x64)
 * NDI 5 Runtime  
   We are not allowed to directly distribute the NDI runtime here, but you can get it from either
-  [the links below](#ndi-runtime), or installing [NDI Tools](https://ndi.video/tools/), or the
-  [NDI SDK](https://ndi.video/download-ndi-sdk/).
+  [the links below](#download--install-the-ndi-5-runtime), or installing
+  [NDI Tools](https://ndi.video/tools/), or the [NDI SDK](https://ndi.video/download-ndi-sdk/).
 
 # Install
 
@@ -122,8 +95,6 @@ Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
    sudo rm /usr/local/lib/libndi*
    sudo ldconfig
    ```
-#### Flatpak
-TBD...
 
 #### Flatpak
 WIP...
