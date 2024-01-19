@@ -25,11 +25,11 @@ echo
 
 popd
 
-if [ "$1" == "install" ]; then
+#if [ "$1" == "install" ]; then
     sudo cp -P /tmp/ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
     sudo ldconfig
 
     echo "libndi installed to /usr/local/lib"
     ls -la /usr/local/lib/libndi*
     echo
-fi
+#fi
