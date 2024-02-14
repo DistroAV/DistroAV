@@ -27,8 +27,8 @@ Network Audio/Video in OBS-Studio using NDI technology.
 Download and install the Linux, MacOS, or Windows version at [Releases](https://github.com/obs-ndi/obs-ndi/releases).
 
 * Linux
-    1. Download [obs-ndi-4.13.0-x86_64-linux-gnu.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.0/obs-ndi-4.13.0-x86_64-linux-gnu.deb)
-    2. `sudo dpkg -i obs-ndi-4.13.0-x86_64-linux-gnu.deb`
+    1. Download [obs-ndi-4.13.1-x86_64-linux-gnu.deb](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.1/obs-ndi-4.13.1-x86_64-linux-gnu.deb)
+    2. `sudo dpkg -i obs-ndi-4.13.1-x86_64-linux-gnu.deb`
     3. If this does not work then try:
     ```
     sudo ln -s /usr/lib/x86_64-linux-gnu/obs-plugins/obs-ndi.so /usr/local/lib/obs-plugins/obs-ndi.so
@@ -36,15 +36,15 @@ Download and install the Linux, MacOS, or Windows version at [Releases](https://
     ```
     * Flatpak and similar installs of this plugin or OBS can cause complications; please experiment and report on our Discord server any problems and preferrably solutions.
 * MacOS:
-    1. Download [obs-ndi-4.13.0-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.0/obs-ndi-4.13.0-macos-universal.pkg)
-    2. Run `obs-ndi-4.13.0-macos-universal.pkg`  
+    1. Download [obs-ndi-4.13.1-macos-universal.pkg](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.1/obs-ndi-4.13.1-macos-universal.pkg)
+    2. Run `obs-ndi-4.13.1-macos-universal.pkg`  
        If MacOS complains about the file, either:
         1. Allow it in `System Settings`->`Privacy & Security`  
           -or-
-        2. `sudo xattr -r -d com.apple.quarantine obs-ndi-4.13.0-macos-universal.pkg`
+        2. `sudo xattr -r -d com.apple.quarantine obs-ndi-4.13.1-macos-universal.pkg`
 * Windows:
-    1. Download [obs-ndi-4.13.0-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.0/obs-ndi-4.13.0-windows-x64-Installer.exe)
-    2. Run `obs-ndi-4.13.0-windows-x64-Installer.exe`
+    1. Download [obs-ndi-4.13.1-windows-x64-Installer.exe](https://github.com/obs-ndi/obs-ndi/releases/download/4.13.1/obs-ndi-4.13.1-windows-x64-Installer.exe)
+    2. Run `obs-ndi-4.13.1-windows-x64-Installer.exe`
 
 # Download & Install The NDI 5 Runtime
 * Linux: [./CI/libndi-get.sh](./CI/libndi-get.sh)
@@ -116,7 +116,7 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 
 <!--
 ```
-.github/scripts/Build-Windows.ps1 -SkipDeps && .github/scripts/Package-Windows.ps1 -BuildInstaller && release\obs-ndi-4.13.0-windows-x64-Installer.exe
+.github/scripts/Build-Windows.ps1 -SkipDeps && .github/scripts/Package-Windows.ps1 -BuildInstaller && release\obs-ndi-4.13.1-windows-x64-Installer.exe
 ```
 -->
 
