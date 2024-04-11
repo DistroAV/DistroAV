@@ -75,17 +75,29 @@ if [ "$1" == "install" ]; then
     echo
 fi
 
-echo "Clean-up : Removing temporary folder"
-rm -rf $LIBNDI_TMP
-# Confirm temporary directory was removed.
 
-# Check if the directory exists and is a directory.
-if [[ ! -d "$LIBNDI_TMP" ]]; then
-    echo "Temporary directory $LIBNDI_TMP does not exist anymore (good!)"
+
+# Allow to keep the temporary files (to use with libndi-package.sh)
+if [ "$1" == "nocleanup" ]; then
+        echo "No Clean-up requested."
+
 else
-    echo "Failed to clean-up temporary directory."
-    echo "Please clean this up manully - All should be in $LIBNDI_TMP"
-    exit 1
+
+        # Otherwise continue with Clean-up
+
+        echo "Clean-up : Removing temporary folder"
+        rm -rf $LIBNDI_TMP
+        # Confirm temporary directory was removed.
+
+        # Check if the directory exists and is a directory.
+        if [[ ! -d "$LIBNDI_TMP" ]]; then
+            echo "Temporary directory $LIBNDI_TMP does not exist anymore (good!)"
+        else
+            echo "Failed to clean-up temporary directory."
+            echo "Please clean this up manully - All should be in $LIBNDI_TMP"
+            exit 1
+        fi
+
 fi
 
 # Enjoy!
