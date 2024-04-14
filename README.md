@@ -50,7 +50,26 @@ Download and install the Linux, MacOS, or Windows version at [Releases](https://
 * Linux: [./CI/libndi-get.sh](./CI/libndi-get.sh)
 * MacOS: http://ndi.link/NDIRedistV5Apple
 * Windows: http://ndi.link/NDIRedistV5
-        
+
+# NDI Runtime for Linux
+
+# Compatibility with NDI 6
+The compatiblity of this plugin with NDI 6 is being confirmed.
+
+Early test confirms that installing the NDI 6 Tools or NDI 6 Runtime on Windows 10/11 (home), Ubuntu 22.04 and MacOS works.
+
+Download & install the NDI 6 Runtime
+* Windows: http://ndi.link/NDIRedistV6
+* Linux: Coming soon (install script need update)
+* MacOS: http://ndi.link/NDIRedistV6Apple
+
+Note on NDI 6 Runtime for MacOS:
+There is a bug in the NDI 6 Runtime for Mac installer when you never had v5 installed. The /usr/local/lib folder is set with the wrong permissions.
+To fix it you can run the following command after you installed the Runtime.
+```
+sudo chmod 755 /usr/local/lib
+```
+
 ## Uninstall
 Reference: https://obsproject.com/kb/plugins-guide#install-or-remove-plugins
 
