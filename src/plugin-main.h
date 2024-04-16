@@ -23,7 +23,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
-void main_output_start(const char *output_name);
+void main_output_start(const char *output_name, const char *output_groups);
 void main_output_stop();
 bool main_output_is_running();
 

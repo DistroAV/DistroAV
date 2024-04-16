@@ -157,7 +157,8 @@ bool obs_module_load(void)
 		conf->Load();
 
 		preview_output_init(
-			conf->PreviewOutputName.toUtf8().constData());
+			conf->PreviewOutputName.toUtf8().constData(),
+			conf->PreviewOutputGroups.toUtf8().constData());
 
 		// Ui setup
 		QAction *menu_action =
@@ -191,11 +192,17 @@ bool obs_module_load(void)
 						main_output_start(
 							conf->OutputName
 								.toUtf8()
+								.constData(),
+							conf->OutputGroups
+								.toUtf8()
 								.constData());
 					}
 					if (conf->PreviewOutputEnabled) {
 						preview_output_start(
 							conf->PreviewOutputName
+								.toUtf8()
+								.constData(),
+							conf->PreviewOutputGroups
 								.toUtf8()
 								.constData());
 					}
