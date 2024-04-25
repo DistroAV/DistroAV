@@ -157,6 +157,7 @@ void preview_output_stop()
 	obs_leave_graphics();
 
 	video_output_close(context.video_queue);
+	audio_output_close(context.dummy_audio_queue);
 
 	context.enabled = false;
 
