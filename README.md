@@ -22,7 +22,7 @@ Network Audio/Video in OBS-Studio using NDI technology
 
 ## Requirements
 * OBS >= 30.0.0 (Qt6 & x64)
-* NDI 5 Runtime  
+* NDI 6 Runtime  
   We are not allowed to directly distribute the NDI runtime here,
   but you can get it from either
   [the links below](#required-install-ndi-runtime), or installing
