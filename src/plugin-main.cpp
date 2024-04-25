@@ -275,6 +275,9 @@ const NDIlib_v4 *load_ndilib()
 					     "[obs-ndi] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 				}
 			} else {
+				blog(LOG_ERROR,
+					"[obs-ndi] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+					loaded_lib->errorString().toUtf8().constData()) ;
 				delete loaded_lib;
 				loaded_lib = nullptr;
 			}
