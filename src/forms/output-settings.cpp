@@ -23,7 +23,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "../preview-output.h"
 
 OutputSettings::OutputSettings(QWidget *parent)
-	: QDialog(parent), ui(new Ui::OutputSettings)
+	: QDialog(parent),
+	  ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
