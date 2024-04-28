@@ -305,8 +305,10 @@ const NDIlib_v4 *load_ndilib()
 				}
 			} else {
 				blog(LOG_ERROR,
-					"[obs-ndi] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
-					loaded_lib->errorString().toUtf8().constData()) ;
+				     "[obs-ndi] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+				     loaded_lib->errorString()
+					     .toUtf8()
+					     .constData());
 				delete loaded_lib;
 				loaded_lib = nullptr;
 			}
