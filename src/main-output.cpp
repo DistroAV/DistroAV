@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,8 +37,10 @@ void main_output_start(const char *output_name)
 
 	obs_data_t *settings = obs_data_create();
 	obs_data_set_string(settings, "ndi_name", output_name);
-	main_out = obs_output_create("ndi_output", "NDI Main Output", settings,
-				     nullptr);
+	main_out = obs_output_create(
+		"ndi_output",
+		obs_module_text("NDIPlugin.OutputSettings.Main.Name.Default"),
+		settings, nullptr);
 	obs_data_release(settings);
 	if (!main_out) {
 		blog(LOG_ERROR,

@@ -9,8 +9,8 @@ Network Audio/Video in OBS-Studio using NDI technology
 [Donations](https://opencollective.com/obs-ndi)
 
 ## Status
-`master`: [![master: Push](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml/badge.svg)](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml)
-`develop`: [![develop: Pull Request](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml/badge.svg?branch=develop)](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml)
+* `master`: [![master: Push](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml/badge.svg)](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml)
+* `develop`: [![develop: Pull Request](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml/badge.svg?branch=develop)](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml)
 <!--
 [![Financial Contributors on Open Collective](https://opencollective.com/obs-websocket/all/badge.svg?label=financial+contributors)](https://opencollective.com/obs-websocket)
 -->

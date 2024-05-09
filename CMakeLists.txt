@@ -35,25 +35,27 @@ if(ENABLE_QT)
 endif()
 
 # cmake-format: off
-# Add your custom source files here Header files are optional and only required for visibility.
+# Add your custom source files here.
+# Header files are optional and only used for visibility.
 # e.g. in Xcode or Visual Studio
 # cmake-format: on
 target_sources(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE src/plugin-main.cpp
-          src/plugin-main.h
-          src/obs-ndi-source.cpp
-          src/obs-ndi-output.cpp
-          src/obs-ndi-filter.cpp
-          src/premultiplied-alpha-filter.cpp
-          src/main-output.cpp
-          src/preview-output.cpp
+  PRIVATE src/forms/output-settings.cpp
+          src/forms/output-settings.h
           src/Config.cpp
-          src/forms/output-settings.cpp
-          src/main-output.h
-          src/preview-output.h
           src/Config.h
-          src/forms/output-settings.h)
+          src/main-output.cpp
+          src/main-output.h
+          src/obs-ndi-filter.cpp
+          src/obs-ndi-output.cpp
+          src/obs-ndi-source.cpp
+          src/plugin-main.cpp
+          src/plugin-main.h
+          src/premultiplied-alpha-filter.cpp
+          src/preview-output.cpp
+          src/preview-output.h
+          )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 

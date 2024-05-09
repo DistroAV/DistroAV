@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QMessageBox>
 #include <QString>
 #include <QStringList>
+#include <QVersionNumber>
 
 #include "plugin-main.h"
 #include "main-output.h"
@@ -47,12 +48,12 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 const char *obs_module_name()
 {
-	return "obs-ndi";
+	return "OBS-NDI";
 }
 
 const char *obs_module_description()
 {
-	return "NDI input/output integration for OBS Studio";
+	return obs_module_text("NDIPlugin.Description");
 }
 
 ConfigPtr _config;
@@ -103,17 +104,18 @@ bool obs_module_load(void)
 	QMainWindow *main_window =
 		static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunreachable-code"
-	// This code is not unreachable; I have seen logs showing QT_VERSION < 6.0.0
-#endif
-	if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) {
+	QVersionNumber runtimeVersionNumber =
+		QVersionNumber::fromString(qVersion());
+	//runtimeVersionNumber = QVersionNumber::fromString("5.0.0"); // for testing purposes only
+	QVersionNumber minimumRequiredVersionNumber(6, 0, 0);
+	if (QVersionNumber::compare(runtimeVersionNumber,
+				    minimumRequiredVersionNumber) < 0) {
 		QString message =
 			QString(obs_module_text(
 					"NDIPlugin.QtVersionError.Message"))
-				.arg(PLUGIN_NAME, PLUGIN_VERSION, "Qt6",
-				     qVersion());
+				.arg(PLUGIN_NAME, PLUGIN_VERSION,
+				     minimumRequiredVersionNumber.toString(),
+				     runtimeVersionNumber.toString());
 
 		blog(LOG_ERROR, "[obs-ndi] obs_module_load: %s",
 		     message.toUtf8().constData());
@@ -124,31 +126,19 @@ bool obs_module_load(void)
 			message, QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
 
 	ndiLib = load_ndilib();
+	//ndiLib = nullptr; // for testing purposes only
 	if (!ndiLib) {
 		blog(LOG_ERROR,
 		     "[obs-ndi] obs_module_load: load_ndilib() failed; Module won't load.");
 
-		const char *redist_url_name = "";
-#ifdef _MSC_VER
-		// Windows
-		redist_url_name = "NDIPlugin.RedistUrl.Win";
-#else
-#ifdef __APPLE__
-		// MacOS
-		redist_url_name = "NDIPlugin.RedistUrl.MacOS";
-#else
-		// Linux
-		redist_url_name = "NDIPlugin.RedistUrl.Linux";
-#endif
-#endif
-		QString redist_url = obs_module_text(redist_url_name);
+		QString ndilib_redist_url = QString(NDILIB_REDIST_URL);
 		QString message = obs_module_text("NDIPlugin.LibError.Message");
-		message += QString("<br><a href='%1'>%1</a>").arg(redist_url);
+		message += QString("<br><a href='%1'>%1</a>")
+				   .arg(ndilib_redist_url);
+		blog(LOG_ERROR, "obs_module_load: load_ndilib() message=%s",
+		     message.toUtf8().constData());
 
 		QMessageBox::critical(
 			main_window,

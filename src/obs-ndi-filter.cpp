@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -93,11 +93,11 @@ obs_properties_t *ndi_filter_getproperties(void *)
 			return true;
 		});
 
-	auto ndi_website = obs_module_text("NDIPlugin.NDIWebsite");
 	auto ndi_website_button = obs_properties_add_button(
-		props, "ndi_website", ndi_website, nullptr);
+		props, "ndi_website", NDI_WEB_URL, nullptr);
 	obs_property_button_set_type(ndi_website_button, OBS_BUTTON_URL);
-	obs_property_button_set_url(ndi_website_button, (char *)ndi_website);
+	obs_property_button_set_url(ndi_website_button,
+				    const_cast<char *>(NDI_WEB_URL));
 
 	return props;
 }

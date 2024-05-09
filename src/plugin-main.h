@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,6 +25,17 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <Processing.NDI.Lib.h>
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
+
+// Required per `NDI SDK License Agreement.pdf` `3 LICENSING`
+// "• Your application must provide a link to http://ndi.video ..."
+#define NDI_WEB_URL "https://ndi.video"
+
+#if !(defined(_WIN32) || defined(__APPLE__))
+// Linux
+#undef NDILIB_REDIST_URL
+#define NDILIB_REDIST_URL \
+	"https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh"
+#endif
 
 void main_output_start(const char *output_name);
 void main_output_stop();
