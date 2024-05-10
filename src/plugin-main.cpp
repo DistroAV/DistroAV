@@ -48,7 +48,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 const char *obs_module_name()
 {
-	return "OBS-NDI";
+	return PLUGIN_NAME;
 }
 
 const char *obs_module_description()
