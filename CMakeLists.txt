@@ -54,8 +54,7 @@ target_sources(
           src/plugin-main.h
           src/premultiplied-alpha-filter.cpp
           src/preview-output.cpp
-          src/preview-output.h
-          )
+          src/preview-output.h)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 
