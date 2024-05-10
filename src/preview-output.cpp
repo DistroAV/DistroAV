@@ -200,6 +200,10 @@ void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 			ctx->current_source = obs_frontend_get_current_scene();
 		}
 		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP:
+		obs_source_release(ctx->current_source);
+		ctx->current_source = nullptr;
+		break;
 	default:
 		break;
 	}
