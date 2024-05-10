@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v5_Linux"
+LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v6_Linux"
 LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
 
 # Use temporary directory
