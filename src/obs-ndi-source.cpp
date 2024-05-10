@@ -33,6 +33,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BANDWIDTH "ndi_bw_mode"
+#define PROP_BEHAVIOR "ndi_behavior"
+#define PROP_BEHAVIOR_LASTFRAME "ndi_behavior_lastframe"
 #define PROP_SYNC "ndi_sync"
 #define PROP_FRAMESYNC "ndi_framesync"
 #define PROP_HW_ACCEL "ndi_recv_hw_accel"
@@ -51,6 +53,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
 
+#define PROP_BEHAVIOR_DISCONNECT "disconnect"
+#define PROP_BEHAVIOR_KEEP "keep"
+
 // sync mode "Internal" got removed
 #define PROP_SYNC_INTERNAL 0
 #define PROP_SYNC_NDI_TIMESTAMP 1
@@ -67,6 +72,11 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
 
+enum behavior_type {
+	BEHAVIOR_DISCONNECT,
+	BEHAVIOR_KEEP,
+};
+
 extern NDIlib_find_instance_t ndi_finder;
 
 typedef struct {
@@ -80,6 +90,8 @@ typedef struct {
 	QByteArray ndi_receiver_name;
 	QByteArray ndi_source_name;
 	int bandwidth;
+	enum behavior_type behavior;
+	bool remember_last_frame;
 	int sync_mode;
 	bool framesync_enabled;
 	bool hw_accel_enabled;
@@ -89,6 +101,7 @@ typedef struct {
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
+	obs_source_frame *blank_frame;
 } ndi_source_config_t;
 
 typedef struct {
@@ -212,6 +225,22 @@ obs_properties_t *ndi_source_getproperties(void *)
 		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
 					     sources[i].p_ndi_name);
 	}
+
+	obs_property_t *p = obs_properties_add_list(
+		props, PROP_BEHAVIOR,
+		obs_module_text("NDIPlugin.SourceProps.Behavior"),
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+
+	obs_property_list_add_string(
+		p, obs_module_text("NDIPlugin.SourceProps.Behavior.Keep"),
+		PROP_BEHAVIOR_KEEP);
+	obs_property_list_add_string(
+		p, obs_module_text("NDIPlugin.SourceProps.Behavior.Disconnect"),
+		PROP_BEHAVIOR_DISCONNECT);
+
+	obs_properties_add_bool(
+		props, PROP_BEHAVIOR_LASTFRAME,
+		obs_module_text("NDIPlugin.SourceProps.BehaviorLastFrame"));
 
 	obs_property_t *bw_modes = obs_properties_add_list(
 		props, PROP_BANDWIDTH,
@@ -361,6 +390,9 @@ obs_properties_t *ndi_source_getproperties(void *)
 void ndi_source_getdefaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
+	obs_data_set_default_string(settings, PROP_BEHAVIOR,
+				    PROP_BEHAVIOR_KEEP);
+	obs_data_set_default_bool(settings, PROP_BEHAVIOR_LASTFRAME, true);
 	obs_data_set_default_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE,
@@ -479,8 +511,9 @@ void *ndi_source_thread(void *data)
 			case PROP_BW_AUDIO_ONLY:
 				recv_desc.bandwidth =
 					NDIlib_recv_bandwidth_audio_only;
-				obs_source_output_video(obs_source,
-							blank_video_frame());
+				obs_source_output_video(
+					obs_source,
+					config_most_recent.blank_frame);
 				break;
 			}
 			blog(LOG_INFO,
@@ -897,6 +930,10 @@ void ndi_source_thread_stop(ndi_source_t *s)
 	if (s->running) {
 		s->running = false;
 		pthread_join(s->av_thread, NULL);
+		if (!s->config.remember_last_frame) {
+			obs_source_output_video(s->obs_source,
+						s->config.blank_frame);
+		}
 	}
 }
 
@@ -911,6 +948,16 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	config.ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
 	config.bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
+
+	const char *behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
+	if (strcmp(behavior, PROP_BEHAVIOR_DISCONNECT) == 0) {
+		config.behavior = BEHAVIOR_DISCONNECT;
+	} else {
+		config.behavior = BEHAVIOR_KEEP;
+	}
+
+	config.remember_last_frame =
+		obs_data_get_bool(settings, PROP_BEHAVIOR_LASTFRAME);
 
 	config.sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
 	// if sync mode is set to the unsupported "Internal" mode, set it
@@ -971,7 +1018,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config = config;
 
 	if (!config.ndi_source_name.isEmpty()) {
-		if (!s->running) {
+		if (!s->running && (config.behavior == BEHAVIOR_KEEP ||
+				    obs_source_active(obs_source))) {
 			ndi_source_thread_start(s);
 		}
 	} else {
@@ -1003,6 +1051,10 @@ void ndi_source_activated(void *data)
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[obs-ndi] ndi_source_activated('%s'...)", name);
 	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
+
+	if (!s->running) {
+		ndi_source_thread_start(s);
+	}
 }
 
 void ndi_source_deactivated(void *data)
@@ -1011,6 +1063,10 @@ void ndi_source_deactivated(void *data)
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[obs-ndi] ndi_source_deactivated('%s'...)", name);
 	s->config.tally.on_program = false;
+
+	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
+		ndi_source_thread_stop(s);
+	}
 }
 
 void ndi_source_renamed(void *data, calldata_t *)
@@ -1032,6 +1088,9 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
+	// Allocate blank video frame
+	s->config.blank_frame = blank_video_frame();
+
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
 
@@ -1052,6 +1111,8 @@ void ndi_source_destroy(void *data)
 				  "rename", ndi_source_renamed, s);
 
 	ndi_source_thread_stop(s);
+
+	obs_source_frame_destroy(s->config.blank_frame);
 
 	bfree(s);
 
