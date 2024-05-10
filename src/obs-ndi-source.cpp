@@ -619,11 +619,26 @@ void *ndi_source_thread(void *data)
 				config_most_recent.hw_accel_enabled;
 
 			if (config_most_recent.hw_accel_enabled) {
+				//
+				// From https://docs.ndi.video/docs/sdk/performance-and-implementation#receiving-video :
+				// > In the modern versions of NDI, there are internal heuristics that attempt to guess whether hardware
+				// > acceleration would enable better performance. That said, it is possible to explicitly enable hardware
+				// > acceleration if you believe that it would be beneficial for your application. This can be enabled by
+				// > sending an XML metadata message to a receiver as follows:
+				// >	<ndi_video_codec type="hardware"/>
+				// The wording of this says very unambiguously "it is possible to explicitly enable hardware acceleration",
+				// but this can in reality only ever be a **REQUEST** to enable. The enable could fail, possibly for the
+				// obvious reason that the device may not have/support hardware acceleration.
+				// Furthermore, there is no documented way to request to "disable" hardware acceleration.
+				// I have tried setting the metadata to `<ndi_video_codec type=""/>` or `<ndi_video_codec/>` and it does not
+				// crash, but I was unable to confirm if this actually disabled hardware acceleration, and am skeptical that
+				// it would/could.
+				//
 				NDIlib_metadata_frame_t hwAccelMetadata;
 				hwAccelMetadata.p_data =
 					(char *)"<ndi_video_codec type=\"hardware\"/>";
 				blog(LOG_INFO,
-				     "[obs-ndi] ndi_source_thread: '%s' hw_accel_enabled changed to enabled; Sending NDI metadata '%s'",
+				     "[obs-ndi] ndi_source_thread: '%s' hw_accel_enabled changed to enabled; Sending NDI metadata '%s' to request hardware acceleration",
 				     obs_source_ndi_receiver_name,
 				     hwAccelMetadata.p_data);
 				ndiLib->recv_send_metadata(ndi_receiver,
