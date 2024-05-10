@@ -6,14 +6,13 @@ Network Audio/Video in OBS-Studio using NDI technology
 [![Discord Shield](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)  
 (English Speaking)
 
-[Donations](https://opencollective.com/obs-ndi)
+## Donate
+[![Open Collective Financial Contributors](https://opencollective.com/obs-ndi/all/badge.svg)](https://opencollective.com/obs-ndi)  
+https://opencollective.com/obs-ndi
 
 ## Status
 * `master`: [![master: Push](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml/badge.svg)](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml)
 * `develop`: [![develop: Pull Request](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml/badge.svg?branch=develop)](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml)
-<!--
-[![Financial Contributors on Open Collective](https://opencollective.com/obs-websocket/all/badge.svg?label=financial+contributors)](https://opencollective.com/obs-websocket)
--->
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
