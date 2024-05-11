@@ -18,9 +18,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "output-settings.h"
 
-#include "../Config.h"
 #include "../plugin-main.h"
 #include "../preview-output.h"
+#include "../UpdateDialog.h"
 
 OutputSettings::OutputSettings(QWidget *parent)
 	: QDialog(parent),
@@ -30,12 +30,22 @@ OutputSettings::OutputSettings(QWidget *parent)
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
+	ui->obsndiVersionLabel->setText(QString("%1 <a href=\"#\">%2</a>")
+						.arg(PLUGIN_NAME)
+						.arg(PLUGIN_VERSION));
+	ui->obsndiVersionLabel->connect(ui->obsndiVersionLabel,
+					&QLabel::linkActivated,
+					[](const QString &savedUrl) {
+						UNUSED_PARAMETER(savedUrl);
+						updateCheckStart(true);
+					});
+
 	ui->ndiVersionLabel->setText(ndiLib->version());
 }
 
 void OutputSettings::onFormAccepted()
 {
-	Config *conf = Config::Current();
+	auto conf = Config::Current();
 
 	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	conf->OutputName = ui->mainOutputName->text();
@@ -71,7 +81,7 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	Config *conf = Config::Current();
+	auto conf = Config::Current();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);

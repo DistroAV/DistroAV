@@ -57,6 +57,8 @@ void main_output_start(const char *output_name)
 
 void main_output_stop()
 {
+	blog(LOG_INFO, "[obs-ndi] +main_output_stop()");
+
 	if (!main_output_running)
 		return;
 
@@ -69,7 +71,10 @@ void main_output_stop()
 	main_output_running = false;
 
 	blog(LOG_INFO, "[obs-ndi] main_output_stop: stopped NDI main output");
+
+	blog(LOG_INFO, "[obs-ndi] -main_output_stop()");
 }
+
 bool main_output_is_running()
 {
 	return main_output_running;

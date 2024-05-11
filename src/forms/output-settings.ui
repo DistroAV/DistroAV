@@ -23,7 +23,7 @@
    <string>NDIPlugin.OutputSettings.DialogTitle</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="4" column="0">
+   <item row="5" column="0">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -33,7 +33,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="4" column="0">
     <widget class="QLabel" name="ndiVersionLabel">
      <property name="font">
       <font>
@@ -42,6 +42,18 @@
      </property>
      <property name="text">
       <string>Unknown NDI version</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="obsndiVersionLabel">
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Unknown OBS-NDI version</string>
      </property>
     </widget>
    </item>

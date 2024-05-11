@@ -22,8 +22,8 @@ if(ENABLE_FRONTEND_API)
 endif()
 
 if(ENABLE_QT)
-  find_package(Qt6 COMPONENTS Widgets Core)
-  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets)
+  find_package(Qt6 COMPONENTS Core Widgets Network)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)
   target_compile_options(
     ${CMAKE_PROJECT_NAME} PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-quoted-include-in-framework-header
                                   -Wno-comma>)
@@ -53,7 +53,8 @@ target_sources(
           src/main-output.h
           src/preview-output.h
           src/Config.h
-          src/forms/output-settings.h)
+          src/forms/output-settings.h
+          src/UpdateDialog.cpp)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 

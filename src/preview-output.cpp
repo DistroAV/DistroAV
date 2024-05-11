@@ -167,12 +167,14 @@ void preview_output_stop()
 
 void preview_output_deinit()
 {
-	blog(LOG_INFO, "[obs-ndi] preview_output_deinit()");
+	blog(LOG_INFO, "[obs-ndi] +preview_output_deinit()");
 
 	obs_output_release(context.output);
 
 	context.output = nullptr;
 	context.enabled = false;
+
+	blog(LOG_INFO, "[obs-ndi] -preview_output_deinit()");
 }
 
 bool preview_output_is_enabled()

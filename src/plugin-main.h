@@ -15,9 +15,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
+#pragma once
 
-#ifndef OBSNDI_H
-#define OBSNDI_H
+#include "plugin-support.h"
+#include "Config.h"
 
 #include <Processing.NDI.Lib.h>
 
@@ -28,5 +29,3 @@ void main_output_stop();
 bool main_output_is_running();
 
 extern const NDIlib_v4 *ndiLib;
-
-#endif // OBSNDI_H

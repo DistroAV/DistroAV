@@ -101,8 +101,9 @@ typedef struct {
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
-	obs_source_frame *blank_frame;
 } ndi_source_config_t;
+
+obs_source_frame *blank_video_frame = nullptr;
 
 typedef struct {
 	obs_source_t *obs_source;
@@ -197,12 +198,36 @@ static video_range_type prop_to_range_type(int index)
 	}
 }
 
-static obs_source_frame *blank_video_frame()
+static void create_blank_video_frame()
 {
-	obs_source_frame *frame =
-		obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
-	frame->timestamp = os_gettime_ns();
-	return frame;
+	blog(LOG_INFO, "[obs-ndi] +create_blank_video_frame()");
+	if (!blank_video_frame) {
+		obs_source_frame *frame =
+			obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
+		frame->timestamp = os_gettime_ns();
+		blank_video_frame = frame;
+	}
+	blog(LOG_INFO, "[obs-ndi] -create_blank_video_frame()");
+}
+
+static void destroy_blank_video_frame()
+{
+	blog(LOG_INFO, "[obs-ndi] +destroy_blank_video_frame()");
+	if (blank_video_frame) {
+		obs_source_frame_destroy(blank_video_frame);
+		blank_video_frame = nullptr;
+	}
+	blog(LOG_INFO, "[obs-ndi] -destroy_blank_video_frame()");
+}
+
+static void source_output_blank_video_frame(obs_source_t *obs_source)
+{
+	blog(LOG_INFO, "[obs-ndi] +source_output_blank_video_frame(...)");
+	if (!blank_video_frame) {
+		create_blank_video_frame();
+	}
+	obs_source_output_video(obs_source, blank_video_frame);
+	blog(LOG_INFO, "[obs-ndi] -source_output_blank_video_frame(...)");
 }
 
 const char *ndi_source_getname(void *)
@@ -221,7 +246,13 @@ obs_properties_t *ndi_source_getproperties(void *)
 	uint32_t nbSources = 0;
 	const NDIlib_source_t *sources =
 		ndiLib->find_get_current_sources(ndi_finder, &nbSources);
+	blog(LOG_INFO,
+	     "[obs-ndi] ndi_source_getproperties: Found %d NDI sources",
+	     nbSources);
 	for (uint32_t i = 0; i < nbSources; ++i) {
+		blog(LOG_INFO,
+		     "[obs-ndi] ndi_source_getproperties: source[%d]=\"%s\"", i,
+		     sources[i].p_ndi_name);
 		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
 					     sources[i].p_ndi_name);
 	}
@@ -420,6 +451,8 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 
 void *ndi_source_thread(void *data)
 {
+	bool verbose_log = Config::VerboseLog();
+
 	auto s = (ndi_source_t *)data;
 	auto obs_source = s->obs_source;
 	QByteArray obs_source_ndi_receiver_name_utf8 =
@@ -511,9 +544,7 @@ void *ndi_source_thread(void *data)
 			case PROP_BW_AUDIO_ONLY:
 				recv_desc.bandwidth =
 					NDIlib_recv_bandwidth_audio_only;
-				obs_source_output_video(
-					obs_source,
-					config_most_recent.blank_frame);
+				source_output_blank_video_frame(obs_source);
 				break;
 			}
 			blog(LOG_INFO,
@@ -701,7 +732,9 @@ void *ndi_source_thread(void *data)
 				1024);
 			if (audio_frame2.p_data &&
 			    (audio_frame2.timestamp > timestamp_audio)) {
-				//blog(LOG_INFO, "a");//udio_frame";
+				if (verbose_log) {
+					blog(LOG_INFO, "a"); //udio_frame";
+				}
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
 					&config_most_recent, &audio_frame2,
@@ -719,7 +752,9 @@ void *ndi_source_thread(void *data)
 				NDIlib_frame_format_type_progressive);
 			if (video_frame2.p_data &&
 			    (video_frame2.timestamp > timestamp_video)) {
-				//blog(LOG_INFO, "v");//ideo_frame";
+				if (verbose_log) {
+					blog(LOG_INFO, "v"); //ideo_frame";
+				}
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
@@ -931,8 +966,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		s->running = false;
 		pthread_join(s->av_thread, NULL);
 		if (!s->config.remember_last_frame) {
-			obs_source_output_video(s->obs_source,
-						s->config.blank_frame);
+			source_output_blank_video_frame(s->obs_source);
 		}
 	}
 }
@@ -1088,8 +1122,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	// Allocate blank video frame
-	s->config.blank_frame = blank_video_frame();
+	create_blank_video_frame();
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
@@ -1112,7 +1145,7 @@ void ndi_source_destroy(void *data)
 
 	ndi_source_thread_stop(s);
 
-	obs_source_frame_destroy(s->config.blank_frame);
+	destroy_blank_video_frame();
 
 	bfree(s);
 
