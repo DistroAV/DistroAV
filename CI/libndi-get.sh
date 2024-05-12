@@ -3,13 +3,12 @@ set -e
 
 LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v6_Linux"
 LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
-# Example https://downloads.ndi.tv/SDK/NDI_SDK_Linux/Install_NDI_SDK_v6_Linux.tar.gz
 LIBNDI_INSTALLER_URL=https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER
 
 # Use temporary directory
 LIBNDI_TMP=$(mktemp --tmpdir -d ndidisk.XXXXXXX)
 
-# Check if the directory exists and is a directory.
+# Check if the temp directory exists and is a directory.
 if [[ -d "$LIBNDI_TMP" ]]; then
     echo "Temporary directory created at $LIBNDI_TMP"
 else
@@ -17,15 +16,15 @@ else
     exit 1
 fi
 
-# While most of the command are with the folder specifiec, this is needed for the libndi install script to be in the correct folder
+# While most of the command are with the folder path, this is needed for the libndi install script to run properly
 pushd $LIBNDI_TMP
 
 # Download LIBNDI
-# The follwoing should work with tmp folder in the user home directory - but not always... So i do not use it.
+# The follwoing should work with tmp folder in the user home directory - but not always... So we do not use it.
 # curl -o "$LIBNDI_TMP/$LIBNDI_INSTALLER" $LIBNDI_INSTALLER_URL -f --retry 5
 
 # The following is required if the temp directory is not in the user home directory.
- curl -L  $LIBNDI_INSTALLER_URL -f --retry 5 > "$LIBNDI_TMP/$LIBNDI_INSTALLER"
+curl -L $LIBNDI_INSTALLER_URL -f --retry 5 > "$LIBNDI_TMP/$LIBNDI_INSTALLER"
 
 
 # Check if download was successful
