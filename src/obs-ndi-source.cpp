@@ -496,7 +496,7 @@ void *ndi_source_thread(void *data)
 				break;
 			case PROP_BW_AUDIO_ONLY:
 				recv_desc.bandwidth =
-					NDIlib_recv_bandwidth_audio_only;		
+					NDIlib_recv_bandwidth_audio_only;
 				break;
 			}
 			blog(LOG_INFO,
