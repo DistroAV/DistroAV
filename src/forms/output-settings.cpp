@@ -31,7 +31,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 		SLOT(onFormAccepted()));
 
 	ui->obsndiVersionLabel->setText(QString("%1 <a href=\"#\">%2</a>")
-						.arg(PLUGIN_NAME)
+						.arg(PLUGIN_DISPLAY_NAME)
 						.arg(PLUGIN_VERSION));
 	ui->obsndiVersionLabel->connect(ui->obsndiVersionLabel,
 					&QLabel::linkActivated,

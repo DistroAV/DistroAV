@@ -20,7 +20,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
 const char *PLUGIN_VERSION = "@CMAKE_PROJECT_VERSION@";
+const char *PLUGIN_DISPLAY_NAME = "@PLUGIN_DISPLAY_NAME@";
+const char *PLUGIN_DISCORD = "@PLUGIN_DISCORD@";
 
+/*
 void obs_log(int log_level, const char *format, ...)
 {
 	size_t length = 4 + strlen(PLUGIN_NAME) + strlen(format);
@@ -37,3 +40,4 @@ void obs_log(int log_level, const char *format, ...)
 
 	free(template);
 }
+*/

@@ -55,7 +55,7 @@ UpdateDialog::UpdateDialog(const QJsonDocument &jsonResponse, QWidget *parent)
 
 	auto releaseVersion = QVersionNumber::fromString(releaseTag);
 
-	auto pluginDisplayName = QString(PLUGIN_NAME).toUpper();
+	auto pluginDisplayName = QString(PLUGIN_DISPLAY_NAME);
 
 	auto config = Config::Current();
 
