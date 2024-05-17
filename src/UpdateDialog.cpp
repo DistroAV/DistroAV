@@ -187,6 +187,7 @@ void onCheckForUpdateNetworkFinish(QNetworkReply *reply, bool userRequested)
 			     currentVersion.toString().toStdString().c_str());
 		}
 
+		auto config = Config::Current();
 		auto skipUpdateVersion = config->SkipUpdateVersion();
 		if (!userRequested && latestVersion == skipUpdateVersion) {
 			blog(LOG_INFO,
