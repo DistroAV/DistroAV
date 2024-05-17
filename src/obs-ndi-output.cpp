@@ -89,7 +89,7 @@ typedef struct {
 
 const char *ndi_output_getname(void *)
 {
-	return obs_module_text("NDIPlugin.OutputName");
+	return Str("NDIPlugin.OutputName");
 }
 
 obs_properties_t *ndi_output_getproperties(void *)
@@ -97,10 +97,9 @@ obs_properties_t *ndi_output_getproperties(void *)
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_properties_add_text(
-		props, "ndi_name",
-		obs_module_text("NDIPlugin.OutputProps.NDIName"),
-		OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, "ndi_name",
+				Str("NDIPlugin.OutputProps.NDIName"),
+				OBS_TEXT_DEFAULT);
 
 	return props;
 }

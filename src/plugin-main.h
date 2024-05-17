@@ -29,3 +29,6 @@ void main_output_stop();
 bool main_output_is_running();
 
 extern const NDIlib_v4 *ndiLib;
+
+const char *Str(const char *lookup);
+QString QTStr(const char *lookupVal);

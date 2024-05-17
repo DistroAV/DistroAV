@@ -26,6 +26,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <plugin-support.h>
 #include <obs-frontend-api.h>
 #include <util/platform.h>
+
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
@@ -54,6 +55,20 @@ const char *obs_module_name()
 const char *obs_module_description()
 {
 	return "NDI input/output integration for OBS Studio";
+}
+
+// Copied from OBS UI/obs-app.hpp
+const char *Str(const char *lookup)
+{
+	// One line tweak/override
+	// to use obs_module_text
+	// instead of ((OBSApp*)App())->GetString(lookup)
+	return obs_module_text(lookup);
+}
+
+QString QTStr(const char *lookupVal)
+{
+	return QString::fromUtf8(Str(lookupVal));
 }
 
 const NDIlib_v4 *ndiLib = nullptr;
@@ -114,14 +129,13 @@ bool obs_module_load(void)
 		redist_url_name = "NDIPlugin.RedistUrl.Linux";
 #endif
 #endif
-		QString redist_url = obs_module_text(redist_url_name);
-		QString message = obs_module_text("NDIPlugin.LibError.Message");
+		QString redist_url = Str(redist_url_name);
+		QString message = Str("NDIPlugin.LibError.Message");
 		message += QString("<br><a href='%1'>%1</a>").arg(redist_url);
 
-		QMessageBox::critical(
-			main_window,
-			obs_module_text("NDIPlugin.LibError.Title"), message,
-			QMessageBox::Ok, QMessageBox::NoButton);
+		QMessageBox::critical(main_window,
+				      Str("NDIPlugin.LibError.Title"), message,
+				      QMessageBox::Ok, QMessageBox::NoButton);
 		return false;
 	}
 
@@ -158,8 +172,8 @@ bool obs_module_load(void)
 	if (main_window) {
 		// Ui setup
 		auto menu_action = static_cast<QAction *>(
-			obs_frontend_add_tools_menu_qaction(obs_module_text(
-				"NDIPlugin.Menu.OutputSettings")));
+			obs_frontend_add_tools_menu_qaction(
+				Str("NDIPlugin.Menu.OutputSettings")));
 
 		obs_frontend_push_ui_translation(obs_module_get_string);
 		output_settings = new OutputSettings(main_window);

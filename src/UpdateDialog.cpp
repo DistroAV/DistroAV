@@ -25,6 +25,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include <plugin-support.h>
 #include <obs-frontend-api.h>
+#include <plugin-main.h>
 
 //
 // Some ideas came from
@@ -58,29 +59,32 @@ UpdateDialog::UpdateDialog(const QJsonDocument &jsonResponse, QWidget *parent)
 
 	auto config = Config::Current();
 
-	auto textTemp = QString("%1 Update").arg(pluginDisplayName);
+	auto textTemp = QTStr("NDIPlugin.Update.Title").arg(pluginDisplayName);
 	setWindowTitle(textTemp);
 	setMinimumSize(640, 480);
 	resize(640, 480);
 
 	setLayout(layout);
 
-	textTemp = QString("<h2>New %1 version %2 is available.</h2>")
-			   .arg(pluginDisplayName)
-			   .arg(releaseVersion.toString());
+	textTemp = QString("<h2>%1</h2>")
+			   .arg(QTStr("NDIPlugin.Update.NewVersionAvailable")
+					.arg(pluginDisplayName)
+					.arg(releaseVersion.toString()));
 	auto labelTitle = new QLabel(textTemp);
 	labelTitle->setTextFormat(Qt::RichText);
 	layout->addWidget(labelTitle);
 
 	QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
-	textTemp = QString("<font size='+1'>Your version: <b>%1</b></font>")
-			   .arg(yourVersion.toString());
+	textTemp = QString("<font size='+1'>%1</font>")
+			   .arg(QTStr("NDIPlugin.Update.YourVersion")
+					.arg(yourVersion.toString()));
 	auto labelMessage = new QLabel(textTemp);
 	labelMessage->setTextFormat(Qt::RichText);
 	layout->addWidget(labelMessage);
 
-	textTemp = QString("<h3>Release Notes:</h3>");
-	auto labelReleaseNotes = new QLabel(textTemp);
+	auto labelReleaseNotes =
+		new QLabel(QString("<h3>%1</h3>")
+				   .arg(Str("NDIPlugin.Update.ReleaseNotes")));
 	labelReleaseNotes->setTextFormat(Qt::RichText);
 	layout->addWidget(labelReleaseNotes);
 
@@ -98,14 +102,15 @@ UpdateDialog::UpdateDialog(const QJsonDocument &jsonResponse, QWidget *parent)
 	layout->addWidget(scrollArea);
 
 	auto checkBox = new QCheckBox(
-		"Continue to check for updates on future launches");
+		Str("NDIPlugin.Update.ContinueToCheckForUpdates"));
 	checkBox->setChecked(config->AutoCheckForUpdates());
 	connect(checkBox, &QCheckBox::stateChanged, this, [](int state) {
 		Config::Current()->AutoCheckForUpdates(state == Qt::Checked);
 	});
 	layout->addWidget(checkBox);
 
-	auto skipButton = new QPushButton("Skip This Version");
+	auto skipButton =
+		new QPushButton(Str("NDIPlugin.Update.SkipThisVersion"));
 	connect(skipButton, &QPushButton::clicked, this,
 		[this, releaseVersion]() {
 			Config::Current()->SkipUpdateVersion(releaseVersion);
@@ -115,14 +120,16 @@ UpdateDialog::UpdateDialog(const QJsonDocument &jsonResponse, QWidget *parent)
 	auto spacer = new QSpacerItem(40, 20, QSizePolicy::Expanding,
 				      QSizePolicy::Minimum);
 
-	auto remindButton = new QPushButton("Remind Me Later");
+	auto remindButton =
+		new QPushButton(Str("NDIPlugin.Update.RemindMeLater"));
 	connect(remindButton, &QPushButton::clicked, this, [this]() {
 		// do nothing; on next launch the plugin
 		// will continue to check for updates as normal
 		this->reject();
 	});
 
-	auto updateButton = new QPushButton("Install Update");
+	auto updateButton =
+		new QPushButton(Str("NDIPlugin.Update.InstallUpdate"));
 	updateButton->setAutoDefault(true);
 	updateButton->setDefault(true);
 	updateButton->setFocus();
@@ -194,8 +201,9 @@ void onCheckForUpdateNetworkFinish(QNetworkReply *reply, bool userRequested)
 				auto main_window = static_cast<QWidget *>(
 					obs_frontend_get_main_window());
 				QMessageBox::information(
-					main_window, "No Update Available",
-					QString("The latest version is %1.\nYou are up to date.")
+					main_window,
+					Str("NDIPlugin.Update.NoUpdateAvailable"),
+					QTStr("NDIPlugin.Update.YouAreUpToDate")
 						.arg(currentVersion.toString()));
 			}
 			return;
