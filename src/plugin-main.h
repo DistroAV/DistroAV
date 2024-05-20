@@ -46,6 +46,6 @@ typedef std::shared_ptr<Config> ConfigPtr;
 
 ConfigPtr GetConfig();
 
-extern const NDIlib_v4 *ndiLib;
+extern const NDIlib_v5 *ndiLib;
 
 #endif // OBSNDI_H

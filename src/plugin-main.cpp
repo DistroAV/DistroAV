@@ -63,7 +63,7 @@ ConfigPtr GetConfig()
 	return _config;
 }
 
-const NDIlib_v4 *ndiLib = nullptr;
+const NDIlib_v5 *ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -256,7 +256,7 @@ void obs_module_unload(void)
 	blog(LOG_INFO, "[obs-ndi] -obs_module_unload()");
 }
 
-const NDIlib_v4 *load_ndilib()
+const NDIlib_v5 *load_ndilib()
 {
 	QStringList locations;
 	QString path = QString(qgetenv(NDILIB_REDIST_FOLDER));
