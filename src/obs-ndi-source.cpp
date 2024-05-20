@@ -497,9 +497,6 @@ void *ndi_source_thread(void *data)
 			case PROP_BW_AUDIO_ONLY:
 				recv_desc.bandwidth =
 					NDIlib_recv_bandwidth_audio_only;
-				obs_source_output_video(
-					obs_source,
-					config_most_recent.blank_frame);
 				break;
 			}
 			blog(LOG_INFO,
@@ -539,6 +536,10 @@ void *ndi_source_thread(void *data)
 			blog(LOG_INFO,
 			     "[obs-ndi] ndi_source_thread: '%s' Resetting NDI receiver...",
 			     obs_source_ndi_receiver_name);
+
+			// Force a clean frame on receiver reset at all times.
+			obs_source_output_video(obs_source,
+						config_most_recent.blank_frame);
 
 			if (ndi_frame_sync) {
 				ndiLib->framesync_destroy(ndi_frame_sync);
