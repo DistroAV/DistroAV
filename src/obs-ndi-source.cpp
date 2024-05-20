@@ -539,9 +539,9 @@ void *ndi_source_thread(void *data)
 			     obs_source_ndi_receiver_name);
 
 			// Force a clean frame on receiver reset at all times.
-				obs_source_output_video(
-					obs_source,
-					config_most_recent.blank_frame);
+			obs_source_output_video(
+				obs_source,
+				config_most_recent.blank_frame);
 
 			if (ndi_frame_sync) {
 				ndiLib->framesync_destroy(ndi_frame_sync);
