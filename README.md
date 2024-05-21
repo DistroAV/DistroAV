@@ -1,16 +1,16 @@
-obs-ndi
+OBS-NDI : NDI® Audio/Video I/O for OBS Studio
 ==============
-Network Audio/Video in OBS-Studio using NDI technology
+<div align="center">
 
-## Discord
-[![Discord Shield](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)  
-(English Speaking)
+[![GitHub](https://img.shields.io/github/license/obs-ndi/obs-ndi)](https://github.com/obs-ndi/obs-ndi/blob/master/LICENSE)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/obs-ndi/obs-ndi/push.yaml?label=master)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/obs-ndi/obs-ndi)](https://github.com/obs-ndi/obs-ndi/releases/latest)
+[![Total downloads](https://img.shields.io/github/downloads/obs-ndi/obs-ndi/total)](https://github.com/obs-ndi/obs-ndi/releases)
+![Flathub](https://img.shields.io/flathub/downloads/com.obsproject.Studio.Plugin.NDI?label=Flathub%20Installs)
+[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/obs-ndi)](https://opencollective.com/obs-ndi/donate)
+[![Discord](https://discordapp.com/api/guilds/1082173788101279746/widget.png)](https://discord.gg/ZuTxbUK3ug)
 
-[Donations](https://opencollective.com/obs-ndi)
-
-## Status
-`master`: [![master: Push](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml/badge.svg)](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml)
-`develop`: [![develop: Pull Request](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml/badge.svg?branch=develop)](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml)
+</div>
 
 ## Features
 - **NDI Source** : receive NDI video and audio in OBS
@@ -34,3 +34,9 @@ See [Troubleshooting Wiki](https://github.com/obs-ndi/obs-ndi/wiki/2.-Troublesho
 # Development
 
 See [Development Wiki](https://github.com/obs-ndi/obs-ndi/wiki/3.-Development)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=obs-ndi/obs-ndi&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=obs-ndi/obs-ndi&type=Date" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=obs-ndi/obs-ndi&type=Date" />
+</picture>
