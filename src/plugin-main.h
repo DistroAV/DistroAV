@@ -41,7 +41,7 @@ void main_output_start(const char *output_name);
 void main_output_stop();
 bool main_output_is_running();
 
-extern const NDIlib_v4 *ndiLib;
+extern const NDIlib_v5 *ndiLib;
 
 const char *Str(const char *lookup);
 QString QTStr(const char *lookupVal);

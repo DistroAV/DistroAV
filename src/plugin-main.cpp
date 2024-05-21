@@ -59,20 +59,20 @@ const char *obs_module_description()
 }
 
 // Copied from OBS UI/obs-app.hpp
+// Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
 const char *Str(const char *lookup)
 {
-	// One line tweak/override
-	// to use obs_module_text
-	// instead of ((OBSApp*)App())->GetString(lookup)
 	return obs_module_text(lookup);
 }
 
+// Copied from OBS UI/obs-app.hpp
+// No change
 QString QTStr(const char *lookupVal)
 {
 	return QString::fromUtf8(Str(lookupVal));
 }
 
-const NDIlib_v4 *ndiLib = nullptr;
+const NDIlib_v5 *ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -289,7 +289,7 @@ void obs_module_unload(void)
 	blog(LOG_INFO, "[obs-ndi] -obs_module_unload()");
 }
 
-const NDIlib_v4 *load_ndilib()
+const NDIlib_v5 *load_ndilib()
 {
 	QStringList locations;
 	auto path = QString(qgetenv(NDILIB_REDIST_FOLDER));
