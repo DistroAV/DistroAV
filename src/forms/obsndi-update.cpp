@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,12 +15,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
-#include "UpdateDialog.h"
+#include "obsndi-update.h"
 #include "Config.h"
-#include <QObject>
+#include <QDesktopServices>
+#include <QJsonDocument>
+#include <QMainWindow>
+#include <QMetaEnum>
 #include <QNetworkAccessManager>
-#include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QObject>
+#include <QPointer>
+#include <QTimer>
 #include <QUrlQuery>
 
 #include <plugin-support.h>
@@ -36,14 +42,19 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 // https://github.com/obsproject/obs-studio/blob/master/UI/forms/OBSUpdate.ui
 //
 
-#define EMULATOR 1
-
 #define UPDATE_TIMEOUT 20000
 
-UpdateDialog::UpdateDialog(const QJsonDocument &jsonResponse, QWidget *parent)
-	: QDialog(parent),
-	  layout(new QVBoxLayout)
+template<typename QEnum> const char *qEnumToString(const QEnum value)
 {
+	return QMetaEnum::fromType<QEnum>().valueToKey(value);
+}
+
+ObsNdiUpdate::ObsNdiUpdate(const QJsonDocument &jsonResponse, QWidget *parent)
+	: QDialog(parent),
+	  ui(new Ui::ObsNdiUpdate)
+{
+	ui->setupUi(this);
+
 	auto releaseTag = jsonResponse["releaseTag"].toString();
 	//auto releaseName = jsonResponse["releaseName"].toString();
 	auto releaseUrl = jsonResponse["releaseUrl"].toString();
@@ -61,99 +72,81 @@ UpdateDialog::UpdateDialog(const QJsonDocument &jsonResponse, QWidget *parent)
 
 	auto textTemp = QTStr("NDIPlugin.Update.Title").arg(pluginDisplayName);
 	setWindowTitle(textTemp);
-	setMinimumSize(640, 480);
-	resize(640, 480);
-
-	setLayout(layout);
 
 	textTemp = QString("<h2>%1</h2>")
 			   .arg(QTStr("NDIPlugin.Update.NewVersionAvailable")
 					.arg(pluginDisplayName)
 					.arg(releaseVersion.toString()));
-	auto labelTitle = new QLabel(textTemp);
-	labelTitle->setTextFormat(Qt::RichText);
-	layout->addWidget(labelTitle);
+	ui->labelVersionNew->setText(textTemp);
 
 	QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
 	textTemp = QString("<font size='+1'>%1</font>")
 			   .arg(QTStr("NDIPlugin.Update.YourVersion")
 					.arg(yourVersion.toString()));
-	auto labelMessage = new QLabel(textTemp);
-	labelMessage->setTextFormat(Qt::RichText);
-	layout->addWidget(labelMessage);
+	ui->labelVersionYours->setText(textTemp);
 
-	auto labelReleaseNotes =
-		new QLabel(QString("<h3>%1</h3>")
-				   .arg(Str("NDIPlugin.Update.ReleaseNotes")));
-	labelReleaseNotes->setTextFormat(Qt::RichText);
-	layout->addWidget(labelReleaseNotes);
+	textTemp =
+		QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseNotes"));
+	ui->labelReleaseNotes->setText(textTemp);
 
-	auto scrollArea = new QScrollArea();
-	auto labelScrollArea = new QLabel(releaseNotes);
-	labelScrollArea->setOpenExternalLinks(true);
-	labelScrollArea->setTextInteractionFlags(Qt::TextBrowserInteraction);
-	labelScrollArea->setTextFormat(Qt::MarkdownText);
-	labelScrollArea->setWordWrap(false);
-	labelScrollArea->setStyleSheet("padding: 8px;");
-	scrollArea->setStyleSheet("background: #212121;");
-	scrollArea->setWidget(labelScrollArea);
-	scrollArea->setWidgetResizable(true);
+	ui->textReleaseNotes->setMarkdown(releaseNotes);
 
-	layout->addWidget(scrollArea);
-
-	auto checkBox = new QCheckBox(
+	ui->checkBoxAutoCheckForUpdates->setText(
 		Str("NDIPlugin.Update.ContinueToCheckForUpdates"));
-	checkBox->setChecked(config->AutoCheckForUpdates());
-	connect(checkBox, &QCheckBox::stateChanged, this, [](int state) {
-		Config::Current()->AutoCheckForUpdates(state == Qt::Checked);
-	});
-	layout->addWidget(checkBox);
+	ui->checkBoxAutoCheckForUpdates->setChecked(
+		config->AutoCheckForUpdates());
+	connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
+		[](int state) {
+			Config::Current()->AutoCheckForUpdates(state ==
+							       Qt::Checked);
+		});
 
-	auto skipButton =
-		new QPushButton(Str("NDIPlugin.Update.SkipThisVersion"));
-	connect(skipButton, &QPushButton::clicked, this,
+	ui->buttonSkipThisVersion->setText(
+		Str("NDIPlugin.Update.SkipThisVersion"));
+	connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this,
 		[this, releaseVersion]() {
 			Config::Current()->SkipUpdateVersion(releaseVersion);
 			this->reject();
 		});
 
-	auto spacer = new QSpacerItem(40, 20, QSizePolicy::Expanding,
-				      QSizePolicy::Minimum);
-
-	auto remindButton =
-		new QPushButton(Str("NDIPlugin.Update.RemindMeLater"));
-	connect(remindButton, &QPushButton::clicked, this, [this]() {
+	ui->buttonRemindMeLater->setText(Str("NDIPlugin.Update.RemindMeLater"));
+	connect(ui->buttonRemindMeLater, &QPushButton::clicked, this, [this]() {
 		// do nothing; on next launch the plugin
 		// will continue to check for updates as normal
 		this->reject();
 	});
 
-	auto updateButton =
-		new QPushButton(Str("NDIPlugin.Update.InstallUpdate"));
-	updateButton->setAutoDefault(true);
-	updateButton->setDefault(true);
-	updateButton->setFocus();
-	updateButton->setStyleSheet(
-		"QPushButton:default { background-color: #2f65d4; }");
-	connect(updateButton, &QPushButton::clicked, [this, releaseUrl]() {
-		QDesktopServices::openUrl(QUrl(releaseUrl));
-		this->accept();
-	});
+	ui->buttonInstallUpdate->setText(Str("NDIPlugin.Update.InstallUpdate"));
+#ifdef __APPLE__
+	// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
+	auto defaultButtonBackgroundColor = QColor::fromString("#2f65d4");
+	ui->buttonInstallUpdate->setStyleSheet(
+		QString("QPushButton:default { background-color: %1; }")
+			.arg(defaultButtonBackgroundColor.name(QColor::HexRgb)));
+#endif
+	connect(ui->buttonInstallUpdate, &QPushButton::clicked,
+		[this, releaseUrl]() {
+			QDesktopServices::openUrl(QUrl(releaseUrl));
+			this->accept();
+		});
 
-	auto buttonLayout = new QHBoxLayout();
-	buttonLayout->addWidget(skipButton);
-	buttonLayout->addItem(spacer);
-	buttonLayout->addWidget(remindButton);
-	buttonLayout->addWidget(updateButton);
-	layout->addLayout(buttonLayout);
+	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
+	ui->labelDonateUrl->setText(
+		QString("<a href=\"%1\">%1</a>").arg(PLUGIN_DONATE_URL));
+	connect(ui->labelDonateUrl, &QLabel::linkActivated,
+		[this](const QString &) {
+			QDesktopServices::openUrl(QUrl(PLUGIN_DONATE_URL));
+		});
 }
 
-UpdateDialog *update_dialog = nullptr;
-
-template<typename QEnum> const char *qEnumToString(const QEnum value)
+ObsNdiUpdate::~ObsNdiUpdate()
 {
-	return QMetaEnum::fromType<QEnum>().valueToKey(value);
+	delete ui;
 }
+
+QNetworkRequest *update_request = nullptr;
+QPointer<QNetworkReply> update_reply = nullptr;
+QPointer<ObsNdiUpdate> update_dialog = nullptr;
 
 void onCheckForUpdateNetworkFinish(QNetworkReply *reply, bool userRequested)
 {
@@ -224,11 +217,11 @@ void onCheckForUpdateNetworkFinish(QNetworkReply *reply, bool userRequested)
 				     "onCheckForUpdateNetworkFinish: Failed to get main OBS window");
 				return;
 			}
+
 			update_dialog =
-				new UpdateDialog(jsonResponse, main_window);
+				new ObsNdiUpdate(jsonResponse, main_window);
 			update_dialog->setAttribute(Qt::WA_DeleteOnClose, true);
-			update_dialog->show();
-			update_dialog->raise();
+			update_dialog->exec();
 		});
 	} else {
 		blog(LOG_WARNING,
@@ -237,8 +230,6 @@ void onCheckForUpdateNetworkFinish(QNetworkReply *reply, bool userRequested)
 		     reply->errorString().toStdString().c_str());
 	}
 }
-
-QNetworkReply *update_reply = nullptr;
 
 void updateCheckStop()
 {
@@ -250,6 +241,10 @@ void updateCheckStop()
 		update_reply->deleteLater();
 		update_reply = nullptr;
 	}
+	if (update_request) {
+		delete update_request;
+		update_request = nullptr;
+	}
 	blog(LOG_INFO, "[obs-ndi] -updateCheckStop()");
 }
 
@@ -257,8 +252,6 @@ void updateCheckStart(bool userRequested)
 {
 	blog(LOG_INFO, "[obs-ndi] +updateCheckStart(userRequested=%d)",
 	     userRequested);
-
-	updateCheckStop();
 
 	auto config = Config::Current();
 	if (!userRequested && !config->AutoCheckForUpdates()) {
@@ -270,17 +263,24 @@ void updateCheckStart(bool userRequested)
 		return;
 	}
 
-	QString obsndiVersion = PLUGIN_VERSION;
+	if (update_request || update_reply || update_dialog) {
+		if (update_dialog) {
+			update_dialog->raise();
+		}
+		blog(LOG_INFO,
+		     "[obs-ndi] updateCheckStart: update pending or showing; ignoring");
+		return;
+	}
+
+	update_request = new QNetworkRequest();
+
+	QString obsndiVersion(PLUGIN_VERSION);
 	QString obsGuid = config->GetProgramGUID();
 
-#if EMULATOR
-	QUrl url("http://127.0.0.1:5002/update");
-#else
-	QUrl url("https://obsndiproject.com/update");
-#endif
+	QUrl url(PLUGIN_UPDATE_URL);
 
-	QNetworkRequest request;
 	if (url.host() == "127.0.0.1") {
+		// Local EMULATOR testing; a little easier to debug
 		QUrlQuery query;
 		query.addQueryItem("obsndiVersion", obsndiVersion);
 		query.addQueryItem("obsGuid", obsGuid);
@@ -288,13 +288,13 @@ void updateCheckStart(bool userRequested)
 		blog(LOG_INFO, "[obs-ndi] updateCheckStart: url=%s",
 		     url.toString().toStdString().c_str());
 	} else {
-		request.setRawHeader("User-Agent",
-				     QString("obs-ndi/%1 (OBS-GUID: %2)")
-					     .arg(obsndiVersion)
-					     .arg(obsGuid)
-					     .toUtf8());
+		update_request->setRawHeader(
+			"User-Agent", QString("obs-ndi/%1 (OBS-GUID: %2)")
+					      .arg(obsndiVersion)
+					      .arg(obsGuid)
+					      .toUtf8());
 	}
-	request.setUrl(url);
+	update_request->setUrl(url);
 
 	auto timer = new QTimer();
 	timer->setSingleShot(true);
@@ -310,13 +310,13 @@ void updateCheckStart(bool userRequested)
 	QObject::connect(manager, &QNetworkAccessManager::finished,
 			 [manager, timer, userRequested](QNetworkReply *reply) {
 				 timer->stop();
-				 updateCheckStop();
 				 onCheckForUpdateNetworkFinish(reply,
 							       userRequested);
+				 updateCheckStop();
 				 timer->deleteLater();
 				 manager->deleteLater();
 			 });
-	update_reply = manager->get(request);
+	update_reply = manager->get(*update_request);
 	timer->start(UPDATE_TIMEOUT);
 
 	blog(LOG_INFO, "[obs-ndi] -updateCheckStart(userRequested=%d)",

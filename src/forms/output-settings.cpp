@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,7 +20,11 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "../plugin-main.h"
 #include "../preview-output.h"
-#include "../UpdateDialog.h"
+#include "obsndi-update.h"
+
+#include <QClipboard>
+#include <QDesktopServices>
+#include <QMessageBox>
 
 OutputSettings::OutputSettings(QWidget *parent)
 	: QDialog(parent),
@@ -30,17 +34,65 @@ OutputSettings::OutputSettings(QWidget *parent)
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
-	ui->obsndiVersionLabel->setText(QString("%1 <a href=\"#\">%2</a>")
-						.arg(PLUGIN_DISPLAY_NAME)
-						.arg(PLUGIN_VERSION));
-	ui->obsndiVersionLabel->connect(ui->obsndiVersionLabel,
-					&QLabel::linkActivated,
-					[](const QString &savedUrl) {
-						UNUSED_PARAMETER(savedUrl);
-						updateCheckStart(true);
-					});
+	auto obsNdiVersionText =
+		QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
+	ui->labelObsNdiVersion->setText(
+		QString("<a href=\"#\">%1</a>").arg(obsNdiVersionText));
+	connect(ui->labelObsNdiVersion, &QLabel::linkActivated,
+		[this, obsNdiVersionText](const QString &) {
+			QApplication::clipboard()->setText(obsNdiVersionText);
+			QMessageBox::information(
+				this,
+				Str("NDIPlugin.OutputSettings.TextCopied"),
+				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+		});
 
-	ui->ndiVersionLabel->setText(ndiLib->version());
+	ui->pushButtonCheckForUpdate->setText(
+		Str("NDIPlugin.OutputSettings.CheckForUpdate"));
+	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked,
+		[]() { updateCheckStart(true); });
+
+	auto ndiVersionText = QString(ndiLib->version());
+	ui->labelNdiVersion->setText(
+		QString("<a href=\"#\">%1</a>").arg(ndiVersionText));
+	connect(ui->labelNdiVersion, &QLabel::linkActivated,
+		[this, ndiVersionText](const QString &) {
+			QApplication::clipboard()->setText(ndiVersionText);
+			QMessageBox::information(
+				this,
+				Str("NDIPlugin.OutputSettings.TextCopied"),
+				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+		});
+	connect(ui->pushButtonNdi, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(NDI_WEB_URL)); });
+#if defined(_WIN32) || defined(__APPLE__)
+	connect(ui->pushButtonNdiTools, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(NDI_TOOLS_URL)); });
+#else
+	ui->pushButtonNdiTools->setVisible(false);
+#endif
+	connect(ui->pushButtonNdiRedist, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(NDILIB_REDIST_URL)); });
+
+	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
+	ui->labelDonateUrl->setText(
+		QString("<a href=\"%1\">%1</a>").arg(PLUGIN_DONATE_URL));
+	connect(ui->labelDonateUrl, &QLabel::linkActivated,
+		[this](const QString &) {
+			QDesktopServices::openUrl(QUrl(PLUGIN_DONATE_URL));
+		});
+
+	ui->labelDiscordUrl->setText(
+		QString("<a href=\"%1\">%1</a>").arg(PLUGIN_DISCORD_URL));
+	connect(ui->labelDiscordUrl, &QLabel::linkActivated,
+		[this](const QString &) {
+			QDesktopServices::openUrl(QUrl(PLUGIN_DISCORD_URL));
+		});
+}
+
+OutputSettings::~OutputSettings()
+{
+	delete ui;
 }
 
 void OutputSettings::onFormAccepted()
@@ -96,9 +148,4 @@ void OutputSettings::showEvent(QShowEvent *)
 void OutputSettings::ToggleShowHide()
 {
 	setVisible(!isVisible());
-}
-
-OutputSettings::~OutputSettings()
-{
-	delete ui;
 }

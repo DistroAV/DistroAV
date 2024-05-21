@@ -1,6 +1,6 @@
 /*
 Plugin Name
-Copyright (C) <Year> <Developer> <Email Address>
+Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,8 +28,15 @@ extern "C" {
 
 extern const char *PLUGIN_NAME;
 extern const char *PLUGIN_VERSION;
+
 extern const char *PLUGIN_DISPLAY_NAME;
-extern const char *PLUGIN_DISCORD;
+
+extern const char *PLUGIN_MIN_QT_VERSION;
+extern const char *PLUGIN_MIN_OBS_VERSION;
+
+extern const char *PLUGIN_UPDATE_URL;
+extern const char *PLUGIN_DISCORD_URL;
+extern const char *PLUGIN_DONATE_URL;
 
 /*
 void obs_log(int log_level, const char *format, ...);
