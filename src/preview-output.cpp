@@ -45,22 +45,24 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void *param);
 void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
-void preview_output_init(const char *default_name)
+void preview_output_init(const char *default_name, const char *default_groups)
 {
 	if (context.output)
 		return;
 
-	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s')", default_name);
+	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s', '%s')",
+	     default_name, default_groups);
 
 	obs_data_t *output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
+	obs_data_set_string(output_settings, "ndi_groups", default_groups);
 	obs_data_set_bool(output_settings, "uses_audio", false);
 	context.output = obs_output_create("ndi_output", "NDI Preview Output",
 					   output_settings, nullptr);
 	obs_data_release(output_settings);
 }
 
-void preview_output_start(const char *output_name)
+void preview_output_start(const char *output_name, const char *output_groups)
 {
 	if (context.enabled || !context.output)
 		return;
@@ -121,6 +123,7 @@ void preview_output_start(const char *output_name)
 
 	obs_data_t *settings = obs_output_get_settings(context.output);
 	obs_data_set_string(settings, "ndi_name", output_name);
+	obs_data_set_string(settings, "ndi_groups", output_groups);
 	obs_output_update(context.output, settings);
 	obs_data_release(settings);
 

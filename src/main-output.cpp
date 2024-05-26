@@ -26,7 +26,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 static obs_output_t *main_out = nullptr;
 static bool main_output_running = false;
 
-void main_output_start(const char *output_name)
+void main_output_start(const char *output_name, const char *output_groups)
 {
 	if (main_output_running)
 		return;
@@ -37,6 +37,7 @@ void main_output_start(const char *output_name)
 
 	obs_data_t *settings = obs_data_create();
 	obs_data_set_string(settings, "ndi_name", output_name);
+	obs_data_set_string(settings, "ndi_groups", output_groups);
 	main_out = obs_output_create("ndi_output", "NDI Main Output", settings,
 				     nullptr);
 	obs_data_release(settings);

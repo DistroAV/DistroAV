@@ -39,9 +39,11 @@ void OutputSettings::onFormAccepted()
 
 	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	conf->OutputName = ui->mainOutputName->text();
+	conf->OutputGroups = ui->mainOutputGroups->text();
 
 	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	conf->PreviewOutputName = ui->previewOutputName->text();
+	conf->PreviewOutputGroups = ui->previewOutputGroups->text();
 
 	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
@@ -53,7 +55,8 @@ void OutputSettings::onFormAccepted()
 			main_output_stop();
 		}
 		main_output_start(
-			ui->mainOutputName->text().toUtf8().constData());
+			ui->mainOutputName->text().toUtf8().constData(),
+			ui->mainOutputGroups->text().toUtf8().constData());
 	} else {
 		main_output_stop();
 	}
@@ -63,7 +66,8 @@ void OutputSettings::onFormAccepted()
 			preview_output_stop();
 		}
 		preview_output_start(
-			ui->previewOutputName->text().toUtf8().constData());
+			ui->previewOutputName->text().toUtf8().constData(),
+			ui->previewOutputGroups->text().toUtf8().constData());
 	} else {
 		preview_output_stop();
 	}
@@ -75,9 +79,11 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);
+	ui->mainOutputGroups->setText(conf->OutputGroups);
 
 	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
 	ui->previewOutputName->setText(conf->PreviewOutputName);
+	ui->previewOutputGroups->setText(conf->PreviewOutputGroups);
 
 	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);

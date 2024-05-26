@@ -33,6 +33,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #define TEXFORMAT GS_BGRA
 #define FLT_PROP_NAME "ndi_filter_ndiname"
+#define FLT_PROP_GROUPS "ndi_filter_ndigroups"
 
 typedef struct {
 	obs_source_t *context;
@@ -82,6 +83,11 @@ obs_properties_t *ndi_filter_getproperties(void *)
 		obs_module_text("NDIPlugin.FilterProps.NDIName"),
 		OBS_TEXT_DEFAULT);
 
+	obs_properties_add_text(
+		props, FLT_PROP_GROUPS,
+		obs_module_text("NDIPlugin.FilterProps.NDIGroups"),
+		OBS_TEXT_DEFAULT);
+
 	obs_properties_add_button(
 		props, "ndi_apply",
 		obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
@@ -128,6 +134,7 @@ void ndi_filter_getdefaults(obs_data_t *defaults)
 	obs_data_set_default_string(
 		defaults, FLT_PROP_NAME,
 		obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
+	obs_data_set_default_string(defaults, FLT_PROP_GROUPS, "");
 }
 
 void ndi_filter_raw_video(void *data, video_data *frame)
@@ -245,7 +252,11 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 
 	NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
-	send_desc.p_groups = nullptr;
+	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
+	if (groups && groups[0])
+		send_desc.p_groups = groups;
+	else
+		send_desc.p_groups = nullptr;
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
@@ -265,7 +276,10 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 void *ndi_filter_create(obs_data_t *settings, obs_source_t *source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
-	blog(LOG_INFO, "[obs-ndi] +ndi_filter_create(name=\"%s\")", name);
+	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
+	blog(LOG_INFO,
+	     "[obs-ndi] +ndi_filter_create(name=\"%s\", groups=\"%s\")", name,
+	     groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->context = source;
@@ -285,8 +299,10 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *source)
 void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
-	blog(LOG_INFO, "[obs-ndi] +ndi_filter_create_audioonly(name=\"%s\")",
-	     name);
+	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
+	blog(LOG_INFO,
+	     "[obs-ndi] +ndi_filter_create_audioonly(name=\"%s\", groups=\"%s\")",
+	     name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->is_audioonly = true;
