@@ -235,17 +235,10 @@ void obs_module_post_load(void)
 {
 	blog(LOG_INFO, "[obs-ndi] +obs_module_post_load()");
 
-	auto conf = Config::Current();
+	preview_output_init();
 
-	preview_output_init(conf->PreviewOutputName.toUtf8().constData());
-
-	if (conf->OutputEnabled) {
-		main_output_start(conf->OutputName.toUtf8().constData());
-	}
-	if (conf->PreviewOutputEnabled) {
-		preview_output_start(
-			conf->PreviewOutputName.toUtf8().constData());
-	}
+	main_output_start();
+	preview_output_start();
 
 	blog(LOG_INFO, "[obs-ndi] obs_module_post_load: updateCheckStart()...");
 	updateCheckStart();

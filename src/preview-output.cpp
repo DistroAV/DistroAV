@@ -45,15 +45,22 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void *param);
 void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
-void preview_output_init(const char *default_name)
+void preview_output_init()
 {
 	if (context.output)
 		return;
 
-	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s')", default_name);
+	auto conf = Config::Current();
+	const char *default_name = conf->PreviewOutputName.toUtf8().constData();
+	const char *default_groups =
+		conf->PreviewOutputGroups.toUtf8().constData();
+
+	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s', '%s')",
+	     default_name, default_groups);
 
 	obs_data_t *output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
+	obs_data_set_string(output_settings, "ndi_groups", default_groups);
 	obs_data_set_bool(output_settings, "uses_audio", false);
 	context.output = obs_output_create(
 		"ndi_output",
@@ -62,10 +69,22 @@ void preview_output_init(const char *default_name)
 	obs_data_release(output_settings);
 }
 
-void preview_output_start(const char *output_name)
+void preview_output_start()
 {
 	if (context.enabled || !context.output)
 		return;
+
+	auto conf = Config::Current();
+
+	if (!conf->PreviewOutputEnabled) {
+		blog(LOG_INFO,
+		     "[obs-ndi] preview_output_start: NDI preview output is disabled");
+		return;
+	}
+
+	const char *output_name = conf->PreviewOutputName.toUtf8().constData();
+	const char *output_groups =
+		conf->PreviewOutputGroups.toUtf8().constData();
 
 	blog(LOG_INFO,
 	     "[obs-ndi] preview_output_start: starting NDI preview output with name '%s'",
@@ -123,6 +142,7 @@ void preview_output_start(const char *output_name)
 
 	obs_data_t *settings = obs_output_get_settings(context.output);
 	obs_data_set_string(settings, "ndi_name", output_name);
+	obs_data_set_string(settings, "ndi_groups", output_groups);
 	obs_output_update(context.output, settings);
 	obs_data_release(settings);
 

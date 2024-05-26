@@ -32,8 +32,10 @@ public:
 
 	bool OutputEnabled;
 	QString OutputName;
+	QString OutputGroups;
 	bool PreviewOutputEnabled;
 	QString PreviewOutputName;
+	QString PreviewOutputGroups;
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 

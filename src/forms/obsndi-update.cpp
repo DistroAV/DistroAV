@@ -20,6 +20,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QMetaEnum>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>

@@ -28,8 +28,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define SECTION_NAME "NDIPlugin"
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
 #define PARAM_MAIN_OUTPUT_NAME "MainOutputName"
+#define PARAM_MAIN_OUTPUT_GROUPS "MainOutputGroups"
 #define PARAM_PREVIEW_OUTPUT_ENABLED "PreviewOutputEnabled"
 #define PARAM_PREVIEW_OUTPUT_NAME "PreviewOutputName"
+#define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
@@ -142,8 +144,10 @@ bool Config::VerboseLog()
 Config::Config()
 	: OutputEnabled(false),
 	  OutputName("OBS"),
+	  OutputGroups(""),
 	  PreviewOutputEnabled(false),
 	  PreviewOutputName("OBS Preview"),
+	  PreviewOutputGroups(""),
 	  TallyProgramEnabled(true),
 	  TallyPreviewEnabled(true),
 	  _VerboseLog(false)
@@ -163,6 +167,9 @@ Config::Config()
 		config_set_default_string(obs_config, SECTION_NAME,
 					  PARAM_MAIN_OUTPUT_NAME,
 					  OutputName.toUtf8().constData());
+		config_set_default_string(obs_config, SECTION_NAME,
+					  PARAM_MAIN_OUTPUT_GROUPS,
+					  OutputGroups.toUtf8().constData());
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_PREVIEW_OUTPUT_ENABLED,
@@ -170,6 +177,9 @@ Config::Config()
 		config_set_default_string(
 			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME,
 			PreviewOutputName.toUtf8().constData());
+		config_set_default_string(
+			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
+			PreviewOutputGroups.toUtf8().constData());
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_TALLY_PROGRAM_ENABLED,
@@ -191,11 +201,15 @@ void Config::Load()
 						PARAM_MAIN_OUTPUT_ENABLED);
 		OutputName = config_get_string(obs_config, SECTION_NAME,
 					       PARAM_MAIN_OUTPUT_NAME);
+		OutputGroups = config_get_string(obs_config, SECTION_NAME,
+						 PARAM_MAIN_OUTPUT_GROUPS);
 
 		PreviewOutputEnabled = config_get_bool(
 			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
 		PreviewOutputName = config_get_string(
 			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
+		PreviewOutputGroups = config_get_string(
+			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS);
 
 		TallyProgramEnabled = config_get_bool(
 			obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED);
@@ -213,6 +227,9 @@ void Config::Save()
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_NAME,
 				  OutputName.toUtf8().constData());
+		config_set_string(obs_config, SECTION_NAME,
+				  PARAM_MAIN_OUTPUT_GROUPS,
+				  OutputGroups.toUtf8().constData());
 
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_PREVIEW_OUTPUT_ENABLED,
@@ -220,6 +237,9 @@ void Config::Save()
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_NAME,
 				  PreviewOutputName.toUtf8().constData());
+		config_set_string(obs_config, SECTION_NAME,
+				  PARAM_PREVIEW_OUTPUT_GROUPS,
+				  PreviewOutputGroups.toUtf8().constData());
 
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_TALLY_PROGRAM_ENABLED,

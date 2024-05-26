@@ -26,10 +26,21 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 static obs_output_t *main_out = nullptr;
 static bool main_output_running = false;
 
-void main_output_start(const char *output_name)
+void main_output_start()
 {
 	if (main_output_running)
 		return;
+
+	auto conf = Config::Current();
+
+	if (!conf->OutputEnabled) {
+		blog(LOG_INFO,
+		     "[obs-ndi] main_output_start: NDI main output is disabled");
+		return;
+	}
+
+	const char *output_name = conf->OutputName.toUtf8().constData();
+	const char *output_groups = conf->OutputGroups.toUtf8().constData();
 
 	blog(LOG_INFO,
 	     "[obs-ndi] main_output_start: starting NDI main output with name '%s'",
@@ -37,6 +48,7 @@ void main_output_start(const char *output_name)
 
 	obs_data_t *settings = obs_data_create();
 	obs_data_set_string(settings, "ndi_name", output_name);
+	obs_data_set_string(settings, "ndi_groups", output_groups);
 	main_out = obs_output_create(
 		"ndi_output", Str("NDIPlugin.OutputSettings.Main.Name.Default"),
 		settings, nullptr);

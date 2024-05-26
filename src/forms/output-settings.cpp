@@ -19,6 +19,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "output-settings.h"
 
 #include "../plugin-main.h"
+#include "../main-output.h"
 #include "../preview-output.h"
 #include "obsndi-update.h"
 
@@ -101,34 +102,26 @@ void OutputSettings::onFormAccepted()
 
 	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	conf->OutputName = ui->mainOutputName->text();
+	conf->OutputGroups = ui->mainOutputGroups->text();
 
 	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	conf->PreviewOutputName = ui->previewOutputName->text();
+	conf->PreviewOutputGroups = ui->previewOutputGroups->text();
 
 	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
 	conf->Save();
 
-	if (conf->OutputEnabled) {
-		if (main_output_is_running()) {
-			main_output_stop();
-		}
-		main_output_start(
-			ui->mainOutputName->text().toUtf8().constData());
-	} else {
+	if (main_output_is_running()) {
 		main_output_stop();
 	}
+	main_output_start();
 
-	if (conf->PreviewOutputEnabled) {
-		if (preview_output_is_enabled()) {
-			preview_output_stop();
-		}
-		preview_output_start(
-			ui->previewOutputName->text().toUtf8().constData());
-	} else {
+	if (preview_output_is_enabled()) {
 		preview_output_stop();
 	}
+	preview_output_start();
 }
 
 void OutputSettings::showEvent(QShowEvent *)
@@ -137,9 +130,11 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);
+	ui->mainOutputGroups->setText(conf->OutputGroups);
 
 	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
 	ui->previewOutputName->setText(conf->PreviewOutputName);
+	ui->previewOutputGroups->setText(conf->PreviewOutputGroups);
 
 	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);

@@ -17,6 +17,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 */
 #pragma once
 
-void main_output_start(const char *output_name);
+void main_output_start();
 void main_output_stop();
 bool main_output_is_running();

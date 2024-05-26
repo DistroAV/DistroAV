@@ -37,10 +37,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 	"https://github.com/obs-ndi/obs-ndi/blob/master/CI/libndi-get.sh"
 #endif
 
-void main_output_start(const char *output_name);
-void main_output_stop();
-bool main_output_is_running();
-
 extern const NDIlib_v5 *ndiLib;
 
 const char *Str(const char *lookup);
