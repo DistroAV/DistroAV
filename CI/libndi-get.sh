@@ -71,7 +71,9 @@ if [ "$1" == "install" ]; then
 
     echo "libndi installed to /usr/local/lib"
     ls -la /usr/local/lib/libndi*
-    echo
+
+    echo "Adding backward compatibility tweaks for older plugins version to work with NDI v6"
+    ln -s /usr/local/lib/libndi.5.so /usr/local/lib/libndi.so.6
 fi
 
 # Allow to keep the temporary files (to use with libndi-package.sh)
