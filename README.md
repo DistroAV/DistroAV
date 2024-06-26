@@ -1,4 +1,6 @@
-obs-ndi
+**NOTE:** `OBS-NDI` was renamed to `DistroAV` ~2024/06 per [obsproject.com](https://obsproject.com)'s request to drop `OBS` from our name.
+
+DistroAV (Formerly OBS-NDI)
 ==============
 Network Audio/Video in OBS-Studio using NDI technology
 
