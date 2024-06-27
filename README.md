@@ -1,4 +1,6 @@
-OBS-NDI : NDI® Audio/Video I/O for OBS Studio
+**NOTE:** `OBS-NDI` was renamed to `DistroAV` ~2024/06 per [obsproject.com](https://obsproject.com)'s request to drop `OBS` from our name.
+
+DistroAV (Formerly OBS-NDI)
 ==============
 <div align="center">
 

@@ -1,5 +1,5 @@
 /*
-Plugin Name
+obs-ndi
 Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
 
 This program is free software; you can redistribute it and/or modify
@@ -15,26 +15,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
+/**
+ * Select methods copied from OBS UI/obs-app.hpp
+ */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <QString>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
+#include <obs-frontend-api.h>
 
-extern const char *PLUGIN_NAME;
-extern const char *PLUGIN_VERSION;
-extern const char *PLUGIN_DISPLAY_NAME;
-
-/*
-void obs_log(int log_level, const char *format, ...);
-extern void blogva(int log_level, const char *format, va_list args);
-*/
-
-#ifdef __cplusplus
-}
-#endif
+config_t *GetGlobalConfig();
+const char *Str(const char *lookup);
+QString QTStr(const char *lookupVal);

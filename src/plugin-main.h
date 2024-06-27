@@ -22,6 +22,18 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include <Processing.NDI.Lib.h>
 
+//#define USE_EMULATOR
+#ifdef USE_EMULATOR
+#define PLUGIN_UPDATE_HOST "127.0.0.1"
+#else
+#define PLUGIN_UPDATE_HOST "distroav.org"
+#endif
+#define PLUGIN_DISCORD_URL "https://discord.gg/ZuTxbUK3ug"
+#define PLUGIN_DONATE_URL "https://opencollective.com/obs-ndi/donate"
+
+#define PLUGIN_MIN_QT_VERSION "6.0.0"
+#define PLUGIN_MIN_OBS_VERSION "30.0.0"
+
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
 // Required per `NDI SDK License Agreement.pdf` `3 LICENSING`

@@ -16,16 +16,13 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
+#include "plugin-main.h"
+#include "forms/obsndi-update.h"
+#include "forms/output-settings.h"
+#include "main-output.h"
+#include "preview-output.h"
 
-#include <sys/stat.h>
-
-#include <obs-module.h>
-#include <plugin-support.h>
 #include <obs-frontend-api.h>
-#include <util/platform.h>
 
 #include <QAction>
 #include <QDir>
@@ -34,42 +31,18 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPointer>
-#include <QProcess>
-#include <QString>
-#include <QStringList>
-
-#include "plugin-main.h"
-#include "main-output.h"
-#include "preview-output.h"
-#include "Config.h"
-#include "forms/output-settings.h"
-#include "forms/obsndi-update.h"
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 const char *obs_module_name()
 {
-	return "obs-ndi";
+	return PLUGIN_NAME;
 }
 
 const char *obs_module_description()
 {
 	return Str("NDIPlugin.Description");
-}
-
-// Copied from OBS UI/obs-app.hpp
-// Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
-const char *Str(const char *lookup)
-{
-	return obs_module_text(lookup);
-}
-
-// Copied from OBS UI/obs-app.hpp
-// No change
-QString QTStr(const char *lookupVal)
-{
-	return QString::fromUtf8(Str(lookupVal));
 }
 
 const NDIlib_v5 *ndiLib = nullptr;
@@ -100,11 +73,11 @@ QPointer<OutputSettings> output_settings = nullptr;
 
 bool obs_module_load(void)
 {
-	Config::Current()->Load();
-
 	blog(LOG_INFO,
 	     "[obs-ndi] obs_module_load: you can haz obs-ndi (Version %s)",
 	     PLUGIN_VERSION);
+
+	Config::Current()->Load();
 
 	auto versionQt = QVersionNumber::fromString(qVersion());
 	blog(LOG_INFO,

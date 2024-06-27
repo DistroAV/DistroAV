@@ -20,15 +20,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
 const char *PLUGIN_VERSION = "@CMAKE_PROJECT_VERSION@";
-
 const char *PLUGIN_DISPLAY_NAME = "@PLUGIN_DISPLAY_NAME@";
-
-const char *PLUGIN_MIN_QT_VERSION = "@PLUGIN_MIN_QT_VERSION@";
-const char *PLUGIN_MIN_OBS_VERSION = "@PLUGIN_MIN_OBS_VERSION@";
-
-const char *PLUGIN_UPDATE_URL = "@PLUGIN_UPDATE_URL@";
-const char *PLUGIN_DISCORD_URL = "@PLUGIN_DISCORD_URL@";
-const char *PLUGIN_DONATE_URL = "@PLUGIN_DONATE_URL@";
 
 /*
 void obs_log(int log_level, const char *format, ...)

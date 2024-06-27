@@ -16,23 +16,23 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 #include "obsndi-update.h"
-#include "Config.h"
+
+#include "plugin-main.h"
+#include "obs-support/shared-update.h"
+
+#include <obs-frontend-api.h>
+
 #include <QDesktopServices>
+#include <QFile>
 #include <QJsonDocument>
 #include <QMainWindow>
-#include <QMessageBox>
 #include <QMetaEnum>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QObject>
 #include <QPointer>
 #include <QTimer>
 #include <QUrlQuery>
-
-#include <plugin-support.h>
-#include <obs-frontend-api.h>
-#include <plugin-main.h>
 
 //
 // Some ideas came from
@@ -249,6 +249,41 @@ void updateCheckStop()
 	blog(LOG_INFO, "[obs-ndi] -updateCheckStop()");
 }
 
+QString GetSHA256(const QString &filePath)
+{
+	QFile file(filePath);
+	if (!file.open(QIODevice::ReadOnly)) {
+		blog(LOG_WARNING,
+		     "[obs-ndi] GetSHA256: Failed to open file: %s",
+		     filePath.toUtf8().constData());
+		return "";
+	}
+
+	QCryptographicHash hash(QCryptographicHash::Sha256);
+	if (!hash.addData(&file)) {
+		blog(LOG_WARNING,
+		     "[obs-ndi] GetSHA256: Failed to read data from file: %s",
+		     filePath.toUtf8().constData());
+		return "";
+	}
+
+	return hash.result().toHex();
+}
+
+QString GetObsCurrentModuleSHA256()
+{
+	auto module = obs_current_module();
+	auto module_binary_path = obs_get_module_binary_path(module);
+	blog(LOG_INFO,
+	     "[obs-ndi] GetObsCurrentModuleSHA256: module_binary_path=%s",
+	     module_binary_path);
+	auto module_hash_sha256 = GetSHA256(module_binary_path);
+	blog(LOG_INFO,
+	     "[obs-ndi] GetObsCurrentModuleSHA256: module_hash_sha256=%s",
+	     module_hash_sha256.toUtf8().constData());
+	return module_hash_sha256;
+}
+
 void updateCheckStart(bool userRequested)
 {
 	blog(LOG_INFO, "[obs-ndi] +updateCheckStart(userRequested=%d)",
@@ -275,26 +310,67 @@ void updateCheckStart(bool userRequested)
 
 	update_request = new QNetworkRequest();
 
-	QString obsndiVersion(PLUGIN_VERSION);
-	QString obsGuid = config->GetProgramGUID();
+#if 0
+	/*
+	2024/07/06 paulpv confirmed w/ OBS RytoEX that OBS "accidentally" removed TLS support from Qt:
+	paulpv Q: Why does obs-deps/deps.qt set -DINPUT_openssl:STRING=no?
+    	Is there some problem letting Qt use OpenSSL?
+    	When I try to call QNetworkAccessManager.get("https://www.github.com") in my plugin,
+		I get a bunch of `No functional TLS backend was found`, `No TLS backend is available`, and
+		`TLS initialization failed` errors; my code works fine on http urls.
+	RytoEX A: We accidentally disabled copying the Qt TLS backends. It'll be fixed in a future release. 
+		It's on my backlog of "local branches that fix this that haven't been PR'd".
+		We decided intentionally to opt for the native TLS backends for Qt on Windows and macOS,
+		but see other messages where copying it got accidentally disabled.
+	
+	**Until that is fixed** I can either:
+	1. Compile my own Qt6 dep for OBS; no thanks!
+	2. Don't make https requests; this is what I will be doing temporarily to distroav.org.
+	3. Make https requests a non-QT way (ex: "libcurl"). Looking at how
+		https://github.com/occ-ai/obs-backgroundremoval/tree/main/src/update-checker
+		works... this isn't complicated but it still makes makes me want to not do it.
+	4. Just use Firebase Functions; the problem with this is "how to cancel an pending function call"?
+	*/
+	qputenv("QT_LOGGING_RULES", "qt.network.ssl=true");
+	blog(LOG_INFO, "[obs-ndi] updateCheckStart QSslSocket: `%s` `%s` `%s`",
+	     QSslSocket::supportsSsl() ? "supportsSsl" : "noSsl",
+	     QSslSocket::sslLibraryBuildVersionString().toStdString().c_str(),
+	     QSslSocket::sslLibraryVersionString().toStdString().c_str());
+#endif
 
-	QUrl url(PLUGIN_UPDATE_URL);
+#if 0
+	QUrl url(
+		"https://api.github.com/repos/DistroAV/DistroAV/releases/latest");
+#else
+	auto obsndiVersion = QString(PLUGIN_VERSION);
+	auto obsGuid = QString(GetProgramGUID().c_str());
+	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
 
+	QString updateHost(PLUGIN_UPDATE_HOST);
+	if (updateHost == "127.0.0.1") {
+		updateHost += ":5002";
+	}
+
+	QUrl url(QString("http://%1/update").arg(updateHost));
 	if (url.host() == "127.0.0.1") {
 		// Local EMULATOR testing; a little easier to debug
 		QUrlQuery query;
 		query.addQueryItem("obsndiVersion", obsndiVersion);
 		query.addQueryItem("obsGuid", obsGuid);
+		query.addQueryItem("sha256", module_hash_sha256);
 		url.setQuery(query);
 		blog(LOG_INFO, "[obs-ndi] updateCheckStart: url=%s",
 		     url.toString().toStdString().c_str());
 	} else {
+		// Production
 		update_request->setRawHeader(
-			"User-Agent", QString("obs-ndi/%1 (OBS-GUID: %2)")
+			"User-Agent", QString("obs-ndi/%1 (OBS-GUID: %2); %3")
 					      .arg(obsndiVersion)
 					      .arg(obsGuid)
+					      .arg(module_hash_sha256)
 					      .toUtf8());
 	}
+#endif
 	update_request->setUrl(url);
 
 	auto timer = new QTimer();

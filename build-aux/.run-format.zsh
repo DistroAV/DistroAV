@@ -21,6 +21,15 @@ autoload -Uz is-at-least && if ! is-at-least 5.2; then
   exit 1
 fi
 
+declare -a exclude_dirs=("build_*")
+if [[ -f ".formatignore" ]]; then
+  while read line; do
+    exclude_dirs+=("${line}")
+  done < .formatignore
+fi
+#echo "Format exclusions:"
+#print -l $exclude_dirs
+
 invoke_formatter() {
   if (( # < 1 )) {
     log_error "Usage invoke_formatter [formatter_name]"
@@ -50,6 +59,9 @@ invoke_formatter() {
       }
 
       local -a source_files=(src/**/*.(c|cpp|h|hpp|m|mm)(.N))
+      for exclude_pattern in "${exclude_dirs[@]}"; do
+        source_files=(${source_files:#$exclude_pattern/*})
+      done
 
       local -a format_args=(-style=file -fallback-style=none)
       if (( _loglevel > 2 )) format_args+=(--verbose)
@@ -69,7 +81,9 @@ invoke_formatter() {
       }
 
       local -a source_files=(**/(CMakeLists.txt|*.cmake)(.N))
-      source_files=(${source_files:#(build_*)/*})
+      for exclude_pattern in "${exclude_dirs[@]}"; do
+        source_files=(${source_files:#$exclude_pattern/*})
+      done
 
       local -a format_args=()
       if (( _loglevel > 2 )) format_args+=(--log-level debug)
@@ -89,6 +103,9 @@ invoke_formatter() {
       }
 
       local -a source_files=(**/*.swift(.N))
+      for exclude_pattern in "${exclude_dirs[@]}"; do
+        source_files=(${source_files:#$exclude_pattern/*})
+      done
 
       local -a format_args=()
       ;;

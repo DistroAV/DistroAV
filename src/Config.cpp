@@ -18,12 +18,12 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "Config.h"
 #include "plugin-main.h"
+#include "obs-support/obs-app.h"
 
 #include <QtCore/QCoreApplication>
 
 #include <obs-frontend-api.h>
 #include <util/config-file.h>
-#include <QRandomGenerator>
 
 #define SECTION_NAME "NDIPlugin"
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
@@ -36,51 +36,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
-
-config_t *GetGlobalConfig()
-{
-	return obs_frontend_get_global_config();
-}
-
-// Copied from OBS UI/update/shared-update.cpp GenerateGUID(...)
-void GenerateGUID(std::string &guid)
-{
-	const char alphabet[] = "0123456789abcdef";
-	QRandomGenerator *rng = QRandomGenerator::system();
-
-	guid.resize(40);
-
-	for (size_t i = 0; i < 40; i++) {
-		guid[i] = alphabet[rng->bounded(0, 16)];
-	}
-}
-
-// Copied from OBS UI/update/shared-update.cpp GetProgramGUID()
-// Changed only to return QString instead of std::string
-QString Config::GetProgramGUID()
-{
-	static std::mutex m;
-	std::lock_guard<std::mutex> lock(m);
-
-	/* NOTE: this is an arbitrary random number that we use to count the
-	 * number of unique OBS installations and is not associated with any
-	 * kind of identifiable information */
-	const char *pguid =
-		config_get_string(GetGlobalConfig(), "General", "InstallGUID");
-	std::string guid;
-	if (pguid)
-		guid = pguid;
-
-	if (guid.empty()) {
-		GenerateGUID(guid);
-
-		if (!guid.empty())
-			config_set_string(GetGlobalConfig(), "General",
-					  "InstallGUID", guid.c_str());
-	}
-
-	return QString(guid.c_str());
-}
 
 bool Config::AutoCheckForUpdates()
 {

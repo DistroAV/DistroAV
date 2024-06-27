@@ -1,22 +1,10 @@
-# Exclude everything
-/*
+.deps
+build_*
+release
 
-# Except for default project files
-!/.github
-!/build-aux
-!/cmake
-!/data
-!/src
-!.clang-format
-!.cmake-format.json
-!.gitignore
-!buildspec.json
-!CMakeLists.txt
-!CMakePresets.json
-!LICENSE
-!README.md
+.ccache.conf
 
-!libobs.patch
+*.code-workspace
 
 # Exclude lock files
 *.lock.json
@@ -28,3 +16,8 @@
 
 # Exclude CMake build number cache
 /cmake/.CMakeBuildNumber
+
+scratch
+certs
+
+google-services*.json
