@@ -5,7 +5,13 @@ ZIP_FILE="firebase_cpp_sdk_${SDK_VERSION}.zip"
 URL="https://dl.google.com/firebase/sdk/cpp/${ZIP_FILE}"
 FIREBASE_CPP_SDK_DIR="lib/firebase_cpp_sdk"
 
-rm -rf ${FIREBASE_CPP_SDK_DIR}
+#rm -rf ${FIREBASE_CPP_SDK_DIR}
+
+if [ -d "${FIREBASE_CPP_SDK_DIR}" ]; then
+  echo "Directory ${FIREBASE_CPP_SDK_DIR} already exists. Exiting."
+  return 0 2>/dev/null || exit 0
+fi
+
 mkdir -p ${FIREBASE_CPP_SDK_DIR}
 
 pushd ${FIREBASE_CPP_SDK_DIR} >/dev/null
@@ -18,9 +24,8 @@ extraction_inclusions=(
   "include/*"
   "libs/linux/x86_64/cxx11/*"
   "libs/darwin/universal/*"
-  "libs/windows/*/MD/x64/*"
   "CMakeLists.txt"
-  "generate_xml_from_google_services_json.*"
+  "generate_xml_from_google_services_json.py"
   "NOTICES"
   "readme.md"
 )

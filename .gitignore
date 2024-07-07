@@ -20,4 +20,5 @@ release
 scratch
 certs
 
+lib/firebase_cpp_sdk/
 google-services*.json

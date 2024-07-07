@@ -20,9 +20,11 @@ with this program. If not, see <https://www.gnu.org/licenses/>
  */
 #include "shared-update.h"
 
+#include "obs-app.h"
+
 #include <util/config-file.h>
 
-#include "obs-app.h"
+#include <mutex>
 
 #include <QRandomGenerator>
 

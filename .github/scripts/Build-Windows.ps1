@@ -56,6 +56,8 @@ function Build {
     if ( ! ( ( $SkipAll ) -or ( $SkipBuild ) ) ) {
         Ensure-Location $ProjectRoot
 
+        ./CI/libfirebase-get.ps1
+
         $CmakeArgs = @()
         $CmakeBuildArgs = @()
         $CmakeInstallArgs = @()
