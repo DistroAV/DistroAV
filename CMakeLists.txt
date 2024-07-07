@@ -80,7 +80,19 @@ if(APPLE)
       "-framework Security"
       "-framework SystemConfiguration")
 elseif(MSVC)
-  set(ADDITIONAL_LIBS advapi32 ws2_32 crypt32 iphlpapi psapi userenv)
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(MSVC_CONFIG Debug)
+  else()
+    set(MSVC_CONFIG Release)
+  endif()
+
+  set(MSVC_RUNTIME_MODE MD) # MT causes `already defined` and `unresolved` errors
+
+  # firebase cpp sdk does not contain PDBs; ignore "warning LNK4099: PDB was not found"
+  target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "/ignore:4099")
+  
+  # https://firebase.google.com/docs/cpp/setup?platform=ios#windows-libraries
+  set(ADDITIONAL_LIBS advapi32 ws2_32 crypt32 rpcrt4 ole32 shell32)
 else()
   set(ADDITIONAL_LIBS pthread)
 endif()
