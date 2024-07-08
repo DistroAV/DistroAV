@@ -8,7 +8,7 @@ FIREBASE_CPP_SDK_DIR="lib/firebase_cpp_sdk"
 #rm -rf ${FIREBASE_CPP_SDK_DIR}
 
 if [ -d "${FIREBASE_CPP_SDK_DIR}" ]; then
-  echo "Directory ${FIREBASE_CPP_SDK_DIR} already exists. Exiting."
+  echo "firebase_cpp_sdk: ${FIREBASE_CPP_SDK_DIR} already exists; skipping."
   return 0 2>/dev/null || exit 0
 fi
 
@@ -16,10 +16,10 @@ mkdir -p ${FIREBASE_CPP_SDK_DIR}
 
 pushd ${FIREBASE_CPP_SDK_DIR} >/dev/null
 
-echo "Downloading Firebase C++ SDK version ${SDK_VERSION}..."
+echo "firebase_cpp_sdk: Downloading v${SDK_VERSION}..."
 curl -L ${URL} -o ${ZIP_FILE}
 
-echo "Extracting ${ZIP_FILE}..."
+echo "firebase_cpp_sdk: Extracting ${ZIP_FILE}..."
 extraction_inclusions=(
   "include/*"
   "libs/linux/x86_64/cxx11/*"
@@ -36,9 +36,9 @@ for path in "${extraction_inclusions[@]}"; do
 done
 unzip ${ZIP_FILE} "${prefixed_paths[@]}" -d ..
 
-echo "Cleaning up..."
+echo "firebase_cpp_sdk: Cleaning up..."
 rm ${ZIP_FILE}
 
 popd >/dev/null
 
-echo "Firebase C++ SDK setup complete."
+echo "firebase_cpp_sdk: Setup complete."

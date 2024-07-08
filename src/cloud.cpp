@@ -1,15 +1,14 @@
 #include "cloud.h"
 
-#include <pthread.h>
-
-#include <QCoreApplication>
-#include <QMetaObject>
-#include <QThread>
+#include "plugin-main.h"
 
 #include "firebase/app_check/debug_provider.h"
 #include "firebase/log.h"
 
-#include "plugin-main.h"
+#include <inttypes.h>
+
+#include <QCoreApplication>
+#include <QThread>
 
 // clang-format off
 // Your Firebase project's Debug token goes here.
@@ -195,7 +194,8 @@ void Cloud::InitializeApp()
 					     .c_str());
 				if (provider_app_check_token.error_code == 0) {
 					blog(LOG_INFO,
-					     "[obs-ndi] cloud: InitializeApp: FetchAppCheckTokenAsync: provider_app_check_token.app_check_token.expire_time_millis=%lld, provider_app_check_token.app_check_token.token=\"%s\"",
+					     "[obs-ndi] cloud: InitializeApp: FetchAppCheckTokenAsync: provider_app_check_token.app_check_token.expire_time_millis=%" PRId64
+					     ", provider_app_check_token.app_check_token.token=\"%s\"",
 					     provider_app_check_token
 						     .app_check_token
 						     .expire_time_millis,
@@ -266,8 +266,9 @@ void Cloud::ExecutePendingCalls()
 
 firebase::Variant Cloud::Call(const char *name, const firebase::Variant &data)
 {
-	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld +Cloud::Call(`%s`, ...)",
-	     pthread_self(), name);
+	auto tid = QThread::currentThreadId();
+	blog(LOG_INFO, "[obs-ndi] cloud: tid=%p +Cloud::Call(`%s`, ...)", tid,
+	     name);
 	firebase::Variant result;
 	if (functions_) {
 		auto httpcallref = functions_->GetHttpsCallable(name);
@@ -280,8 +281,8 @@ firebase::Variant Cloud::Call(const char *name, const firebase::Variant &data)
 				.c_str());
 		result = OnCallCompleted(future, nullptr);
 	}
-	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld -Cloud::Call(`%s`, ...)",
-	     pthread_self(), name);
+	blog(LOG_INFO, "[obs-ndi] cloud: tid=%p -Cloud::Call(`%s`, ...)", tid,
+	     name);
 	return result;
 }
 
@@ -291,42 +292,46 @@ Cloud::CallAsync(const char *name, const firebase::Variant &data,
 				    const std::string &)>
 			 completion_callback)
 {
-	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld +Cloud::CallAsync(`%s`, ...)",
-	     pthread_self(), name);
-	firebase::Future<firebase::functions::HttpsCallableResult> future;
+	auto tid = QThread::currentThreadId();
+	blog(LOG_INFO, "[obs-ndi] cloud: tid=%p +Cloud::CallAsync(`%s`, ...)",
+	     tid, name);
+	firebase::Future<firebase::functions::HttpsCallableResult> futureRequest;
 	if (functions_) {
 		auto httpcallref = functions_->GetHttpsCallable(name);
 		blog(LOG_INFO, "[obs-ndi] cloud: CallAsync: `%s` +Call(...)",
 		     name);
-		future = httpcallref.Call(data);
+		futureRequest = httpcallref.Call(data);
 		blog(LOG_INFO, "[obs-ndi] cloud: CallAsync: `%s` -Call(...)",
 		     name);
-		future.OnCompletion(
+		futureRequest.OnCompletion(
 			[this, completion_callback](
 				const firebase::Future<
 					firebase::functions::HttpsCallableResult>
-					&future) {
-				OnCallCompleted(future, completion_callback);
+					&futureResponse) {
+				OnCallCompleted(futureResponse,
+						completion_callback);
 			});
 	}
-	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld -Cloud::CallAsync(`%s`, ...)",
-	     pthread_self(), name);
-	return future;
+	blog(LOG_INFO, "[obs-ndi] cloud: tid=%p -Cloud::CallAsync(`%s`, ...)",
+	     tid, name);
+	return futureRequest;
 }
 
 firebase::Variant Cloud::OnCallCompleted(
-	const firebase::Future<firebase::functions::HttpsCallableResult> &future,
+	const firebase::Future<firebase::functions::HttpsCallableResult>
+		&futureResponse,
 	std::function<void(const firebase::Variant &data, int error,
 			   const std::string &)>
 		completion_callback)
 {
-	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld +Cloud::OnCallCompleted(...)",
-	     pthread_self());
+	auto tid = QThread::currentThreadId();
+	blog(LOG_INFO, "[obs-ndi] cloud: tid=%p +Cloud::OnCallCompleted(...)",
+	     tid);
 	firebase::Variant data;
-	if (future.status() == firebase::kFutureStatusComplete) {
-		auto httpcallresult = future.result();
-		auto error = future.error();
-		auto error_message = future.error_message();
+	if (futureResponse.status() == firebase::kFutureStatusComplete) {
+		auto httpcallresult = futureResponse.result();
+		auto error = futureResponse.error();
+		auto error_message = futureResponse.error_message();
 		if (error == 0) {
 			data = httpcallresult->data();
 		}
@@ -334,8 +339,8 @@ firebase::Variant Cloud::OnCallCompleted(
 			completion_callback(data, error, error_message);
 		}
 	}
-	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld -Cloud::OnCallCompleted(...)",
-	     pthread_self());
+	blog(LOG_INFO, "[obs-ndi] cloud: tid=%p -Cloud::OnCallCompleted(...)",
+	     tid);
 	return data;
 }
 
@@ -343,17 +348,18 @@ firebase::Future<firebase::functions::HttpsCallableResult>
 Cloud::FetchAppCheckTokenAsync(
 	std::function<void(ProviderAppCheckToken)> completion_callback)
 {
-	auto data = firebase::Variant(firebase::Variant::EmptyMap());
-	data.map()["foo"] = "bar";
+	auto dataRequest = firebase::Variant(firebase::Variant::EmptyMap());
+	dataRequest.map()["foo"] = "bar";
 
-	auto future = CallAsync(
-		"fetchAppCheckToken", data,
-		[this, completion_callback](const firebase::Variant &data,
-					    int error, const std::string &) {
+	auto futureRequest = CallAsync(
+		"fetchAppCheckToken", dataRequest,
+		[this,
+		 completion_callback](const firebase::Variant &dataResponse,
+				      int error, const std::string &) {
 			ProviderAppCheckToken provider_app_check_token;
 			if (error == 0) {
-				if (data.is_map()) {
-					auto map = data.map();
+				if (dataResponse.is_map()) {
+					auto map = dataResponse.map();
 					auto token = map["token"];
 					if (token.is_null()) {
 						auto error_code =
@@ -362,7 +368,8 @@ Cloud::FetchAppCheckTokenAsync(
 							map["errorText"];
 						provider_app_check_token
 							.error_code =
-							error_code.int64_value();
+							(int)error_code
+								.int64_value();
 						provider_app_check_token
 							.error_text =
 							error_text
@@ -391,7 +398,8 @@ Cloud::FetchAppCheckTokenAsync(
 			     provider_app_check_token.error_text.c_str());
 			if (provider_app_check_token.error_code == 0) {
 				blog(LOG_INFO,
-				     "[obs-ndi] cloud: FetchAppCheckTokenAsync: provider_app_check_token.app_check_token.expire_time_millis=%lld, provider_app_check_token.app_check_token.token=\"%s\"",
+				     "[obs-ndi] cloud: FetchAppCheckTokenAsync: provider_app_check_token.app_check_token.expire_time_millis=%" PRId64
+				     ", provider_app_check_token.app_check_token.token=\"%s\"",
 				     provider_app_check_token.app_check_token
 					     .expire_time_millis,
 				     provider_app_check_token.app_check_token
@@ -405,16 +413,16 @@ Cloud::FetchAppCheckTokenAsync(
 				completion_callback(provider_app_check_token);
 			}
 		});
-	return future;
+	return futureRequest;
 }
 
-int Cloud::Foo()
+int64_t Cloud::Foo()
 {
 	return Call("foo", firebase::Variant()).int64_value();
 }
 
 firebase::Future<firebase::functions::HttpsCallableResult>
-Cloud::FooAsync(std::function<void(int)> completion_callback)
+Cloud::FooAsync(std::function<void(int64_t)> completion_callback)
 {
 	blog(LOG_INFO, "[obs-ndi] cloud: +Cloud::FooAsync(...)");
 	firebase::Future<firebase::functions::HttpsCallableResult> future;
@@ -423,8 +431,8 @@ Cloud::FooAsync(std::function<void(int)> completion_callback)
 			"foo", firebase::Variant(),
 			[completion_callback](const firebase::Variant &data,
 					      int error, const std::string &) {
-				int value = (error == 0) ? data.int64_value()
-							 : -1;
+				int64_t value =
+					(error == 0) ? data.int64_value() : -1;
 				if (completion_callback) {
 					completion_callback(value);
 				}
@@ -434,13 +442,13 @@ Cloud::FooAsync(std::function<void(int)> completion_callback)
 	return future;
 }
 
-int Cloud::Bar()
+int64_t Cloud::Bar()
 {
 	return Call("bar", firebase::Variant()).int64_value();
 }
 
 firebase::Future<firebase::functions::HttpsCallableResult>
-Cloud::BarAsync(std::function<void(int)> completion_callback)
+Cloud::BarAsync(std::function<void(int64_t)> completion_callback)
 {
 	blog(LOG_INFO, "[obs-ndi] cloud: +Cloud::BarAsync(...)");
 	firebase::Future<firebase::functions::HttpsCallableResult> future;
@@ -450,8 +458,8 @@ Cloud::BarAsync(std::function<void(int)> completion_callback)
 			[this,
 			 completion_callback](const firebase::Variant &data,
 					      int error, const std::string &) {
-				int value = (error == 0) ? data.int64_value()
-							 : -1;
+				int64_t value =
+					(error == 0) ? data.int64_value() : -1;
 				if (completion_callback) {
 					completion_callback(value);
 				}
@@ -485,11 +493,7 @@ void PostToMainThread(std::function<void()> task)
 bool ProcessEvents(int msec)
 {
 	static bool quit = false;
-#ifdef _WIN32
-	Sleep(msec);
-#else
-	usleep(msec * 1000);
-#endif // _WIN32
+	QThread::usleep(msec * 1000);
 	return quit;
 }
 

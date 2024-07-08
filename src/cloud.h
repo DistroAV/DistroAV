@@ -54,13 +54,13 @@ public:
 	void InitializeApp();
 	void TerminateApp();
 
-	int Foo();
+	int64_t Foo();
 	firebase::Future<firebase::functions::HttpsCallableResult>
-	FooAsync(std::function<void(int)> completion_callback = nullptr);
+	FooAsync(std::function<void(int64_t)> completion_callback = nullptr);
 
-	int Bar();
+	int64_t Bar();
 	firebase::Future<firebase::functions::HttpsCallableResult>
-	BarAsync(std::function<void(int)> completion_callback = nullptr);
+	BarAsync(std::function<void(int64_t)> completion_callback = nullptr);
 
 private:
 	std::unique_ptr<firebase::App> app_;

@@ -6,15 +6,16 @@ $FIREBASE_CPP_SDK_DIR = "lib/firebase_cpp_sdk"
 #Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $FIREBASE_CPP_SDK_DIR
 
 if (Test-Path $FIREBASE_CPP_SDK_DIR) {
-    Write-Output "Directory $FIREBASE_CPP_SDK_DIR already exists; skipping."
+    Write-Output "firebase_cpp_sdk: $FIREBASE_CPP_SDK_DIR already exists; skipping."
     return
 }
 
 Push-Location "lib"
 
-Write-Output "Downloading Firebase C++ SDK version $SDK_VERSION..."
+Write-Output "firebase_cpp_sdk: Downloading v$SDK_VERSION..."
 Invoke-WebRequest -Uri $URL -OutFile $ZIP_FILE
 
+Write-Output "firebase_cpp_sdk: Extracting $ZIP_FILE..."
 Expand-Archive -Path $ZIP_FILE
 
 $BASE_ZIP_FILE_NAME = $ZIP_FILE -replace '\.zip$'
@@ -24,9 +25,9 @@ Move-Item -Path $BASE_ZIP_FILE_NAME/* -Destination .
 Remove-Item $BASE_ZIP_FILE_NAME
 Rename-Item -Path $BASE_ZIP_OUTPUT_DIR -NewName $BASE_FIREBASE_CPP_SDK_DIR
 
-Write-Output "Cleaning up..."
+Write-Output "firebase_cpp_sdk: Cleaning up..."
 Remove-Item $ZIP_FILE
 
 Pop-Location
 
-Write-Output "Firebase C++ SDK setup complete."
+Write-Output "firebase_cpp_sdk: Setup complete."
