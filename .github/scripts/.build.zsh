@@ -195,7 +195,6 @@ ${_usage_host:-}"
 
   pushd ${project_root}
   if (( ! (${skips[(Ie)all]} + ${skips[(Ie)build]}) )) {
-
     log_group "Configuring ${product_name}..."
 
     local -a cmake_args=()

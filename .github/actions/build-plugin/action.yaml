@@ -33,9 +33,7 @@ runs:
       run: |
         : Run macOS Build
 
-        local -a build_args=(
-          --config ${{ inputs.config }}
-        )
+        local -a build_args=(--config ${{ inputs.config }})
         if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
 
         if [[ '${{ inputs.codesign }}' == 'true' ]] build_args+=(--codesign)

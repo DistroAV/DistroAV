@@ -1,6 +1,7 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+Copyright (C) 2023 by Lain Bailey <lain@obsproject.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,9 +17,11 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 /**
- * Select methods copied from OBS UI/obs-app.hpp
+ * Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/obs-app.cpp
+ * In some places just the method signature is [mostly] copied.
+ * In some places [nearly] the full code implementation is copied.
  */
-#include "obs-app.h"
+#include "obs-app.hpp"
 
 #include <obs-module.h>
 

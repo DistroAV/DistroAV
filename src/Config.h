@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,9 +24,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 class Config {
 public:
 	static Config *Current();
+	static void Destroy();
 	static bool VerboseLog();
 
-	Config();
 	void Load();
 	void Save();
 
@@ -46,7 +46,5 @@ public:
 
 private:
 	static Config *_instance;
-
-	// Do not persist this to storage
-	bool _VerboseLog;
+	Config();
 };

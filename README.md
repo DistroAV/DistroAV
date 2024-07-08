@@ -3,42 +3,47 @@
 DistroAV (Formerly OBS-NDI)
 ==============
 <div align="center">
+<h3>Network Audio/Video in OBS-Studio using NDI technology</h3>  
 
-[![GitHub](https://img.shields.io/github/license/obs-ndi/obs-ndi)](https://github.com/obs-ndi/obs-ndi/blob/master/LICENSE)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/obs-ndi/obs-ndi/push.yaml?label=master)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/obs-ndi/obs-ndi)](https://github.com/obs-ndi/obs-ndi/releases/latest)
-[![Total downloads](https://img.shields.io/github/downloads/obs-ndi/obs-ndi/total)](https://github.com/obs-ndi/obs-ndi/releases)
-![Flathub](https://img.shields.io/flathub/downloads/com.obsproject.Studio.Plugin.NDI?label=Flathub%20Installs)
-[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/obs-ndi)](https://opencollective.com/obs-ndi/donate)
-[![Discord](https://discordapp.com/api/guilds/1082173788101279746/widget.png)](https://discord.gg/ZuTxbUK3ug)
+[![GitHub](https://img.shields.io/github/license/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/blob/master/LICENSE)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DistroAV/DistroAV/push.yaml?label=master)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/releases/latest)  
+[![Discord](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)  
+(English Speaking)  
 
+[![Total downloads](https://img.shields.io/github/downloads/DistroAV/DistroAV/total)](https://github.com/DistroAV/DistroAV/releases)
+![Flathub](https://img.shields.io/flathub/downloads/com.obsproject.Studio.Plugin.NDI?label=Flathub%20Installs)  
+[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/obs-ndi)](https://opencollective.com/obs-ndi/donate)  
+[(Please consider making a donation)](https://opencollective.com/obs-ndi)
 </div>
 
 ## Features
-- **NDI Source** : receive NDI video and audio in OBS
-- **NDI Output** : transmit OBS video and audio to NDI
-- **NDI Filter** (a.k.a NDI Dedicated Output) : transmit a single OBS source or scene audio to NDI
+- **NDI Source** : Receive NDI video and audio in OBS
+- **NDI Output** : Transmit OBS video and audio to NDI
+- **NDI Filter** (a.k.a. **NDI Dedicated Output**) : Transmit a single OBS source or scene audio to NDI
 
 ## Requirements
 * OBS >= 30.0.0 (Qt6 & x64)
-* NDI 6 Runtime  
-  We are not allowed to directly distribute the NDI runtime here.  
+* [NDI Runtime](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
+  MacOS/Windows: NDI 6  
+  Linux: NDI 5 ([NDI 6 with a symlink](https://github.com/DistroAV/DistroAV/blob/4fc32df87ebcb9f659fec1e38ffbac8fb7565876/CI/libndi-get.sh#L76); NDI 6 support "Soon™")  
+  **NOTE: We are not allowed to directly distribute the NDI runtime here.**  
   See [#Installation](#installation).
 
 # Installation
 
-See [Installation Wiki](https://github.com/obs-ndi/obs-ndi/wiki/1.-Installation)
+See [Installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
 
 # Troubleshooting
 
-See [Troubleshooting Wiki](https://github.com/obs-ndi/obs-ndi/wiki/2.-Troubleshooting)
+See [Troubleshooting Wiki](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting)
 
 # Development
 
-See [Development Wiki](https://github.com/obs-ndi/obs-ndi/wiki/3.-Development)
+See [Development Wiki](https://github.com/DistroAV/DistroAV/wiki/3.-Development)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=obs-ndi/obs-ndi&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=obs-ndi/obs-ndi&type=Date" />
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=obs-ndi/obs-ndi&type=Date" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=DistroAV/DistroAV&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=DistroAV/DistroAV&type=Date" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=DistroAV/DistroAV&type=Date" />
 </picture>

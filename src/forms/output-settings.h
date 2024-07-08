@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,7 +16,8 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
-#pragma once
+#ifndef OUTPUTSETTINGS_H
+#define OUTPUTSETTINGS_H
 
 #include <QDialog>
 
@@ -25,8 +26,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 class OutputSettings : public QDialog {
 	Q_OBJECT
 public:
-	explicit OutputSettings(QWidget *parent = nullptr);
-	~OutputSettings();
+	explicit OutputSettings(QWidget *parent = 0);
 	void showEvent(QShowEvent *event);
 	void ToggleShowHide();
 
@@ -34,5 +34,7 @@ private slots:
 	void onFormAccepted();
 
 private:
-	Ui::OutputSettings *ui;
+	std::unique_ptr<Ui::OutputSettings> ui;
 };
+
+#endif // OUTPUTSETTINGS_H

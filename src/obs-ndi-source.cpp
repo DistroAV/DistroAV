@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -103,9 +103,8 @@ typedef struct {
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
+	obs_source_frame *blank_frame;
 } ndi_source_config_t;
-
-obs_source_frame *blank_video_frame = nullptr;
 
 typedef struct {
 	obs_source_t *obs_source;
@@ -200,41 +199,17 @@ static video_range_type prop_to_range_type(int index)
 	}
 }
 
-static void create_blank_video_frame()
+static obs_source_frame *blank_video_frame()
 {
-	blog(LOG_INFO, "[obs-ndi] +create_blank_video_frame()");
-	if (!blank_video_frame) {
-		obs_source_frame *frame =
-			obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
-		frame->timestamp = os_gettime_ns();
-		blank_video_frame = frame;
-	}
-	blog(LOG_INFO, "[obs-ndi] -create_blank_video_frame()");
-}
-
-static void destroy_blank_video_frame()
-{
-	blog(LOG_INFO, "[obs-ndi] +destroy_blank_video_frame()");
-	if (blank_video_frame) {
-		obs_source_frame_destroy(blank_video_frame);
-		blank_video_frame = nullptr;
-	}
-	blog(LOG_INFO, "[obs-ndi] -destroy_blank_video_frame()");
-}
-
-static void source_output_blank_video_frame(obs_source_t *obs_source)
-{
-	blog(LOG_INFO, "[obs-ndi] +source_output_blank_video_frame(...)");
-	if (!blank_video_frame) {
-		create_blank_video_frame();
-	}
-	obs_source_output_video(obs_source, blank_video_frame);
-	blog(LOG_INFO, "[obs-ndi] -source_output_blank_video_frame(...)");
+	obs_source_frame *frame =
+		obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
+	frame->timestamp = os_gettime_ns();
+	return frame;
 }
 
 const char *ndi_source_getname(void *)
 {
-	return Str("NDIPlugin.NDISourceName");
+	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
 obs_properties_t *ndi_source_getproperties(void *)
@@ -242,48 +217,46 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_property_t *source_list = obs_properties_add_list(
-		props, PROP_SOURCE, Str("NDIPlugin.SourceProps.SourceName"),
+		props, PROP_SOURCE,
+		obs_module_text("NDIPlugin.SourceProps.SourceName"),
 		OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
 	uint32_t nbSources = 0;
 	const NDIlib_source_t *sources =
 		ndiLib->find_get_current_sources(ndi_finder, &nbSources);
-	blog(LOG_INFO,
-	     "[obs-ndi] ndi_source_getproperties: Found %d NDI sources",
-	     nbSources);
 	for (uint32_t i = 0; i < nbSources; ++i) {
-		blog(LOG_INFO,
-		     "[obs-ndi] ndi_source_getproperties: source[%d]=\"%s\"", i,
-		     sources[i].p_ndi_name);
 		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
 					     sources[i].p_ndi_name);
 	}
 
 	obs_property_t *p = obs_properties_add_list(
-		props, PROP_BEHAVIOR, Str("NDIPlugin.SourceProps.Behavior"),
+		props, PROP_BEHAVIOR,
+		obs_module_text("NDIPlugin.SourceProps.Behavior"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
 
-	obs_property_list_add_string(p,
-				     Str("NDIPlugin.SourceProps.Behavior.Keep"),
-				     PROP_BEHAVIOR_KEEP);
 	obs_property_list_add_string(
-		p, Str("NDIPlugin.SourceProps.Behavior.Disconnect"),
+		p, obs_module_text("NDIPlugin.SourceProps.Behavior.Keep"),
+		PROP_BEHAVIOR_KEEP);
+	obs_property_list_add_string(
+		p, obs_module_text("NDIPlugin.SourceProps.Behavior.Disconnect"),
 		PROP_BEHAVIOR_DISCONNECT);
 
-	obs_properties_add_bool(props, PROP_BEHAVIOR_LASTFRAME,
-				Str("NDIPlugin.SourceProps.BehaviorLastFrame"));
+	obs_properties_add_bool(
+		props, PROP_BEHAVIOR_LASTFRAME,
+		obs_module_text("NDIPlugin.SourceProps.BehaviorLastFrame"));
 
 	obs_property_t *bw_modes = obs_properties_add_list(
-		props, PROP_BANDWIDTH, Str("NDIPlugin.SourceProps.Bandwidth"),
+		props, PROP_BANDWIDTH,
+		obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(
-		bw_modes, Str("NDIPlugin.SourceProps.Bandwidth.Highest"),
-		PROP_BW_HIGHEST);
 	obs_property_list_add_int(bw_modes,
-				  Str("NDIPlugin.SourceProps.Bandwidth.Lowest"),
+				  obs_module_text("NDIPlugin.BWMode.Highest"),
+				  PROP_BW_HIGHEST);
+	obs_property_list_add_int(bw_modes,
+				  obs_module_text("NDIPlugin.BWMode.Lowest"),
 				  PROP_BW_LOWEST);
-	obs_property_list_add_int(
-		bw_modes, Str("NDIPlugin.SourceProps.Bandwidth.AudioOnly"),
-		PROP_BW_AUDIO_ONLY);
+	obs_property_list_add_int(bw_modes,
+				  obs_module_text("NDIPlugin.BWMode.AudioOnly"),
+				  PROP_BW_AUDIO_ONLY);
 #if defined(__linux__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
@@ -310,77 +283,90 @@ obs_properties_t *ndi_source_getproperties(void *)
 	});
 
 	obs_property_t *sync_modes = obs_properties_add_list(
-		props, PROP_SYNC, Str("NDIPlugin.SourceProps.Sync"),
+		props, PROP_SYNC, obs_module_text("NDIPlugin.SourceProps.Sync"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(
-		sync_modes, Str("NDIPlugin.SourceProps.Sync.NDITimestamp"),
+		sync_modes, obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
 		PROP_SYNC_NDI_TIMESTAMP);
 	obs_property_list_add_int(
-		sync_modes, Str("NDIPlugin.SourceProps.Sync.NDISourceTimecode"),
+		sync_modes,
+		obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
 		PROP_SYNC_NDI_SOURCE_TIMECODE);
 
 	obs_properties_add_bool(props, PROP_FRAMESYNC,
-				Str("NDIPlugin.SourceProps.NDIFrameSync"));
+				obs_module_text("NDIPlugin.NDIFrameSync"));
 
-	obs_properties_add_bool(props, PROP_HW_ACCEL,
-				Str("NDIPlugin.SourceProps.HWAccel"));
+	obs_properties_add_bool(
+		props, PROP_HW_ACCEL,
+		obs_module_text("NDIPlugin.SourceProps.HWAccel"));
 
-	obs_properties_add_bool(props, PROP_FIX_ALPHA,
-				Str("NDIPlugin.SourceProps.AlphaBlendingFix"));
+	obs_properties_add_bool(
+		props, PROP_FIX_ALPHA,
+		obs_module_text("NDIPlugin.SourceProps.AlphaBlendingFix"));
 
 	obs_property_t *yuv_ranges = obs_properties_add_list(
-		props, PROP_YUV_RANGE, Str("NDIPlugin.SourceProps.ColorRange"),
+		props, PROP_YUV_RANGE,
+		obs_module_text("NDIPlugin.SourceProps.ColorRange"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(
-		yuv_ranges, Str("NDIPlugin.SourceProps.ColorRange.Partial"),
+		yuv_ranges,
+		obs_module_text("NDIPlugin.SourceProps.ColorRange.Partial"),
 		PROP_YUV_RANGE_PARTIAL);
-	obs_property_list_add_int(yuv_ranges,
-				  Str("NDIPlugin.SourceProps.ColorRange.Full"),
-				  PROP_YUV_RANGE_FULL);
+	obs_property_list_add_int(
+		yuv_ranges,
+		obs_module_text("NDIPlugin.SourceProps.ColorRange.Full"),
+		PROP_YUV_RANGE_FULL);
 
 	obs_property_t *yuv_spaces = obs_properties_add_list(
 		props, PROP_YUV_COLORSPACE,
-		Str("NDIPlugin.SourceProps.ColorSpace"), OBS_COMBO_TYPE_LIST,
-		OBS_COMBO_FORMAT_INT);
+		obs_module_text("NDIPlugin.SourceProps.ColorSpace"),
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
 
 	obs_property_t *latency_modes = obs_properties_add_list(
-		props, PROP_LATENCY, Str("NDIPlugin.SourceProps.LatencyMode"),
+		props, PROP_LATENCY,
+		obs_module_text("NDIPlugin.SourceProps.Latency"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(
-		latency_modes, Str("NDIPlugin.SourceProps.LatencyMode.Normal"),
+		latency_modes,
+		obs_module_text("NDIPlugin.SourceProps.Latency.Normal"),
 		PROP_LATENCY_NORMAL);
-	obs_property_list_add_int(latency_modes,
-				  Str("NDIPlugin.SourceProps.LatencyMode.Low"),
-				  PROP_LATENCY_LOW);
 	obs_property_list_add_int(
-		latency_modes, Str("NDIPlugin.SourceProps.LatencyMode.Lowest"),
+		latency_modes,
+		obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
+		PROP_LATENCY_LOW);
+	obs_property_list_add_int(
+		latency_modes,
+		obs_module_text("NDIPlugin.SourceProps.Latency.Lowest"),
 		PROP_LATENCY_LOWEST);
 
 	obs_properties_add_bool(props, PROP_AUDIO,
-				Str("NDIPlugin.SourceProps.Audio"));
+				obs_module_text("NDIPlugin.SourceProps.Audio"));
 
 	obs_properties_t *group_ptz = obs_properties_create();
-	obs_properties_add_float_slider(group_ptz, PROP_PAN,
-					Str("NDIPlugin.SourceProps.Pan"), -1.0,
-					1.0, 0.001);
-	obs_properties_add_float_slider(group_ptz, PROP_TILT,
-					Str("NDIPlugin.SourceProps.Tilt"), -1.0,
-					1.0, 0.001);
-	obs_properties_add_float_slider(group_ptz, PROP_ZOOM,
-					Str("NDIPlugin.SourceProps.Zoom"), 0.0,
-					1.0, 0.001);
+	obs_properties_add_float_slider(
+		group_ptz, PROP_PAN,
+		obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0, 0.001);
+	obs_properties_add_float_slider(
+		group_ptz, PROP_TILT,
+		obs_module_text("NDIPlugin.SourceProps.Tilt"), -1.0, 1.0,
+		0.001);
+	obs_properties_add_float_slider(
+		group_ptz, PROP_ZOOM,
+		obs_module_text("NDIPlugin.SourceProps.Zoom"), 0.0, 1.0, 0.001);
 	obs_properties_add_group(props, PROP_PTZ,
-				 Str("NDIPlugin.SourceProps.PTZ"),
+				 obs_module_text("NDIPlugin.SourceProps.PTZ"),
 				 OBS_GROUP_CHECKABLE, group_ptz);
 
-	obs_properties_t *group_ndi = obs_properties_create();
-	auto ndi_website_button = obs_properties_add_button(
-		group_ndi, "ndi_website", NDI_WEB_URL, nullptr);
-	obs_property_button_set_type(ndi_website_button, OBS_BUTTON_URL);
-	obs_property_button_set_url(ndi_website_button,
-				    const_cast<char *>(NDI_WEB_URL));
+	auto group_ndi = obs_properties_create();
+	obs_properties_add_button(
+		group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
+		[](obs_properties_t *, obs_property_t *, void *) {
+			QDesktopServices::openUrl(
+				QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+			return false;
+		});
 	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
 				 group_ndi);
 
@@ -420,8 +406,6 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 
 void *ndi_source_thread(void *data)
 {
-	bool verbose_log = Config::VerboseLog();
-
 	auto s = (ndi_source_t *)data;
 	auto obs_source = s->obs_source;
 	QByteArray obs_source_ndi_receiver_name_utf8 =
@@ -513,7 +497,9 @@ void *ndi_source_thread(void *data)
 			case PROP_BW_AUDIO_ONLY:
 				recv_desc.bandwidth =
 					NDIlib_recv_bandwidth_audio_only;
-				source_output_blank_video_frame(obs_source);
+				obs_source_output_video(
+					obs_source,
+					config_most_recent.blank_frame);
 				break;
 			}
 			blog(LOG_INFO,
@@ -701,9 +687,7 @@ void *ndi_source_thread(void *data)
 				1024);
 			if (audio_frame2.p_data &&
 			    (audio_frame2.timestamp > timestamp_audio)) {
-				if (verbose_log) {
-					blog(LOG_INFO, "a"); //udio_frame";
-				}
+				//blog(LOG_INFO, "a");//udio_frame";
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
 					&config_most_recent, &audio_frame2,
@@ -721,9 +705,7 @@ void *ndi_source_thread(void *data)
 				NDIlib_frame_format_type_progressive);
 			if (video_frame2.p_data &&
 			    (video_frame2.timestamp > timestamp_video)) {
-				if (verbose_log) {
-					blog(LOG_INFO, "v"); //ideo_frame";
-				}
+				//blog(LOG_INFO, "v");//ideo_frame";
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
@@ -935,7 +917,8 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		s->running = false;
 		pthread_join(s->av_thread, NULL);
 		if (!s->config.remember_last_frame) {
-			source_output_blank_video_frame(s->obs_source);
+			obs_source_output_video(s->obs_source,
+						s->config.blank_frame);
 		}
 	}
 }
@@ -984,7 +967,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		if (!existing_filter) {
 			obs_source_t *new_filter = obs_source_create(
 				OBS_NDI_ALPHA_FILTER_ID,
-				Str("NDIPlugin.PremultipliedAlphaFilterName"),
+				obs_module_text(
+					"NDIPlugin.PremultipliedAlphaFilterName"),
 				nullptr, nullptr);
 			obs_source_filter_add(obs_source, new_filter);
 			obs_source_release(new_filter);
@@ -1090,7 +1074,8 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	create_blank_video_frame();
+	// Allocate blank video frame
+	s->config.blank_frame = blank_video_frame();
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
@@ -1113,7 +1098,7 @@ void ndi_source_destroy(void *data)
 
 	ndi_source_thread_stop(s);
 
-	destroy_blank_video_frame();
+	obs_source_frame_destroy(s->config.blank_frame);
 
 	bfree(s);
 

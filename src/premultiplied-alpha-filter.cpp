@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ struct alpha_filter {
 
 const char *alpha_filter_getname(void *)
 {
-	return Str("NDIPlugin.PremultipliedAlphaFilterName");
+	return obs_module_text("NDIPlugin.PremultipliedAlphaFilterName");
 }
 
 obs_properties_t *alpha_filter_getproperties(void *)

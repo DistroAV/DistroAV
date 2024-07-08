@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,19 +16,49 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 /**
- * Select methods copied from OBS UI/update/shared-update.cpp
+ * Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/update/shared-update.cpp
+ * The original file has no copyright notice.
+ * In some places just the method signature is [mostly] copied.
+ * In some places [nearly] the full code implementation is copied.
  */
-#include "shared-update.h"
+#include "shared-update.hpp"
 
-#include "obs-app.h"
+#include "obs-app.hpp"
 
 #include <util/config-file.h>
 
 #include <mutex>
 
+#include <QCryptographicHash>
+#include <QFile>
 #include <QRandomGenerator>
 
-void GenerateGUID(std::string &guid)
+// Changed to use QCryptographicHash::Sha256 and QString
+bool CalculateFileHash(const char *path, QString &hash)
+{
+	QFile file(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		blog(LOG_WARNING,
+		     "[obs-ndi] CalculateFileHash: Failed to open file: `%s`",
+		     path);
+		return false;
+	}
+
+	QCryptographicHash qhash(QCryptographicHash::Sha256);
+	if (!qhash.addData(&file)) {
+		blog(LOG_WARNING,
+		     "[obs-ndi] CalculateFileHash: Failed to read data from file: `%s`",
+		     path);
+		return false;
+	}
+
+	hash = qhash.result().toHex();
+
+	return true;
+}
+
+// Changed to use QString
+void GenerateGUID(QString &guid)
 {
 	const char alphabet[] = "0123456789abcdef";
 	QRandomGenerator *rng = QRandomGenerator::system();
@@ -40,7 +70,8 @@ void GenerateGUID(std::string &guid)
 	}
 }
 
-std::string GetProgramGUID()
+// Changed to return QString
+QString GetProgramGUID()
 {
 	static std::mutex m;
 	std::lock_guard<std::mutex> lock(m);
@@ -48,19 +79,14 @@ std::string GetProgramGUID()
 	/* NOTE: this is an arbitrary random number that we use to count the
 	 * number of unique OBS installations and is not associated with any
 	 * kind of identifiable information */
-	const char *pguid =
+	QString guid =
 		config_get_string(GetGlobalConfig(), "General", "InstallGUID");
-	std::string guid;
-	if (pguid)
-		guid = pguid;
-
-	if (guid.empty()) {
+	if (guid.isEmpty()) {
 		GenerateGUID(guid);
-
-		if (!guid.empty())
+		if (!guid.isEmpty())
 			config_set_string(GetGlobalConfig(), "General",
-					  "InstallGUID", guid.c_str());
+					  "InstallGUID",
+					  guid.toUtf8().constData());
 	}
-
 	return guid;
 }

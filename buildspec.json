@@ -49,8 +49,8 @@
         }
     },
     "name": "obs-ndi",
-    "version": "4.13.2",
     "displayName": "OBS-NDI",
+    "version": "4.13.2",
     "website": "https://obsproject.com/forum/resources/obs-ndi-newtek-ndi%E2%84%A2-integration-into-obs-studio.528/",
     "author": "Stéphane Lepin",
     "email": "stephane.lepin@gmail.com",

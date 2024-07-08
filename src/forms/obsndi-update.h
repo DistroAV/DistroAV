@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,18 +18,18 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #pragma once
 
 #include <QDialog>
+#include <QJsonObject>
 
 #include "ui_obsndi-update.h"
 
 class ObsNdiUpdate : public QDialog {
 	Q_OBJECT
 public:
-	explicit ObsNdiUpdate(const QJsonDocument &jsonResponse,
+	explicit ObsNdiUpdate(const QJsonObject &jsonObject,
 			      QWidget *parent = nullptr);
-	~ObsNdiUpdate();
 
 private:
-	Ui::ObsNdiUpdate *ui;
+	std::unique_ptr<Ui::ObsNdiUpdate> ui;
 };
 
 void updateCheckStop();

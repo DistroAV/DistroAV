@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -45,15 +45,10 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void *param);
 void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
-void preview_output_init()
+void preview_output_init(const char *default_name, const char *default_groups)
 {
 	if (context.output)
 		return;
-
-	auto conf = Config::Current();
-	const char *default_name = conf->PreviewOutputName.toUtf8().constData();
-	const char *default_groups =
-		conf->PreviewOutputGroups.toUtf8().constData();
 
 	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s', '%s')",
 	     default_name, default_groups);
@@ -62,29 +57,15 @@ void preview_output_init()
 	obs_data_set_string(output_settings, "ndi_name", default_name);
 	obs_data_set_string(output_settings, "ndi_groups", default_groups);
 	obs_data_set_bool(output_settings, "uses_audio", false);
-	context.output = obs_output_create(
-		"ndi_output",
-		Str("NDIPlugin.OutputSettings.Preview.Name.Default"),
-		output_settings, nullptr);
+	context.output = obs_output_create("ndi_output", "NDI Preview Output",
+					   output_settings, nullptr);
 	obs_data_release(output_settings);
 }
 
-void preview_output_start()
+void preview_output_start(const char *output_name, const char *output_groups)
 {
 	if (context.enabled || !context.output)
 		return;
-
-	auto conf = Config::Current();
-
-	if (!conf->PreviewOutputEnabled) {
-		blog(LOG_INFO,
-		     "[obs-ndi] preview_output_start: NDI preview output is disabled");
-		return;
-	}
-
-	const char *output_name = conf->PreviewOutputName.toUtf8().constData();
-	const char *output_groups =
-		conf->PreviewOutputGroups.toUtf8().constData();
 
 	blog(LOG_INFO,
 	     "[obs-ndi] preview_output_start: starting NDI preview output with name '%s'",
@@ -189,14 +170,12 @@ void preview_output_stop()
 
 void preview_output_deinit()
 {
-	blog(LOG_INFO, "[obs-ndi] +preview_output_deinit()");
+	blog(LOG_INFO, "[obs-ndi] preview_output_deinit()");
 
 	obs_output_release(context.output);
 
 	context.output = nullptr;
 	context.enabled = false;
-
-	blog(LOG_INFO, "[obs-ndi] -preview_output_deinit()");
 }
 
 bool preview_output_is_enabled()

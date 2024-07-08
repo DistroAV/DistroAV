@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,21 +26,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 static obs_output_t *main_out = nullptr;
 static bool main_output_running = false;
 
-void main_output_start()
+void main_output_start(const char *output_name, const char *output_groups)
 {
 	if (main_output_running)
 		return;
-
-	auto conf = Config::Current();
-
-	if (!conf->OutputEnabled) {
-		blog(LOG_INFO,
-		     "[obs-ndi] main_output_start: NDI main output is disabled");
-		return;
-	}
-
-	const char *output_name = conf->OutputName.toUtf8().constData();
-	const char *output_groups = conf->OutputGroups.toUtf8().constData();
 
 	blog(LOG_INFO,
 	     "[obs-ndi] main_output_start: starting NDI main output with name '%s'",
@@ -49,9 +38,8 @@ void main_output_start()
 	obs_data_t *settings = obs_data_create();
 	obs_data_set_string(settings, "ndi_name", output_name);
 	obs_data_set_string(settings, "ndi_groups", output_groups);
-	main_out = obs_output_create(
-		"ndi_output", Str("NDIPlugin.OutputSettings.Main.Name.Default"),
-		settings, nullptr);
+	main_out = obs_output_create("ndi_output", "NDI Main Output", settings,
+				     nullptr);
 	obs_data_release(settings);
 	if (!main_out) {
 		blog(LOG_ERROR,
@@ -70,8 +58,6 @@ void main_output_start()
 
 void main_output_stop()
 {
-	blog(LOG_INFO, "[obs-ndi] +main_output_stop()");
-
 	if (!main_output_running)
 		return;
 
@@ -84,10 +70,7 @@ void main_output_stop()
 	main_output_running = false;
 
 	blog(LOG_INFO, "[obs-ndi] main_output_stop: stopped NDI main output");
-
-	blog(LOG_INFO, "[obs-ndi] -main_output_stop()");
 }
-
 bool main_output_is_running()
 {
 	return main_output_running;

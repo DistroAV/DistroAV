@@ -1,6 +1,6 @@
 /*
 obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "Config.h"
 #include "plugin-main.h"
-#include "obs-support/obs-app.h"
 
 #include <QtCore/QCoreApplication>
 
@@ -37,50 +36,6 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
 
-bool Config::AutoCheckForUpdates()
-{
-	auto obs_config = GetGlobalConfig();
-	if (obs_config) {
-		return config_get_bool(obs_config, SECTION_NAME,
-				       PARAM_AUTO_CHECK_FOR_UPDATES);
-	}
-	return false;
-}
-
-void Config::AutoCheckForUpdates(bool value)
-{
-	auto obs_config = GetGlobalConfig();
-	if (obs_config) {
-		config_set_bool(obs_config, SECTION_NAME,
-				PARAM_AUTO_CHECK_FOR_UPDATES, value);
-		config_save(obs_config);
-	}
-}
-
-void Config::SkipUpdateVersion(const QVersionNumber &version)
-{
-	auto obs_config = GetGlobalConfig();
-	if (obs_config) {
-		config_set_string(obs_config, SECTION_NAME,
-				  PARAM_SKIP_UPDATE_VERSION,
-				  version.toString().toUtf8().constData());
-		config_save(obs_config);
-	}
-}
-
-QVersionNumber Config::SkipUpdateVersion()
-{
-	auto obs_config = GetGlobalConfig();
-	if (obs_config) {
-		auto version = config_get_string(obs_config, SECTION_NAME,
-						 PARAM_SKIP_UPDATE_VERSION);
-		if (version) {
-			return QVersionNumber::fromString(version);
-		}
-	}
-	return QVersionNumber();
-}
-
 Config *Config::_instance = nullptr;
 
 Config *Config::Current()
@@ -91,9 +46,19 @@ Config *Config::Current()
 	return _instance;
 }
 
+void Config::Destroy()
+{
+	if (_instance) {
+		delete _instance;
+		_instance = nullptr;
+	}
+}
+
+bool _VerboseLog = false;
+
 bool Config::VerboseLog()
 {
-	return Current()->_VerboseLog;
+	return _VerboseLog;
 }
 
 Config::Config()
@@ -104,8 +69,7 @@ Config::Config()
 	  PreviewOutputName("OBS Preview"),
 	  PreviewOutputGroups(""),
 	  TallyProgramEnabled(true),
-	  TallyPreviewEnabled(true),
-	  _VerboseLog(false)
+	  TallyPreviewEnabled(true)
 {
 	auto arguments = QCoreApplication::arguments();
 	if (arguments.contains("--obs-ndi-verbose")) {
@@ -205,4 +169,48 @@ void Config::Save()
 
 		config_save(obs_config);
 	}
+}
+
+bool Config::AutoCheckForUpdates()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		return config_get_bool(obs_config, SECTION_NAME,
+				       PARAM_AUTO_CHECK_FOR_UPDATES);
+	}
+	return false;
+}
+
+void Config::AutoCheckForUpdates(bool value)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_bool(obs_config, SECTION_NAME,
+				PARAM_AUTO_CHECK_FOR_UPDATES, value);
+		config_save(obs_config);
+	}
+}
+
+void Config::SkipUpdateVersion(const QVersionNumber &version)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_string(obs_config, SECTION_NAME,
+				  PARAM_SKIP_UPDATE_VERSION,
+				  version.toString().toUtf8().constData());
+		config_save(obs_config);
+	}
+}
+
+QVersionNumber Config::SkipUpdateVersion()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		auto version = config_get_string(obs_config, SECTION_NAME,
+						 PARAM_SKIP_UPDATE_VERSION);
+		if (version) {
+			return QVersionNumber::fromString(version);
+		}
+	}
+	return QVersionNumber();
 }

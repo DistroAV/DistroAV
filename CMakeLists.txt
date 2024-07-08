@@ -16,6 +16,9 @@ add_library(${CMAKE_PROJECT_NAME} MODULE)
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 
+find_package(CURL REQUIRED)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE CURL::libcurl)
+
 if(ENABLE_FRONTEND_API)
   find_package(obs-frontend-api REQUIRED)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
@@ -46,9 +49,11 @@ target_sources(
           src/forms/output-settings.cpp
           src/forms/output-settings.h
           src/obs-support/obs-app.cpp
-          src/obs-support/obs-app.h
+          src/obs-support/obs-app.hpp
+          src/obs-support/remote-text.cpp
+          src/obs-support/remote-text.hpp
           src/obs-support/shared-update.cpp
-          src/obs-support/shared-update.h
+          src/obs-support/shared-update.hpp
           src/Config.cpp
           src/Config.h
           src/main-output.cpp
