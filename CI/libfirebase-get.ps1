@@ -6,39 +6,23 @@ $FIREBASE_CPP_SDK_DIR = "lib/firebase_cpp_sdk"
 #Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $FIREBASE_CPP_SDK_DIR
 
 if (Test-Path $FIREBASE_CPP_SDK_DIR) {
-    Write-Output "Directory $FIREBASE_CPP_SDK_DIR already exists. Exiting script."
+    Write-Output "Directory $FIREBASE_CPP_SDK_DIR already exists; skipping."
     return
 }
 
-New-Item -ItemType Directory -Path $FIREBASE_CPP_SDK_DIR
-
-Push-Location $FIREBASE_CPP_SDK_DIR
+Push-Location "lib"
 
 Write-Output "Downloading Firebase C++ SDK version $SDK_VERSION..."
 Invoke-WebRequest -Uri $URL -OutFile $ZIP_FILE
 
-Write-Output "Extracting $ZIP_FILE..."
-$extraction_inclusions = @(
-    "include/*",
-    "libs/windows/*/MD/x64/*",
-    "CMakeLists.txt",
-    "generate_xml_from_google_services_json.exe",
-    "NOTICES",
-    "readme.md"
-)
-$BASE_DIR_NAME = Split-Path -Leaf $FIREBASE_CPP_SDK_DIR
-$prefixed_paths = $extraction_inclusions | ForEach-Object { "$BASE_DIR_NAME/$_" }
+Expand-Archive -Path $ZIP_FILE
 
-# Unzip the selected files
-Expand-Archive -Path $ZIP_FILE -DestinationPath ".."
-
-# Manually move the specific files/directories to the correct location
-$prefixed_paths | ForEach-Object {
-    $source = Join-Path -Path ".." -ChildPath $_
-    if (Test-Path -Path $source) {
-        Move-Item -Path $source -Destination "."
-    }
-}
+$BASE_ZIP_FILE_NAME = $ZIP_FILE -replace '\.zip$'
+$BASE_ZIP_OUTPUT_DIR = $BASE_ZIP_FILE_NAME -replace '_\d+\.\d+\.\d+$'
+$BASE_FIREBASE_CPP_SDK_DIR = Split-Path -Leaf $FIREBASE_CPP_SDK_DIR
+Move-Item -Path $BASE_ZIP_FILE_NAME/* -Destination .
+Remove-Item $BASE_ZIP_FILE_NAME
+Rename-Item -Path $BASE_ZIP_OUTPUT_DIR -NewName $BASE_FIREBASE_CPP_SDK_DIR
 
 Write-Output "Cleaning up..."
 Remove-Item $ZIP_FILE

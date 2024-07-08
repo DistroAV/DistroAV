@@ -1,9 +1,6 @@
 #include "cloud.h"
 
 #include <pthread.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif // _WIN32
 
 #include <QCoreApplication>
 #include <QMetaObject>
@@ -270,7 +267,7 @@ void Cloud::ExecutePendingCalls()
 firebase::Variant Cloud::Call(const char *name, const firebase::Variant &data)
 {
 	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld +Cloud::Call(`%s`, ...)",
-	     (long)pthread_self(), name);
+	     pthread_self(), name);
 	firebase::Variant result;
 	if (functions_) {
 		auto httpcallref = functions_->GetHttpsCallable(name);
@@ -284,7 +281,7 @@ firebase::Variant Cloud::Call(const char *name, const firebase::Variant &data)
 		result = OnCallCompleted(future, nullptr);
 	}
 	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld -Cloud::Call(`%s`, ...)",
-	     (long)pthread_self(), name);
+	     pthread_self(), name);
 	return result;
 }
 
@@ -295,7 +292,7 @@ Cloud::CallAsync(const char *name, const firebase::Variant &data,
 			 completion_callback)
 {
 	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld +Cloud::CallAsync(`%s`, ...)",
-	     (long)pthread_self(), name);
+	     pthread_self(), name);
 	firebase::Future<firebase::functions::HttpsCallableResult> future;
 	if (functions_) {
 		auto httpcallref = functions_->GetHttpsCallable(name);
@@ -313,7 +310,7 @@ Cloud::CallAsync(const char *name, const firebase::Variant &data,
 			});
 	}
 	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld -Cloud::CallAsync(`%s`, ...)",
-	     (long)pthread_self(), name);
+	     pthread_self(), name);
 	return future;
 }
 
@@ -324,7 +321,7 @@ firebase::Variant Cloud::OnCallCompleted(
 		completion_callback)
 {
 	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld +Cloud::OnCallCompleted(...)",
-	     (long)pthread_self());
+	     pthread_self());
 	firebase::Variant data;
 	if (future.status() == firebase::kFutureStatusComplete) {
 		auto httpcallresult = future.result();
@@ -338,7 +335,7 @@ firebase::Variant Cloud::OnCallCompleted(
 		}
 	}
 	blog(LOG_INFO, "[obs-ndi] cloud: tid=%ld -Cloud::OnCallCompleted(...)",
-	     (long)pthread_self());
+	     pthread_self());
 	return data;
 }
 
