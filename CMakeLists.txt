@@ -49,8 +49,6 @@ target_sources(
           src/obs-support/obs-app.h
           src/obs-support/shared-update.cpp
           src/obs-support/shared-update.h
-          src/cloud.cpp
-          src/cloud.h
           src/Config.cpp
           src/Config.h
           src/main-output.cpp
@@ -65,43 +63,5 @@ target_sources(
           src/preview-output.h)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
-
-# Firebase C++ SDK: Begin
-
-# "`firebase_app` is required and must always be listed last"
-set(firebase_libs firebase_app_check firebase_auth firebase_firestore firebase_functions firebase_app)
-if(APPLE)
-  set(ADDITIONAL_LIBS
-      gssapi_krb5
-      pthread
-      "-framework CoreFoundation"
-      "-framework Foundation"
-      "-framework GSS"
-      "-framework Security"
-      "-framework SystemConfiguration")
-elseif(MSVC)
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(MSVC_CONFIG Debug)
-  else()
-    set(MSVC_CONFIG Release)
-  endif()
-
-  set(MSVC_RUNTIME_MODE MD) # MT causes `already defined` and `unresolved` errors
-
-  # firebase cpp sdk does not contain PDBs; ignore "warning LNK4099: PDB was not found"
-  target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "/ignore:4099")
-
-  # https://firebase.google.com/docs/cpp/setup?platform=ios#windows-libraries
-  set(ADDITIONAL_LIBS advapi32 ws2_32 crypt32 rpcrt4 ole32 shell32)
-else()
-  set(ADDITIONAL_LIBS pthread)
-endif()
-
-set(FIREBASE_SDK_DIR ${CMAKE_SOURCE_DIR}/lib/firebase_cpp_sdk)
-add_subdirectory(${FIREBASE_SDK_DIR} EXCLUDE_FROM_ALL)
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${FIREBASE_SDK_DIR}/include)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${firebase_libs} ${ADDITIONAL_LIBS})
-
-# Firebase C++ SDK: End
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
