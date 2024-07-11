@@ -73,7 +73,7 @@ if [ "$1" == "install" ]; then
     ls -la /usr/local/lib/libndi*
 
     echo "Adding backward compatibility tweaks for older plugins version to work with NDI v6"
-    ln -s /usr/local/lib/libndi.5.so /usr/local/lib/libndi.so.6
+    sudo ln -s /usr/local/lib/libndi.so.6 /usr/local/lib/libndi.so.5
 fi
 
 # Allow to keep the temporary files (to use with libndi-package.sh)
