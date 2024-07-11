@@ -3,11 +3,12 @@ set -e
 
 LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v6_Linux"
 LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
+LIBNDI_INSTALLER_URL=https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER
 
 # Use temporary directory
 LIBNDI_TMP=$(mktemp --tmpdir -d ndidisk.XXXXXXX)
 
-# Check if the directory exists and is a directory.
+# Check if the temp directory exists and is a directory.
 if [[ -d "$LIBNDI_TMP" ]]; then
     echo "Temporary directory created at $LIBNDI_TMP"
 else
@@ -15,15 +16,15 @@ else
     exit 1
 fi
 
-# While most of the command are with the folder specifiec, this is needed for the libndi install script to be in the correct folder
+# While most of the command are with the folder path, this is needed for the libndi install script to run properly
 pushd $LIBNDI_TMP
 
 # Download LIBNDI
-# The follwoing should work with tmp folder in the user home directory - but not always... So i do not use it.
-# curl -o "$LIBNDI_TMP/$LIBNDI_INSTALLER" https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER -f --retry 5
+# The follwoing should work with tmp folder in the user home directory - but not always... So we do not use it.
+# curl -o "$LIBNDI_TMP/$LIBNDI_INSTALLER" $LIBNDI_INSTALLER_URL -f --retry 5
 
 # The following is required if the temp directory is not in the user home directory.
- curl -L  https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER -f --retry 5 > "$LIBNDI_TMP/$LIBNDI_INSTALLER"
+curl -L $LIBNDI_INSTALLER_URL -f --retry 5 > "$LIBNDI_TMP/$LIBNDI_INSTALLER"
 
 
 # Check if download was successful
@@ -47,8 +48,6 @@ fi
 echo "Uncompression complete."
 
 
-# curl -L -o $LIBNDI_INSTALLER https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER -f --retry 5
-#tar -xf $LIBNDI_INSTALLER
 yes | PAGER="cat" sh $LIBNDI_INSTALLER_NAME.sh
 
 
@@ -72,32 +71,22 @@ if [ "$1" == "install" ]; then
 
     echo "libndi installed to /usr/local/lib"
     ls -la /usr/local/lib/libndi*
-    echo
+
+    echo "Adding backward compatibility tweaks for older plugins version to work with NDI v6"
+    sudo ln -s /usr/local/lib/libndi.so.6 /usr/local/lib/libndi.so.5
 fi
-
-
 
 # Allow to keep the temporary files (to use with libndi-package.sh)
 if [ "$1" == "nocleanup" ]; then
-        echo "No Clean-up requested."
-
+    echo "No Clean-up requested."
 else
-
-        # Otherwise continue with Clean-up
-
-        echo "Clean-up : Removing temporary folder"
-        rm -rf $LIBNDI_TMP
-        # Confirm temporary directory was removed.
-
-        # Check if the directory exists and is a directory.
-        if [[ ! -d "$LIBNDI_TMP" ]]; then
-            echo "Temporary directory $LIBNDI_TMP does not exist anymore (good!)"
-        else
-            echo "Failed to clean-up temporary directory."
-            echo "Please clean this up manully - All should be in $LIBNDI_TMP"
-            exit 1
-        fi
-
+    echo "Clean-up : Removing temporary folder"
+    rm -rf $LIBNDI_TMP
+    if [[ ! -d "$LIBNDI_TMP" ]]; then
+        echo "Temporary directory $LIBNDI_TMP does not exist anymore (good!)"
+    else
+        echo "Failed to clean-up temporary directory."
+        echo "Please clean this up manully - All should be in $LIBNDI_TMP"
+        exit 1
+    fi
 fi
-
-# Enjoy!
