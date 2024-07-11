@@ -13,8 +13,8 @@ DistroAV (Formerly OBS-NDI)
 
 [![Total downloads](https://img.shields.io/github/downloads/DistroAV/DistroAV/total)](https://github.com/DistroAV/DistroAV/releases)
 ![Flathub](https://img.shields.io/flathub/downloads/com.obsproject.Studio.Plugin.NDI?label=Flathub%20Installs)  
-[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/obs-ndi)](https://opencollective.com/obs-ndi/donate)  
-[(Please consider making a donation)](https://opencollective.com/obs-ndi)
+[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/distroav)](https://opencollective.com/distroav/donate)  
+[(Please consider making a donation)](https://opencollective.com/distroav)
 </div>
 
 ## Features
@@ -26,9 +26,7 @@ DistroAV (Formerly OBS-NDI)
 * OBS >= 30.0.0 (Qt6 & x64)
 * [NDI Runtime](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
   MacOS/Windows: NDI 6  
-  Linux: NDI 5 ([NDI 6 with a symlink](https://github.com/DistroAV/DistroAV/blob/4fc32df87ebcb9f659fec1e38ffbac8fb7565876/CI/libndi-get.sh#L76); NDI 6 support "Soon™")  
-  **NOTE: We are not allowed to directly distribute the NDI runtime here.**  
-  See [#Installation](#installation).
+  Linux: NDI 5 ([NDI 6 with a symlink](https://github.com/DistroAV/DistroAV/blob/4fc32df87ebcb9f659fec1e38ffbac8fb7565876/CI/libndi-get.sh#L76); NDI 6 support "Soon™")
 
 # Installation
 
