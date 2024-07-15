@@ -86,7 +86,7 @@ else
         echo "Temporary directory $LIBNDI_TMP does not exist anymore (good!)"
     else
         echo "Failed to clean-up temporary directory."
-        echo "Please clean this up manully - All should be in $LIBNDI_TMP"
+        echo "Please clean this up manually - All should be in $LIBNDI_TMP"
         exit 1
     fi
 fi
