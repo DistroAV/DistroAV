@@ -83,10 +83,10 @@ QPointer<OutputSettings> output_settings = nullptr;
 QString rehostUrl(const char *url)
 {
 	auto result = QString::fromUtf8(url);
-	if (strcmp(PLUGIN_WEB_HOST, "127.0.0.1") == 0) {
-		result.replace("https://distroav.org",
-			       QString("http://%1:5002").arg(PLUGIN_WEB_HOST));
-	}
+#ifdef USE_LOCALHOST
+	result.replace("https://distroav.org",
+		       QString("http://%1:5002").arg(PLUGIN_WEB_HOST));
+#endif
 	return result;
 }
 

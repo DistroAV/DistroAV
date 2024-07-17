@@ -152,7 +152,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <item>
     <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
      <property name="text">
-      <string>NDIPlugin.Update.ContinueToCheckForUpdates</string>
+      <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
      </property>
     </widget>
    </item>

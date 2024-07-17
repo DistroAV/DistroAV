@@ -33,15 +33,14 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-frontend-api.h>
 
 #include <QDesktopServices>
-#include <QJsonDocument>
+#include <QDialog>
 #include <QMainWindow>
-#include <QMessageBox>
+// #include <QMessageBox>
 #include <QMetaEnum>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QNetworkRequest>
+// #include <QNetworkAccessManager>
+// #include <QNetworkReply>
+// #include <QNetworkRequest>
 #include <QPointer>
-#include <QThread>
 #include <QTimer>
 #include <QUrlQuery>
 
@@ -61,103 +60,184 @@ template<typename QEnum> const char *qEnumToString(const QEnum value)
 	return QMetaEnum::fromType<QEnum>().valueToKey(value);
 }
 
-ObsNdiUpdate::ObsNdiUpdate(const QJsonObject &jsonObject, QWidget *parent)
-	: QDialog(parent),
-	  ui(new Ui::ObsNdiUpdate)
+PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
+				   const QString &errorData_)
 {
-	ui->setupUi(this);
-
-	auto releaseTag = jsonObject["releaseTag"].toString();
-	//auto releaseName = jsonObject["releaseName"].toString();
-	auto releaseUrl = jsonObject["releaseUrl"].toString();
-	auto releaseDate = jsonObject["releaseDate"].toString();
-	auto releaseNotes = jsonObject["releaseNotes"].toString();
-	if (releaseNotes.isEmpty()) {
-		releaseNotes = "No release notes available.";
+	errorData = errorData_;
+	if (!errorData.isEmpty()) {
+		return;
 	}
 
-	auto releaseVersion = QVersionNumber::fromString(releaseTag);
+	responseData = responseData_;
 
-	auto pluginDisplayName = QString(PLUGIN_DISPLAY_NAME);
+	QJsonParseError jsonParseError;
+	jsonDocument =
+		QJsonDocument::fromJson(responseData.toUtf8(), &jsonParseError);
+	if (jsonDocument.isNull()) {
+		this->errorData = jsonParseError.errorString();
+		return;
+	}
+	if (!jsonDocument.isObject()) {
+		this->errorData = "jsonDocument is not an object";
+		return;
+	}
 
-	auto config = Config::Current();
+	jsonObject = jsonDocument.object();
 
-	auto textTemp = QTStr("NDIPlugin.Update.Title").arg(pluginDisplayName);
-	setWindowTitle(textTemp);
+	auto infoVersion_ = jsonObject["v"];
+	if (infoVersion_.isUndefined()) {
+		this->errorData = "v == undefined";
+		return;
+	}
+	infoVersion = infoVersion_.toInt();
 
-	textTemp = QString("<h2>%1</h2>")
-			   .arg(QTStr("NDIPlugin.Update.NewVersionAvailable")
-					.arg(pluginDisplayName)
-					.arg(releaseVersion.toString()));
-	ui->labelVersionNew->setText(textTemp);
+	auto releaseTag_ = jsonObject["releaseTag"];
+	if (releaseTag_.isUndefined()) {
+		this->errorData = "releaseTag == undefined";
+		return;
+	}
+	releaseTag = releaseTag_.toString();
 
-	QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
-	textTemp = QString("<font size='+1'>%1</font>")
-			   .arg(QTStr("NDIPlugin.Update.YourVersion")
-					.arg(yourVersion.toString()));
-	ui->labelVersionYours->setText(textTemp);
+	releaseName = jsonObject["releaseName"].toString();
 
-	textTemp =
-		QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseNotes"));
-	ui->labelReleaseNotes->setText(textTemp);
+	releaseUrl = jsonObject["releaseUrl"].toString();
 
-	auto utcDateTime = QDateTime::fromString(releaseDate, Qt::ISODate);
-	utcDateTime.setTimeSpec(Qt::UTC);
-	auto formattedUtcDateTime =
-		utcDateTime.toString("yyyy-MM-dd hh:mm:ss 'UTC'");
-	textTemp =
-		QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseDate"));
-	ui->labelReleaseDate->setText(textTemp);
-	ui->textReleaseDate->setText(formattedUtcDateTime);
+	releaseDate = jsonObject["releaseDate"].toString();
 
-	ui->textReleaseNotes->setMarkdown(releaseNotes);
+	releaseNotes = jsonObject["releaseNotes"].toString();
+	if (releaseNotes.isEmpty()) {
+		releaseNotes = Str("NDIPlugin.Update.ReleaseNotes.None");
+	}
 
-	ui->checkBoxAutoCheckForUpdates->setText(
-		Str("NDIPlugin.Update.ContinueToCheckForUpdates"));
-	ui->checkBoxAutoCheckForUpdates->setChecked(
-		config->AutoCheckForUpdates());
-	connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
-		[](int state) {
-			Config::Current()->AutoCheckForUpdates(state ==
-							       Qt::Checked);
-		});
+	uiDelayMillis = jsonObject["uiDelayMillis"].toInt(1000);
 
-	ui->buttonSkipThisVersion->setText(
-		Str("NDIPlugin.Update.SkipThisVersion"));
-	connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this,
-		[this, releaseVersion]() {
-			Config::Current()->SkipUpdateVersion(releaseVersion);
-			this->reject();
-		});
+	versionCurrent = QVersionNumber::fromString(PLUGIN_VERSION);
 
-	ui->buttonRemindMeLater->setText(Str("NDIPlugin.Update.RemindMeLater"));
-	connect(ui->buttonRemindMeLater, &QPushButton::clicked, this, [this]() {
-		// do nothing; on next launch the plugin
-		// will continue to check for updates as normal
-		this->reject();
-	});
-
-	ui->buttonInstallUpdate->setText(Str("NDIPlugin.Update.InstallUpdate"));
-#ifdef __APPLE__
-	// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
-	auto defaultButtonBackgroundColor = QColor::fromString("#2f65d4");
-	ui->buttonInstallUpdate->setStyleSheet(
-		QString("QPushButton:default { background-color: %1; }")
-			.arg(defaultButtonBackgroundColor.name(QColor::HexRgb)));
+#if 0
+	// For testing purposes only
+	this->fakeVersionLatest = true;
+	versionLatest = QVersionNumber(versionCurrent.majorVersion(),
+				       versionCurrent.minorVersion() + 1,
+				       versionCurrent.microVersion());
+#else
+	versionLatest = QVersionNumber::fromString(releaseTag);
 #endif
-	connect(ui->buttonInstallUpdate, &QPushButton::clicked,
-		[this, releaseUrl]() {
-			QDesktopServices::openUrl(QUrl(releaseUrl));
-			this->accept();
-		});
-
-	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
-	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
-	connect(ui->labelDonateUrl, &QLabel::linkActivated,
-		[this](const QString &url) {
-			QDesktopServices::openUrl(QUrl(url));
-		});
+	if (versionLatest.isNull()) {
+		this->errorData = "versionLatest == null";
+		return;
+	}
 }
+
+class ObsNdiUpdate : public QDialog {
+	Q_OBJECT
+private:
+	std::unique_ptr<Ui::ObsNdiUpdate> ui;
+
+public:
+	explicit ObsNdiUpdate(const PluginUpdateInfo &pluginUpdateInfo,
+			      QWidget *parent = nullptr)
+		: QDialog(parent),
+		  ui(new Ui::ObsNdiUpdate)
+	{
+		ui->setupUi(this);
+
+		auto pluginDisplayName = QString(PLUGIN_DISPLAY_NAME);
+
+		auto config = Config::Current();
+
+		auto textTemp =
+			QTStr("NDIPlugin.Update.Title").arg(pluginDisplayName);
+		setWindowTitle(textTemp);
+
+		textTemp =
+			QString("<h2>%1</h2>")
+				.arg(QTStr("NDIPlugin.Update.NewVersionAvailable")
+					     .arg(pluginDisplayName)
+					     .arg(pluginUpdateInfo.versionLatest
+							  .toString()));
+		ui->labelVersionNew->setText(textTemp);
+
+		QVersionNumber yourVersion =
+			QVersionNumber::fromString(PLUGIN_VERSION);
+		textTemp = QString("<font size='+1'>%1</font>")
+				   .arg(QTStr("NDIPlugin.Update.YourVersion")
+						.arg(yourVersion.toString()));
+		ui->labelVersionYours->setText(textTemp);
+
+		textTemp = QString("<h3>%1</h3>")
+				   .arg(Str("NDIPlugin.Update.ReleaseNotes"));
+		ui->labelReleaseNotes->setText(textTemp);
+
+		auto utcDateTime = QDateTime::fromString(
+			pluginUpdateInfo.releaseDate, Qt::ISODate);
+		utcDateTime.setTimeSpec(Qt::UTC);
+		auto formattedUtcDateTime =
+			utcDateTime.toString("yyyy-MM-dd hh:mm:ss 'UTC'");
+		textTemp = QString("<h3>%1</h3>")
+				   .arg(Str("NDIPlugin.Update.ReleaseDate"));
+		ui->labelReleaseDate->setText(textTemp);
+		ui->textReleaseDate->setText(formattedUtcDateTime);
+
+		ui->textReleaseNotes->setMarkdown(
+			pluginUpdateInfo.releaseNotes);
+
+		ui->checkBoxAutoCheckForUpdates->setText(
+			Str("NDIPlugin.Update.ContinueToCheckForUpdate"));
+		ui->checkBoxAutoCheckForUpdates->setChecked(
+			config->AutoCheckForUpdates());
+		connect(ui->checkBoxAutoCheckForUpdates,
+			&QCheckBox::stateChanged, this, [](int state) {
+				Config::Current()->AutoCheckForUpdates(
+					state == Qt::Checked);
+			});
+
+		ui->buttonSkipThisVersion->setText(
+			Str("NDIPlugin.Update.SkipThisVersion"));
+		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this,
+			[this, pluginUpdateInfo]() {
+				Config::Current()->SkipUpdateVersion(
+					pluginUpdateInfo.versionLatest);
+				this->reject();
+			});
+
+		ui->buttonRemindMeLater->setText(
+			Str("NDIPlugin.Update.RemindMeLater"));
+		connect(ui->buttonRemindMeLater, &QPushButton::clicked, this,
+			[this]() {
+				// do nothing; on next launch the plugin
+				// will continue to check for updates as normal
+				this->reject();
+			});
+
+		ui->buttonInstallUpdate->setText(
+			Str("NDIPlugin.Update.InstallUpdate"));
+#ifdef __APPLE__
+		// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
+		auto defaultButtonBackgroundColor =
+			QColor::fromString("#2f65d4");
+		ui->buttonInstallUpdate->setStyleSheet(
+			QString("QPushButton:default { background-color: %1; }")
+				.arg(defaultButtonBackgroundColor.name(
+					QColor::HexRgb)));
+#endif
+		connect(ui->buttonInstallUpdate, &QPushButton::clicked,
+			[this, pluginUpdateInfo]() {
+				QDesktopServices::openUrl(
+					QUrl(pluginUpdateInfo.releaseUrl));
+				this->accept();
+			});
+
+		ui->labelDonate->setText(Str("NDIPlugin.Donate"));
+		ui->labelDonateUrl->setText(
+			makeLink(PLUGIN_REDIRECT_DONATE_URL));
+		connect(ui->labelDonateUrl, &QLabel::linkActivated,
+			[this](const QString &url) {
+				QDesktopServices::openUrl(QUrl(url));
+			});
+	}
+};
+
+#include "obsndi-update.moc"
 
 //
 //
@@ -184,31 +264,6 @@ QString GetObsCurrentModuleSHA256()
 	return success ? module_hash_sha256 : "";
 }
 
-bool IsMainThread()
-{
-	return QThread::currentThread() ==
-	       QCoreApplication::instance()->thread();
-}
-
-bool PostToMainThread(const char *text, std::function<void()> task)
-{
-	if (IsMainThread()) {
-		task();
-		return false;
-	} else {
-#if 0
-		blog(LOG_INFO,
-		     "[obs-ndi] obsndi-update: PostToMainThread(`%s`, task)",
-		     text);
-#else
-		UNUSED_PARAMETER(text);
-#endif
-		QMetaObject::invokeMethod(QCoreApplication::instance(),
-					  [task]() { task(); });
-		return true;
-	}
-}
-
 //#define UPDATE_REQUEST_QT
 #ifdef UPDATE_REQUEST_QT
 /*
@@ -225,6 +280,9 @@ bool PostToMainThread(const char *text, std::function<void()> task)
 
 	Options:
 	1. Wait for OBS to fix this: Unknown how long this will be.
+	   I think the place to watch for changes that fix this is:
+		* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.ps1
+	   	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.zsh
 	2. Compile DistroAV's own Qt6 dep w/ TLS enabled: No thanks!
 	3. Make only http requests; Don't make https requests: Ignoring the security concerns, this works
 	   when testing against the emulator but won't work for non-emulator (actual cloud) due to
@@ -264,122 +322,103 @@ bool isUpdatePendingOrShowing()
 }
 
 void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
-				   const QString &errorData, bool userRequested)
+				   const QString &errorData,
+				   UserRequestCallback userRequestCallback)
 {
-	auto verbose_log = Config::VerboseLog();
-	if (verbose_log) {
+	auto log_debug = false;
+#if 0
+	// For testing purposes only
+	log_debug = true;
+#endif
+	auto log_verbose = log_debug || Config::VerboseLog();
+	if (log_debug) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=`%s`, errorData=`%s`, userRequested=%d)",
+		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
 		     httpCode, responseData.toUtf8().constData(),
-		     errorData.toUtf8().constData(), userRequested);
+		     errorData.toUtf8().constData(),
+		     userRequestCallback ? "..." : "nullptr");
 	} else {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=..., errorData=`%s`, userRequested=%d)",
-		     httpCode, errorData.toUtf8().constData(), userRequested);
+		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
+		     httpCode, errorData.toUtf8().constData(),
+		     userRequestCallback ? "..." : "nullptr");
 	}
 
-	if (!errorData.isEmpty()) {
+	auto pluginUpdateInfo = PluginUpdateInfo(responseData, errorData);
+	if (!pluginUpdateInfo.errorData.isEmpty()) {
 		blog(LOG_WARNING,
 		     "[obs-ndi] onCheckForUpdateNetworkFinish: Error! httpCode=%d, errorData=`%s`; ignoring response",
-		     httpCode, errorData.toUtf8().constData());
-		return;
-	}
-
-	blog(LOG_INFO,
-	     "[obs-ndi] onCheckForUpdateNetworkFinish: Success! httpCode=%d",
-	     httpCode);
-
-	QJsonParseError jsonParseError;
-	auto jsonResponse =
-		QJsonDocument::fromJson(responseData.toUtf8(), &jsonParseError);
-	if (verbose_log) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: jsonResponse=`%s`",
-		     jsonResponse.toJson().constData());
-	}
-	if (jsonResponse.isNull()) {
-		blog(LOG_WARNING,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: jsonResponse=null; jsonParseError=`%s`; ignoring response",
-		     jsonParseError.errorString().toUtf8().constData());
-		return;
-	}
-	if (!jsonResponse.isObject()) {
-		blog(LOG_WARNING,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: jsonResponse is not an object; ignoring response");
-		return;
-	}
-	auto jsonObject = jsonResponse.object();
-
-	auto releaseTag = jsonObject["releaseTag"];
-	if (releaseTag.isUndefined()) {
-		blog(LOG_WARNING,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: releaseTag is undefined; ignoring response");
-		return;
-	}
-
-	auto latestVersion = QVersionNumber::fromString(releaseTag.toString());
-	if (verbose_log) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: latestVersion=%s",
-		     latestVersion.toString().toUtf8().constData());
-	}
-	if (latestVersion.isNull()) {
-		blog(LOG_WARNING,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: latestVersion is null; ignoring response");
-		return;
-	}
-
-	auto currentVersion = QVersionNumber::fromString(PLUGIN_VERSION);
-	if (verbose_log) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: currentVersion=%s",
-		     currentVersion.toString().toUtf8().constData());
-	}
-
-//#define TEST_FORCE_UPDATE
-#ifdef TEST_FORCE_UPDATE
-	UNUSED_PARAMETER(userRequested);
-#else
-	auto config = Config::Current();
-	auto skipUpdateVersion = config->SkipUpdateVersion();
-	if (!userRequested && latestVersion == skipUpdateVersion) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: latestVersion == skipUpdateVersion; ignoring update");
-		return;
-	}
-
-	if (latestVersion <= currentVersion) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: latestVersion <= currentVersion; ignoring update");
-		if (userRequested) {
-			auto main_window = static_cast<QWidget *>(
-				obs_frontend_get_main_window());
-			QMessageBox::information(
-				main_window,
-				Str("NDIPlugin.Update.NoUpdateAvailable"),
-				QTStr("NDIPlugin.Update.YouAreUpToDate")
-					.arg(currentVersion.toString()));
+		     httpCode, pluginUpdateInfo.errorData.toUtf8().constData());
+		if (userRequestCallback) {
+			userRequestCallback(pluginUpdateInfo);
 		}
 		return;
 	}
-#endif
-	auto uiDelayMillis = jsonObject["uiDelayMillis"].toInt(1000);
-	if (verbose_log) {
+
+	if (log_verbose) {
+		blog(LOG_INFO,
+		     "[obs-ndi] onCheckForUpdateNetworkFinish: Success! httpCode=%d",
+		     httpCode);
+	}
+
+	if (log_debug) {
+		blog(LOG_INFO,
+		     "[obs-ndi] onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
+		     pluginUpdateInfo.jsonDocument.toJson().constData());
+	}
+	if (log_verbose) {
+		blog(LOG_INFO,
+		     "[obs-ndi] onCheckForUpdateNetworkFinish: versionCurrent=%s",
+		     pluginUpdateInfo.versionCurrent.toString()
+			     .toUtf8()
+			     .constData());
+		blog(LOG_INFO,
+		     "[obs-ndi] onCheckForUpdateNetworkFinish: %sversionLatest=%s",
+		     pluginUpdateInfo.fakeVersionLatest ? "FAKE " : "",
+		     pluginUpdateInfo.versionLatest.toString()
+			     .toUtf8()
+			     .constData());
+	}
+
+	if (userRequestCallback) {
+		// User requested update check ignores SkipUpdateVersion
+		userRequestCallback(pluginUpdateInfo);
+	} else {
+		// Non-user requested update check respects SkipUpdateVersion
+		auto versionSkip = Config::Current()->SkipUpdateVersion();
+		if (pluginUpdateInfo.versionLatest == versionSkip) {
+			blog(LOG_INFO,
+			     "[obs-ndi] onCheckForUpdateNetworkFinish: versionLatest == versionSkip(%s); ignoring update",
+			     versionSkip.toString().toUtf8().constData());
+			return;
+		}
+	}
+
+	// Both user requested and non-user requested update checks ignore versionLatest <= versionCurrent
+	if (pluginUpdateInfo.versionLatest <= pluginUpdateInfo.versionCurrent) {
+		blog(LOG_INFO,
+		     "[obs-ndi] onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
+		return;
+	}
+
+	auto uiDelayMillis =
+		userRequestCallback ? 0 : pluginUpdateInfo.uiDelayMillis;
+	if (log_debug) {
 		blog(LOG_INFO,
 		     "[obs-ndi] onCheckForUpdateNetworkFinish: uiDelayMillis=%d",
 		     uiDelayMillis);
 	}
 
-	QTimer::singleShot(uiDelayMillis, [jsonObject]() {
-		auto main_window =
-			static_cast<QWidget *>(obs_frontend_get_main_window());
+	QTimer::singleShot(uiDelayMillis, [pluginUpdateInfo]() {
+		auto main_window = static_cast<QMainWindow *>(
+			obs_frontend_get_main_window());
 		if (main_window == nullptr) {
 			blog(LOG_ERROR,
 			     "onCheckForUpdateNetworkFinish: Failed to get main OBS window");
 			return;
 		}
 
-		update_dialog = new ObsNdiUpdate(jsonObject, main_window);
+		update_dialog = new ObsNdiUpdate(pluginUpdateInfo, main_window);
 		// Our logic needs to set update_dialog=nullptr after it closes...
 		QObject::connect(update_dialog, &QDialog::finished, [](int) {
 			update_dialog->deleteLater();
@@ -403,29 +442,34 @@ void updateCheckStop()
 #endif
 	if (update_request) {
 		if (update_request->isRunning()) {
-			update_request->exit(-1);
+			//update_request->terminate();
+			update_request->exit(1);
 		}
-		update_request->deleteLater();
-		update_request = nullptr;
+		//update_request->deleteLater();
+		//update_request = nullptr;
 	}
 	blog(LOG_INFO, "[obs-ndi] -updateCheckStop()");
 }
 
-void updateCheckStart(bool userRequested)
+bool updateCheckStart(UserRequestCallback userRequestCallback)
 {
-	blog(LOG_INFO, "[obs-ndi] +updateCheckStart(userRequested=%d)",
-	     userRequested);
-
-	auto verbose_log = Config::VerboseLog();
+	//auto log_debug = false;
+#if 0
+	// For testing purposes only
+	log_debug = true;
+#endif
+	blog(LOG_INFO, "[obs-ndi] +updateCheckStart(userRequestCallback=%s)",
+	     userRequestCallback ? "..." : "nullptr");
 
 	auto config = Config::Current();
-	if (!userRequested && !config->AutoCheckForUpdates()) {
+	if (!userRequestCallback && !config->AutoCheckForUpdates()) {
 		blog(LOG_INFO,
 		     "[obs-ndi] updateCheckStart: AutoCheckForUpdates is disabled");
 
-		blog(LOG_INFO, "[obs-ndi] -updateCheckStart(userRequested=%d)",
-		     userRequested);
-		return;
+		blog(LOG_INFO,
+		     "[obs-ndi] -updateCheckStart(userRequestCallback=%p)",
+		     userRequestCallback ? "..." : "nullptr");
+		return false;
 	}
 
 	if (isUpdatePendingOrShowing()) {
@@ -434,8 +478,11 @@ void updateCheckStart(bool userRequested)
 		}
 		blog(LOG_INFO,
 		     "[obs-ndi] updateCheckStart: update pending or showing; ignoring");
-		return;
+		return false;
 	}
+
+	auto main_window =
+		static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
 //#define DIRECT_REQUEST_GITHUB
 #ifdef DIRECT_REQUEST_GITHUB
@@ -445,38 +492,26 @@ void updateCheckStart(bool userRequested)
 #else
 	QUrl url(rehostUrl(PLUGIN_UPDATE_URL));
 
-	auto obsndiVersion = QString(PLUGIN_VERSION);
+	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = QString(GetProgramGUID().constData());
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
 	// blog(LOG_INFO, "[obs-ndi] updateCheckStart: module_hash_sha256=`%s`",
 	//      module_hash_sha256.toUtf8().constData());
 	std::string postData;
 
-	bool useEmulator = url.host() == "127.0.0.1";
-	bool doGet = useEmulator;
-	if (doGet) {
+	auto useEmulator = url.host() == "127.0.0.1";
+	auto useQueryParams = useEmulator;
+	if (useQueryParams) {
 		// Local EMULATOR testing; a little easier to debug
 		QUrlQuery query;
-		query.addQueryItem("obsndiVersion", obsndiVersion);
+		query.addQueryItem("pluginVersion", pluginVersion);
 		query.addQueryItem("obsGuid", obsGuid);
 		query.addQueryItem("sha256", module_hash_sha256);
 		url.setQuery(query);
-	} else {
-		QJsonObject jsonObject;
-		jsonObject["obsndiVersion"] = obsndiVersion;
-		jsonObject["obsGuid"] = obsGuid;
-		jsonObject["sha256"] = module_hash_sha256;
-		postData =
-			QJsonDocument(jsonObject).toJson(QJsonDocument::Compact);
 	}
-	if (verbose_log) {
+	if (true) { // log_debug) {
 		blog(LOG_INFO, "[obs-ndi] updateCheckStart: url=`%s`",
 		     url.toString().toUtf8().constData());
-		if (!postData.empty()) {
-			blog(LOG_INFO,
-			     "[obs-ndi] updateCheckStart: postData=`%s`",
-			     postData.c_str());
-		}
 	}
 #endif
 
@@ -500,13 +535,19 @@ void updateCheckStart(bool userRequested)
 	update_request = new RemoteTextThread(url.toString().toStdString(),
 					      "application/json", postData,
 					      UPDATE_TIMEOUT_SEC);
+	QObject::connect(
+		update_request, &RemoteTextThread::finished, main_window,
+		[]() {
+			update_request->deleteLater();
+			update_request = nullptr;
+		},
+		Qt::QueuedConnection);
 #endif
 
 #ifndef DIRECT_REQUEST_GITHUB
-	if (url.host().startsWith("distroav")) {
-		// Production; requires at tiny bit more effort to spoof
-		auto userAgent = QString("obs-ndi/%1 (OBS-GUID: %2); %3")
-					 .arg(obsndiVersion)
+	if (!useQueryParams) {
+		auto userAgent = QString("DistroAV/%1 (OBS-GUID: %2); %3")
+					 .arg(pluginVersion)
 					 .arg(obsGuid)
 					 .arg(module_hash_sha256);
 #ifdef UPDATE_REQUEST_QT
@@ -519,9 +560,6 @@ void updateCheckStart(bool userRequested)
 #endif
 
 #ifdef UPDATE_REQUEST_QT
-	auto main_window =
-		static_cast<QMainWindow *>(obs_frontend_get_main_window());
-
 	auto manager = new QNetworkAccessManager(main_window);
 
 	auto timer = new QTimer();
@@ -534,7 +572,7 @@ void updateCheckStart(bool userRequested)
 
 	QObject::connect(
 		manager, &QNetworkAccessManager::finished,
-		[manager, timer, userRequested](QNetworkReply *reply) {
+		[manager, timer, userRequestor](QNetworkReply *reply) {
 			timer->stop();
 
 			auto errorCode = reply->error();
@@ -546,7 +584,7 @@ void updateCheckStart(bool userRequested)
 			}
 
 			onCheckForUpdateNetworkFinish(responseOrErrorString,
-						      errorCode, userRequested);
+						      errorCode, userRequestor);
 			updateCheckStop();
 			timer->deleteLater();
 			manager->deleteLater();
@@ -555,21 +593,24 @@ void updateCheckStart(bool userRequested)
 	update_reply = manager->get(*update_request);
 #else
 	QObject::connect(
-		update_request, &RemoteTextThread::Result,
-		[userRequested](int httpCode, const QString &responseData,
-				const QString &errorData) {
-			PostToMainThread("update_request->Result",
-					 [httpCode, responseData, errorData,
-					  userRequested]() {
-						 onCheckForUpdateNetworkFinish(
-							 httpCode, responseData,
-							 errorData,
-							 userRequested);
-						 updateCheckStop();
-					 });
-		});
+		update_request, &RemoteTextThread::Result, main_window,
+		[userRequestCallback](int httpCode, const QString &responseData,
+				      const QString &errorData) {
+#if 0
+			blog(LOG_INFO,
+			     "[obs-ndi] updateCheckStart: Result: httpCode=%d, responseData=`%s`, errorData=`%s`",
+			     httpCode, responseData.toUtf8().constData(),
+			     errorData.toUtf8().constData());
+#endif
+			onCheckForUpdateNetworkFinish(httpCode, responseData,
+						      errorData,
+						      userRequestCallback);
+			//updateCheckStop();
+		},
+		Qt::QueuedConnection);
 	update_request->start();
 #endif
-	blog(LOG_INFO, "[obs-ndi] -updateCheckStart(userRequested=%d)",
-	     userRequested);
+	blog(LOG_INFO, "[obs-ndi] -updateCheckStart(userRequestCallback=%s)",
+	     userRequestCallback ? "..." : "nullptr");
+	return true;
 }

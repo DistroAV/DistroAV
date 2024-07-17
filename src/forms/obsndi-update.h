@@ -17,20 +17,40 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 */
 #pragma once
 
-#include <QDialog>
+#include <QJsonDocument>
 #include <QJsonObject>
+#include <QVersionNumber>
 
 #include "ui_obsndi-update.h"
 
-class ObsNdiUpdate : public QDialog {
-	Q_OBJECT
+class PluginUpdateInfo {
 public:
-	explicit ObsNdiUpdate(const QJsonObject &jsonObject,
-			      QWidget *parent = nullptr);
+	PluginUpdateInfo(const QString &responseData, const QString &errorData);
 
-private:
-	std::unique_ptr<Ui::ObsNdiUpdate> ui;
+	QString responseData;
+	QString errorData;
+
+	QJsonDocument jsonDocument;
+	QJsonObject jsonObject;
+
+	int infoVersion = -1;
+	QString releaseTag;
+	QString releaseName;
+	QString releaseUrl;
+	QString releaseDate;
+	QString releaseNotes;
+	int uiDelayMillis = 1000;
+
+	bool fakeVersionLatest = false;
+	QVersionNumber versionLatest;
+	QVersionNumber versionCurrent;
 };
 
+/**
+ * @return true if the callback handled the update check response, otherwise false
+ */
+typedef std::function<bool(const PluginUpdateInfo &pluginUpdateInfo)>
+	UserRequestCallback;
+
 void updateCheckStop();
-void updateCheckStart(bool force = false);
+bool updateCheckStart(UserRequestCallback userRequestCallback = nullptr);

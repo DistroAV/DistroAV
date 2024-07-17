@@ -51,10 +51,14 @@ The following accomplishes two goals:
    There is always the possibility that the user may **see** a "out of date" url, but when they click
    on it they will actually be browsing to distroav.org which will redirect them to the latest NDI url.
 */
-#if 0
-#define PLUGIN_WEB_HOST "127.0.0.1"
+#define PLUGIN_WEB_HOST_LOCALHOST "127.0.0.1"
+#define PLUGIN_WEB_HOST_PRODUCTION "distroav.org"
+
+//#define USE_LOCALHOST
+#ifdef USE_LOCALHOST
+constexpr const char *PLUGIN_WEB_HOST = PLUGIN_WEB_HOST_LOCALHOST;
 #else
-#define PLUGIN_WEB_HOST "distroav.org"
+constexpr const char *PLUGIN_WEB_HOST = PLUGIN_WEB_HOST_PRODUCTION;
 #endif
 
 QString rehostUrl(const char *url);

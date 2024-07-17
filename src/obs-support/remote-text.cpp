@@ -93,6 +93,11 @@ void RemoteTextThread::run()
 
 		curlCode = curl_easy_perform(session);
 
+#if 0
+		// For testing purposes only
+		sleep(5);
+#endif
+
 		long httpCode = 0;
 		QString responseData = QT_UTF8(str.c_str());
 		QString errorData;

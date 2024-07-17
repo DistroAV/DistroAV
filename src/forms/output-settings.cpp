@@ -26,6 +26,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QMessageBox>
+#include <QProgressDialog>
 
 OutputSettings::OutputSettings(QWidget *parent)
 	: QDialog(parent),
@@ -50,8 +51,58 @@ OutputSettings::OutputSettings(QWidget *parent)
 
 	ui->pushButtonCheckForUpdate->setText(
 		Str("NDIPlugin.OutputSettings.CheckForUpdate"));
-	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, []() {
-		[]() { updateCheckStart(true); });
+	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
+		auto progressDialog = new QProgressDialog(
+			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
+				.arg(PLUGIN_DISPLAY_NAME),
+			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
+			this);
+		progressDialog->setWindowModality(Qt::WindowModal);
+		connect(progressDialog, &QProgressDialog::canceled,
+			[progressDialog]() {
+				updateCheckStop();
+				progressDialog->close();
+				progressDialog->deleteLater();
+			});
+		auto checking = updateCheckStart([this, progressDialog](
+							 const PluginUpdateInfo &
+								 pluginUpdateInfo)
+							 -> bool {
+			progressDialog->close();
+			progressDialog->deleteLater();
+
+			if (!pluginUpdateInfo.errorData.isEmpty()) {
+				QMessageBox::warning(
+					this,
+					Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
+					QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text")
+						.arg(pluginUpdateInfo
+							     .errorData));
+				return false;
+			}
+
+			if (pluginUpdateInfo.versionLatest <=
+			    pluginUpdateInfo.versionCurrent) {
+				QMessageBox::information(
+					this,
+					QTStr("NDIPlugin.Update.NoUpdateAvailable")
+						.arg(PLUGIN_DISPLAY_NAME),
+					QTStr("NDIPlugin.Update.YouAreUpToDate")
+						.arg(PLUGIN_DISPLAY_NAME,
+						     pluginUpdateInfo
+							     .versionCurrent
+							     .toString()));
+				return false;
+			}
+
+			return false;
+		});
+		if (checking) {
+			progressDialog->show();
+		} else {
+			progressDialog->deleteLater();
+		}
+	});
 
 	auto ndiVersionText = QString(ndiLib->version());
 	ui->labelNdiVersion->setText(
