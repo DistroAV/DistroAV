@@ -56,9 +56,9 @@ The following accomplishes two goals:
 
 //#define USE_LOCALHOST
 #ifdef USE_LOCALHOST
-constexpr const char *PLUGIN_WEB_HOST = PLUGIN_WEB_HOST_LOCALHOST;
+#define PLUGIN_WEB_HOST PLUGIN_WEB_HOST_LOCALHOST
 #else
-constexpr const char *PLUGIN_WEB_HOST = PLUGIN_WEB_HOST_PRODUCTION;
+#define PLUGIN_WEB_HOST PLUGIN_WEB_HOST_PRODUCTION
 #endif
 
 QString rehostUrl(const char *url);
