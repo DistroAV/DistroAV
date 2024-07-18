@@ -7,9 +7,7 @@
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-; This was `AppId={{@UUID_APP@}` which seemed wrong...
-; https://github.com/obsproject/obs-plugintemplate/pull/76/files#r1604462761
-AppId={@UUID_APP@}
+AppId={{@UUID_APP@}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
