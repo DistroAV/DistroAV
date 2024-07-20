@@ -44,7 +44,6 @@ file(READ "${CMAKE_CURRENT_SOURCE_DIR}/buildspec.json" buildspec)
 
 # cmake-format: off
 string(JSON _name GET ${buildspec} name)
-string(JSON _displayName GET ${buildspec} displayName)
 string(JSON _website GET ${buildspec} website)
 string(JSON _author GET ${buildspec} author)
 string(JSON _email GET ${buildspec} email)
@@ -53,7 +52,6 @@ string(JSON _bundleId GET ${buildspec} platformConfig macos bundleId)
 string(JSON _windowsAppUUID GET ${buildspec} uuids windowsApp)
 # cmake-format: on
 
-set(PLUGIN_DISPLAY_NAME ${_displayName})
 set(PLUGIN_AUTHOR ${_author})
 set(PLUGIN_WEBSITE ${_website})
 set(PLUGIN_EMAIL ${_email})

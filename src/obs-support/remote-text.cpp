@@ -15,15 +15,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
 /*
-    Original File: https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.cpp
+Original File: https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.cpp
  */
 
 #include "curl-helper.h"
 #include "obs-app.hpp"
 #include "remote-text.hpp"
-
-// Copied from https://github.com/obsproject/obs-studio/blob/master/UI/qt-wrappers.hpp
-#define QT_UTF8(str) QString::fromUtf8(str, -1)
 
 using namespace std;
 
@@ -115,7 +112,7 @@ void RemoteTextThread::run()
 					.arg(error);
 			blog(LOG_WARNING,
 			     "RemoteTextThread: HTTP request failed. `%s`",
-			     errorData.toUtf8().constData());
+			     QT_TO_UTF8(errorData));
 		}
 		emit Result((int)httpCode, responseData, errorData);
 

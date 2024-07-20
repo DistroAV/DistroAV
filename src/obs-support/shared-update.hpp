@@ -15,11 +15,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
-/**
- * Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/update/shared-update.cpp
- * The original file has no copyright notice.
- * In some places just the method signature is [mostly] copied.
- * In some places [nearly] the full code implementation is copied.
+/*
+Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/update/shared-update.hpp
+The original file has no copyright header.
+In some places just the method signature is [mostly] copied.
+In some places [nearly] the full code implementation is copied.
  */
 #pragma once
 

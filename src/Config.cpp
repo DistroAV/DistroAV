@@ -38,27 +38,23 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 Config *Config::_instance = nullptr;
 
-Config *Config::Current()
+bool _LogVerbose = false;
+bool _LogDebug = false;
+bool _UpdateForce = false;
+
+bool Config::LogVerbose()
 {
-	if (!_instance) {
-		_instance = new Config();
-	}
-	return _instance;
+	return _LogVerbose;
 }
 
-void Config::Destroy()
+bool Config::LogDebug()
 {
-	if (_instance) {
-		delete _instance;
-		_instance = nullptr;
-	}
+	return _LogDebug;
 }
 
-bool _VerboseLog = false;
-
-bool Config::VerboseLog()
+bool Config::UpdateForce()
 {
-	return _VerboseLog;
+	return _UpdateForce;
 }
 
 Config::Config()
@@ -75,7 +71,17 @@ Config::Config()
 	if (arguments.contains("--obs-ndi-verbose")) {
 		blog(LOG_INFO,
 		     "[obs-ndi] Config: obs-ndi verbose logging enabled");
-		_VerboseLog = true;
+		_LogVerbose = true;
+	}
+	if (arguments.contains("--obs-ndi-debug")) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi debug logging enabled");
+		_LogDebug = true;
+	}
+	if (arguments.contains("--obs-ndi-update-force")) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi update force enabled");
+		_UpdateForce = true;
 	}
 
 	auto obs_config = GetGlobalConfig();
@@ -85,20 +91,20 @@ Config::Config()
 					OutputEnabled);
 		config_set_default_string(obs_config, SECTION_NAME,
 					  PARAM_MAIN_OUTPUT_NAME,
-					  OutputName.toUtf8().constData());
+					  QT_TO_UTF8(OutputName));
 		config_set_default_string(obs_config, SECTION_NAME,
 					  PARAM_MAIN_OUTPUT_GROUPS,
-					  OutputGroups.toUtf8().constData());
+					  QT_TO_UTF8(OutputGroups));
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_PREVIEW_OUTPUT_ENABLED,
 					PreviewOutputEnabled);
-		config_set_default_string(
-			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME,
-			PreviewOutputName.toUtf8().constData());
-		config_set_default_string(
-			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
-			PreviewOutputGroups.toUtf8().constData());
+		config_set_default_string(obs_config, SECTION_NAME,
+					  PARAM_PREVIEW_OUTPUT_NAME,
+					  QT_TO_UTF8(PreviewOutputName));
+		config_set_default_string(obs_config, SECTION_NAME,
+					  PARAM_PREVIEW_OUTPUT_GROUPS,
+					  QT_TO_UTF8(PreviewOutputGroups));
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_TALLY_PROGRAM_ENABLED,
@@ -145,20 +151,20 @@ void Config::Save()
 				PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_NAME,
-				  OutputName.toUtf8().constData());
+				  QT_TO_UTF8(OutputName));
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_GROUPS,
-				  OutputGroups.toUtf8().constData());
+				  QT_TO_UTF8(OutputGroups));
 
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_PREVIEW_OUTPUT_ENABLED,
 				PreviewOutputEnabled);
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_NAME,
-				  PreviewOutputName.toUtf8().constData());
+				  QT_TO_UTF8(PreviewOutputName));
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_GROUPS,
-				  PreviewOutputGroups.toUtf8().constData());
+				  QT_TO_UTF8(PreviewOutputGroups));
 
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_TALLY_PROGRAM_ENABLED,
@@ -197,7 +203,7 @@ void Config::SkipUpdateVersion(const QVersionNumber &version)
 	if (obs_config) {
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_SKIP_UPDATE_VERSION,
-				  version.toString().toUtf8().constData());
+				  QT_TO_UTF8(version.toString()));
 		config_save(obs_config);
 	}
 }
@@ -213,4 +219,20 @@ QVersionNumber Config::SkipUpdateVersion()
 		}
 	}
 	return QVersionNumber();
+}
+
+Config *Config::Current()
+{
+	if (!_instance) {
+		_instance = new Config();
+	}
+	return _instance;
+}
+
+void Config::Destroy()
+{
+	if (_instance) {
+		delete _instance;
+		_instance = nullptr;
+	}
 }

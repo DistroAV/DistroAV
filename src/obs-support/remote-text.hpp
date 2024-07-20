@@ -15,14 +15,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
 /*
-    Original File: https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.hpp
-    
-    Changes:
-    - Renamed extraHeaders to headers
-    - Made headers public
-    - Commented out versionString; should be passed in or set as a header
-    - Commented out blocking/non-threaded GetRemoteFile
-	- Changed Result to `void Result(int httpCode, const QString &responseData, const QString &errorText)`
+Original File: https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.hpp
+
+DistroAV Changes:
+- Renamed extraHeaders to headers
+- Made headers public
+- Commented out versionString; should be passed in or set as a header
+- Commented out blocking/non-threaded GetRemoteFile
+- Changed Result to `void Result(int httpCode, const QString &responseData, const QString &errorText)`
  */
 
 #pragma once

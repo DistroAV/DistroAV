@@ -37,9 +37,9 @@ OutputSettings::OutputSettings(QWidget *parent)
 		SLOT(onFormAccepted()));
 
 	auto obsNdiVersionText =
-		QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
+		QString("%1 %2").arg(PLUGIN_NAME).arg(PLUGIN_VERSION);
 	ui->labelObsNdiVersion->setText(
-		QString("<a href=\"#\">%1</a>").arg(obsNdiVersionText));
+		makeLink("#", QT_TO_UTF8(obsNdiVersionText)));
 	connect(ui->labelObsNdiVersion, &QLabel::linkActivated,
 		[this, obsNdiVersionText](const QString &) {
 			QApplication::clipboard()->setText(obsNdiVersionText);
@@ -54,7 +54,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
-				.arg(PLUGIN_DISPLAY_NAME),
+				.arg(PLUGIN_NAME),
 			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
 			this);
 		progressDialog->setWindowModality(Qt::WindowModal);
@@ -86,9 +86,9 @@ OutputSettings::OutputSettings(QWidget *parent)
 				QMessageBox::information(
 					this,
 					QTStr("NDIPlugin.Update.NoUpdateAvailable")
-						.arg(PLUGIN_DISPLAY_NAME),
+						.arg(PLUGIN_NAME),
 					QTStr("NDIPlugin.Update.YouAreUpToDate")
-						.arg(PLUGIN_DISPLAY_NAME,
+						.arg(PLUGIN_NAME,
 						     pluginUpdateInfo
 							     .versionCurrent
 							     .toString()));
@@ -105,8 +105,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 	});
 
 	auto ndiVersionText = QString(ndiLib->version());
-	ui->labelNdiVersion->setText(
-		QString("<a href=\"#\">%1</a>").arg(ndiVersionText));
+	ui->labelNdiVersion->setText(makeLink("#", QT_TO_UTF8(ndiVersionText)));
 	connect(ui->labelNdiVersion, &QLabel::linkActivated,
 		[this, ndiVersionText](const QString &) {
 			QApplication::clipboard()->setText(ndiVersionText);
@@ -188,9 +187,8 @@ void OutputSettings::onFormAccepted()
 		if (main_output_is_running()) {
 			main_output_stop();
 		}
-		main_output_start(
-			ui->mainOutputName->text().toUtf8().constData(),
-			ui->mainOutputGroups->text().toUtf8().constData());
+		main_output_start(QT_TO_UTF8(ui->mainOutputName->text()),
+				  QT_TO_UTF8(ui->mainOutputGroups->text()));
 	} else {
 		main_output_stop();
 	}
@@ -200,8 +198,8 @@ void OutputSettings::onFormAccepted()
 			preview_output_stop();
 		}
 		preview_output_start(
-			ui->previewOutputName->text().toUtf8().constData(),
-			ui->previewOutputGroups->text().toUtf8().constData());
+			QT_TO_UTF8(ui->previewOutputName->text()),
+			QT_TO_UTF8(ui->previewOutputGroups->text()));
 	} else {
 		preview_output_stop();
 	}
@@ -226,4 +224,9 @@ void OutputSettings::showEvent(QShowEvent *)
 void OutputSettings::ToggleShowHide()
 {
 	setVisible(!isVisible());
+}
+
+OutputSettings::~OutputSettings()
+{
+	delete ui;
 }

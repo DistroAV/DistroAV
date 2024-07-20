@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 /*
- * Original File: https://github.com/obsproject/obs-studio/blob/master/libobs/util/curl/curl-helper.h
+Original File: https://github.com/obsproject/obs-studio/blob/master/libobs/util/curl/curl-helper.h
  */
 
 #pragma once

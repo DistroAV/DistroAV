@@ -48,7 +48,6 @@ target_sources(
           src/forms/obsndi-update.h
           src/forms/output-settings.cpp
           src/forms/output-settings.h
-          src/obs-support/obs-app.cpp
           src/obs-support/obs-app.hpp
           src/obs-support/remote-text.cpp
           src/obs-support/remote-text.hpp

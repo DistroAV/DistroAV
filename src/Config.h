@@ -25,7 +25,10 @@ class Config {
 public:
 	static Config *Current();
 	static void Destroy();
-	static bool VerboseLog();
+
+	static bool LogVerbose();
+	static bool LogDebug();
+	static bool UpdateForce();
 
 	void Load();
 	void Save();
@@ -45,6 +48,6 @@ public:
 	QVersionNumber SkipUpdateVersion();
 
 private:
-	static Config *_instance;
 	Config();
+	static Config *_instance;
 };

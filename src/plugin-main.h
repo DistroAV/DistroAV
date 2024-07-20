@@ -44,12 +44,12 @@ The following accomplishes two goals:
 	they point to... sortof: See #2.
 	`rehostUrl` rewrites the urls to point to a local firebase emulator/server... or not.
 	`makeLink` will call `rehostUrl` to rewrite any url... or not.
-2. Semi-future proof urls so that they are [semi-]consistent if NDI ever changes their urls... again.
-   If NDI ever changes their urls, updating and deploying the
-   https://github.com/DistroAV/firebase/blob/main/firebase.json hosting urls will 
-   allow the plugin to redirect to the new urls without needing to update the plugin.
-   There is always the possibility that the user may **see** a "out of date" url, but when they click
-   on it they will actually be browsing to distroav.org which will redirect them to the latest NDI url.
+2. Semi-future proof urls so that they are [semi-]consistent if NDI ever changes their urls...again.
+	If NDI ever changes their urls, updating and deploying the
+	https://github.com/DistroAV/firebase/blob/main/firebase.json hosting urls will 
+	allow the plugin to redirect to the new urls without needing to update the plugin.
+	There is always the possibility that the user may **see** a "out of date" url, but when they
+	click on it the distroav.org server will redirect them to the latest url.
 */
 #define PLUGIN_WEB_HOST_LOCALHOST "127.0.0.1"
 #define PLUGIN_WEB_HOST_PRODUCTION "distroav.org"
@@ -95,7 +95,7 @@ QString makeLink(const char *url, const char *text = nullptr);
 //	  	Clients will then auto-magically point to the new urls without needing to update the plugin,
 //		even if they see the old urls; no one should notice/care [that the links look old].
 // 	2. Then update them here and then release a new version of the plugin.
-//     	Clients will then both see and point to the new urls.
+//		Clients will then both see and point to the new urls.
 //
 #if defined(_WIN32) || defined(__APPLE__)
 #define NDI_OFFICIAL_REDIST_URL NDILIB_REDIST_URL
