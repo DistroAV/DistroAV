@@ -12,9 +12,10 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
-/*
+
+/******************************************************************************
 Original File: https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.hpp
 
 DistroAV Changes:
@@ -23,7 +24,7 @@ DistroAV Changes:
 - Commented out versionString; should be passed in or set as a header
 - Commented out blocking/non-threaded GetRemoteFile
 - Changed Result to `void Result(int httpCode, const QString &responseData, const QString &errorText)`
- */
+******************************************************************************/
 
 #pragma once
 

@@ -1,28 +1,26 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <distroav@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
 #include "plugin-main.h"
-#include "forms/obsndi-update.h"
+
 #include "forms/output-settings.h"
+#include "forms/update.h"
 #include "main-output.h"
 #include "preview-output.h"
-
-#include <obs-frontend-api.h>
 
 #include <QAction>
 #include <QDir>
@@ -141,10 +139,10 @@ void showUnloadingMessageBoxDelayed(const QString &title,
 bool obs_module_load(void)
 {
 	blog(LOG_INFO,
-	     "[obs-ndi] obs_module_load: you can haz obs-ndi (Version %s)",
-	     PLUGIN_VERSION);
+	     "[DistroAV] obs_module_load: you can haz %s (Version %s)",
+	     PLUGIN_NAME, PLUGIN_VERSION);
 	blog(LOG_INFO,
-	     "[obs-ndi] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
+	     "[DistroAV] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
 	     qVersion(), QT_VERSION_STR);
 
 	Config::Current()->Load();
@@ -167,7 +165,7 @@ bool obs_module_load(void)
 		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 #endif
 		blog(LOG_ERROR,
-		     "[obs-ndi] obs_module_load: ERROR - load_ndilib() failed; message=%s",
+		     "[DistroAV] obs_module_load: ERROR - load_ndilib() failed; message=%s",
 		     QT_TO_UTF8(message));
 		showUnloadingMessageBoxDelayed(title, message);
 		return false;
@@ -175,12 +173,12 @@ bool obs_module_load(void)
 
 	if (!ndiLib->initialize()) {
 		blog(LOG_ERROR,
-		     "[obs-ndi] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
+		     "[DistroAV] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
 	blog(LOG_INFO,
-	     "[obs-ndi] obs_module_load: NDI library initialized successfully ('%s')",
+	     "[DistroAV] obs_module_load: NDI library initialized successfully ('%s')",
 	     ndiLib->version());
 
 	NDIlib_find_create_t find_desc = {0};
@@ -266,16 +264,16 @@ bool obs_module_load(void)
 
 void obs_module_post_load(void)
 {
-	blog(LOG_INFO, "[obs-ndi] +obs_module_post_load()");
+	blog(LOG_INFO, "[DistroAV] +obs_module_post_load()");
 
 	updateCheckStart();
 
-	blog(LOG_INFO, "[obs-ndi] -obs_module_post_load()");
+	blog(LOG_INFO, "[DistroAV] -obs_module_post_load()");
 }
 
 void obs_module_unload(void)
 {
-	blog(LOG_INFO, "[obs-ndi] +obs_module_unload()");
+	blog(LOG_INFO, "[DistroAV] +obs_module_unload()");
 
 	updateCheckStop();
 
@@ -292,7 +290,7 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
-	blog(LOG_INFO, "[obs-ndi] -obs_module_unload(): goodbye!");
+	blog(LOG_INFO, "[DistroAV] -obs_module_unload(): goodbye!");
 }
 
 const NDIlib_v5 *load_ndilib()
@@ -309,33 +307,33 @@ const NDIlib_v5 *load_ndilib()
 	for (auto location : locations) {
 		path = QDir::cleanPath(
 			QDir(location).absoluteFilePath(NDILIB_LIBRARY_NAME));
-		blog(LOG_INFO, "[obs-ndi] load_ndilib: Trying '%s'",
+		blog(LOG_INFO, "[DistroAV] load_ndilib: Trying '%s'",
 		     QT_TO_UTF8(path));
 		QFileInfo libPath(path);
 		if (libPath.exists() && libPath.isFile()) {
 			path = libPath.absoluteFilePath();
 			blog(LOG_INFO,
-			     "[obs-ndi] load_ndilib: Found '%s'; attempting to load NDI library...",
+			     "[DistroAV] load_ndilib: Found '%s'; attempting to load NDI library...",
 			     QT_TO_UTF8(path));
 			loaded_lib = new QLibrary(path, nullptr);
 			if (loaded_lib->load()) {
 				blog(LOG_INFO,
-				     "[obs-ndi] load_ndilib: NDI library loaded successfully");
+				     "[DistroAV] load_ndilib: NDI library loaded successfully");
 				NDIlib_v5_load_ lib_load =
 					reinterpret_cast<NDIlib_v5_load_>(
 						loaded_lib->resolve(
 							"NDIlib_v5_load"));
 				if (lib_load != nullptr) {
 					blog(LOG_INFO,
-					     "[obs-ndi] load_ndilib: NDIlib_v5_load found");
+					     "[DistroAV] load_ndilib: NDIlib_v5_load found");
 					return lib_load();
 				} else {
 					blog(LOG_ERROR,
-					     "[obs-ndi] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+					     "[DistroAV] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 				}
 			} else {
 				blog(LOG_ERROR,
-				     "[obs-ndi] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+				     "[DistroAV] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
 				     QT_TO_UTF8(loaded_lib->errorString()));
 				delete loaded_lib;
 				loaded_lib = nullptr;
@@ -343,6 +341,6 @@ const NDIlib_v5 *load_ndilib()
 		}
 	}
 	blog(LOG_ERROR,
-	     "[obs-ndi] load_ndilib: ERROR: Can't find the NDI library");
+	     "[DistroAV] load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;
 }

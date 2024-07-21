@@ -1,20 +1,20 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <distroav@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
+
 /*
 Inspiration(s):
 * https://github.com/obsproject/obs-studio/tree/master/UI/update
@@ -29,21 +29,16 @@ Inspiration(s):
 * https://github.com/occ-ai/obs-backgroundremoval/blob/main/src/update-checker/github-utils.cpp#L13
  */
 
-#include "obsndi-update.h"
+#include "update.h"
 
 #include "plugin-main.h"
-#include "obs-support/shared-update.hpp"
 
-#include <obs-frontend-api.h>
+#include "obs-support/shared-update.hpp"
 
 #include <QDesktopServices>
 #include <QDialog>
 #include <QMainWindow>
-// #include <QMessageBox>
 #include <QMetaEnum>
-// #include <QNetworkAccessManager>
-// #include <QNetworkReply>
-// #include <QNetworkRequest>
 #include <QPointer>
 #include <QSslSocket>
 #include <QTimer>
@@ -233,7 +228,7 @@ public:
 	}
 };
 
-#include "obsndi-update.moc"
+#include "update.moc"
 
 //
 //
@@ -246,7 +241,7 @@ QString GetObsCurrentModuleSHA256()
 	auto module_binary_path = obs_get_module_binary_path(module);
 #if 0
 	blog(LOG_INFO,
-	     "[obs-ndi] GetObsCurrentModuleSHA256: module_binary_path=`%s`",
+	     "[DistroAV] GetObsCurrentModuleSHA256: module_binary_path=`%s`",
 	     module_binary_path);
 #endif
 	QString module_hash_sha256;
@@ -254,7 +249,7 @@ QString GetObsCurrentModuleSHA256()
 		CalculateFileHash(module_binary_path, module_hash_sha256);
 #if 0
 	blog(LOG_INFO,
-	     "[obs-ndi] GetObsCurrentModuleSHA256: module_hash_sha256=`%s`",
+	     "[DistroAV] GetObsCurrentModuleSHA256: module_hash_sha256=`%s`",
 	     QT_TO_UTF8(module_hash_sha256));
 #endif
 	return success ? module_hash_sha256 : "";
@@ -328,12 +323,12 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 	auto logVerbose = logDebug || Config::LogVerbose();
 	if (logDebug) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
+		     "[DistroAV] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
 		     httpCode, QT_TO_UTF8(responseData), QT_TO_UTF8(errorData),
 		     userRequestCallback ? "..." : "nullptr");
 	} else {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
+		     "[DistroAV] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
 		     httpCode, QT_TO_UTF8(errorData),
 		     userRequestCallback ? "..." : "nullptr");
 	}
@@ -341,7 +336,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 	auto pluginUpdateInfo = PluginUpdateInfo(responseData, errorData);
 	if (!pluginUpdateInfo.errorData.isEmpty()) {
 		blog(LOG_WARNING,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: Error! httpCode=%d, errorData=`%s`; ignoring response",
+		     "[DistroAV] onCheckForUpdateNetworkFinish: Error! httpCode=%d, errorData=`%s`; ignoring response",
 		     httpCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
 		if (userRequestCallback) {
 			userRequestCallback(pluginUpdateInfo);
@@ -351,21 +346,21 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 
 	if (logVerbose) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: Success! httpCode=%d",
+		     "[DistroAV] onCheckForUpdateNetworkFinish: Success! httpCode=%d",
 		     httpCode);
 	}
 
 	if (logDebug) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
+		     "[DistroAV] onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
 		     pluginUpdateInfo.jsonDocument.toJson().constData());
 	}
 	if (logVerbose) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: versionCurrent=%s",
+		     "[DistroAV] onCheckForUpdateNetworkFinish: versionCurrent=%s",
 		     QT_TO_UTF8(pluginUpdateInfo.versionCurrent.toString()));
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: %sversionLatest=%s",
+		     "[DistroAV] onCheckForUpdateNetworkFinish: %sversionLatest=%s",
 		     pluginUpdateInfo.fakeVersionLatest ? "FAKE " : "",
 		     QT_TO_UTF8(pluginUpdateInfo.versionLatest.toString()));
 	}
@@ -381,7 +376,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 		if (!forceUpdate &&
 		    pluginUpdateInfo.versionLatest == versionSkip) {
 			blog(LOG_INFO,
-			     "[obs-ndi] onCheckForUpdateNetworkFinish: versionLatest == versionSkip(%s); ignoring update",
+			     "[DistroAV] onCheckForUpdateNetworkFinish: versionLatest == versionSkip(%s); ignoring update",
 			     QT_TO_UTF8(versionSkip.toString()));
 			return;
 		}
@@ -391,7 +386,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 	if (!forceUpdate &&
 	    pluginUpdateInfo.versionLatest <= pluginUpdateInfo.versionCurrent) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
+		     "[DistroAV] onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
 		return;
 	}
 
@@ -399,7 +394,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 		userRequestCallback ? 0 : pluginUpdateInfo.uiDelayMillis;
 	if (logDebug) {
 		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: uiDelayMillis=%d",
+		     "[DistroAV] onCheckForUpdateNetworkFinish: uiDelayMillis=%d",
 		     uiDelayMillis);
 	}
 
@@ -408,7 +403,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 			obs_frontend_get_main_window());
 		if (main_window == nullptr) {
 			blog(LOG_ERROR,
-			     "onCheckForUpdateNetworkFinish: Failed to get main OBS window");
+			     "[DistroAV] onCheckForUpdateNetworkFinish: Failed to get main OBS window");
 			return;
 		}
 
@@ -424,7 +419,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 
 void updateCheckStop()
 {
-	blog(LOG_INFO, "[obs-ndi] +updateCheckStop()");
+	blog(LOG_INFO, "[DistroAV] +updateCheckStop()");
 #ifdef UPDATE_REQUEST_QT
 	if (update_reply) {
 		if (update_reply->isRunning()) {
@@ -439,22 +434,22 @@ void updateCheckStop()
 			update_request->exit(1);
 		}
 	}
-	blog(LOG_INFO, "[obs-ndi] -updateCheckStop()");
+	blog(LOG_INFO, "[DistroAV] -updateCheckStop()");
 }
 
 bool updateCheckStart(UserRequestCallback userRequestCallback)
 {
 	auto logDebug = Config::LogDebug();
-	blog(LOG_INFO, "[obs-ndi] +updateCheckStart(userRequestCallback=%s)",
+	blog(LOG_INFO, "[DistroAV] +updateCheckStart(userRequestCallback=%s)",
 	     userRequestCallback ? "..." : "nullptr");
 
 	auto config = Config::Current();
 	if (!userRequestCallback && !config->AutoCheckForUpdates()) {
 		blog(LOG_INFO,
-		     "[obs-ndi] updateCheckStart: AutoCheckForUpdates is disabled");
+		     "[DistroAV] updateCheckStart: AutoCheckForUpdates is disabled");
 
 		blog(LOG_INFO,
-		     "[obs-ndi] -updateCheckStart(userRequestCallback=%p)",
+		     "[DistroAV] -updateCheckStart(userRequestCallback=%p)",
 		     userRequestCallback ? "..." : "nullptr");
 		return false;
 	}
@@ -464,7 +459,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 			update_dialog->raise();
 		}
 		blog(LOG_INFO,
-		     "[obs-ndi] updateCheckStart: update pending or showing; ignoring");
+		     "[DistroAV] updateCheckStart: update pending or showing; ignoring");
 		return false;
 	}
 
@@ -482,7 +477,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = GetProgramGUID();
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
-	// blog(LOG_INFO, "[obs-ndi] updateCheckStart: module_hash_sha256=`%s`",
+	// blog(LOG_INFO, "[DistroAV] updateCheckStart: module_hash_sha256=`%s`",
 	//      QT_TO_UTF8(module_hash_sha256));
 	std::string postData;
 
@@ -497,26 +492,27 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		url.setQuery(query);
 	}
 	if (logDebug) {
-		blog(LOG_INFO, "[obs-ndi] updateCheckStart: url=`%s`",
+		blog(LOG_INFO, "[DistroAV] updateCheckStart: url=`%s`",
 		     QT_TO_UTF8(url.toString()));
 	}
 #endif
 
 	//qputenv("QT_LOGGING_RULES", "qt.network.ssl=true");
 	blog(LOG_INFO,
-	     "[obs-ndi] updateCheckStart QSslSocket: supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`",
+	     "[DistroAV] updateCheckStart QSslSocket: supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`",
 	     QSslSocket::supportsSsl() ? "true" : "false",
 	     QT_TO_UTF8(QSslSocket::sslLibraryBuildVersionString()),
 	     QT_TO_UTF8(QSslSocket::sslLibraryVersionString()));
 	/*
 	The above should output something like:
-	[obs-ndi] updateCheckStart QSslSocket: `supportsSsl` `OpenSSL 1.1.1l  24 Aug 2021` `OpenSSL 1.1.1l  24 Aug 2021`
+	updateCheckStart QSslSocket: supportsSsl=true, sslLibraryBuildVersionString=`OpenSSL 1.1.1l  24 Aug 2021`, sslLibraryVersionString=`OpenSSL 1.1.1l  24 Aug 2021`
 	Instead it is outputting:
-	[obs-ndi] updateCheckStart QSslSocket: `noSsl` `` ``
-	This appears to confirm that OBS' Qt is not built with SSL support. :()
+	updateCheckStart QSslSocket: supportsSsl=false, sslLibraryBuildVersionString=``, sslLibraryVersionString=``
+	This appears to confirm that OBS' Qt is not built with SSL support. :/
 	*/
 
 #ifdef UPDATE_REQUEST_QT
+	// TODO: QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
 	update_request = new QNetworkRequest(url);
 #else
 	update_request = new RemoteTextThread(url.toString().toStdString(),
@@ -554,7 +550,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	timer->setSingleShot(true);
 	QObject::connect(timer, &QTimer::timeout, []() {
 		blog(LOG_WARNING,
-		     "[obs-ndi] updateCheckStart: timer: Request timed out");
+		     "[DistroAV] updateCheckStart: timer: Request timed out");
 		PostToMainThread("timer->timeout", []() { updateCheckStop(); });
 	});
 
@@ -586,7 +582,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				      const QString &errorData) {
 #if 0
 			blog(LOG_INFO,
-			     "[obs-ndi] updateCheckStart: Result: httpCode=%d, responseData=`%s`, errorData=`%s`",
+			     "[DistroAV] updateCheckStart: Result: httpCode=%d, responseData=`%s`, errorData=`%s`",
 			     httpCode, QT_TO_UTF8(responseData),
 			     QT_TO_UTF8(errorData));
 #endif
@@ -597,7 +593,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		Qt::QueuedConnection);
 	update_request->start();
 #endif
-	blog(LOG_INFO, "[obs-ndi] -updateCheckStart(userRequestCallback=%s)",
+	blog(LOG_INFO, "[DistroAV] -updateCheckStart(userRequestCallback=%s)",
 	     userRequestCallback ? "..." : "nullptr");
 	return true;
 }

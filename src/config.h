@@ -17,6 +17,36 @@
 
 #pragma once
 
-void main_output_start(const char *output_name, const char *output_groups);
-void main_output_stop();
-bool main_output_is_running();
+#include <QString>
+#include <QVersionNumber>
+
+class Config {
+public:
+	static Config *Current();
+	static void Destroy();
+
+	static bool LogVerbose();
+	static bool LogDebug();
+	static bool UpdateForce();
+
+	void Load();
+	void Save();
+
+	bool OutputEnabled;
+	QString OutputName;
+	QString OutputGroups;
+	bool PreviewOutputEnabled;
+	QString PreviewOutputName;
+	QString PreviewOutputGroups;
+	bool TallyProgramEnabled;
+	bool TallyPreviewEnabled;
+
+	bool AutoCheckForUpdates();
+	void AutoCheckForUpdates(bool value);
+	void SkipUpdateVersion(const QVersionNumber &version);
+	QVersionNumber SkipUpdateVersion();
+
+private:
+	Config();
+	static Config *_instance;
+};

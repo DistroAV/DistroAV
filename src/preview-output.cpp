@@ -1,29 +1,26 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <distroav@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
-#include <obs.h>
-#include <obs-module.h>
-#include <obs-frontend-api.h>
-#include <util/platform.h>
-#include <media-io/video-io.h>
-#include <media-io/video-frame.h>
+#include "preview-output.h"
 
 #include "plugin-main.h"
+
+#include <util/platform.h>
+#include <media-io/video-frame.h>
 
 struct preview_output {
 	bool enabled;
@@ -50,7 +47,7 @@ void preview_output_init(const char *default_name, const char *default_groups)
 	if (context.output)
 		return;
 
-	blog(LOG_INFO, "[obs-ndi] preview_output_init('%s', '%s')",
+	blog(LOG_INFO, "[DistroAV] preview_output_init('%s', '%s')",
 	     default_name, default_groups);
 
 	obs_data_t *output_settings = obs_data_create();
@@ -68,7 +65,7 @@ void preview_output_start(const char *output_name, const char *output_groups)
 		return;
 
 	blog(LOG_INFO,
-	     "[obs-ndi] preview_output_start: starting NDI preview output with name '%s'",
+	     "[DistroAV] preview_output_start: starting NDI preview output with name '%s'",
 	     output_name);
 
 	obs_get_video_info(&context.ovi);
@@ -134,7 +131,7 @@ void preview_output_start(const char *output_name, const char *output_groups)
 	context.enabled = true;
 
 	blog(LOG_INFO,
-	     "[obs-ndi] preview_output_start: started NDI preview output");
+	     "[DistroAV] preview_output_start: started NDI preview output");
 }
 
 void preview_output_stop()
@@ -143,7 +140,7 @@ void preview_output_stop()
 		return;
 
 	blog(LOG_INFO,
-	     "[obs-ndi] preview_output_stop: stopping NDI preview output");
+	     "[DistroAV] preview_output_stop: stopping NDI preview output");
 
 	obs_output_stop(context.output);
 
@@ -165,12 +162,12 @@ void preview_output_stop()
 	context.enabled = false;
 
 	blog(LOG_INFO,
-	     "[obs-ndi] preview_output_stop: stopped NDI preview output");
+	     "[DistroAV] preview_output_stop: stopped NDI preview output");
 }
 
 void preview_output_deinit()
 {
-	blog(LOG_INFO, "[obs-ndi] preview_output_deinit()");
+	blog(LOG_INFO, "[DistroAV] preview_output_deinit()");
 
 	obs_output_release(context.output);
 
@@ -185,7 +182,7 @@ bool preview_output_is_enabled()
 
 void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 {
-	blog(LOG_INFO, "[obs-ndi] on_preview_scene_changed(%d)", event);
+	blog(LOG_INFO, "[DistroAV] on_preview_scene_changed(%d)", event);
 	auto ctx = (struct preview_output *)param;
 	switch (event) {
 	case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:

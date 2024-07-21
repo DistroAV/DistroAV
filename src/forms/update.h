@@ -17,6 +17,40 @@
 
 #pragma once
 
-void main_output_start(const char *output_name, const char *output_groups);
-void main_output_stop();
-bool main_output_is_running();
+#include "ui_update.h"
+
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QVersionNumber>
+
+class PluginUpdateInfo {
+public:
+	PluginUpdateInfo(const QString &responseData, const QString &errorData);
+
+	QString responseData;
+	QString errorData;
+
+	QJsonDocument jsonDocument;
+	QJsonObject jsonObject;
+
+	int infoVersion = -1;
+	QString releaseTag;
+	QString releaseName;
+	QString releaseUrl;
+	QString releaseDate;
+	QString releaseNotes;
+	int uiDelayMillis = 1000;
+
+	bool fakeVersionLatest = false;
+	QVersionNumber versionLatest;
+	QVersionNumber versionCurrent;
+};
+
+/**
+ * @return true if the callback handled the update check response, otherwise false
+ */
+typedef std::function<bool(const PluginUpdateInfo &pluginUpdateInfo)>
+	UserRequestCallback;
+
+void updateCheckStop();
+bool updateCheckStart(UserRequestCallback userRequestCallback = nullptr);
