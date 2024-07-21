@@ -28,6 +28,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <media-io/video-frame.h>
 #include <media-io/audio-resampler.h>
 #include <QString>
+#include <QDesktopServices>
+#include <QUrl>
 
 #include "plugin-main.h"
 
@@ -99,32 +101,16 @@ obs_properties_t *ndi_filter_getproperties(void *)
 			return true;
 		});
 
-	auto ndi_website = obs_module_text("NDIPlugin.NDIWebsite");
-	obs_properties_add_button2(
-		props, "ndi_website", ndi_website,
-		[](obs_properties_t *, obs_property_t *, void *data) {
-#if defined(__linux__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-#endif
-			QString ndi_website = (const char *)data;
-#if defined(__linux__)
-#pragma GCC diagnostic pop
-#endif
-
-#if defined(_WIN32)
-			ShellExecute(NULL, L"open",
-				     (const wchar_t *)ndi_website.utf16(), NULL,
-				     NULL, SW_SHOWNORMAL);
-#elif defined(__linux__) || defined(__APPLE__)
-			(void)!system(QString("open %1")
-					      .arg(ndi_website)
-					      .toUtf8()
-					      .constData());
-#endif
-			return true;
-		},
-		(void *)ndi_website);
+	auto group_ndi = obs_properties_create();
+	obs_properties_add_button(
+		group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
+		[](obs_properties_t *, obs_property_t *, void *) {
+			QDesktopServices::openUrl(
+				QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+			return false;
+		});
+	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
+				 group_ndi);
 
 	return props;
 }
@@ -277,9 +263,8 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
-	blog(LOG_INFO,
-	     "[obs-ndi] +ndi_filter_create(name=\"%s\", groups=\"%s\")", name,
-	     groups);
+	blog(LOG_INFO, "[obs-ndi] +ndi_filter_create(name=`%s`, groups=`%s`)",
+	     name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->context = source;
@@ -301,7 +286,7 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *source)
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 	blog(LOG_INFO,
-	     "[obs-ndi] +ndi_filter_create_audioonly(name=\"%s\", groups=\"%s\")",
+	     "[obs-ndi] +ndi_filter_create_audioonly(name=`%s`, groups=`%s`)",
 	     name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));

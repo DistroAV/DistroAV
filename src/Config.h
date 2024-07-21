@@ -15,19 +15,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
-
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 #include <QString>
+#include <QVersionNumber>
 #include <obs-module.h>
 
 class Config {
 public:
-	Config();
-	static void OBSSaveCallback(obs_data_t *save_data, bool saving,
-				    void *private_data);
 	static Config *Current();
+	static void Destroy();
+
+	static bool LogVerbose();
+	static bool LogDebug();
+	static bool UpdateForce();
+
 	void Load();
 	void Save();
 
@@ -40,8 +42,12 @@ public:
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 
+	bool AutoCheckForUpdates();
+	void AutoCheckForUpdates(bool value);
+	void SkipUpdateVersion(const QVersionNumber &version);
+	QVersionNumber SkipUpdateVersion();
+
 private:
+	Config();
 	static Config *_instance;
 };
-
-#endif // CONFIG_H

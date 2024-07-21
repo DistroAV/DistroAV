@@ -1,6 +1,6 @@
 /*
-Plugin Name
-Copyright (C) <Year> <Developer> <Email Address>
+obs-ndi
+Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,27 +15,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
-
-#include <plugin-support.h>
-
-const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
-const char *PLUGIN_VERSION = "@CMAKE_PROJECT_VERSION@";
-
 /*
-void obs_log(int log_level, const char *format, ...)
-{
-	size_t length = 4 + strlen(PLUGIN_NAME) + strlen(format);
+Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/update/shared-update.hpp
+The original file has no copyright header.
+In some places just the method signature is [mostly] copied.
+In some places [nearly] the full code implementation is copied.
+ */
+#pragma once
 
-	char *template = malloc(length + 1);
+#include <QString>
 
-	snprintf(template, length, "[%s] %s", PLUGIN_NAME, format);
-
-	va_list(args);
-
-	va_start(args, format);
-	blogva(log_level, template, args);
-	va_end(args);
-
-	free(template);
-}
-*/
+bool CalculateFileHash(const char *path, QString &hash);
+void GenerateGUID(QString &guid);
+QString GetProgramGUID();
