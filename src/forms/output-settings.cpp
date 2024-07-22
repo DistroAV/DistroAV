@@ -18,9 +18,15 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include "output-settings.h"
 
-#include "../Config.h"
 #include "../plugin-main.h"
+#include "../main-output.h"
 #include "../preview-output.h"
+#include "obsndi-update.h"
+
+#include <QClipboard>
+#include <QDesktopServices>
+#include <QMessageBox>
+#include <QProgressDialog>
 
 OutputSettings::OutputSettings(QWidget *parent)
 	: QDialog(parent),
@@ -30,12 +36,139 @@ OutputSettings::OutputSettings(QWidget *parent)
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
-	ui->ndiVersionLabel->setText(ndiLib->version());
+	auto obsNdiVersionText =
+		QString("%1 %2").arg(PLUGIN_NAME).arg(PLUGIN_VERSION);
+	ui->labelObsNdiVersion->setText(
+		makeLink("#", QT_TO_UTF8(obsNdiVersionText)));
+	connect(ui->labelObsNdiVersion, &QLabel::linkActivated,
+		[this, obsNdiVersionText](const QString &) {
+			QApplication::clipboard()->setText(obsNdiVersionText);
+			QMessageBox::information(
+				this,
+				Str("NDIPlugin.OutputSettings.TextCopied"),
+				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+		});
+
+	ui->pushButtonCheckForUpdate->setText(
+		Str("NDIPlugin.OutputSettings.CheckForUpdate"));
+	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
+		auto progressDialog = new QProgressDialog(
+			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
+				.arg(PLUGIN_NAME),
+			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
+			this);
+		progressDialog->setWindowModality(Qt::WindowModal);
+		connect(progressDialog, &QProgressDialog::canceled,
+			[progressDialog]() {
+				updateCheckStop();
+				progressDialog->close();
+				progressDialog->deleteLater();
+			});
+		auto checking = updateCheckStart([this, progressDialog](
+							 const PluginUpdateInfo &
+								 pluginUpdateInfo)
+							 -> bool {
+			progressDialog->close();
+			progressDialog->deleteLater();
+
+			if (!pluginUpdateInfo.errorData.isEmpty()) {
+				QMessageBox::warning(
+					this,
+					Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
+					QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text")
+						.arg(pluginUpdateInfo
+							     .errorData));
+				return false;
+			}
+
+			if (pluginUpdateInfo.versionLatest <=
+			    pluginUpdateInfo.versionCurrent) {
+				QMessageBox::information(
+					this,
+					QTStr("NDIPlugin.Update.NoUpdateAvailable")
+						.arg(PLUGIN_NAME),
+					QTStr("NDIPlugin.Update.YouAreUpToDate")
+						.arg(PLUGIN_NAME,
+						     pluginUpdateInfo
+							     .versionCurrent
+							     .toString()));
+				return false;
+			}
+
+			return false;
+		});
+		if (checking) {
+			progressDialog->show();
+		} else {
+			progressDialog->deleteLater();
+		}
+	});
+
+	auto ndiVersionText = QString(ndiLib->version());
+	ui->labelNdiVersion->setText(makeLink("#", QT_TO_UTF8(ndiVersionText)));
+	connect(ui->labelNdiVersion, &QLabel::linkActivated,
+		[this, ndiVersionText](const QString &) {
+			QApplication::clipboard()->setText(ndiVersionText);
+			QMessageBox::information(
+				this,
+				Str("NDIPlugin.OutputSettings.TextCopied"),
+				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+		});
+
+	ui->pushButtonNdi->setText(QString("%1 %2").arg(
+		ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
+	connect(ui->pushButtonNdi, &QPushButton::clicked, []() {
+		QDesktopServices::openUrl(
+			QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+	});
+
+#if 1
+	ui->pushButtonNdiTools->setVisible(false);
+	ui->pushButtonNdiRedist->setVisible(false);
+#else
+	//
+	// These are not useful to users that can see this Dialog because
+	// they have already installed and successfully loaded the NDI SDK.
+	// Keeping the code around for a little while longer...
+	//
+#ifdef NDI_OFFICIAL_TOOLS_URL
+	ui->pushButtonNdiTools->setText(NDI_OFFICIAL_TOOLS_URL);
+	connect(ui->pushButtonNdiTools, &QPushButton::clicked, []() {
+		QDesktopServices::openUrl(
+			QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_TOOLS_URL)));
+	});
+#else
+	ui->pushButtonNdiTools->setVisible(false);
+#endif
+
+#ifdef NDI_OFFICIAL_REDIST_URL
+	ui->pushButtonNdiRedist->setText(NDI_OFFICIAL_REDIST_URL);
+#else
+	ui->pushButtonNdiRedist->setText(PLUGIN_REDIRECT_NDI_REDIST_URL);
+#endif
+	connect(ui->pushButtonNdiRedist, &QPushButton::clicked, []() {
+		QDesktopServices::openUrl(
+			QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL)));
+	});
+#endif
+
+	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
+	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
+	connect(ui->labelDonateUrl, &QLabel::linkActivated,
+		[this](const QString &url) {
+			QDesktopServices::openUrl(QUrl(url));
+		});
+
+	ui->labelDiscordUrl->setText(makeLink(PLUGIN_REDIRECT_DISCORD_URL));
+	connect(ui->labelDiscordUrl, &QLabel::linkActivated,
+		[this](const QString &url) {
+			QDesktopServices::openUrl(QUrl(url));
+		});
 }
 
 void OutputSettings::onFormAccepted()
 {
-	Config *conf = Config::Current();
+	auto conf = Config::Current();
 
 	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	conf->OutputName = ui->mainOutputName->text();
@@ -54,9 +187,8 @@ void OutputSettings::onFormAccepted()
 		if (main_output_is_running()) {
 			main_output_stop();
 		}
-		main_output_start(
-			ui->mainOutputName->text().toUtf8().constData(),
-			ui->mainOutputGroups->text().toUtf8().constData());
+		main_output_start(QT_TO_UTF8(ui->mainOutputName->text()),
+				  QT_TO_UTF8(ui->mainOutputGroups->text()));
 	} else {
 		main_output_stop();
 	}
@@ -66,8 +198,8 @@ void OutputSettings::onFormAccepted()
 			preview_output_stop();
 		}
 		preview_output_start(
-			ui->previewOutputName->text().toUtf8().constData(),
-			ui->previewOutputGroups->text().toUtf8().constData());
+			QT_TO_UTF8(ui->previewOutputName->text()),
+			QT_TO_UTF8(ui->previewOutputGroups->text()));
 	} else {
 		preview_output_stop();
 	}
@@ -75,7 +207,7 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	Config *conf = Config::Current();
+	auto conf = Config::Current();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);
