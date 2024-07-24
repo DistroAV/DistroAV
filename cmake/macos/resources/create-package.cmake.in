@@ -15,8 +15,8 @@ make_directory("$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/temp")
 
 execute_process(
   COMMAND /usr/bin/pkgbuild
-    --identifier '@MACOS_BUNDLEID@'
-    --version '@CMAKE_PROJECT_VERSION@'
+    --identifier @MACOS_BUNDLEID@
+    --version @CMAKE_PROJECT_VERSION@
     --root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package"
     "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/temp/@CMAKE_PROJECT_NAME@.pkg"
     COMMAND_ERROR_IS_FATAL ANY
