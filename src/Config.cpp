@@ -19,6 +19,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "Config.h"
 #include "plugin-main.h"
 
+#include <QtCore/QCoreApplication>
+
 #include <obs-frontend-api.h>
 #include <util/config-file.h>
 
@@ -31,8 +33,29 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
+#define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
+#define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
 
 Config *Config::_instance = nullptr;
+
+bool _LogVerbose = false;
+bool _LogDebug = false;
+bool _UpdateForce = false;
+
+bool Config::LogVerbose()
+{
+	return _LogVerbose;
+}
+
+bool Config::LogDebug()
+{
+	return _LogDebug;
+}
+
+bool Config::UpdateForce()
+{
+	return _UpdateForce;
+}
 
 Config::Config()
 	: OutputEnabled(false),
@@ -44,27 +67,44 @@ Config::Config()
 	  TallyProgramEnabled(true),
 	  TallyPreviewEnabled(true)
 {
-	config_t *obs_config = obs_frontend_get_global_config();
+	auto arguments = QCoreApplication::arguments();
+	if (arguments.contains("--obs-ndi-verbose")) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi verbose logging enabled");
+		_LogVerbose = true;
+	}
+	if (arguments.contains("--obs-ndi-debug")) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi debug logging enabled");
+		_LogDebug = true;
+	}
+	if (arguments.contains("--obs-ndi-update-force")) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi update force enabled");
+		_UpdateForce = true;
+	}
+
+	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_MAIN_OUTPUT_ENABLED,
 					OutputEnabled);
 		config_set_default_string(obs_config, SECTION_NAME,
 					  PARAM_MAIN_OUTPUT_NAME,
-					  OutputName.toUtf8().constData());
+					  QT_TO_UTF8(OutputName));
 		config_set_default_string(obs_config, SECTION_NAME,
 					  PARAM_MAIN_OUTPUT_GROUPS,
-					  OutputGroups.toUtf8().constData());
+					  QT_TO_UTF8(OutputGroups));
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_PREVIEW_OUTPUT_ENABLED,
 					PreviewOutputEnabled);
-		config_set_default_string(
-			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME,
-			PreviewOutputName.toUtf8().constData());
-		config_set_default_string(
-			obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
-			PreviewOutputGroups.toUtf8().constData());
+		config_set_default_string(obs_config, SECTION_NAME,
+					  PARAM_PREVIEW_OUTPUT_NAME,
+					  QT_TO_UTF8(PreviewOutputName));
+		config_set_default_string(obs_config, SECTION_NAME,
+					  PARAM_PREVIEW_OUTPUT_GROUPS,
+					  QT_TO_UTF8(PreviewOutputGroups));
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_TALLY_PROGRAM_ENABLED,
@@ -72,12 +112,15 @@ Config::Config()
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_TALLY_PREVIEW_ENABLED,
 					TallyPreviewEnabled);
+
+		config_set_default_bool(obs_config, SECTION_NAME,
+					PARAM_AUTO_CHECK_FOR_UPDATES, true);
 	}
 }
 
 void Config::Load()
 {
-	config_t *obs_config = obs_frontend_get_global_config();
+	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		OutputEnabled = config_get_bool(obs_config, SECTION_NAME,
 						PARAM_MAIN_OUTPUT_ENABLED);
@@ -102,26 +145,26 @@ void Config::Load()
 
 void Config::Save()
 {
-	config_t *obs_config = obs_frontend_get_global_config();
+	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_NAME,
-				  OutputName.toUtf8().constData());
+				  QT_TO_UTF8(OutputName));
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_GROUPS,
-				  OutputGroups.toUtf8().constData());
+				  QT_TO_UTF8(OutputGroups));
 
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_PREVIEW_OUTPUT_ENABLED,
 				PreviewOutputEnabled);
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_NAME,
-				  PreviewOutputName.toUtf8().constData());
+				  QT_TO_UTF8(PreviewOutputName));
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_GROUPS,
-				  PreviewOutputGroups.toUtf8().constData());
+				  QT_TO_UTF8(PreviewOutputGroups));
 
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_TALLY_PROGRAM_ENABLED,
@@ -134,10 +177,62 @@ void Config::Save()
 	}
 }
 
+bool Config::AutoCheckForUpdates()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		return config_get_bool(obs_config, SECTION_NAME,
+				       PARAM_AUTO_CHECK_FOR_UPDATES);
+	}
+	return false;
+}
+
+void Config::AutoCheckForUpdates(bool value)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_bool(obs_config, SECTION_NAME,
+				PARAM_AUTO_CHECK_FOR_UPDATES, value);
+		config_save(obs_config);
+	}
+}
+
+void Config::SkipUpdateVersion(const QVersionNumber &version)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_string(obs_config, SECTION_NAME,
+				  PARAM_SKIP_UPDATE_VERSION,
+				  QT_TO_UTF8(version.toString()));
+		config_save(obs_config);
+	}
+}
+
+QVersionNumber Config::SkipUpdateVersion()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		auto version = config_get_string(obs_config, SECTION_NAME,
+						 PARAM_SKIP_UPDATE_VERSION);
+		if (version) {
+			return QVersionNumber::fromString(version);
+		}
+	}
+	return QVersionNumber();
+}
+
 Config *Config::Current()
 {
 	if (!_instance) {
 		_instance = new Config();
 	}
 	return _instance;
+}
+
+void Config::Destroy()
+{
+	if (_instance) {
+		delete _instance;
+		_instance = nullptr;
+	}
 }
