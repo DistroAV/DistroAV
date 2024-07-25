@@ -29,8 +29,8 @@ public:
 	static bool LogDebug();
 	static bool UpdateForce();
 
-	void Load();
-	void Save();
+	Config *Load();
+	Config *Save();
 
 	bool OutputEnabled;
 	QString OutputName;

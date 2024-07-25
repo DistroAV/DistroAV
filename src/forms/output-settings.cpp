@@ -32,6 +32,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 	  ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
@@ -206,7 +207,7 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	auto conf = Config::Current();
+	auto conf = Config::Current()->Load();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);
