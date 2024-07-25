@@ -181,6 +181,8 @@ void OutputSettings::onFormAccepted()
 	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
+	conf->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
+
 	conf->Save();
 
 	if (conf->OutputEnabled) {
@@ -219,6 +221,9 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);
+
+	ui->checkBoxAutoCheckForUpdates->setChecked(
+		conf->AutoCheckForUpdates());
 }
 
 void OutputSettings::ToggleShowHide()
