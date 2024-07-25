@@ -15,7 +15,38 @@
 	along with this program; if not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-#include <plugin-support.h>
+#pragma once
 
-const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
-const char *PLUGIN_VERSION = "@CMAKE_PROJECT_VERSION@";
+#include <QString>
+#include <QVersionNumber>
+
+class Config {
+public:
+	static Config *Current();
+	static void Destroy();
+
+	static bool LogVerbose();
+	static bool LogDebug();
+	static bool UpdateForce();
+
+	Config *Load();
+	Config *Save();
+
+	bool OutputEnabled;
+	QString OutputName;
+	QString OutputGroups;
+	bool PreviewOutputEnabled;
+	QString PreviewOutputName;
+	QString PreviewOutputGroups;
+	bool TallyProgramEnabled;
+	bool TallyPreviewEnabled;
+
+	bool AutoCheckForUpdates();
+	void AutoCheckForUpdates(bool value);
+	void SkipUpdateVersion(const QVersionNumber &version);
+	QVersionNumber SkipUpdateVersion();
+
+private:
+	Config();
+	static Config *_instance;
+};

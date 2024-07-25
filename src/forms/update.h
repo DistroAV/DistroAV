@@ -17,19 +17,40 @@
 
 #pragma once
 
-#include "ui_output-settings.h"
+#include "ui_update.h"
 
-class OutputSettings : public QDialog {
-	Q_OBJECT
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QVersionNumber>
+
+class PluginUpdateInfo {
 public:
-	explicit OutputSettings(QWidget *parent = 0);
-	~OutputSettings();
-	void showEvent(QShowEvent *event);
-	void ToggleShowHide();
+	PluginUpdateInfo(const QString &responseData, const QString &errorData);
 
-private slots:
-	void onFormAccepted();
+	QString responseData;
+	QString errorData;
 
-private:
-	Ui::OutputSettings *ui;
+	QJsonDocument jsonDocument;
+	QJsonObject jsonObject;
+
+	int infoVersion = -1;
+	QString releaseTag;
+	QString releaseName;
+	QString releaseUrl;
+	QString releaseDate;
+	QString releaseNotes;
+	int uiDelayMillis = 1000;
+
+	bool fakeVersionLatest = false;
+	QVersionNumber versionLatest;
+	QVersionNumber versionCurrent;
 };
+
+/**
+ * @return true if the callback handled the update check response, otherwise false
+ */
+typedef std::function<bool(const PluginUpdateInfo &pluginUpdateInfo)>
+	UserRequestCallback;
+
+void updateCheckStop();
+bool updateCheckStart(UserRequestCallback userRequestCallback = nullptr);

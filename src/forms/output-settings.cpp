@@ -1,27 +1,26 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
 #include "output-settings.h"
 
-#include "../plugin-main.h"
-#include "../main-output.h"
-#include "../preview-output.h"
-#include "obsndi-update.h"
+#include "plugin-main.h"
+#include "main-output.h"
+#include "preview-output.h"
+#include "update.h"
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -33,24 +32,23 @@ OutputSettings::OutputSettings(QWidget *parent)
 	  ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
-	auto obsNdiVersionText =
+	auto pluginVersionText =
 		QString("%1 %2").arg(PLUGIN_NAME).arg(PLUGIN_VERSION);
-	ui->labelObsNdiVersion->setText(
-		makeLink("#", QT_TO_UTF8(obsNdiVersionText)));
-	connect(ui->labelObsNdiVersion, &QLabel::linkActivated,
-		[this, obsNdiVersionText](const QString &) {
-			QApplication::clipboard()->setText(obsNdiVersionText);
+	ui->labelDistroAvVersion->setText(
+		makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	connect(ui->labelDistroAvVersion, &QLabel::linkActivated,
+		[this, pluginVersionText](const QString &) {
+			QApplication::clipboard()->setText(pluginVersionText);
 			QMessageBox::information(
 				this,
 				Str("NDIPlugin.OutputSettings.TextCopied"),
 				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 		});
 
-	ui->pushButtonCheckForUpdate->setText(
-		Str("NDIPlugin.OutputSettings.CheckForUpdate"));
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
@@ -152,7 +150,6 @@ OutputSettings::OutputSettings(QWidget *parent)
 	});
 #endif
 
-	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
 	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
 	connect(ui->labelDonateUrl, &QLabel::linkActivated,
 		[this](const QString &url) {
@@ -181,6 +178,8 @@ void OutputSettings::onFormAccepted()
 	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
+	conf->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
+
 	conf->Save();
 
 	if (conf->OutputEnabled) {
@@ -207,7 +206,7 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	auto conf = Config::Current();
+	auto conf = Config::Current()->Load();
 
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);
@@ -219,6 +218,9 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);
+
+	ui->checkBoxAutoCheckForUpdates->setChecked(
+		conf->AutoCheckForUpdates());
 }
 
 void OutputSettings::ToggleShowHide()

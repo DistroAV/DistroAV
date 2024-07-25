@@ -1,37 +1,28 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
-
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
-#include <obs-module.h>
-#include <obs-frontend-api.h>
-#include <util/platform.h>
-#include <util/threading.h>
-#include <media-io/video-io.h>
-#include <media-io/video-frame.h>
-#include <media-io/audio-resampler.h>
-#include <QString>
-#include <QDesktopServices>
-#include <QUrl>
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
 #include "plugin-main.h"
+
+#include <util/platform.h>
+#include <util/threading.h>
+#include <media-io/video-frame.h>
+
+#include <QDesktopServices>
+#include <QUrl>
 
 #define TEXFORMAT GS_BGRA
 #define FLT_PROP_NAME "ndi_filter_ndiname"
@@ -263,7 +254,7 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
-	blog(LOG_INFO, "[obs-ndi] +ndi_filter_create(name=`%s`, groups=`%s`)",
+	blog(LOG_INFO, "[DistroAV] +ndi_filter_create(name=`%s`, groups=`%s`)",
 	     name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
@@ -276,7 +267,7 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *source)
 
 	ndi_filter_update(f, settings);
 
-	blog(LOG_INFO, "[obs-ndi] -ndi_filter_create(...)");
+	blog(LOG_INFO, "[DistroAV] -ndi_filter_create(...)");
 
 	return f;
 }
@@ -286,7 +277,7 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *source)
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 	blog(LOG_INFO,
-	     "[obs-ndi] +ndi_filter_create_audioonly(name=`%s`, groups=`%s`)",
+	     "[DistroAV] +ndi_filter_create_audioonly(name=`%s`, groups=`%s`)",
 	     name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
@@ -297,14 +288,14 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *source)
 
 	ndi_filter_update(f, settings);
 
-	blog(LOG_INFO, "[obs-ndi] -ndi_filter_create_audioonly(...)");
+	blog(LOG_INFO, "[DistroAV] -ndi_filter_create_audioonly(...)");
 
 	return f;
 }
 
 void ndi_filter_destroy(void *data)
 {
-	blog(LOG_INFO, "[obs-ndi] +ndi_filter_destroy(...)");
+	blog(LOG_INFO, "[DistroAV] +ndi_filter_destroy(...)");
 
 	auto f = (ndi_filter_t *)data;
 
@@ -323,7 +314,7 @@ void ndi_filter_destroy(void *data)
 
 	if (f->audio_conv_buffer) {
 		blog(LOG_INFO,
-		     "[obs-ndi] ndi_filter_destroy: freeing %zu bytes",
+		     "[DistroAV] ndi_filter_destroy: freeing %zu bytes",
 		     f->audio_conv_buffer_size);
 		bfree(f->audio_conv_buffer);
 		f->audio_conv_buffer = nullptr;
@@ -331,12 +322,12 @@ void ndi_filter_destroy(void *data)
 
 	bfree(f);
 
-	blog(LOG_INFO, "[obs-ndi] -ndi_filter_destroy(...)");
+	blog(LOG_INFO, "[DistroAV] -ndi_filter_destroy(...)");
 }
 
 void ndi_filter_destroy_audioonly(void *data)
 {
-	blog(LOG_INFO, "[obs-ndi] +ndi_filter_destroy_audioonly(...)");
+	blog(LOG_INFO, "[DistroAV] +ndi_filter_destroy_audioonly(...)");
 
 	auto f = (ndi_filter_t *)data;
 
@@ -351,7 +342,7 @@ void ndi_filter_destroy_audioonly(void *data)
 
 	bfree(f);
 
-	blog(LOG_INFO, "[obs-ndi] -ndi_filter_destroy_audioonly(...)");
+	blog(LOG_INFO, "[DistroAV] -ndi_filter_destroy_audioonly(...)");
 }
 
 void ndi_filter_tick(void *data, float)
@@ -369,7 +360,7 @@ void ndi_filter_videorender(void *data, gs_effect_t *)
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 {
 	// NOTE: The logic in this function should be similar to
-	// obs-ndi-output::ndi_output_raw_audio
+	// ndi-output.cpp/ndi_output_raw_audio(...)
 	auto f = (ndi_filter_t *)data;
 
 	obs_get_audio_info(&f->oai);
@@ -386,16 +377,16 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 
 	if (data_size > f->audio_conv_buffer_size) {
 		blog(LOG_INFO,
-		     "[obs-ndi] ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
+		     "[DistroAV] ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
 		     f->audio_conv_buffer_size, data_size);
 		if (f->audio_conv_buffer) {
 			blog(LOG_INFO,
-			     "[obs-ndi] ndi_filter_asyncaudio: freeing %zu bytes",
+			     "[DistroAV] ndi_filter_asyncaudio: freeing %zu bytes",
 			     f->audio_conv_buffer_size);
 			bfree(f->audio_conv_buffer);
 		}
 		blog(LOG_INFO,
-		     "[obs-ndi] ndi_filter_asyncaudio: allocating %zu bytes",
+		     "[DistroAV] ndi_filter_asyncaudio: allocating %zu bytes",
 		     data_size);
 		f->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
 		f->audio_conv_buffer_size = data_size;

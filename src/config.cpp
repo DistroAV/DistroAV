@@ -1,28 +1,27 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
-#include "Config.h"
+#include "config.h"
+
 #include "plugin-main.h"
 
-#include <QtCore/QCoreApplication>
-
-#include <obs-frontend-api.h>
 #include <util/config-file.h>
+
+#include <QCoreApplication>
 
 #define SECTION_NAME "NDIPlugin"
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
@@ -40,6 +39,7 @@ Config *Config::_instance = nullptr;
 
 bool _LogVerbose = false;
 bool _LogDebug = false;
+int _LogLevel = LOG_INFO;
 bool _UpdateForce = false;
 
 bool Config::LogVerbose()
@@ -68,19 +68,22 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	auto arguments = QCoreApplication::arguments();
-	if (arguments.contains("--obs-ndi-verbose")) {
+	if (arguments.contains("--DistroAV-verbose",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi verbose logging enabled");
+		     "[DistroAV] config: DistroAV verbose logging enabled");
 		_LogVerbose = true;
 	}
-	if (arguments.contains("--obs-ndi-debug")) {
+	if (arguments.contains("--DistroAV-debug",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi debug logging enabled");
+		     "[DistroAV] config: DistroAV debug logging enabled");
 		_LogDebug = true;
 	}
-	if (arguments.contains("--obs-ndi-update-force")) {
+	if (arguments.contains("--DistroAV-update-force",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi update force enabled");
+		     "[DistroAV] config: DistroAV update force enabled");
 		_UpdateForce = true;
 	}
 
@@ -118,7 +121,7 @@ Config::Config()
 	}
 }
 
-void Config::Load()
+Config *Config::Load()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -141,9 +144,10 @@ void Config::Load()
 		TallyPreviewEnabled = config_get_bool(
 			obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
 	}
+	return this;
 }
 
-void Config::Save()
+Config *Config::Save()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -175,6 +179,7 @@ void Config::Save()
 
 		config_save(obs_config);
 	}
+	return this;
 }
 
 bool Config::AutoCheckForUpdates()
