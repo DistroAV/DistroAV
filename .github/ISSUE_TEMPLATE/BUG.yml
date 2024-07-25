@@ -43,7 +43,7 @@ body:
     validations:
       required: true
   - type: input
-    id: obsndi-version
+    id: distroav-version
     attributes:
       label: DistroAV Version
       description: "What version(s) of DistroAV does this happen on? OBS menu: `Tools`->`NDI Output Settings`, Title: `DistroAV ...`"
@@ -51,7 +51,7 @@ body:
     validations:
       required: true
   - type: input
-    id: obsndi-install
+    id: distroav-install
     attributes:
       label: DistroAV Installation Method
       description: How did you install DistroAV?

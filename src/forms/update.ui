@@ -18,8 +18,8 @@
 ******************************************************************************/
 -->
 <ui version="4.0">
- <class>ObsNdiUpdate</class>
- <widget class="QDialog" name="ObsNdiUpdate">
+ <class>PluginUpdate</class>
+ <widget class="QDialog" name="PluginUpdate">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -162,7 +162,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <item>
       <widget class="QPushButton" name="buttonSkipThisVersion">
        <property name="text">
-        <string>SkipThisVersion</string>
+        <string>NDIPlugin.Update.SkipThisVersion</string>
        </property>
       </widget>
      </item>
@@ -182,14 +182,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <item>
       <widget class="QPushButton" name="buttonRemindMeLater">
        <property name="text">
-        <string>RemindMeLater</string>
+        <string>NDIPlugin.Update.RemindMeLater</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="buttonInstallUpdate">
        <property name="text">
-        <string>InstallUpdate</string>
+        <string>NDIPlugin.Update.InstallUpdate</string>
        </property>
        <property name="default">
         <bool>true</bool>

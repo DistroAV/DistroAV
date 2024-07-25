@@ -119,16 +119,16 @@ PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
 	}
 }
 
-class ObsNdiUpdate : public QDialog {
+class PluginUpdate : public QDialog {
 	Q_OBJECT
 private:
-	std::unique_ptr<Ui::ObsNdiUpdate> ui;
+	std::unique_ptr<Ui::PluginUpdate> ui;
 
 public:
-	explicit ObsNdiUpdate(const PluginUpdateInfo &pluginUpdateInfo,
+	explicit PluginUpdate(const PluginUpdateInfo &pluginUpdateInfo,
 			      QWidget *parent = nullptr)
 		: QDialog(parent),
-		  ui(new Ui::ObsNdiUpdate)
+		  ui(new Ui::PluginUpdate)
 	{
 		ui->setupUi(this);
 
@@ -172,8 +172,6 @@ public:
 		ui->textReleaseNotes->setMarkdown(
 			pluginUpdateInfo.releaseNotes);
 
-		ui->checkBoxAutoCheckForUpdates->setText(
-			Str("NDIPlugin.Update.ContinueToCheckForUpdate"));
 		ui->checkBoxAutoCheckForUpdates->setChecked(
 			config->AutoCheckForUpdates());
 		connect(ui->checkBoxAutoCheckForUpdates,
@@ -182,8 +180,6 @@ public:
 					state == Qt::Checked);
 			});
 
-		ui->buttonSkipThisVersion->setText(
-			Str("NDIPlugin.Update.SkipThisVersion"));
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this,
 			[this, pluginUpdateInfo]() {
 				Config::Current()->SkipUpdateVersion(
@@ -191,8 +187,6 @@ public:
 				this->reject();
 			});
 
-		ui->buttonRemindMeLater->setText(
-			Str("NDIPlugin.Update.RemindMeLater"));
 		connect(ui->buttonRemindMeLater, &QPushButton::clicked, this,
 			[this]() {
 				// do nothing; on next launch the plugin
@@ -200,8 +194,6 @@ public:
 				this->reject();
 			});
 
-		ui->buttonInstallUpdate->setText(
-			Str("NDIPlugin.Update.InstallUpdate"));
 #ifdef __APPLE__
 		// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
 		auto defaultButtonBackgroundColor =
@@ -218,7 +210,6 @@ public:
 				this->accept();
 			});
 
-		ui->labelDonate->setText(Str("NDIPlugin.Donate"));
 		ui->labelDonateUrl->setText(
 			makeLink(PLUGIN_REDIRECT_DONATE_URL));
 		connect(ui->labelDonateUrl, &QLabel::linkActivated,
@@ -277,6 +268,8 @@ Options:
 	I think the place to watch for changes that fix this is:
 	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.ps1
 	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.zsh
+	* Or one of RytoEX's branches:
+	  https://github.com/RytoEX/obs-studio/branches
 2. Compile DistroAV's own Qt6 dep w/ TLS enabled: No thanks!
 3. Make only http requests; Don't make https requests:
 	Ignoring the security concerns, this works when testing against the emulator but won't work for
@@ -304,7 +297,7 @@ QPointer<QNetworkReply> update_reply = nullptr;
 #include "obs-support/remote-text.hpp"
 QPointer<RemoteTextThread> update_request = nullptr;
 #endif
-QPointer<ObsNdiUpdate> update_dialog = nullptr;
+QPointer<PluginUpdate> update_dialog = nullptr;
 
 bool isUpdatePendingOrShowing()
 {
@@ -407,7 +400,9 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 			return;
 		}
 
-		update_dialog = new ObsNdiUpdate(pluginUpdateInfo, main_window);
+		obs_frontend_push_ui_translation(obs_module_get_string);
+		update_dialog = new PluginUpdate(pluginUpdateInfo, main_window);
+		obs_frontend_pop_ui_translation();
 		// Our logic needs to set `update_dialog = nullptr` after it finishes...
 		QObject::connect(update_dialog, &QDialog::finished, [](int) {
 			update_dialog->deleteLater();

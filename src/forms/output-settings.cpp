@@ -36,21 +36,19 @@ OutputSettings::OutputSettings(QWidget *parent)
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
-	auto obsNdiVersionText =
+	auto pluginVersionText =
 		QString("%1 %2").arg(PLUGIN_NAME).arg(PLUGIN_VERSION);
-	ui->labelObsNdiVersion->setText(
-		makeLink("#", QT_TO_UTF8(obsNdiVersionText)));
-	connect(ui->labelObsNdiVersion, &QLabel::linkActivated,
-		[this, obsNdiVersionText](const QString &) {
-			QApplication::clipboard()->setText(obsNdiVersionText);
+	ui->labelDistroAvVersion->setText(
+		makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	connect(ui->labelDistroAvVersion, &QLabel::linkActivated,
+		[this, pluginVersionText](const QString &) {
+			QApplication::clipboard()->setText(pluginVersionText);
 			QMessageBox::information(
 				this,
 				Str("NDIPlugin.OutputSettings.TextCopied"),
 				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 		});
 
-	ui->pushButtonCheckForUpdate->setText(
-		Str("NDIPlugin.OutputSettings.CheckForUpdate"));
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
@@ -152,7 +150,6 @@ OutputSettings::OutputSettings(QWidget *parent)
 	});
 #endif
 
-	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
 	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
 	connect(ui->labelDonateUrl, &QLabel::linkActivated,
 		[this](const QString &url) {
