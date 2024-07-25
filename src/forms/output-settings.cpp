@@ -49,8 +49,6 @@ OutputSettings::OutputSettings(QWidget *parent)
 				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 		});
 
-	ui->pushButtonCheckForUpdate->setText(
-		Str("NDIPlugin.OutputSettings.CheckForUpdate"));
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
@@ -152,7 +150,6 @@ OutputSettings::OutputSettings(QWidget *parent)
 	});
 #endif
 
-	ui->labelDonate->setText(Str("NDIPlugin.Donate"));
 	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
 	connect(ui->labelDonateUrl, &QLabel::linkActivated,
 		[this](const QString &url) {
@@ -180,6 +177,8 @@ void OutputSettings::onFormAccepted()
 
 	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
+
+	conf->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
 
 	conf->Save();
 
@@ -219,6 +218,9 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);
+
+	ui->checkBoxAutoCheckForUpdates->setChecked(
+		conf->AutoCheckForUpdates());
 }
 
 void OutputSettings::ToggleShowHide()
