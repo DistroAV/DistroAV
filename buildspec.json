@@ -45,7 +45,7 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "fr.palakis.obs-ndi"
+            "bundleId": "org.distroav.distroav"
         }
     },
     "name": "DistroAV",
