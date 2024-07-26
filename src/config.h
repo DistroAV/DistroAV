@@ -20,6 +20,26 @@
 #include <QString>
 #include <QVersionNumber>
 
+/**
+ * Loads and Saves configuration value from/to:
+ * Linux: TBD...
+ * MacOS: ~/Library/Application Support/obs-studio/global.ini
+ * Windows: TBD...
+ * 
+ * ```
+ * [NDIPlugin]
+ * MainOutputEnabled=true
+ * MainOutputName=qwigybo
+ * PreviewOutputEnabled=false
+ * PreviewOutputName=OBS Preview
+ * TallyProgramEnabled=false
+ * TallyPreviewEnabled=false
+ * CheckForUpdates=true
+ * AutoCheckForUpdates=true
+ * MainOutputGroups=
+ * PreviewOutputGroups=
+ * ```
+ */
 class Config {
 public:
 	static Config *Current();

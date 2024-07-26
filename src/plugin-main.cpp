@@ -99,16 +99,46 @@ QString makeLink(const char *url, const char *text)
 }
 
 /**
+ * Similar to `QMessageBox::critical` but with the following changes:
+ * 	1. The title is prefixed with the plugin name
+ *  2. MacOS: Shows text in the title bar
+ * 	3. MacOS: The message is not bold by default
+ *  4. A common footer is appended to the message
+ * 	5. The message box is shown after a delay (default 2000ms)
+ *  6. Shows the dialog as WindowStaysOnTopHint and NonModal
+ *  7. Deletes the dialog when closed
+ * 
  * References:
  * * QMessageBox::showNewMessageBox
  *   https://code.qt.io/cgit/qt/qtbase.git/tree/src/widgets/dialogs/qmessagebox.cpp
+ *   * `showNewMessageBox` internals...
+ *     https://code.qt.io/cgit/qt/qtbase.git/tree/src/widgets/dialogs/qmessagebox.cpp#n1754
+ *   * MacOS defaults text to bold
+ *     https://code.qt.io/cgit/qt/qtbase.git/tree/src/widgets/dialogs/qmessagebox.cpp#n284
+ *     ```
+ * void QMessageBoxPrivate::init(const QString &title, const QString &text)
+ * ... 
+ * #ifdef Q_OS_MAC
+ *     QFont f = q->font();
+ *     f.setBold(true);
+ *     label->setFont(f);
+ * #endif
+ * ...
+ *     ```
+ * * MacOS guidelines say that dialog title bars have no text.
+ *   https://stackoverflow.com/a/22187538/25683720
+ * 
+ * @param title The title of the message box
+ * @param message The message to display in the message box
+ * @param milliseconds The delay in milliseconds before the message box is shown
  */
-void showUnloadingMessageBoxDelayed(const QString &title,
-				    const QString &message)
+void showCriticalUnloadingMessageBoxDelayed(const QString &title,
+					    const QString &message,
+					    int milliseconds = 2000)
 {
-	const QString newTitle = QString("%1 : %2").arg(PLUGIN_NAME).arg(title);
-	const QString newMessage =
-		QString("%1<br><br>%2")
+	auto newTitle = QString("%1 : %2").arg(PLUGIN_NAME).arg(title);
+	auto newMessage =
+		QString("<span style='font-weight: normal;'>%1</span><br><br>%2")
 			.arg(message)
 			.arg(QTStr("NDIPlugin.PluginCannotContinueAndWillBeUnloaded")
 				     .arg(PLUGIN_NAME,
@@ -116,12 +146,11 @@ void showUnloadingMessageBoxDelayed(const QString &title,
 						  PLUGIN_REDIRECT_REPORT_BUG_URL),
 					  rehostUrl(
 						  PLUGIN_REDIRECT_UNINSTALL_URL)));
-	QTimer::singleShot(2000, [newTitle, newMessage] {
+	QTimer::singleShot(milliseconds, [newTitle, newMessage] {
 		auto dlg = new QMessageBox(QMessageBox::Critical, newTitle,
-					   newMessage, QMessageBox::Ok,
-					   nullptr);
+					   newMessage, QMessageBox::Ok);
 #if defined(__APPLE__)
-		// https://stackoverflow.com/a/22187538/25683720
+		// Allow the title bar to show text: https://stackoverflow.com/a/22187538/25683720
 		dlg->QDialog::setWindowTitle(newTitle);
 #endif
 		dlg->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -130,6 +159,48 @@ void showUnloadingMessageBoxDelayed(const QString &title,
 		dlg->setWindowModality(Qt::NonModal);
 		dlg->show();
 	});
+}
+
+//
+//
+//
+
+struct find_module_data {
+	const char *target_name;
+	bool found;
+};
+
+bool is_module_found(const char *module_name)
+{
+	struct find_module_data data = {0};
+	data.target_name = module_name;
+	obs_find_modules2(
+		[](void *param, const struct obs_module_info2 *module_info) {
+			struct find_module_data *data_ =
+				(struct find_module_data *)param;
+			if (strcmp(data_->target_name, module_info->name) ==
+			    0) {
+				blog(LOG_INFO,
+				     "[DistroAV] is_module_found: Found module_info->name == `%s`",
+				     module_info->name);
+#if 0
+				blog(LOG_INFO,
+				     "[DistroAV] is_module_found: module_info->bin_path=`%s`",
+				     module_info->bin_path);
+				blog(LOG_INFO,
+				     "[DistroAV] is_module_found: module_info->data_path=`%s`",
+				     module_info->data_path);
+#endif
+				data_->found = true;
+			}
+		},
+		&data);
+	return data.found;
+}
+
+bool is_obsndi_installed()
+{
+	return is_module_found("obs-ndi");
 }
 
 //
@@ -146,6 +217,16 @@ bool obs_module_load(void)
 	     qVersion(), QT_VERSION_STR);
 
 	Config::Current()->Load();
+
+	if (is_obsndi_installed()) {
+		blog(LOG_INFO,
+		     "[DistroAV] obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
+		     PLUGIN_NAME);
+		showCriticalUnloadingMessageBoxDelayed(
+			QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
+			QTStr("NDIPlugin.ErrorObsNdiDetected.Message"));
+		return false;
+	}
 
 	QMainWindow *main_window =
 		(QMainWindow *)obs_frontend_get_main_window();
@@ -167,7 +248,7 @@ bool obs_module_load(void)
 		blog(LOG_ERROR,
 		     "[DistroAV] obs_module_load: ERROR - load_ndilib() failed; message=%s",
 		     QT_TO_UTF8(message));
-		showUnloadingMessageBoxDelayed(title, message);
+		showCriticalUnloadingMessageBoxDelayed(title, message);
 		return false;
 	}
 
