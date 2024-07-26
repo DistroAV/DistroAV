@@ -444,8 +444,9 @@ void *ndi_source_thread(void *data)
 		// Force a clean frame at first start
 		obs_source_output_video(obs_source, blank_video_frame());
 #if 1
-		blog(LOG_INFO, "[obs-ndi] +ndi_source_thread('%s'): Creating the first frame for NDI source",
-			obs_source_ndi_receiver_name);
+		blog(LOG_INFO,
+		     "[obs-ndi] +ndi_source_thread('%s'): Creating the first frame for NDI source",
+		     obs_source_ndi_receiver_name);
 #endif
 	}
 
@@ -581,13 +582,14 @@ void *ndi_source_thread(void *data)
 			}
 
 			// Force a clean (blank) frame when settings change to Audio only
-			if (recv_desc.bandwidth == NDIlib_recv_bandwidth_audio_only) {
+			if (recv_desc.bandwidth ==
+			    NDIlib_recv_bandwidth_audio_only) {
 				obs_source_output_video(obs_source,
 							blank_video_frame());
 #if 1
 				blog(LOG_INFO,
-					"[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
-					obs_source_ndi_receiver_name);
+				     "[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
+				     obs_source_ndi_receiver_name);
 #endif
 			}
 
