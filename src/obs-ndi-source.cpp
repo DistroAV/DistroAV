@@ -440,6 +440,14 @@ void *ndi_source_thread(void *data)
 
 	NDIlib_recv_create_v3_t *reset_recv_desc = &recv_desc;
 
+	if (!s->running) {
+		// Force a clean frame at first start
+		obs_source_output_video(obs_source, blank_video_frame());
+
+		blog(LOG_INFO, "[obs-ndi] +ndi_source_thread('%s'): Creating the first frame for NDI source",
+			obs_source_ndi_receiver_name);
+	}
+
 	while (s->running) {
 		//
 		// Main NDI receiver loop
@@ -537,15 +545,12 @@ void *ndi_source_thread(void *data)
 			     "[obs-ndi] ndi_source_thread: '%s' Resetting NDI receiver...",
 			     obs_source_ndi_receiver_name);
 
-			// Force a clean frame on receiver reset at all times.
-			obs_source_output_video(obs_source,
-						config_most_recent.blank_frame);
-
 			if (ndi_frame_sync) {
 				ndiLib->framesync_destroy(ndi_frame_sync);
 				ndi_frame_sync = nullptr;
 			}
 
+			// Reset ndi_receiver
 			if (ndi_receiver) {
 #if 1
 				blog(LOG_INFO,
@@ -574,6 +579,31 @@ void *ndi_source_thread(void *data)
 				break;
 			}
 
+			// Force a clean (blank) frame when settings change to Audio only
+			if (recv_desc.bandwidth == NDIlib_recv_bandwidth_audio_only) {
+				obs_source_output_video(obs_source,
+							blank_video_frame());
+#if 1
+				blog(LOG_INFO,
+					"[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
+					obs_source_ndi_receiver_name);
+#endif
+			}
+
+			/*
+			// TODO: Force a clean frame everytime we reset the receiver to ensure "clean" state. Unless "Remenber last frame" is enabled AND settings is not audio-only bandwidth.
+			if ( ADD-Remenber_last_frame_here || recv_desc.bandwidth == NDIlib_recv_bandwidth_audio_only) {
+				obs_source_output_video(obs_source,
+							blank_video_frame());
+#if 1
+				blog(LOG_INFO,
+					"[obs-ndi] ndi_source_thread: '%s' Reset Frame after settings change.",
+					obs_source_ndi_receiver_name);
+#endif
+			}
+			*/
+
+			// Apply Framesync Settings
 			if (config_most_recent.framesync_enabled) {
 				timestamp_audio = 0;
 				timestamp_video = 0;
@@ -1054,6 +1084,7 @@ void ndi_source_deactivated(void *data)
 	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
 		ndi_source_thread_stop(s);
 	}
+
 }
 
 void ndi_source_renamed(void *data, calldata_t *)
