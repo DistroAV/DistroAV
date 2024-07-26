@@ -443,9 +443,10 @@ void *ndi_source_thread(void *data)
 	if (!s->running) {
 		// Force a clean frame at first start
 		obs_source_output_video(obs_source, blank_video_frame());
-
+#if 1
 		blog(LOG_INFO, "[obs-ndi] +ndi_source_thread('%s'): Creating the first frame for NDI source",
 			obs_source_ndi_receiver_name);
+#endif
 	}
 
 	while (s->running) {
@@ -589,19 +590,6 @@ void *ndi_source_thread(void *data)
 					obs_source_ndi_receiver_name);
 #endif
 			}
-
-			/*
-			// TODO: Force a clean frame everytime we reset the receiver to ensure "clean" state. Unless "Remenber last frame" is enabled AND settings is not audio-only bandwidth.
-			if ( ADD-Remenber_last_frame_here || recv_desc.bandwidth == NDIlib_recv_bandwidth_audio_only) {
-				obs_source_output_video(obs_source,
-							blank_video_frame());
-#if 1
-				blog(LOG_INFO,
-					"[obs-ndi] ndi_source_thread: '%s' Reset Frame after settings change.",
-					obs_source_ndi_receiver_name);
-#endif
-			}
-			*/
 
 			// Apply Framesync Settings
 			if (config_most_recent.framesync_enabled) {
@@ -1084,7 +1072,6 @@ void ndi_source_deactivated(void *data)
 	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
 		ndi_source_thread_stop(s);
 	}
-
 }
 
 void ndi_source_renamed(void *data, calldata_t *)
