@@ -66,6 +66,7 @@ UpdateHostEnum Config::UpdateHost()
 void ProcessCommandLine()
 {
 	auto arguments = QCoreApplication::arguments();
+
 	if (arguments.contains("--DistroAV-verbose",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
@@ -78,6 +79,7 @@ void ProcessCommandLine()
 		     "[DistroAV] config: DistroAV debug logging enabled");
 		_LogDebug = true;
 	}
+
 	if (arguments.contains("--DistroAV-update-force",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
