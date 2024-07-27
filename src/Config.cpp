@@ -41,6 +41,7 @@ Config *Config::_instance = nullptr;
 bool _LogVerbose = false;
 bool _LogDebug = false;
 bool _UpdateForce = false;
+UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
 
 bool Config::LogVerbose()
 {
@@ -57,6 +58,43 @@ bool Config::UpdateForce()
 	return _UpdateForce;
 }
 
+UpdateHostEnum Config::UpdateHost()
+{
+	return _UpdateHost;
+}
+
+void ProcessCommandLine()
+{
+	auto arguments = QCoreApplication::arguments();
+
+	if (arguments.contains("--obs-ndi-verbose",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi verbose logging enabled");
+		_LogVerbose = true;
+	}
+	if (arguments.contains("--obs-ndi-debug",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi debug logging enabled");
+		_LogDebug = true;
+	}
+
+	if (arguments.contains("--obs-ndi-update-force",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi update force enabled");
+		_UpdateForce = true;
+	}
+
+	if (arguments.contains("--obs-ndi-update-local",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi update host set to Local");
+		_UpdateHost = UpdateHostEnum::LocalEmulator;
+	}
+}
+
 Config::Config()
 	: OutputEnabled(false),
 	  OutputName("OBS"),
@@ -67,22 +105,7 @@ Config::Config()
 	  TallyProgramEnabled(true),
 	  TallyPreviewEnabled(true)
 {
-	auto arguments = QCoreApplication::arguments();
-	if (arguments.contains("--obs-ndi-verbose")) {
-		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi verbose logging enabled");
-		_LogVerbose = true;
-	}
-	if (arguments.contains("--obs-ndi-debug")) {
-		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi debug logging enabled");
-		_LogDebug = true;
-	}
-	if (arguments.contains("--obs-ndi-update-force")) {
-		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi update force enabled");
-		_UpdateForce = true;
-	}
+	ProcessCommandLine();
 
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
