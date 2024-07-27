@@ -21,6 +21,31 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QVersionNumber>
 #include <obs-module.h>
 
+enum UpdateHostEnum {
+	Production,
+	LocalEmulator,
+};
+
+/**
+ * Loads and Saves configuration settings from/to:
+ * Linux: TBD...
+ * MacOS: ~/Library/Application Support/obs-studio/global.ini
+ * Windows: %APPDATA%\obs-studio\global.ini
+ * 
+ * ```
+ * [NDIPlugin]
+ * MainOutputEnabled=true
+ * MainOutputName=OBS
+ * PreviewOutputEnabled=false
+ * PreviewOutputName=OBS Preview
+ * TallyProgramEnabled=false
+ * TallyPreviewEnabled=false
+ * CheckForUpdates=true
+ * AutoCheckForUpdates=true
+ * MainOutputGroups=
+ * PreviewOutputGroups=
+ * ```
+ */
 class Config {
 public:
 	static Config *Current();
@@ -29,6 +54,7 @@ public:
 	static bool LogVerbose();
 	static bool LogDebug();
 	static bool UpdateForce();
+	static UpdateHostEnum UpdateHost();
 
 	void Load();
 	void Save();
