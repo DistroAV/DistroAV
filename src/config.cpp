@@ -41,6 +41,7 @@ bool _LogVerbose = false;
 bool _LogDebug = false;
 int _LogLevel = LOG_INFO;
 bool _UpdateForce = false;
+UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
 
 bool Config::LogVerbose()
 {
@@ -57,15 +58,12 @@ bool Config::UpdateForce()
 	return _UpdateForce;
 }
 
-Config::Config()
-	: OutputEnabled(false),
-	  OutputName("OBS"),
-	  OutputGroups(""),
-	  PreviewOutputEnabled(false),
-	  PreviewOutputName("OBS Preview"),
-	  PreviewOutputGroups(""),
-	  TallyProgramEnabled(true),
-	  TallyPreviewEnabled(true)
+UpdateHostEnum Config::UpdateHost()
+{
+	return _UpdateHost;
+}
+
+void ProcessCommandLine()
 {
 	auto arguments = QCoreApplication::arguments();
 	if (arguments.contains("--DistroAV-verbose",
@@ -86,6 +84,26 @@ Config::Config()
 		     "[DistroAV] config: DistroAV update force enabled");
 		_UpdateForce = true;
 	}
+
+	if (arguments.contains("--DistroAV-update-local",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV update host set to Local");
+		_UpdateHost = UpdateHostEnum::LocalEmulator;
+	}
+}
+
+Config::Config()
+	: OutputEnabled(false),
+	  OutputName("OBS"),
+	  OutputGroups(""),
+	  PreviewOutputEnabled(false),
+	  PreviewOutputName("OBS Preview"),
+	  PreviewOutputGroups(""),
+	  TallyProgramEnabled(true),
+	  TallyPreviewEnabled(true)
+{
+	ProcessCommandLine();
 
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {

@@ -80,10 +80,11 @@ OutputSettings *output_settings = nullptr;
 QString rehostUrl(const char *url)
 {
 	auto result = QString::fromUtf8(url);
-#ifdef USE_LOCALHOST
-	result.replace("https://distroav.org",
-		       QString("http://%1:5002").arg(PLUGIN_WEB_HOST));
-#endif
+	if (Config::UpdateHost() == UpdateHostEnum::LocalEmulator) {
+		result.replace("https://distroav.org",
+			       QString("http://%1:5002")
+				       .arg(PLUGIN_WEB_HOST_LOCAL_EMULATOR));
+	}
 	return result;
 }
 
@@ -121,7 +122,7 @@ void showUnloadingMessageBoxDelayed(const QString &title,
 					   newMessage, QMessageBox::Ok,
 					   nullptr);
 #if defined(__APPLE__)
-		// https://stackoverflow.com/a/22187538/25683720
+		// Make title bar show text: https://stackoverflow.com/a/22187538/25683720
 		dlg->QDialog::setWindowTitle(newTitle);
 #endif
 		dlg->setAttribute(Qt::WA_DeleteOnClose, true);
