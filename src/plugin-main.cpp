@@ -29,6 +29,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPointer>
+#include <QRegularExpression>
 #include <QTimer>
 
 OBS_DECLARE_MODULE()
@@ -101,13 +102,13 @@ QString makeLink(const char *url, const char *text)
 
 /**
  * Similar to `QMessageBox::critical` but with the following changes:
- *	1. The title is prefixed with the plugin name
- *	2. MacOS: Shows text in the title bar
- *	3. MacOS: The message is not bold by default
- *	4. A common footer is appended to the message
- *	5. The message box is shown after a delay (default 2000ms)
- *	6. Shows the dialog as WindowStaysOnTopHint and NonModal
- *	7. Deletes the dialog when closed
+ *  1. The title is prefixed with the plugin name
+ *  2. MacOS: Shows text in the title bar
+ *  3. MacOS: The message is not bold by default
+ *  4. A common footer is appended to the message
+ *  5. The message box is shown after a delay (default 2000ms)
+ *  6. Shows the dialog as WindowStaysOnTopHint and NonModal
+ *  7. Deletes the dialog when closed
  * 
  * References:
  * * QMessageBox::showNewMessageBox
@@ -137,11 +138,18 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title,
 					    const QString &message,
 					    int milliseconds = 2000)
 {
-	auto newTitle = QString("%1 : %2").arg(PLUGIN_NAME).arg(title);
-	auto newMessage =
-		QString("<span style='font-weight: normal;'>%1</span><br><br>%2")
-			.arg(message)
-			.arg(QTStr("NDIPlugin.PluginCannotContinueAndWillBeUnloaded")
+	auto newTitle = QString("%1 : %2").arg(PLUGIN_NAME, title);
+
+	auto newMessage = message;
+	newMessage.remove(QRegularExpression("(\r?\n?<br>\r?\n?)+$"));
+	auto newMessageFormat =
+		QRegularExpression("(</ol>|</ul>)$").match(newMessage).hasMatch()
+			? "%1%2"
+			: "%1<br><br>%2";
+	newMessage =
+		QString(newMessageFormat)
+			.arg(newMessage,
+			     QTStr("NDIPlugin.PluginCannotContinueAndWillBeUnloaded")
 				     .arg(PLUGIN_NAME,
 					  rehostUrl(
 						  PLUGIN_REDIRECT_REPORT_BUG_URL),
@@ -225,7 +233,9 @@ bool obs_module_load(void)
 		     PLUGIN_NAME);
 		showCriticalUnloadingMessageBoxDelayed(
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
-			QTStr("NDIPlugin.ErrorObsNdiDetected.Message"));
+			QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
+				.arg(rehostUrl(
+					PLUGIN_REDIRECT_OBSNDI_IS_NOW_DISTROAV_URL)));
 		return false;
 	}
 
