@@ -42,6 +42,7 @@ bool _LogDebug = false;
 int _LogLevel = LOG_INFO;
 bool _UpdateForce = false;
 UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
+int _DetectObsNdiForce = 0;
 
 bool Config::LogVerbose()
 {
@@ -61,6 +62,11 @@ bool Config::UpdateForce()
 UpdateHostEnum Config::UpdateHost()
 {
 	return _UpdateHost;
+}
+
+int Config::DetectObsNdiForce()
+{
+	return _DetectObsNdiForce;
 }
 
 void ProcessCommandLine()
@@ -92,6 +98,18 @@ void ProcessCommandLine()
 		blog(LOG_INFO,
 		     "[DistroAV] config: DistroAV update host set to Local");
 		_UpdateHost = UpdateHostEnum::LocalEmulator;
+	}
+
+	if (arguments.contains("--DistroAV-detect-obsndi-force-on",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV detect OBS-NDI force on");
+		_DetectObsNdiForce = 1;
+	} else if (arguments.contains("--DistroAV-detect-obsndi-force-off",
+				      Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV detect OBS-NDI force off");
+		_DetectObsNdiForce = -1;
 	}
 }
 

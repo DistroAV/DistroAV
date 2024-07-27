@@ -54,6 +54,7 @@ public:
 	static bool LogDebug();
 	static bool UpdateForce();
 	static UpdateHostEnum UpdateHost();
+	static int DetectObsNdiForce();
 
 	Config *Load();
 	Config *Save();

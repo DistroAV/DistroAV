@@ -209,6 +209,10 @@ bool is_module_found(const char *module_name)
 
 bool is_obsndi_installed()
 {
+	auto force = Config::DetectObsNdiForce();
+	if (force) {
+		return force == 1;
+	}
 	return is_module_found("obs-ndi");
 }
 
