@@ -484,7 +484,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
 	// blog(LOG_INFO, "[obs-ndi] updateCheckStart: module_hash_sha256=`%s`",
 	//      QT_TO_UTF8(module_hash_sha256));
-	std::string postData;
+	QJsonObject postObj;
 
 	auto useEmulator = url.host() == "127.0.0.1";
 	auto useQueryParams = useEmulator;
@@ -499,6 +499,18 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	if (logDebug) {
 		blog(LOG_INFO, "[obs-ndi] updateCheckStart: url=`%s`",
 		     QT_TO_UTF8(url.toString()));
+	}
+	if (config->AutoCheckForUpdates()) {
+		postObj["autoCheck"] = true;
+	}
+	if (userRequestCallback) {
+		postObj["userSolicited"] = true;
+	}
+
+	std::string postData;
+	if (!postObj.isEmpty()) {
+		QJsonDocument postJson(postObj);
+		postData = postJson.toJson().toStdString();
 	}
 #endif
 
