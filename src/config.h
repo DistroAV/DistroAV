@@ -20,16 +20,21 @@
 #include <QString>
 #include <QVersionNumber>
 
+enum UpdateHostEnum {
+	Production,
+	LocalEmulator,
+};
+
 /**
- * Loads and Saves configuration value from/to:
+ * Loads and Saves configuration settings from/to:
  * Linux: TBD...
  * MacOS: ~/Library/Application Support/obs-studio/global.ini
- * Windows: TBD...
+ * Windows: %APPDATA%\obs-studio\global.ini
  * 
  * ```
  * [NDIPlugin]
  * MainOutputEnabled=true
- * MainOutputName=qwigybo
+ * MainOutputName=OBS
  * PreviewOutputEnabled=false
  * PreviewOutputName=OBS Preview
  * TallyProgramEnabled=false
@@ -48,6 +53,7 @@ public:
 	static bool LogVerbose();
 	static bool LogDebug();
 	static bool UpdateForce();
+	static UpdateHostEnum UpdateHost();
 
 	Config *Load();
 	Config *Save();

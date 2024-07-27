@@ -80,10 +80,11 @@ OutputSettings *output_settings = nullptr;
 QString rehostUrl(const char *url)
 {
 	auto result = QString::fromUtf8(url);
-#ifdef USE_LOCALHOST
-	result.replace("https://distroav.org",
-		       QString("http://%1:5002").arg(PLUGIN_WEB_HOST));
-#endif
+	if (Config::UpdateHost() == UpdateHostEnum::LocalEmulator) {
+		result.replace("https://distroav.org",
+			       QString("http://%1:5002")
+				       .arg(PLUGIN_WEB_HOST_LOCAL_EMULATOR));
+	}
 	return result;
 }
 
@@ -100,13 +101,13 @@ QString makeLink(const char *url, const char *text)
 
 /**
  * Similar to `QMessageBox::critical` but with the following changes:
- * 	1. The title is prefixed with the plugin name
- *  2. MacOS: Shows text in the title bar
- * 	3. MacOS: The message is not bold by default
- *  4. A common footer is appended to the message
- * 	5. The message box is shown after a delay (default 2000ms)
- *  6. Shows the dialog as WindowStaysOnTopHint and NonModal
- *  7. Deletes the dialog when closed
+ *	1. The title is prefixed with the plugin name
+ *	2. MacOS: Shows text in the title bar
+ *	3. MacOS: The message is not bold by default
+ *	4. A common footer is appended to the message
+ *	5. The message box is shown after a delay (default 2000ms)
+ *	6. Shows the dialog as WindowStaysOnTopHint and NonModal
+ *	7. Deletes the dialog when closed
  * 
  * References:
  * * QMessageBox::showNewMessageBox
@@ -150,7 +151,7 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title,
 		auto dlg = new QMessageBox(QMessageBox::Critical, newTitle,
 					   newMessage, QMessageBox::Ok);
 #if defined(__APPLE__)
-		// Allow the title bar to show text: https://stackoverflow.com/a/22187538/25683720
+		// Make title bar show text: https://stackoverflow.com/a/22187538/25683720
 		dlg->QDialog::setWindowTitle(newTitle);
 #endif
 		dlg->setAttribute(Qt::WA_DeleteOnClose, true);

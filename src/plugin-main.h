@@ -52,15 +52,8 @@ The following accomplishes two goals:
 	There is always the possibility that the user may **see** a "out of date" url, but when they
 	click on it the distroav.org server will redirect them to the latest url.
 */
-#define PLUGIN_WEB_HOST_LOCALHOST "127.0.0.1"
+#define PLUGIN_WEB_HOST_LOCAL_EMULATOR "127.0.0.1"
 #define PLUGIN_WEB_HOST_PRODUCTION "distroav.org"
-
-//#define USE_LOCALHOST
-#ifdef USE_LOCALHOST
-#define PLUGIN_WEB_HOST PLUGIN_WEB_HOST_LOCALHOST
-#else
-#define PLUGIN_WEB_HOST PLUGIN_WEB_HOST_PRODUCTION
-#endif
 
 QString rehostUrl(const char *url);
 QString makeLink(const char *url, const char *text = nullptr);
