@@ -208,6 +208,8 @@ void OutputSettings::showEvent(QShowEvent *)
 {
 	auto conf = Config::Current()->Load();
 
+	conf->Load();
+
 	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
 	ui->mainOutputName->setText(conf->OutputName);
 	ui->mainOutputGroups->setText(conf->OutputGroups);
