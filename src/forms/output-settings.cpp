@@ -80,7 +80,8 @@ OutputSettings::OutputSettings(QWidget *parent)
 			}
 
 			if (pluginUpdateInfo.versionLatest <=
-			    pluginUpdateInfo.versionCurrent) {
+				    pluginUpdateInfo.versionCurrent &&
+			    !Config::UpdateForce()) {
 				QMessageBox::information(
 					this,
 					QTStr("NDIPlugin.Update.NoUpdateAvailable")
