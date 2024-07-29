@@ -290,7 +290,7 @@ int Config::MinAutoUpdateCheckIntervalSeconds()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
-		return config_get_int(
+		return (int)config_get_int(
 			obs_config, SECTION_NAME,
 			PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS);
 	}
