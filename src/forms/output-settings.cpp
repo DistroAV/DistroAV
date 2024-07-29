@@ -70,12 +70,30 @@ OutputSettings::OutputSettings(QWidget *parent)
 			progressDialog->deleteLater();
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
+				QString errorText = pluginUpdateInfo.errorData;
+				if (!Config::LogDebug()) {
+					QJsonParseError parseError;
+					QJsonDocument jsonDoc =
+						QJsonDocument::fromJson(
+							errorText.toUtf8(),
+							&parseError);
+					if (parseError.error ==
+					    QJsonParseError::NoError) {
+						QJsonObject jsonObject =
+							jsonDoc.object();
+						if (jsonObject.contains(
+							    "error")) {
+							errorText =
+								jsonObject["error"]
+									.toString();
+						}
+					}
+				}
 				QMessageBox::warning(
 					this,
 					Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
 					QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text")
-						.arg(pluginUpdateInfo
-							     .errorData));
+						.arg(errorText));
 				return false;
 			}
 
