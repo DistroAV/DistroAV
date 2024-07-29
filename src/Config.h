@@ -55,9 +55,10 @@ public:
 	static bool LogDebug();
 	static bool UpdateForce();
 	static UpdateHostEnum UpdateHost();
+	static bool UpdateLastCheckIgnore();
 
-	void Load();
-	void Save();
+	Config *Load();
+	Config *Save();
 
 	bool OutputEnabled;
 	QString OutputName;
@@ -72,6 +73,10 @@ public:
 	void AutoCheckForUpdates(bool value);
 	void SkipUpdateVersion(const QVersionNumber &version);
 	QVersionNumber SkipUpdateVersion();
+	QDateTime LastUpdateCheck();
+	void LastUpdateCheck(const QDateTime &dateTime);
+	int MinAutoUpdateCheckIntervalSeconds();
+	void MinAutoUpdateCheckIntervalSeconds(int seconds);
 
 private:
 	Config();

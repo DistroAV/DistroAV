@@ -17,12 +17,14 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
 #include "Config.h"
-#include "plugin-main.h"
 
-#include <QtCore/QCoreApplication>
+#include "plugin-main.h"
 
 #include <obs-frontend-api.h>
 #include <util/config-file.h>
+
+#include <QCoreApplication>
+#include <QDateTime>
 
 #define SECTION_NAME "NDIPlugin"
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
@@ -35,6 +37,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
+#define PARAM_LAST_UPDATE_CHECK "LastUpdateCheck"
+#define PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS \
+	"MinAutoUpdateCheckIntervalSeconds"
 
 Config *Config::_instance = nullptr;
 
@@ -42,6 +47,7 @@ bool _LogVerbose = false;
 bool _LogDebug = false;
 bool _UpdateForce = false;
 UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
+bool _UpdateLastCheckIgnore = false;
 
 bool Config::LogVerbose()
 {
@@ -61,6 +67,11 @@ bool Config::UpdateForce()
 UpdateHostEnum Config::UpdateHost()
 {
 	return _UpdateHost;
+}
+
+bool Config::UpdateLastCheckIgnore()
+{
+	return _UpdateLastCheckIgnore;
 }
 
 void ProcessCommandLine()
@@ -92,6 +103,13 @@ void ProcessCommandLine()
 		blog(LOG_INFO,
 		     "[obs-ndi] Config: obs-ndi update host set to Local");
 		_UpdateHost = UpdateHostEnum::LocalEmulator;
+	}
+
+	if (arguments.contains("--obs-ndi-update-last-check-ignore",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[obs-ndi] Config: obs-ndi update last check ignore enabled");
+		_UpdateLastCheckIgnore = true;
 	}
 }
 
@@ -141,7 +159,7 @@ Config::Config()
 	}
 }
 
-void Config::Load()
+Config *Config::Load()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -164,9 +182,10 @@ void Config::Load()
 		TallyPreviewEnabled = config_get_bool(
 			obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
 	}
+	return this;
 }
 
-void Config::Save()
+Config *Config::Save()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -198,6 +217,7 @@ void Config::Save()
 
 		config_save(obs_config);
 	}
+	return this;
 }
 
 bool Config::AutoCheckForUpdates()
@@ -242,6 +262,50 @@ QVersionNumber Config::SkipUpdateVersion()
 		}
 	}
 	return QVersionNumber();
+}
+
+QDateTime Config::LastUpdateCheck()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		auto lastCheck = config_get_int(obs_config, SECTION_NAME,
+						PARAM_LAST_UPDATE_CHECK);
+		return QDateTime::fromSecsSinceEpoch(lastCheck);
+	}
+	return QDateTime();
+}
+
+void Config::LastUpdateCheck(const QDateTime &dateTime)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME,
+			       PARAM_LAST_UPDATE_CHECK,
+			       dateTime.toSecsSinceEpoch());
+		config_save(obs_config);
+	}
+}
+
+int Config::MinAutoUpdateCheckIntervalSeconds()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		return (int)config_get_int(
+			obs_config, SECTION_NAME,
+			PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS);
+	}
+	return 0;
+}
+
+void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME,
+			       PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS,
+			       seconds);
+		config_save(obs_config);
+	}
 }
 
 Config *Config::Current()
