@@ -55,6 +55,7 @@ public:
 	static bool LogDebug();
 	static bool UpdateForce();
 	static UpdateHostEnum UpdateHost();
+	static int UpdateLocalPort();
 	static bool UpdateLastCheckIgnore();
 
 	Config *Load();

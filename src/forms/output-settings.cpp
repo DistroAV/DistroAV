@@ -50,6 +50,8 @@ OutputSettings::OutputSettings(QWidget *parent)
 		});
 
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
+		// Whew! QProgressDialog is ugly on Windows!
+		// TODO: Write our own.
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
 				.arg(PLUGIN_NAME),
