@@ -100,7 +100,12 @@ PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
 		releaseNotes = Str("NDIPlugin.Update.ReleaseNotes.None");
 	}
 
-	uiDelayMillis = jsonObject["uiDelayMillis"].toInt(1000);
+	uiDelayMillis =
+		jsonObject["uiDelayMillis"].toInt(DEFAULT_UI_DELAY_MILLIS);
+
+	minAutoUpdateCheckIntervalSeconds =
+		jsonObject["minAutoUpdateCheckIntervalSeconds"].toInt(
+			DEFAULT_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS);
 
 	versionCurrent = QVersionNumber::fromString(PLUGIN_VERSION);
 
@@ -358,6 +363,13 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 		     QT_TO_UTF8(pluginUpdateInfo.versionLatest.toString()));
 	}
 
+	auto config = Config::Current();
+
+	auto minAutoUpdateCheckIntervalSeconds =
+		pluginUpdateInfo.minAutoUpdateCheckIntervalSeconds;
+	config->MinAutoUpdateCheckIntervalSeconds(
+		minAutoUpdateCheckIntervalSeconds);
+
 	auto forceUpdate = Config::UpdateForce();
 
 	if (userRequestCallback) {
@@ -365,7 +377,7 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 		userRequestCallback(pluginUpdateInfo);
 	} else {
 		// Non-user requested update check respects SkipUpdateVersion
-		auto versionSkip = Config::Current()->SkipUpdateVersion();
+		auto versionSkip = config->SkipUpdateVersion();
 		if (!forceUpdate &&
 		    pluginUpdateInfo.versionLatest == versionSkip) {
 			blog(LOG_INFO,
@@ -435,17 +447,18 @@ void updateCheckStop()
 bool updateCheckStart(UserRequestCallback userRequestCallback)
 {
 	auto logDebug = Config::LogDebug();
-	blog(LOG_INFO, "[DistroAV] +updateCheckStart(userRequestCallback=%s)",
-	     userRequestCallback ? "..." : "nullptr");
+	auto methodSignature =
+		QString("updateCheckStart(userRequestCallback=%1)")
+			.arg(userRequestCallback ? "..." : "nullptr");
+	blog(LOG_INFO, "[DistroAV] +%s", QT_TO_UTF8(methodSignature));
+
+	auto isAutoCheck = userRequestCallback == nullptr;
 
 	auto config = Config::Current();
-	if (!userRequestCallback && !config->AutoCheckForUpdates()) {
+	if (isAutoCheck && !config->AutoCheckForUpdates()) {
 		blog(LOG_INFO,
-		     "[DistroAV] updateCheckStart: AutoCheckForUpdates is disabled");
-
-		blog(LOG_INFO,
-		     "[DistroAV] -updateCheckStart(userRequestCallback=%p)",
-		     userRequestCallback ? "..." : "nullptr");
+		     "[DistroAV] updateCheckStart: AutoCheckForUpdates is disabled; ignoring");
+		blog(LOG_INFO, "[DistroAV] -%s", QT_TO_UTF8(methodSignature));
 		return false;
 	}
 
@@ -455,8 +468,34 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		}
 		blog(LOG_INFO,
 		     "[DistroAV] updateCheckStart: update pending or showing; ignoring");
+		blog(LOG_INFO, "[DistroAV] -%s", QT_TO_UTF8(methodSignature));
 		return false;
 	}
+
+	//
+	// Avoid hitting the server too often by limiting auto-checks to every minAutoUpdateCheckIntervalSeconds.
+	//
+	if (isAutoCheck && !Config::UpdateLastCheckIgnore()) {
+		auto now = QDateTime::currentDateTime();
+
+		auto minAutoUpdateCheckIntervalSeconds =
+			config->MinAutoUpdateCheckIntervalSeconds();
+		if (minAutoUpdateCheckIntervalSeconds > 0) {
+			auto lastUpdateCheck = config->LastUpdateCheck();
+			auto elapsedSeconds = lastUpdateCheck.secsTo(now);
+			if (elapsedSeconds <
+			    minAutoUpdateCheckIntervalSeconds) {
+				blog(LOG_INFO,
+				     "[DistroAV] updateCheckStart: elapsedSeconds=%lld < minAutoUpdateCheckIntervalSeconds=%d; ignoring",
+				     elapsedSeconds,
+				     minAutoUpdateCheckIntervalSeconds);
+				blog(LOG_INFO, "[DistroAV] -%s",
+				     QT_TO_UTF8(methodSignature));
+				return false;
+			}
+		}
+	}
+	config->LastUpdateCheck(QDateTime::currentDateTime());
 
 	auto main_window =
 		static_cast<QMainWindow *>(obs_frontend_get_main_window());
@@ -468,42 +507,57 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		"https://api.github.com/repos/DistroAV/DistroAV/releases/latest");
 #else
 	QUrl url(rehostUrl(PLUGIN_UPDATE_URL));
+	if (logDebug) {
+		blog(LOG_INFO, "[DistroAV] updateCheckStart: url=`%s`",
+		     QT_TO_UTF8(url.toString()));
+	}
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = GetProgramGUID();
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
-	// blog(LOG_INFO, "[DistroAV] updateCheckStart: module_hash_sha256=`%s`",
-	//      QT_TO_UTF8(module_hash_sha256));
-	std::string postData;
-
-	auto useEmulator = url.host() == "127.0.0.1";
-	auto useQueryParams = useEmulator;
-	if (useQueryParams) {
-		// Local EMULATOR testing; a little easier to debug
-		QUrlQuery query;
-		query.addQueryItem("pluginVersion", pluginVersion);
-		query.addQueryItem("obsGuid", obsGuid);
-		query.addQueryItem("sha256", module_hash_sha256);
-		url.setQuery(query);
-	}
+	auto userAgent = QString("DistroAV/%1 (OBS/%2 %3; %4; %5; %6) %7")
+				 .arg(pluginVersion)
+				 .arg(obs_get_version_string())
+				 .arg(obsGuid)
+				 .arg(ndiLib->version())
+				 .arg(QSysInfo::prettyProductName())
+				 .arg(QSysInfo::currentCpuArchitecture())
+				 .arg(module_hash_sha256);
 	if (logDebug) {
-		blog(LOG_INFO, "[DistroAV] updateCheckStart: url=`%s`",
-		     QT_TO_UTF8(url.toString()));
+		blog(LOG_INFO, "[DistroAV] updateCheckStart: userAgent=`%s`",
+		     QT_TO_UTF8(userAgent));
+	}
+
+	QJsonObject postObj;
+	postObj["config"] =
+		QJsonObject{{"autoCheck", config->AutoCheckForUpdates()}};
+	postObj["request"] = QJsonObject{{"autoCheck", isAutoCheck}};
+	std::string postData;
+	if (!postObj.isEmpty()) {
+		QJsonDocument postJson(postObj);
+		postData = postJson.toJson().toStdString();
 	}
 #endif
 
 	//qputenv("QT_LOGGING_RULES", "qt.network.ssl=true");
 	blog(LOG_INFO,
-	     "[DistroAV] updateCheckStart QSslSocket: supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`",
+	     "[DistroAV] updateCheckStart: QSslSocket{ supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`}",
 	     QSslSocket::supportsSsl() ? "true" : "false",
 	     QT_TO_UTF8(QSslSocket::sslLibraryBuildVersionString()),
 	     QT_TO_UTF8(QSslSocket::sslLibraryVersionString()));
 	/*
 	The above should output something like:
-	updateCheckStart QSslSocket: supportsSsl=true, sslLibraryBuildVersionString=`OpenSSL 1.1.1l  24 Aug 2021`, sslLibraryVersionString=`OpenSSL 1.1.1l  24 Aug 2021`
+	```
+	info: [DistroAV] updateCheckStart: QSslSocket{ supportsSsl=true, sslLibraryBuildVersionString=`OpenSSL 1.1.1l  24 Aug 2021`, sslLibraryVersionString=`OpenSSL 1.1.1l  24 Aug 2021`}	
+	```
 	Instead it is outputting:
-	updateCheckStart QSslSocket: supportsSsl=false, sslLibraryBuildVersionString=``, sslLibraryVersionString=``
-	This appears to confirm that OBS' Qt is not built with SSL support. :/
+	```
+	warning: No functional TLS backend was found
+	warning: No functional TLS backend was found
+	warning: No functional TLS backend was found
+	info: [DistroAV] updateCheckStart: QSslSocket{ supportsSsl=false, sslLibraryBuildVersionString=``, sslLibraryVersionString=``}
+	```
+	This appears to confirm that OBS' Qt is not built with SSL support. :(
 	*/
 
 #ifdef UPDATE_REQUEST_QT
@@ -524,18 +578,12 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 #endif
 
 #ifndef DIRECT_REQUEST_GITHUB
-	if (!useQueryParams) {
-		auto userAgent = QString("DistroAV/%1 (OBS-GUID: %2); %3")
-					 .arg(pluginVersion)
-					 .arg(obsGuid)
-					 .arg(module_hash_sha256);
 #ifdef UPDATE_REQUEST_QT
-		update_request->setRawHeader("User-Agent", userAgent.toUtf8());
+	update_request->setRawHeader("User-Agent", userAgent.toUtf8());
 #else
-		userAgent = "User-Agent: " + userAgent;
-		update_request->headers.push_back(userAgent.toStdString());
+	userAgent = "User-Agent: " + userAgent;
+	update_request->headers.push_back(userAgent.toStdString());
 #endif
-	}
 #endif
 
 #ifdef UPDATE_REQUEST_QT
@@ -588,7 +636,6 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		Qt::QueuedConnection);
 	update_request->start();
 #endif
-	blog(LOG_INFO, "[DistroAV] -updateCheckStart(userRequestCallback=%s)",
-	     userRequestCallback ? "..." : "nullptr");
+	blog(LOG_INFO, "[DistroAV] -%s", QT_TO_UTF8(methodSignature));
 	return true;
 }

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <QDateTime>
 #include <QString>
 #include <QVersionNumber>
 
@@ -54,6 +55,8 @@ public:
 	static bool LogDebug();
 	static bool UpdateForce();
 	static UpdateHostEnum UpdateHost();
+	static int UpdateLocalPort();
+	static bool UpdateLastCheckIgnore();
 
 	Config *Load();
 	Config *Save();
@@ -71,6 +74,10 @@ public:
 	void AutoCheckForUpdates(bool value);
 	void SkipUpdateVersion(const QVersionNumber &version);
 	QVersionNumber SkipUpdateVersion();
+	QDateTime LastUpdateCheck();
+	void LastUpdateCheck(const QDateTime &dateTime);
+	int MinAutoUpdateCheckIntervalSeconds();
+	void MinAutoUpdateCheckIntervalSeconds(int seconds);
 
 private:
 	Config();

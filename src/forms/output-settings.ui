@@ -284,7 +284,7 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutObsNdi">
+    <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
      <item>
       <widget class="QLabel" name="labelDistroAvVersion">
        <property name="font">
