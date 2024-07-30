@@ -47,6 +47,8 @@ bool _LogVerbose = false;
 bool _LogDebug = false;
 bool _UpdateForce = false;
 UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
+#define DEFAULT_UPDATE_LOCAL_PORT 5002
+int _UpdateLocalPort = DEFAULT_UPDATE_LOCAL_PORT;
 bool _UpdateLastCheckIgnore = false;
 
 bool Config::LogVerbose()
@@ -67,6 +69,11 @@ bool Config::UpdateForce()
 UpdateHostEnum Config::UpdateHost()
 {
 	return _UpdateHost;
+}
+
+int Config::UpdateLocalPort()
+{
+	return _UpdateLocalPort;
 }
 
 bool Config::UpdateLastCheckIgnore()
@@ -98,11 +105,30 @@ void ProcessCommandLine()
 		_UpdateForce = true;
 	}
 
-	if (arguments.contains("--obs-ndi-update-local",
-			       Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi update host set to Local");
-		_UpdateHost = UpdateHostEnum::LocalEmulator;
+	for (int i = 0; i < arguments.size(); i++) {
+		if (arguments.at(i).contains(
+			    "--obs-ndi-update-local",
+			    Qt::CaseSensitivity::CaseInsensitive)) {
+			blog(LOG_INFO,
+			     "[obs-ndi] Config: obs-ndi update host set to Local");
+			_UpdateHost = UpdateHostEnum::LocalEmulator;
+			auto parts = arguments.at(i).split("=");
+			if (parts.size() > 1) {
+				auto port = parts.at(1).toInt();
+				if (port > 0 && port < 65536) {
+					_UpdateLocalPort = port;
+				}
+			}
+			if (_UpdateLocalPort != DEFAULT_UPDATE_LOCAL_PORT) {
+				blog(LOG_INFO,
+				     "[obs-ndi] Config: obs-ndi update port set to %d",
+				     _UpdateLocalPort);
+			} else {
+				blog(LOG_INFO,
+				     "[obs-ndi] Config: obs-ndi update port using default %d",
+				     _UpdateLocalPort);
+			}
+		}
 	}
 
 	if (arguments.contains("--obs-ndi-update-last-check-ignore",
