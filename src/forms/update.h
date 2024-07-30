@@ -23,6 +23,9 @@
 #include <QJsonObject>
 #include <QVersionNumber>
 
+#define DEFAULT_UI_DELAY_MILLIS 1000
+#define DEFAULT_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS (24 * 60 * 60)
+
 class PluginUpdateInfo {
 public:
 	PluginUpdateInfo(const QString &responseData, const QString &errorData);
@@ -39,7 +42,9 @@ public:
 	QString releaseUrl;
 	QString releaseDate;
 	QString releaseNotes;
-	int uiDelayMillis = 1000;
+	int uiDelayMillis = DEFAULT_UI_DELAY_MILLIS;
+	int minAutoUpdateCheckIntervalSeconds =
+		DEFAULT_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS;
 
 	bool fakeVersionLatest = false;
 	QVersionNumber versionLatest;

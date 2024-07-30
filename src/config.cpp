@@ -34,6 +34,9 @@
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
+#define PARAM_LAST_UPDATE_CHECK "LastUpdateCheck"
+#define PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS \
+	"MinAutoUpdateCheckIntervalSeconds"
 
 Config *Config::_instance = nullptr;
 
@@ -42,6 +45,9 @@ bool _LogDebug = false;
 int _LogLevel = LOG_INFO;
 bool _UpdateForce = false;
 UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
+#define DEFAULT_UPDATE_LOCAL_PORT 5002
+int _UpdateLocalPort = DEFAULT_UPDATE_LOCAL_PORT;
+bool _UpdateLastCheckIgnore = false;
 int _DetectObsNdiForce = 0;
 
 bool Config::LogVerbose()
@@ -62,6 +68,16 @@ bool Config::UpdateForce()
 UpdateHostEnum Config::UpdateHost()
 {
 	return _UpdateHost;
+}
+
+int Config::UpdateLocalPort()
+{
+	return _UpdateLocalPort;
+}
+
+bool Config::UpdateLastCheckIgnore()
+{
+	return _UpdateLastCheckIgnore;
 }
 
 int Config::DetectObsNdiForce()
@@ -93,11 +109,37 @@ void ProcessCommandLine()
 		_UpdateForce = true;
 	}
 
-	if (arguments.contains("--DistroAV-update-local",
+	for (int i = 0; i < arguments.size(); i++) {
+		if (arguments.at(i).contains(
+			    "--DistroAV-update-local",
+			    Qt::CaseSensitivity::CaseInsensitive)) {
+			blog(LOG_INFO,
+			     "[DistroAV] config: DistroAV update host set to Local");
+			_UpdateHost = UpdateHostEnum::LocalEmulator;
+			auto parts = arguments.at(i).split("=");
+			if (parts.size() > 1) {
+				auto port = parts.at(1).toInt();
+				if (port > 0 && port < 65536) {
+					_UpdateLocalPort = port;
+				}
+			}
+			if (_UpdateLocalPort != DEFAULT_UPDATE_LOCAL_PORT) {
+				blog(LOG_INFO,
+				     "[DistroAV] config: DistroAV update port set to %d",
+				     _UpdateLocalPort);
+			} else {
+				blog(LOG_INFO,
+				     "[DistroAV] config: DistroAV update port using default %d",
+				     _UpdateLocalPort);
+			}
+		}
+	}
+
+	if (arguments.contains("--DistroAV-update-last-check-ignore",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV update host set to Local");
-		_UpdateHost = UpdateHostEnum::LocalEmulator;
+		     "[DistroAV] config: DistroAV update last check ignore enabled");
+		_UpdateLastCheckIgnore = true;
 	}
 
 	if (arguments.contains("--DistroAV-detect-obsndi-force-on",
@@ -262,6 +304,50 @@ QVersionNumber Config::SkipUpdateVersion()
 		}
 	}
 	return QVersionNumber();
+}
+
+QDateTime Config::LastUpdateCheck()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		auto lastCheck = config_get_int(obs_config, SECTION_NAME,
+						PARAM_LAST_UPDATE_CHECK);
+		return QDateTime::fromSecsSinceEpoch(lastCheck);
+	}
+	return QDateTime();
+}
+
+void Config::LastUpdateCheck(const QDateTime &dateTime)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME,
+			       PARAM_LAST_UPDATE_CHECK,
+			       dateTime.toSecsSinceEpoch());
+		config_save(obs_config);
+	}
+}
+
+int Config::MinAutoUpdateCheckIntervalSeconds()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		return (int)config_get_int(
+			obs_config, SECTION_NAME,
+			PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS);
+	}
+	return 0;
+}
+
+void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME,
+			       PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS,
+			       seconds);
+		config_save(obs_config);
+	}
 }
 
 Config *Config::Current()
