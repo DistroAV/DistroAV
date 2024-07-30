@@ -48,6 +48,7 @@ UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
 #define DEFAULT_UPDATE_LOCAL_PORT 5002
 int _UpdateLocalPort = DEFAULT_UPDATE_LOCAL_PORT;
 bool _UpdateLastCheckIgnore = false;
+int _DetectObsNdiForce = 0;
 
 bool Config::LogVerbose()
 {
@@ -77,6 +78,11 @@ int Config::UpdateLocalPort()
 bool Config::UpdateLastCheckIgnore()
 {
 	return _UpdateLastCheckIgnore;
+}
+
+int Config::DetectObsNdiForce()
+{
+	return _DetectObsNdiForce;
 }
 
 void ProcessCommandLine()
@@ -134,6 +140,18 @@ void ProcessCommandLine()
 		blog(LOG_INFO,
 		     "[DistroAV] config: DistroAV update last check ignore enabled");
 		_UpdateLastCheckIgnore = true;
+	}
+
+	if (arguments.contains("--DistroAV-detect-obsndi-force-on",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV detect OBS-NDI force on");
+		_DetectObsNdiForce = 1;
+	} else if (arguments.contains("--DistroAV-detect-obsndi-force-off",
+				      Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV detect OBS-NDI force off");
+		_DetectObsNdiForce = -1;
 	}
 }
 

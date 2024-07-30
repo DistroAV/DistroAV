@@ -57,6 +57,7 @@ public:
 	static UpdateHostEnum UpdateHost();
 	static int UpdateLocalPort();
 	static bool UpdateLastCheckIgnore();
+	static int DetectObsNdiForce();
 
 	Config *Load();
 	Config *Save();
