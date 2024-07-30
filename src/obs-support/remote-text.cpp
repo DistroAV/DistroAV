@@ -106,7 +106,7 @@ void RemoteTextThread::run()
 #endif
 		if (curlCode != CURLE_OK) {
 			errorData =
-				QString("{ curlCode:{ code:%1, text:\"%2\" }, error:\"%3\" }")
+				QString("{ \"curlCode\":{ \"code\":%1, \"text\":\"%2\" }, \"error\":\"%3\" }")
 					.arg(curlCode)
 					.arg(curl_easy_strerror(curlCode))
 					.arg(error);
