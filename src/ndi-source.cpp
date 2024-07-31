@@ -125,8 +125,8 @@ static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 		[](obs_source_t *, obs_source_t *filter, void *param) {
 			search_context_t *filter_search_ =
 				static_cast<search_context_t *>(param);
-			const char *id = obs_source_get_id(filter);
-			if (strcmp(id, filter_search_->query) == 0) {
+			const char *obs_source_id = obs_source_get_id(filter);
+			if (strcmp(obs_source_id, filter_search_->query) == 0) {
 				obs_source_get_ref(filter);
 				filter_search_->result = filter;
 			}
@@ -199,6 +199,8 @@ const char *ndi_source_getname(void *)
 
 obs_properties_t *ndi_source_getproperties(void *)
 {
+	blog(LOG_INFO, "[DistroAV] +ndi_source_getproperties()");
+
 	obs_properties_t *props = obs_properties_create();
 
 	obs_property_t *source_list = obs_properties_add_list(
@@ -349,11 +351,14 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
 				 group_ndi);
 
+	blog(LOG_INFO, "[DistroAV] -ndi_source_getproperties()");
+
 	return props;
 }
 
 void ndi_source_getdefaults(obs_data_t *settings)
 {
+	blog(LOG_INFO, "[DistroAV] +ndi_source_getdefaults(...)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_string(settings, PROP_BEHAVIOR,
 				    PROP_BEHAVIOR_KEEP);
@@ -366,6 +371,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 				 PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
+	blog(LOG_INFO, "[DistroAV] -ndi_source_getdefaults(...)");
 }
 
 void ndi_source_thread_process_audio2(ndi_source_config_t *config,
