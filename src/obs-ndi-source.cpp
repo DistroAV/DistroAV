@@ -440,16 +440,6 @@ void *ndi_source_thread(void *data)
 
 	NDIlib_recv_create_v3_t *reset_recv_desc = &recv_desc;
 
-	if (!s->running) {
-		// Force a clean frame at first start
-		obs_source_output_video(obs_source, blank_video_frame());
-#if 1
-		blog(LOG_INFO,
-		     "[obs-ndi] +ndi_source_thread('%s'): Creating the first frame for NDI source",
-		     obs_source_ndi_receiver_name);
-#endif
-	}
-
 	while (s->running) {
 		//
 		// Main NDI receiver loop
@@ -585,7 +575,7 @@ void *ndi_source_thread(void *data)
 			if (recv_desc.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
 				obs_source_output_video(obs_source,
-							blank_video_frame());
+							s->config.blank_frame);
 #if 1
 				blog(LOG_INFO,
 				     "[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
@@ -1027,6 +1017,18 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	if (!config.ndi_source_name.isEmpty()) {
 		if (!s->running && (config.behavior == BEHAVIOR_KEEP ||
 				    obs_source_active(obs_source))) {
+
+			if (config.bandwidth ==
+			    NDIlib_recv_bandwidth_audio_only) {
+				// Force a clean frame when source is updated
+				obs_source_output_video(obs_source,
+							s->config.blank_frame);
+#if 1
+				blog(LOG_INFO,
+				     "[obs-ndi] ndi_source_update '%s'): Creating the first frame for NDI source on Update",
+				     name);
+#endif
+			}
 			ndi_source_thread_start(s);
 		}
 	} else {
@@ -1096,7 +1098,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
 	// Allocate blank video frame
-	s->config.blank_frame = blank_video_frame();
+	// s->config.blank_frame = blank_video_frame();
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
