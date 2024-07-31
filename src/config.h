@@ -28,7 +28,7 @@ enum UpdateHostEnum {
 
 /**
  * Loads and Saves configuration settings from/to:
- * Linux: TBD...
+ * Linux: ~/.config/obs-studio/global.ini
  * MacOS: ~/Library/Application Support/obs-studio/global.ini
  * Windows: %APPDATA%\obs-studio\global.ini
  * 

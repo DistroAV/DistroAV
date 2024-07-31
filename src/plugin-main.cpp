@@ -244,8 +244,8 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	QMainWindow *main_window =
-		(QMainWindow *)obs_frontend_get_main_window();
+	auto main_window =
+		static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
 #if 0
 	// For testing purposes only
@@ -268,7 +268,13 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	if (!ndiLib->initialize()) {
+#if 0
+	// for testing purposes only
+	auto initialized = false;
+#else
+	auto initialized = ndiLib->initialize();
+#endif
+	if (!initialized) {
 		blog(LOG_ERROR,
 		     "[DistroAV] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
@@ -305,10 +311,9 @@ bool obs_module_load(void)
 				    QT_TO_UTF8(conf->PreviewOutputGroups));
 
 		// Ui setup
-		QAction *menu_action =
-			(QAction *)obs_frontend_add_tools_menu_qaction(
-				obs_module_text(
-					"NDIPlugin.Menu.OutputSettings"));
+		auto menu_action = static_cast<QAction *>(
+			obs_frontend_add_tools_menu_qaction(obs_module_text(
+				"NDIPlugin.Menu.OutputSettings")));
 
 		obs_frontend_push_ui_translation(obs_module_get_string);
 		output_settings = new OutputSettings(main_window);
@@ -320,18 +325,10 @@ bool obs_module_load(void)
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
 		obs_frontend_add_event_callback(
-			[](enum obs_frontend_event event, void *private_data) {
+			[](enum obs_frontend_event event, void *) {
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-#if defined(__linux__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-#endif
-					Config *conf = static_cast<Config *>(
-						private_data);
-#if defined(__linux__)
-#pragma GCC diagnostic pop
-#endif
+					Config *conf = Config::Current();
 					if (conf->OutputEnabled) {
 						main_output_start(
 							QT_TO_UTF8(
@@ -353,7 +350,7 @@ bool obs_module_load(void)
 					preview_output_deinit();
 				}
 			},
-			static_cast<void *>(conf));
+			nullptr);
 	}
 
 	return true;

@@ -199,7 +199,7 @@ public:
 				this->reject();
 			});
 
-#ifdef __APPLE__
+#ifdef Q_OS_MACOS
 		// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
 		auto defaultButtonBackgroundColor =
 			QColor::fromString("#2f65d4");

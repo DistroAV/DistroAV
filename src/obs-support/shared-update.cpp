@@ -82,6 +82,11 @@ QString GetProgramGUID()
 	/* NOTE: this is an arbitrary random number that we use to count the
 	 * number of unique OBS installations and is not associated with any
 	 * kind of identifiable information */
+	/* Stored in
+	 * Linux: ~/.config/obs-studio/global.ini
+	 * MacOS: ~/Library/Application Support/obs-studio/global.ini
+	 * Windows: %APPDATA%\obs-studio\global.ini
+	 */
 	QString guid =
 		config_get_string(GetGlobalConfig(), "General", "InstallGUID");
 	if (guid.isEmpty()) {
