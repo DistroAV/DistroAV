@@ -201,7 +201,7 @@ Config::Config()
 	}
 }
 
-Config *Config::Load()
+void Config::Load()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -224,10 +224,9 @@ Config *Config::Load()
 		TallyPreviewEnabled = config_get_bool(
 			obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
 	}
-	return this;
 }
 
-Config *Config::Save()
+void Config::Save()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -259,7 +258,6 @@ Config *Config::Save()
 
 		config_save(obs_config);
 	}
-	return this;
 }
 
 bool Config::AutoCheckForUpdates()
@@ -350,10 +348,13 @@ void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
 	}
 }
 
-Config *Config::Current()
+Config *Config::Current(bool load)
 {
 	if (!_instance) {
 		_instance = new Config();
+	}
+	if (load) {
+		_instance->Load();
 	}
 	return _instance;
 }

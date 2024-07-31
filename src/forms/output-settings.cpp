@@ -189,24 +189,25 @@ OutputSettings::OutputSettings(QWidget *parent)
 
 void OutputSettings::onFormAccepted()
 {
-	auto conf = Config::Current();
+	auto config = Config::Current();
 
-	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
-	conf->OutputName = ui->mainOutputName->text();
-	conf->OutputGroups = ui->mainOutputGroups->text();
+	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
+	config->OutputName = ui->mainOutputName->text();
+	config->OutputGroups = ui->mainOutputGroups->text();
 
-	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
-	conf->PreviewOutputName = ui->previewOutputName->text();
-	conf->PreviewOutputGroups = ui->previewOutputGroups->text();
+	config->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
+	config->PreviewOutputName = ui->previewOutputName->text();
+	config->PreviewOutputGroups = ui->previewOutputGroups->text();
 
-	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
-	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
+	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
+	config->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
-	conf->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
+	config->AutoCheckForUpdates(
+		ui->checkBoxAutoCheckForUpdates->isChecked());
 
-	conf->Save();
+	config->Save();
 
-	if (conf->OutputEnabled) {
+	if (config->OutputEnabled) {
 		if (main_output_is_running()) {
 			main_output_stop();
 		}
@@ -216,7 +217,7 @@ void OutputSettings::onFormAccepted()
 		main_output_stop();
 	}
 
-	if (conf->PreviewOutputEnabled) {
+	if (config->PreviewOutputEnabled) {
 		if (preview_output_is_enabled()) {
 			preview_output_stop();
 		}
@@ -230,31 +231,24 @@ void OutputSettings::onFormAccepted()
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	auto conf = Config::Current()->Load();
+	auto config = Config::Current();
 
-	conf->Load();
+	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
+	ui->mainOutputName->setText(config->OutputName);
+	ui->mainOutputGroups->setText(config->OutputGroups);
 
-	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
-	ui->mainOutputName->setText(conf->OutputName);
-	ui->mainOutputGroups->setText(conf->OutputGroups);
+	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
+	ui->previewOutputName->setText(config->PreviewOutputName);
+	ui->previewOutputGroups->setText(config->PreviewOutputGroups);
 
-	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
-	ui->previewOutputName->setText(conf->PreviewOutputName);
-	ui->previewOutputGroups->setText(conf->PreviewOutputGroups);
-
-	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
-	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);
+	ui->tallyProgramCheckBox->setChecked(config->TallyProgramEnabled);
+	ui->tallyPreviewCheckBox->setChecked(config->TallyPreviewEnabled);
 
 	ui->checkBoxAutoCheckForUpdates->setChecked(
-		conf->AutoCheckForUpdates());
+		config->AutoCheckForUpdates());
 }
 
 void OutputSettings::ToggleShowHide()
 {
 	setVisible(!isVisible());
-}
-
-OutputSettings::~OutputSettings()
-{
-	delete ui;
 }

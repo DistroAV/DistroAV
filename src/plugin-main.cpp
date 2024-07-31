@@ -230,7 +230,7 @@ bool obs_module_load(void)
 	     "[DistroAV] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
 	     qVersion(), QT_VERSION_STR);
 
-	Config::Current()->Load();
+	auto config = Config::Current();
 
 	if (is_obsndi_installed()) {
 		blog(LOG_INFO,
@@ -305,10 +305,8 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
-		auto conf = Config::Current();
-
-		preview_output_init(QT_TO_UTF8(conf->PreviewOutputName),
-				    QT_TO_UTF8(conf->PreviewOutputGroups));
+		preview_output_init(QT_TO_UTF8(config->PreviewOutputName),
+				    QT_TO_UTF8(config->PreviewOutputGroups));
 
 		// Ui setup
 		auto menu_action = static_cast<QAction *>(
@@ -328,20 +326,20 @@ bool obs_module_load(void)
 			[](enum obs_frontend_event event, void *) {
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-					Config *conf = Config::Current();
-					if (conf->OutputEnabled) {
+					auto config_ = Config::Current();
+					if (config_->OutputEnabled) {
 						main_output_start(
 							QT_TO_UTF8(
-								conf->OutputName),
+								config_->OutputName),
 							QT_TO_UTF8(
-								conf->OutputGroups));
+								config_->OutputGroups));
 					}
-					if (conf->PreviewOutputEnabled) {
+					if (config_->PreviewOutputEnabled) {
 						preview_output_start(
 							QT_TO_UTF8(
-								conf->PreviewOutputName),
+								config_->PreviewOutputName),
 							QT_TO_UTF8(
-								conf->PreviewOutputGroups));
+								config_->PreviewOutputGroups));
 					}
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					preview_output_stop();

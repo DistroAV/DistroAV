@@ -909,33 +909,38 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	auto name = obs_source_get_name(obs_source);
 	blog(LOG_INFO, "[DistroAV] +ndi_source_update('%s'...)", name);
 
-	ndi_source_config_t config = s->config;
+	ndi_source_config_t ndi_source_config = s->config;
 
-	config.ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
-	config.bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
+	ndi_source_config.ndi_source_name =
+		obs_data_get_string(settings, PROP_SOURCE);
+	ndi_source_config.bandwidth =
+		(int)obs_data_get_int(settings, PROP_BANDWIDTH);
 
 	const char *behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
 	if (strcmp(behavior, PROP_BEHAVIOR_DISCONNECT) == 0) {
-		config.behavior = BEHAVIOR_DISCONNECT;
+		ndi_source_config.behavior = BEHAVIOR_DISCONNECT;
 	} else {
-		config.behavior = BEHAVIOR_KEEP;
+		ndi_source_config.behavior = BEHAVIOR_KEEP;
 	}
 
-	config.remember_last_frame =
+	ndi_source_config.remember_last_frame =
 		obs_data_get_bool(settings, PROP_BEHAVIOR_LASTFRAME);
 
-	config.sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
+	ndi_source_config.sync_mode =
+		(int)obs_data_get_int(settings, PROP_SYNC);
 	// if sync mode is set to the unsupported "Internal" mode, set it
 	// to "Source Timing" mode and apply that change to the settings data
-	if (config.sync_mode == PROP_SYNC_INTERNAL) {
-		config.sync_mode = PROP_SYNC_NDI_SOURCE_TIMECODE;
+	if (ndi_source_config.sync_mode == PROP_SYNC_INTERNAL) {
+		ndi_source_config.sync_mode = PROP_SYNC_NDI_SOURCE_TIMECODE;
 		obs_data_set_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
 
-	config.framesync_enabled = obs_data_get_bool(settings, PROP_FRAMESYNC);
+	ndi_source_config.framesync_enabled =
+		obs_data_get_bool(settings, PROP_FRAMESYNC);
 
-	config.hw_accel_enabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
+	ndi_source_config.hw_accel_enabled =
+		obs_data_get_bool(settings, PROP_HW_ACCEL);
 
 	bool alpha_filter_enabled = obs_data_get_bool(settings, PROP_FIX_ALPHA);
 	// Prevent duplicate filters by not persisting this value in settings
@@ -954,37 +959,42 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		}
 	}
 
-	config.yuv_range = prop_to_range_type(
+	ndi_source_config.yuv_range = prop_to_range_type(
 		(int)obs_data_get_int(settings, PROP_YUV_RANGE));
-	config.yuv_colorspace = prop_to_colorspace(
+	ndi_source_config.yuv_colorspace = prop_to_colorspace(
 		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
-	config.latency = (int)obs_data_get_int(settings, PROP_LATENCY);
+	ndi_source_config.latency =
+		(int)obs_data_get_int(settings, PROP_LATENCY);
 	// Disable OBS buffering only for "Lowest" latency mode
-	const bool is_unbuffered = (config.latency == PROP_LATENCY_LOWEST);
+	const bool is_unbuffered =
+		(ndi_source_config.latency == PROP_LATENCY_LOWEST);
 	obs_source_set_async_unbuffered(obs_source, is_unbuffered);
 
-	config.audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
-	obs_source_set_audio_active(obs_source, config.audio_enabled);
+	ndi_source_config.audio_enabled =
+		obs_data_get_bool(settings, PROP_AUDIO);
+	obs_source_set_audio_active(obs_source,
+				    ndi_source_config.audio_enabled);
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
 	float zoom = (float)obs_data_get_double(settings, PROP_ZOOM);
-	config.ptz = {ptz_enabled, pan, tilt, zoom};
+	ndi_source_config.ptz = {ptz_enabled, pan, tilt, zoom};
 
 	// Update tally status
-	Config *conf = Config::Current();
-	config.tally.on_preview = conf->TallyPreviewEnabled &&
-				  obs_source_showing(obs_source);
-	config.tally.on_program = conf->TallyProgramEnabled &&
-				  obs_source_active(obs_source);
+	auto config = Config::Current();
+	ndi_source_config.tally.on_preview = config->TallyPreviewEnabled &&
+					     obs_source_showing(obs_source);
+	ndi_source_config.tally.on_program = config->TallyProgramEnabled &&
+					     obs_source_active(obs_source);
 
-	s->config = config;
+	s->config = ndi_source_config;
 
-	if (!config.ndi_source_name.isEmpty()) {
-		if (!s->running && (config.behavior == BEHAVIOR_KEEP ||
-				    obs_source_active(obs_source))) {
+	if (!ndi_source_config.ndi_source_name.isEmpty()) {
+		if (!s->running &&
+		    (ndi_source_config.behavior == BEHAVIOR_KEEP ||
+		     obs_source_active(obs_source))) {
 			ndi_source_thread_start(s);
 		}
 	} else {
