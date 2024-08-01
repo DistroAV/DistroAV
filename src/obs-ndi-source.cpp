@@ -1025,7 +1025,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 							s->config.blank_frame);
 #if 1
 				blog(LOG_INFO,
-				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update"
+				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update",
 				     name);
 #endif
 			}
