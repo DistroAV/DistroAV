@@ -29,7 +29,7 @@ public:
 	explicit OutputSettings(QWidget *parent = 0);
 	~OutputSettings();
 	void showEvent(QShowEvent *event);
-	void ToggleShowHide();
+	void toggleShowHide();
 
 private slots:
 	void onFormAccepted();

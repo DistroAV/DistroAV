@@ -28,8 +28,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 class PluginUpdateInfo {
 public:
-	PluginUpdateInfo(const QString &responseData, const QString &errorData);
+	PluginUpdateInfo(const int httpStatusCode, const QString &responseData,
+			 const QString &errorData);
 
+	int httpStatusCode = -1;
 	QString responseData;
 	QString errorData;
 
