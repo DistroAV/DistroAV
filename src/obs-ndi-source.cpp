@@ -1012,7 +1012,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 			if (config.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-				// Force a clean frame when source is updated 
+				// Force a clean frame when source is updated
 				obs_source_output_video(obs_source,
 							s->config.blank_frame);
 #if 1
