@@ -199,14 +199,6 @@ static video_range_type prop_to_range_type(int index)
 	}
 }
 
-static obs_source_frame *blank_video_frame()
-{
-	obs_source_frame *frame =
-		obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
-	frame->timestamp = os_gettime_ns();
-	return frame;
-}
-
 const char *ndi_source_getname(void *)
 {
 	return obs_module_text("NDIPlugin.NDISourceName");
@@ -1097,8 +1089,8 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	// Allocate blank video frame -> moved to ndi_source_update()
-	// s->config.blank_frame = blank_video_frame();
+	// Initialize the blank frame at Source's creation
+	s->config.blank_frame = nullptr;
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
