@@ -1012,12 +1012,12 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 			if (config.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-				// Force a clean frame when source is updated
+				// Force a clean frame when source is updated 
 				obs_source_output_video(obs_source,
 							s->config.blank_frame);
 #if 1
 				blog(LOG_INFO,
-				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update",
+				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
 				     name);
 #endif
 			}
@@ -1089,7 +1089,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	// Initialize the blank frame at Source's creation
+	// Initialize the blank frame config at Source's creation
 	s->config.blank_frame = nullptr;
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
