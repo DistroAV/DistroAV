@@ -1025,7 +1025,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 							s->config.blank_frame);
 #if 1
 				blog(LOG_INFO,
-				     "[obs-ndi] ndi_source_update '%s'): Creating the first frame for NDI source on Update",
+				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update"
 				     name);
 #endif
 			}
@@ -1097,7 +1097,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	// Allocate blank video frame
+	// Allocate blank video frame -> moved to ndi_source_update()
 	// s->config.blank_frame = blank_video_frame();
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
