@@ -565,8 +565,7 @@ void *ndi_source_thread(void *data)
 			// Force a clean (blank) frame when settings change to Audio only
 			if (recv_desc.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-				obs_source_output_video(obs_source,
-							NULL);
+				obs_source_output_video(obs_source, NULL);
 #if 1
 				blog(LOG_INFO,
 				     "[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
@@ -919,8 +918,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		s->running = false;
 		pthread_join(s->av_thread, NULL);
 		if (!s->config.remember_last_frame) {
-			obs_source_output_video(s->obs_source,
-						NULL);
+			obs_source_output_video(s->obs_source, NULL);
 		}
 	}
 }
@@ -1012,8 +1010,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			if (config.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
 				// Force a clean frame when source is updated
-				obs_source_output_video(obs_source,
-							NULL);
+				obs_source_output_video(obs_source, NULL);
 #if 1
 				blog(LOG_INFO,
 				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
