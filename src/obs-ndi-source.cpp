@@ -103,7 +103,6 @@ typedef struct {
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
-	obs_source_frame *blank_frame;
 } ndi_source_config_t;
 
 typedef struct {
@@ -567,7 +566,7 @@ void *ndi_source_thread(void *data)
 			if (recv_desc.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
 				obs_source_output_video(obs_source,
-							s->config.blank_frame);
+							NULL);
 #if 1
 				blog(LOG_INFO,
 				     "[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
@@ -921,7 +920,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		pthread_join(s->av_thread, NULL);
 		if (!s->config.remember_last_frame) {
 			obs_source_output_video(s->obs_source,
-						s->config.blank_frame);
+						NULL);
 		}
 	}
 }
@@ -1014,7 +1013,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			    NDIlib_recv_bandwidth_audio_only) {
 				// Force a clean frame when source is updated
 				obs_source_output_video(obs_source,
-							s->config.blank_frame);
+							NULL);
 #if 1
 				blog(LOG_INFO,
 				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
@@ -1089,9 +1088,6 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	// Initialize the blank frame config at Source's creation
-	s->config.blank_frame = nullptr;
-
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
 
@@ -1112,8 +1108,6 @@ void ndi_source_destroy(void *data)
 				  "rename", ndi_source_renamed, s);
 
 	ndi_source_thread_stop(s);
-
-	obs_source_frame_destroy(s->config.blank_frame);
 
 	bfree(s);
 
