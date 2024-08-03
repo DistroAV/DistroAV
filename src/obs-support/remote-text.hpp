@@ -23,7 +23,7 @@ DistroAV Changes:
 - Made headers public
 - Commented out versionString; should be passed in or set as a header
 - Commented out blocking/non-threaded GetRemoteFile
-- Changed Result to `void Result(int httpCode, const QString &responseData, const QString &errorText)`
+- Changed Result to `void Result(int httpStatusCode, const QString &responseData, const QString &errorText)`
 ******************************************************************************/
 
 #pragma once
@@ -44,7 +44,7 @@ class RemoteTextThread : public QThread {
 	void run() override;
 
 signals:
-	void Result(int httpCode, const QString &responseData,
+	void Result(int httpStatusCode, const QString &responseData,
 		    const QString &errorData);
 
 public:

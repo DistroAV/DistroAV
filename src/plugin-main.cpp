@@ -318,7 +318,7 @@ bool obs_module_load(void)
 		obs_frontend_pop_ui_translation();
 
 		auto menu_cb = [] {
-			output_settings->ToggleShowHide();
+			output_settings->toggleShowHide();
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 

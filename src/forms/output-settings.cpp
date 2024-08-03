@@ -57,27 +57,26 @@ OutputSettings::OutputSettings(QWidget *parent)
 				.arg(PLUGIN_NAME),
 			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
 			this);
+		progressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
 		progressDialog->setWindowModality(Qt::WindowModal);
 		connect(progressDialog, &QProgressDialog::canceled,
 			[progressDialog]() {
 				updateCheckStop();
 				progressDialog->close();
-				progressDialog->deleteLater();
 			});
 		auto checking = updateCheckStart([this, progressDialog](
 							 const PluginUpdateInfo &
 								 pluginUpdateInfo)
 							 -> bool {
 			progressDialog->close();
-			progressDialog->deleteLater();
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
-				QString errorText = pluginUpdateInfo.errorData;
+				QString errorData = pluginUpdateInfo.errorData;
 				if (!Config::LogDebug()) {
 					QJsonParseError parseError;
 					QJsonDocument jsonDoc =
 						QJsonDocument::fromJson(
-							errorText.toUtf8(),
+							errorData.toUtf8(),
 							&parseError);
 					if (parseError.error ==
 					    QJsonParseError::NoError) {
@@ -85,17 +84,43 @@ OutputSettings::OutputSettings(QWidget *parent)
 							jsonDoc.object();
 						if (jsonObject.contains(
 							    "error")) {
-							errorText =
+							errorData =
 								jsonObject["error"]
 									.toString();
 						}
 					}
 				}
+
+				auto errorText = QTStr(
+					"NDIPlugin.Update.CheckingForUpdate.Error.Text");
+				errorText +=
+					QString("<pre>%1</pre>").arg(errorData);
+
+				if (pluginUpdateInfo.httpStatusCode ==
+					    404 // Not Found
+				    || pluginUpdateInfo.httpStatusCode ==
+					       412 // Precondition Failed
+				) {
+					// Only someone building and loading their own plugin should see this.
+					// This is effectively just a code comment to them/me in the UI.
+					// English only text is OK here, just like it is for all code comments.
+					errorText += R"(
+The update server says you are not using an official release.<br>
+<br>
+Update checks are only supported for official releases.
+)";
+					if (Config::LogDebug()) {
+						errorText += R"(<br>
+<br>
+If you are running a local build, don't forget to add your build info to the update server.
+)";
+					}
+				}
+
 				QMessageBox::warning(
 					this,
 					Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
-					QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text")
-						.arg(errorText));
+					errorText);
 				return false;
 			}
 
@@ -248,7 +273,7 @@ void OutputSettings::showEvent(QShowEvent *)
 		config->AutoCheckForUpdates());
 }
 
-void OutputSettings::ToggleShowHide()
+void OutputSettings::toggleShowHide()
 {
 	setVisible(!isVisible());
 }

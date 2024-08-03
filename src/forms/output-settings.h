@@ -24,7 +24,7 @@ class OutputSettings : public QDialog {
 public:
 	explicit OutputSettings(QWidget *parent = 0);
 	void showEvent(QShowEvent *event);
-	void ToggleShowHide();
+	void toggleShowHide();
 
 private slots:
 	void onFormAccepted();

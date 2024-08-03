@@ -51,9 +51,12 @@ template<typename QEnum> const char *qEnumToString(const QEnum value)
 	return QMetaEnum::fromType<QEnum>().valueToKey(value);
 }
 
-PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
+PluginUpdateInfo::PluginUpdateInfo(const int httpStatusCode_,
+				   const QString &responseData_,
 				   const QString &errorData_)
 {
+	httpStatusCode = httpStatusCode_;
+
 	errorData = errorData_;
 	if (!errorData.isEmpty()) {
 		return;
@@ -64,12 +67,12 @@ PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
 	QJsonParseError jsonParseError;
 	jsonDocument =
 		QJsonDocument::fromJson(responseData.toUtf8(), &jsonParseError);
-	if (jsonDocument.isNull()) {
-		this->errorData = jsonParseError.errorString();
+	if (jsonParseError.error != QJsonParseError::NoError) {
+		errorData = jsonParseError.errorString();
 		return;
 	}
-	if (!jsonDocument.isObject()) {
-		this->errorData = "jsonDocument is not an object";
+	if (jsonDocument.isNull() || !jsonDocument.isObject()) {
+		errorData = "jsonDocument is not an object";
 		return;
 	}
 
@@ -77,14 +80,14 @@ PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
 
 	auto infoVersion_ = jsonObject["v"];
 	if (infoVersion_.isUndefined()) {
-		this->errorData = "v == undefined";
+		errorData = "v == undefined";
 		return;
 	}
 	infoVersion = infoVersion_.toInt();
 
 	auto releaseTag_ = jsonObject["releaseTag"];
 	if (releaseTag_.isUndefined()) {
-		this->errorData = "releaseTag == undefined";
+		errorData = "releaseTag == undefined";
 		return;
 	}
 	releaseTag = releaseTag_.toString();
@@ -111,7 +114,7 @@ PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
 
 #if 0
 	// For testing purposes only
-	this->fakeVersionLatest = true;
+	fakeVersionLatest = true;
 	versionLatest = QVersionNumber(versionCurrent.majorVersion(),
 				       versionCurrent.minorVersion() + 1,
 				       versionCurrent.microVersion());
@@ -119,7 +122,7 @@ PluginUpdateInfo::PluginUpdateInfo(const QString &responseData_,
 	versionLatest = QVersionNumber::fromString(releaseTag);
 #endif
 	if (versionLatest.isNull()) {
-		this->errorData = "versionLatest == null";
+		errorData = "versionLatest == null";
 		return;
 	}
 }
@@ -189,14 +192,14 @@ public:
 			[this, pluginUpdateInfo]() {
 				Config::Current(false)->SkipUpdateVersion(
 					pluginUpdateInfo.versionLatest);
-				this->reject();
+				reject();
 			});
 
 		connect(ui->buttonRemindMeLater, &QPushButton::clicked, this,
 			[this]() {
 				// do nothing; on next launch the plugin
 				// will continue to check for updates as normal
-				this->reject();
+				reject();
 			});
 
 #ifdef Q_OS_MACOS
@@ -212,7 +215,7 @@ public:
 			[this, pluginUpdateInfo]() {
 				QDesktopServices::openUrl(
 					QUrl(pluginUpdateInfo.releaseUrl));
-				this->accept();
+				accept();
 			});
 
 		ui->labelDonateUrl->setText(
@@ -313,7 +316,8 @@ bool isUpdatePendingOrShowing()
 	       update_dialog;
 }
 
-void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
+void onCheckForUpdateNetworkFinish(const int httpStatusCode,
+				   const QString &responseData,
 				   const QString &errorData,
 				   UserRequestCallback userRequestCallback)
 {
@@ -321,21 +325,23 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 	auto logVerbose = logDebug || Config::LogVerbose();
 	if (logDebug) {
 		blog(LOG_INFO,
-		     "[DistroAV] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
-		     httpCode, QT_TO_UTF8(responseData), QT_TO_UTF8(errorData),
+		     "[DistroAV] onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
+		     httpStatusCode, QT_TO_UTF8(responseData),
+		     QT_TO_UTF8(errorData),
 		     userRequestCallback ? "..." : "nullptr");
 	} else {
 		blog(LOG_INFO,
-		     "[DistroAV] onCheckForUpdateNetworkFinish(httpCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
-		     httpCode, QT_TO_UTF8(errorData),
+		     "[DistroAV] onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
+		     httpStatusCode, QT_TO_UTF8(errorData),
 		     userRequestCallback ? "..." : "nullptr");
 	}
 
-	auto pluginUpdateInfo = PluginUpdateInfo(responseData, errorData);
+	auto pluginUpdateInfo =
+		PluginUpdateInfo(httpStatusCode, responseData, errorData);
 	if (!pluginUpdateInfo.errorData.isEmpty()) {
 		blog(LOG_WARNING,
-		     "[DistroAV] onCheckForUpdateNetworkFinish: Error! httpCode=%d, errorData=`%s`; ignoring response",
-		     httpCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
+		     "[DistroAV] onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData=`%s`; ignoring response",
+		     httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
 		if (userRequestCallback) {
 			userRequestCallback(pluginUpdateInfo);
 		}
@@ -344,8 +350,8 @@ void onCheckForUpdateNetworkFinish(int httpCode, const QString &responseData,
 
 	if (logVerbose) {
 		blog(LOG_INFO,
-		     "[DistroAV] onCheckForUpdateNetworkFinish: Success! httpCode=%d",
-		     httpCode);
+		     "[DistroAV] onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d",
+		     httpStatusCode);
 	}
 
 	if (logDebug) {
@@ -621,16 +627,17 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 #else
 	QObject::connect(
 		update_request, &RemoteTextThread::Result, main_window,
-		[userRequestCallback](int httpCode, const QString &responseData,
+		[userRequestCallback](int httpStatusCode,
+				      const QString &responseData,
 				      const QString &errorData) {
 #if 0
 			blog(LOG_INFO,
-			     "[DistroAV] updateCheckStart: Result: httpCode=%d, responseData=`%s`, errorData=`%s`",
+			     "[DistroAV] updateCheckStart: Result: httpStatusCode=%d, responseData=`%s`, errorData=`%s`",
 			     httpCode, QT_TO_UTF8(responseData),
 			     QT_TO_UTF8(errorData));
 #endif
-			onCheckForUpdateNetworkFinish(httpCode, responseData,
-						      errorData,
+			onCheckForUpdateNetworkFinish(httpStatusCode,
+						      responseData, errorData,
 						      userRequestCallback);
 		},
 		Qt::QueuedConnection);

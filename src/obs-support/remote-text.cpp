@@ -97,11 +97,12 @@ void RemoteTextThread::run()
 		sleep(5);
 #endif
 
-		long httpCode = 0;
+		long httpStatusCode = 0;
 		QString responseData = QT_UTF8(str.c_str());
 		QString errorData;
 
-		curl_easy_getinfo(session, CURLINFO_RESPONSE_CODE, &httpCode);
+		curl_easy_getinfo(session, CURLINFO_RESPONSE_CODE,
+				  &httpStatusCode);
 #if 0
 		blog(LOG_INFO, "[DistroAV] RemoteTextThread: curlCode=%d, httpCode=%d",
 		     curlCode, (int)httpCode);
@@ -116,7 +117,7 @@ void RemoteTextThread::run()
 			     "[DistroAV] RemoteTextThread: HTTP request failed. `%s`",
 			     QT_TO_UTF8(errorData));
 		}
-		emit Result((int)httpCode, responseData, errorData);
+		emit Result((int)httpStatusCode, responseData, errorData);
 
 		curl_slist_free_all(header);
 	}
