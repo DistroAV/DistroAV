@@ -553,7 +553,7 @@ void *ndi_source_thread(void *data)
 				obs_source_output_video(obs_source, NULL);
 #if 1
 				blog(LOG_INFO,
-				     "[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
+				     "[DistroAV] ndi_source_thread: '%s' Reset Frame for Audio Only",
 				     obs_source_ndi_receiver_name);
 #endif
 			}
@@ -1007,7 +1007,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 				obs_source_output_video(obs_source, NULL);
 #if 1
 				blog(LOG_INFO,
-				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
+				     "[DistroAV] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
 				     name);
 #endif
 			}
