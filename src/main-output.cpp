@@ -24,7 +24,7 @@ static bool main_output_running = false;
 
 void main_output_start(const char *output_name, const char *output_groups)
 {
-	blog(LOG_INFO, "[obs-ndi] +main_output_start(`%s`, `%s`)", output_name,
+	blog(LOG_INFO, "[DistroAV] +main_output_start(`%s`, `%s`)", output_name,
 	     output_groups);
 	if (!main_output_running) {
 		blog(LOG_INFO,
@@ -55,13 +55,13 @@ void main_output_start(const char *output_name, const char *output_groups)
 		blog(LOG_INFO,
 		     "[DistroAV] main_output_start: NDI main output already running");
 	}
-	blog(LOG_INFO, "[obs-ndi] -main_output_start(`%s`, `%s`)", output_name,
+	blog(LOG_INFO, "[DistroAV] -main_output_start(`%s`, `%s`)", output_name,
 	     output_groups);
 }
 
 void main_output_stop()
 {
-	blog(LOG_INFO, "[obs-ndi] +main_output_stop()");
+	blog(LOG_INFO, "[DistroAV] +main_output_stop()");
 	if (main_output_running) {
 		blog(LOG_INFO,
 		     "[DistroAV] main_output_stop: stopping NDI main output");
@@ -78,7 +78,7 @@ void main_output_stop()
 		blog(LOG_INFO,
 		     "[DistroAV] main_output_stop: NDI main output not running");
 	}
-	blog(LOG_INFO, "[obs-ndi] -main_output_stop()");
+	blog(LOG_INFO, "[DistroAV] -main_output_stop()");
 }
 
 bool main_output_is_running()
