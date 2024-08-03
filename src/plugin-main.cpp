@@ -230,7 +230,7 @@ bool obs_module_load(void)
 	     "[DistroAV] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
 	     qVersion(), QT_VERSION_STR);
 
-	Config::Current()->Load();
+	auto config = Config::Current();
 
 	if (is_obsndi_installed()) {
 		blog(LOG_INFO,
@@ -244,8 +244,8 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	QMainWindow *main_window =
-		(QMainWindow *)obs_frontend_get_main_window();
+	auto main_window =
+		static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
 #if 0
 	// For testing purposes only
@@ -268,7 +268,13 @@ bool obs_module_load(void)
 		return false;
 	}
 
-	if (!ndiLib->initialize()) {
+#if 0
+	// for testing purposes only
+	auto initialized = false;
+#else
+	auto initialized = ndiLib->initialize();
+#endif
+	if (!initialized) {
 		blog(LOG_ERROR,
 		     "[DistroAV] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
@@ -299,16 +305,13 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
-		auto conf = Config::Current();
-
-		preview_output_init(QT_TO_UTF8(conf->PreviewOutputName),
-				    QT_TO_UTF8(conf->PreviewOutputGroups));
+		preview_output_init(QT_TO_UTF8(config->PreviewOutputName),
+				    QT_TO_UTF8(config->PreviewOutputGroups));
 
 		// Ui setup
-		QAction *menu_action =
-			(QAction *)obs_frontend_add_tools_menu_qaction(
-				obs_module_text(
-					"NDIPlugin.Menu.OutputSettings"));
+		auto menu_action = static_cast<QAction *>(
+			obs_frontend_add_tools_menu_qaction(obs_module_text(
+				"NDIPlugin.Menu.OutputSettings")));
 
 		obs_frontend_push_ui_translation(obs_module_get_string);
 		output_settings = new OutputSettings(main_window);
@@ -320,31 +323,23 @@ bool obs_module_load(void)
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
 		obs_frontend_add_event_callback(
-			[](enum obs_frontend_event event, void *private_data) {
+			[](enum obs_frontend_event event, void *) {
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-#if defined(__linux__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-#endif
-					Config *conf = static_cast<Config *>(
-						private_data);
-#if defined(__linux__)
-#pragma GCC diagnostic pop
-#endif
-					if (conf->OutputEnabled) {
+					auto config_ = Config::Current();
+					if (config_->OutputEnabled) {
 						main_output_start(
 							QT_TO_UTF8(
-								conf->OutputName),
+								config_->OutputName),
 							QT_TO_UTF8(
-								conf->OutputGroups));
+								config_->OutputGroups));
 					}
-					if (conf->PreviewOutputEnabled) {
+					if (config_->PreviewOutputEnabled) {
 						preview_output_start(
 							QT_TO_UTF8(
-								conf->PreviewOutputName),
+								config_->PreviewOutputName),
 							QT_TO_UTF8(
-								conf->PreviewOutputGroups));
+								config_->PreviewOutputGroups));
 					}
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					preview_output_stop();
@@ -353,7 +348,7 @@ bool obs_module_load(void)
 					preview_output_deinit();
 				}
 			},
-			static_cast<void *>(conf));
+			nullptr);
 	}
 
 	return true;

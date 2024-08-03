@@ -181,13 +181,13 @@ public:
 			config->AutoCheckForUpdates());
 		connect(ui->checkBoxAutoCheckForUpdates,
 			&QCheckBox::stateChanged, this, [](int state) {
-				Config::Current()->AutoCheckForUpdates(
+				Config::Current(false)->AutoCheckForUpdates(
 					state == Qt::Checked);
 			});
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this,
 			[this, pluginUpdateInfo]() {
-				Config::Current()->SkipUpdateVersion(
+				Config::Current(false)->SkipUpdateVersion(
 					pluginUpdateInfo.versionLatest);
 				this->reject();
 			});
@@ -199,7 +199,7 @@ public:
 				this->reject();
 			});
 
-#ifdef __APPLE__
+#ifdef Q_OS_MACOS
 		// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
 		auto defaultButtonBackgroundColor =
 			QColor::fromString("#2f65d4");

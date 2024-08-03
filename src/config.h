@@ -28,7 +28,7 @@ enum UpdateHostEnum {
 
 /**
  * Loads and Saves configuration settings from/to:
- * Linux: TBD...
+ * Linux: ~/.config/obs-studio/global.ini
  * MacOS: ~/Library/Application Support/obs-studio/global.ini
  * Windows: %APPDATA%\obs-studio\global.ini
  * 
@@ -48,7 +48,7 @@ enum UpdateHostEnum {
  */
 class Config {
 public:
-	static Config *Current();
+	static Config *Current(bool load = true);
 	static void Destroy();
 
 	static bool LogVerbose();
@@ -58,9 +58,6 @@ public:
 	static int UpdateLocalPort();
 	static bool UpdateLastCheckIgnore();
 	static int DetectObsNdiForce();
-
-	Config *Load();
-	Config *Save();
 
 	bool OutputEnabled;
 	QString OutputName;
@@ -80,7 +77,10 @@ public:
 	int MinAutoUpdateCheckIntervalSeconds();
 	void MinAutoUpdateCheckIntervalSeconds(int seconds);
 
+	void Save();
+
 private:
+	void Load();
 	Config();
 	static Config *_instance;
 };

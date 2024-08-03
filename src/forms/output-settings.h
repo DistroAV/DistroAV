@@ -23,7 +23,6 @@ class OutputSettings : public QDialog {
 	Q_OBJECT
 public:
 	explicit OutputSettings(QWidget *parent = 0);
-	~OutputSettings();
 	void showEvent(QShowEvent *event);
 	void ToggleShowHide();
 
@@ -31,5 +30,5 @@ private slots:
 	void onFormAccepted();
 
 private:
-	Ui::OutputSettings *ui;
+	std::unique_ptr<Ui::OutputSettings> ui;
 };

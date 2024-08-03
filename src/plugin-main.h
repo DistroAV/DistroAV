@@ -68,10 +68,10 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define PLUGIN_REDIRECT_TROUBLESHOOTING_URL \
 	"https://distroav.org/kb/troubleshooting"
 #define PLUGIN_REDIRECT_UNINSTALL_URL "https://distroav.org/kb/uninstall"
-#if defined(_WIN32)
+#if defined(Q_OS_WIN)
 // Windows
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-windows"
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
 // MacOS
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-macos"
 #else
@@ -93,7 +93,7 @@ QString makeLink(const char *url, const char *text = nullptr);
 // 	2. Then update them here and then release a new version of the plugin.
 //		Clients will then both see and point to the new urls.
 //
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
 #define NDI_OFFICIAL_REDIST_URL NDILIB_REDIST_URL
 #define NDI_OFFICIAL_TOOLS_URL "https://ndi.video/tools/download"
 #endif
