@@ -63,11 +63,11 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define PLUGIN_REDIRECT_DISCORD_URL "https://distroav.org/discord"
 #define PLUGIN_REDIRECT_DONATE_URL "https://distroav.org/donate"
 #define PLUGIN_REDIRECT_REPORT_BUG_URL "https://distroav.org/report-bug"
-#define PLUGIN_REDIRECT_OBSNDI_IS_NOW_DISTROAV_URL \
-	"https://distroav.org/kb/obs-ndi-is-now-distroav"
 #define PLUGIN_REDIRECT_TROUBLESHOOTING_URL \
 	"https://distroav.org/kb/troubleshooting"
 #define PLUGIN_REDIRECT_UNINSTALL_URL "https://distroav.org/kb/uninstall"
+#define PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL \
+	"https://distroav.org/kb/uninstall-obs-ndi"
 #if defined(Q_OS_WIN)
 // Windows
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-windows"

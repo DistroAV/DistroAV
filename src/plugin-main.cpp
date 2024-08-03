@@ -240,7 +240,7 @@ bool obs_module_load(void)
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
 				.arg(rehostUrl(
-					PLUGIN_REDIRECT_OBSNDI_IS_NOW_DISTROAV_URL)));
+					PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
 		return false;
 	}
 
