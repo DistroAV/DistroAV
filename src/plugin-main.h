@@ -99,4 +99,13 @@ QString makeLink(const char *url, const char *text = nullptr);
 #endif
 #define NDI_OFFICIAL_CPU_REQUIREMENTS_URL \
 	"https://docs.ndi.video/docs/sdk/cpu-requirements"
+// Required by NDI license:
+// Per https://github.com/DistroAV/DistroAV/blob/master/lib/ndi/NDI%20SDK%20Documentation.pdf
+// "3 Licensing"
+// "Your application must provide a link to https://ndi.video/ in a location close to all locations
+// where NDI is used / selected within the product, on your web site, and in its documentation."
 #define NDI_OFFICIAL_WEB_URL "https://ndi.video"
+// "Your application’s About Box and any other locations where trademark attribution is provided
+// should also specifically indicate that “NDI® is a registered trademark of Vizrt NDI AB”."
+#define NDI_IS_A_REGISTERED_TRADEMARK_TEXT \
+	"NDI® is a registered trademark of Vizrt NDI AB"

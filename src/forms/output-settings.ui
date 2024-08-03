@@ -27,8 +27,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>400</height>
+    <width>565</width>
+    <height>549</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -41,6 +41,9 @@
    <string>NDIPlugin.OutputSettings.DialogTitle</string>
   </property>
   <layout class="QVBoxLayout">
+   <property name="spacing">
+    <number>6</number>
+   </property>
    <property name="leftMargin">
     <number>12</number>
    </property>
@@ -52,9 +55,6 @@
    </property>
    <property name="bottomMargin">
     <number>12</number>
-   </property>
-   <property name="spacing">
-    <number>6</number>
    </property>
    <item>
     <widget class="QGroupBox" name="mainOutputGroupBox">
@@ -338,37 +338,51 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutNdi">
+    <layout class="QVBoxLayout" name="verticalLayoutNdi">
      <item>
-      <widget class="QLabel" name="labelNdiVersion">
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Unknown NDI version</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayoutNdi">
+       <item>
+        <widget class="QLabel" name="labelNdiVersion">
+         <property name="font">
+          <font>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Unknown NDI version</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButtonNdi">
+         <property name="text">
+          <string>NDI®</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButtonNdiTools">
+         <property name="text">
+          <string>NDI Tools</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButtonNdiRedist">
+         <property name="text">
+          <string>NDI Redist</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonNdi">
+      <widget class="QLabel" name="labelNdiRegisteredTrademark">
        <property name="text">
-        <string>NDI®</string>
+        <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonNdiTools">
-       <property name="text">
-        <string>NDI Tools</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonNdiRedist">
-       <property name="text">
-        <string>NDI Redist</string>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
        </property>
       </widget>
      </item>

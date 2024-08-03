@@ -159,7 +159,7 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title,
 	QTimer::singleShot(milliseconds, [newTitle, newMessage] {
 		auto dlg = new QMessageBox(QMessageBox::Critical, newTitle,
 					   newMessage, QMessageBox::Ok);
-#if defined(__APPLE__)
+#if defined(Q_OS_MACOS)
 		// Make title bar show text: https://stackoverflow.com/a/22187538/25683720
 		dlg->QDialog::setWindowTitle(newTitle);
 #endif
@@ -392,51 +392,84 @@ void obs_module_unload(void)
 
 const NDIlib_v5 *load_ndilib()
 {
-	QStringList locations;
-	auto path = QString(qgetenv(NDILIB_REDIST_FOLDER));
-	if (!path.isEmpty()) {
-		locations << path;
+	auto locations = QStringList();
+	auto temp_path = QString(qgetenv(NDILIB_REDIST_FOLDER));
+	if (!temp_path.isEmpty()) {
+		locations << temp_path;
 	}
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+	// Linux, MacOS
+	// https://github.com/DistroAV/DistroAV/blob/master/lib/ndi/NDI%20SDK%20Documentation.pdf
+	// "6.1 LOCATING THE LIBRARY
+	// ... the redistributable on MacOS is installed within `/usr/local/lib` ..."
 	locations << "/usr/lib";
 	locations << "/usr/local/lib";
 #endif
-	for (auto location : locations) {
-		path = QDir::cleanPath(
-			QDir(location).absoluteFilePath(NDILIB_LIBRARY_NAME));
-		blog(LOG_INFO, "[DistroAV] load_ndilib: Trying '%s'",
-		     QT_TO_UTF8(path));
-		QFileInfo libPath(path);
-		if (libPath.exists() && libPath.isFile()) {
-			path = libPath.absoluteFilePath();
-			blog(LOG_INFO,
-			     "[DistroAV] load_ndilib: Found '%s'; attempting to load NDI library...",
-			     QT_TO_UTF8(path));
-			loaded_lib = new QLibrary(path, nullptr);
-			if (loaded_lib->load()) {
-				blog(LOG_INFO,
-				     "[DistroAV] load_ndilib: NDI library loaded successfully");
-				NDIlib_v5_load_ lib_load =
-					reinterpret_cast<NDIlib_v5_load_>(
-						loaded_lib->resolve(
-							"NDIlib_v5_load"));
-				if (lib_load != nullptr) {
-					blog(LOG_INFO,
-					     "[DistroAV] load_ndilib: NDIlib_v5_load found");
-					return lib_load();
-				} else {
-					blog(LOG_ERROR,
-					     "[DistroAV] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+	auto lib_path = QString();
+#if defined(Q_OS_LINUX)
+	// Linux
+	auto regex = QRegularExpression("libndi\\.so\\.(\\d+)");
+	int max_version = 0;
+#endif
+	for (const auto &location : locations) {
+		auto dir = QDir(location);
+#if defined(Q_OS_LINUX)
+		// Linux
+		auto filters = QStringList("libndi.so.*");
+		dir.setNameFilters(filters);
+		auto file_names = dir.entryList(QDir::Files);
+		for (const auto &file_name : file_names) {
+			auto match = regex.match(file_name);
+			if (match.hasMatch()) {
+				int version = match.captured(1).toInt();
+				if (version > max_version) {
+					max_version = version;
+					lib_path =
+						dir.absoluteFilePath(file_name);
 				}
-			} else {
-				blog(LOG_ERROR,
-				     "[DistroAV] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
-				     QT_TO_UTF8(loaded_lib->errorString()));
-				delete loaded_lib;
-				loaded_lib = nullptr;
 			}
 		}
+#else
+		// MacOS, Windows
+		temp_path = QDir::cleanPath(
+			dir.absoluteFilePath(NDILIB_LIBRARY_NAME));
+		blog(LOG_INFO, "[DistroAV] load_ndilib: Trying '%s'",
+		     QT_TO_UTF8(temp_path));
+		auto file_info = QFileInfo(temp_path);
+		if (file_info.exists() && file_info.isFile()) {
+			lib_path = temp_path;
+			break;
+		}
+#endif
 	}
+	if (!lib_path.isEmpty()) {
+		blog(LOG_INFO,
+		     "[DistroAV] load_ndilib: Found '%s'; attempting to load NDI library...",
+		     QT_TO_UTF8(lib_path));
+		loaded_lib = new QLibrary(lib_path, nullptr);
+		if (loaded_lib->load()) {
+			blog(LOG_INFO,
+			     "[DistroAV] load_ndilib: NDI library loaded successfully");
+			NDIlib_v5_load_ lib_load =
+				reinterpret_cast<NDIlib_v5_load_>(
+					loaded_lib->resolve("NDIlib_v5_load"));
+			if (lib_load != nullptr) {
+				blog(LOG_INFO,
+				     "[DistroAV] load_ndilib: NDIlib_v5_load found");
+				return lib_load();
+			} else {
+				blog(LOG_ERROR,
+				     "[DistroAV] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+			}
+		} else {
+			blog(LOG_ERROR,
+			     "[DistroAV] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+			     QT_TO_UTF8(loaded_lib->errorString()));
+			delete loaded_lib;
+			loaded_lib = nullptr;
+		}
+	}
+
 	blog(LOG_ERROR,
 	     "[DistroAV] load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;

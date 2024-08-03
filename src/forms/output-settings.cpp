@@ -171,6 +171,9 @@ OutputSettings::OutputSettings(QWidget *parent)
 	});
 #endif
 
+	ui->labelNdiRegisteredTrademark->setText(
+		NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+
 	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
 	connect(ui->labelDonateUrl, &QLabel::linkActivated,
 		[this](const QString &url) {
