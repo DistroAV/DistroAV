@@ -1026,6 +1026,10 @@ void ndi_source_shown(void *data)
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[DistroAV] ndi_source_shown('%s'...)", name);
 	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
+
+	if (!s->running) {
+		ndi_source_thread_start(s);
+	}
 }
 
 void ndi_source_hidden(void *data)
@@ -1034,6 +1038,10 @@ void ndi_source_hidden(void *data)
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[DistroAV] ndi_source_hidden('%s'...)", name);
 	s->config.tally.on_preview = false;
+
+	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
+		ndi_source_thread_stop(s);
+	}
 }
 
 void ndi_source_activated(void *data)
@@ -1054,10 +1062,6 @@ void ndi_source_deactivated(void *data)
 	auto name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[DistroAV] ndi_source_deactivated('%s'...)", name);
 	s->config.tally.on_program = false;
-
-	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
-		ndi_source_thread_stop(s);
-	}
 }
 
 void ndi_source_renamed(void *data, calldata_t *)
