@@ -1028,6 +1028,9 @@ void ndi_source_shown(void *data)
 	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
 
 	if (!s->running) {
+		blog(LOG_INFO,
+		     "[DistroAV] ndi_source_shown('%s'...) : Requesting Source Thread Start.",
+		     name);
 		ndi_source_thread_start(s);
 	}
 }
@@ -1040,6 +1043,9 @@ void ndi_source_hidden(void *data)
 	s->config.tally.on_preview = false;
 
 	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
+		blog(LOG_INFO,
+		     "[DistroAV] ndi_source_hidden('%s'...) : Requesting Source Thread Stop.",
+		     name);
 		ndi_source_thread_stop(s);
 	}
 }
@@ -1052,6 +1058,9 @@ void ndi_source_activated(void *data)
 	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
 
 	if (!s->running) {
+		blog(LOG_INFO,
+		     "[DistroAV] ndi_source_activated('%s'...) : Requesting Source Thread Start.",
+		     name);
 		ndi_source_thread_start(s);
 	}
 }
