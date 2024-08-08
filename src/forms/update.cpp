@@ -140,7 +140,7 @@ public:
 	{
 		ui->setupUi(this);
 
-		auto pluginDisplayName = QString(PLUGIN_NAME);
+		auto pluginDisplayName = QString(PLUGIN_DISPLAY_NAME);
 
 		auto config = Config::Current();
 

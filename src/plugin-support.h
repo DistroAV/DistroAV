@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 extern const char *PLUGIN_NAME;
+extern const char *PLUGIN_DISPLAY_NAME;
 extern const char *PLUGIN_VERSION;
 
 #ifdef __cplusplus
