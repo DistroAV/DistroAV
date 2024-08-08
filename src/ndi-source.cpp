@@ -81,8 +81,8 @@ typedef struct {
 } ptz_t;
 
 typedef struct {
-	QByteArray ndi_receiver_name;
-	QByteArray ndi_source_name;
+	char *ndi_receiver_name;
+	const char *ndi_source_name;
 	int bandwidth;
 	enum behavior_type behavior;
 	bool remember_last_frame;
@@ -349,7 +349,7 @@ obs_properties_t *ndi_source_getproperties(void *)
 
 void ndi_source_getdefaults(obs_data_t *settings)
 {
-	blog(LOG_INFO, "[DistroAV] +ndi_source_getdefaults(...)");
+	blog(LOG_INFO, "[DistroAV] +ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_string(settings, PROP_BEHAVIOR,
 				    PROP_BEHAVIOR_KEEP);
@@ -362,7 +362,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 				 PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
-	blog(LOG_INFO, "[DistroAV] -ndi_source_getdefaults(...)");
+	blog(LOG_INFO, "[DistroAV] -ndi_source_getdefaults(…)");
 }
 
 void ndi_source_thread_process_audio2(ndi_source_config_t *config,
@@ -383,13 +383,9 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 void *ndi_source_thread(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	auto obs_source = s->obs_source;
-	QByteArray obs_source_ndi_receiver_name_utf8 =
-		QString(obs_source_get_name(obs_source)).toUtf8();
-	const char *obs_source_ndi_receiver_name =
-		obs_source_ndi_receiver_name_utf8.constData();
-	blog(LOG_INFO, "[DistroAV] +ndi_source_thread('%s'...)",
-	     obs_source_ndi_receiver_name);
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	blog(LOG_INFO, "[DistroAV] +ndi_source_thread(…): '%s'",
+	     obs_source_name);
 
 	ndi_source_config_t config_most_recent = {};
 	ndi_source_config_t config_last_used = {};
@@ -424,21 +420,21 @@ void *ndi_source_thread(void *data)
 		// semi-atomic not *TOO* heavy snapshot
 		config_most_recent = s->config;
 
+		// Fast pointer comparisons are fine here; no need for slow content comparison
 		if (config_most_recent.ndi_receiver_name !=
 		    config_last_used.ndi_receiver_name) {
 			config_last_used.ndi_receiver_name =
 				config_most_recent.ndi_receiver_name;
 
+			// If config.ndi_receiver_name changed, then so did obs_source_name
+			obs_source_name = obs_source_get_name(s->obs_source);
+
 			reset_recv_desc = &recv_desc;
-			obs_source_ndi_receiver_name_utf8 =
-				config_most_recent.ndi_receiver_name;
-			obs_source_ndi_receiver_name =
-				obs_source_ndi_receiver_name_utf8.constData();
 			recv_desc.p_ndi_recv_name =
-				obs_source_ndi_receiver_name;
+				config_most_recent.ndi_receiver_name;
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' ndi_receiver_name changed; Setting recv_desc.p_ndi_recv_name='%s'",
-			     obs_source_ndi_receiver_name,
+			     obs_source_name, //
 			     recv_desc.p_ndi_recv_name);
 		}
 		if (config_most_recent.ndi_source_name !=
@@ -451,7 +447,7 @@ void *ndi_source_thread(void *data)
 				config_most_recent.ndi_source_name;
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' ndi_source_name changed; Setting recv_desc.source_to_connect_to.p_ndi_name='%s'",
-			     obs_source_ndi_receiver_name,
+			     obs_source_name, //
 			     recv_desc.source_to_connect_to.p_ndi_name);
 		}
 		if (config_most_recent.bandwidth !=
@@ -477,7 +473,8 @@ void *ndi_source_thread(void *data)
 			}
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' bandwidth changed; Setting recv_desc.bandwidth='%d'",
-			     obs_source_ndi_receiver_name, recv_desc.bandwidth);
+			     obs_source_name, //
+			     recv_desc.bandwidth);
 		}
 		if (config_most_recent.latency != config_last_used.latency) {
 			config_last_used.latency = config_most_recent.latency;
@@ -491,7 +488,7 @@ void *ndi_source_thread(void *data)
 					NDIlib_recv_color_format_fastest;
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' latency changed; Setting recv_desc.color_format='%d'",
-			     obs_source_ndi_receiver_name,
+			     obs_source_name, //
 			     recv_desc.color_format);
 		}
 		if (config_most_recent.framesync_enabled !=
@@ -502,7 +499,7 @@ void *ndi_source_thread(void *data)
 			reset_recv_desc = &recv_desc;
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' framesync changed to %s",
-			     obs_source_ndi_receiver_name,
+			     obs_source_name, //
 			     config_most_recent.framesync_enabled ? "enabled"
 								  : "disabled");
 		}
@@ -510,8 +507,8 @@ void *ndi_source_thread(void *data)
 			reset_recv_desc = nullptr;
 
 			blog(LOG_INFO,
-			     "[DistroAV] ndi_source_thread: '%s' Resetting NDI receiver...",
-			     obs_source_ndi_receiver_name);
+			     "[DistroAV] ndi_source_thread: '%s' Resetting NDI receiver…",
+			     obs_source_name);
 
 			if (ndi_frame_sync) {
 				ndiLib->framesync_destroy(ndi_frame_sync);
@@ -523,26 +520,31 @@ void *ndi_source_thread(void *data)
 #if 1
 				blog(LOG_INFO,
 				     "[DistroAV] ndi_source_thread: '%s' ndiLib->recv_destroy(ndi_receiver)",
-				     obs_source_ndi_receiver_name);
+				     obs_source_name);
 #endif
 				ndiLib->recv_destroy(ndi_receiver);
 				ndi_receiver = nullptr;
 			}
 #if 1
 			blog(LOG_INFO,
+			     "[DistroAV] ndi_source_thread: '%s' recv_desc = { p_ndi_recv_name='%s', source_to_connect_to.p_ndi_name='%s' }",
+			     obs_source_name, //
+			     recv_desc.p_ndi_recv_name,
+			     recv_desc.source_to_connect_to.p_ndi_name);
+			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' +ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
-			     obs_source_ndi_receiver_name);
+			     obs_source_name);
 #endif
 			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
 #if 1
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
-			     obs_source_ndi_receiver_name);
+			     obs_source_name);
 #endif
 			if (!ndi_receiver) {
 				blog(LOG_ERROR,
 				     "[DistroAV] ndi_source_thread: '%s' Cannot create ndi_receiver for NDI source '%s'",
-				     obs_source_ndi_receiver_name,
+				     obs_source_name, //
 				     recv_desc.source_to_connect_to.p_ndi_name);
 				break;
 			}
@@ -550,12 +552,12 @@ void *ndi_source_thread(void *data)
 			// Force a clean (blank) frame when settings change to Audio only
 			if (recv_desc.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-				obs_source_output_video(obs_source, NULL);
 #if 1
 				blog(LOG_INFO,
-				     "[DistroAV] ndi_source_thread: '%s' Reset Frame for Audio Only",
-				     obs_source_ndi_receiver_name);
+				     "[DistroAV] ndi_source_thread: '%s' Audio Only: Forcing a blank/clean/reset video frame",
+				     obs_source_name);
 #endif
+				obs_source_output_video(s->obs_source, NULL);
 			}
 
 			// Apply Framesync Settings
@@ -566,20 +568,20 @@ void *ndi_source_thread(void *data)
 #if 1
 				blog(LOG_INFO,
 				     "[DistroAV] ndi_source_thread: '%s' +ndi_frame_sync = ndiLib->framesync_create(ndi_receiver)",
-				     obs_source_ndi_receiver_name);
+				     obs_source_name);
 #endif
 				ndi_frame_sync =
 					ndiLib->framesync_create(ndi_receiver);
 #if 1
 				blog(LOG_INFO,
 				     "[DistroAV] ndi_source_thread: '%s' -ndi_frame_sync = ndiLib->framesync_create(ndi_receiver); ndi_frame_sync=%p",
-				     obs_source_ndi_receiver_name,
+				     obs_source_name, //
 				     ndi_frame_sync);
 #endif
 				if (!ndi_frame_sync) {
 					blog(LOG_ERROR,
 					     "[DistroAV] ndi_source_thread: '%s' Cannot create ndi_frame_sync for NDI source '%s'",
-					     obs_source_ndi_receiver_name,
+					     obs_source_name, //
 					     recv_desc.source_to_connect_to
 						     .p_ndi_name);
 					break;
@@ -591,7 +593,7 @@ void *ndi_source_thread(void *data)
 #if 0
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' No connection",
-			     obs_source_ndi_receiver_name);
+			     obs_source_name);
 #endif
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds(100));
@@ -610,7 +612,7 @@ void *ndi_source_thread(void *data)
 					: (char *)"<ndi_hwaccel enabled=\"false\"/>";
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' hw_accel_enabled changed; Sending NDI metadata '%s'",
-			     obs_source_ndi_receiver_name,
+			     obs_source_name, //
 			     hwAccelMetadata.p_data);
 			ndiLib->recv_send_metadata(ndi_receiver,
 						   &hwAccelMetadata);
@@ -631,7 +633,7 @@ void *ndi_source_thread(void *data)
 
 					blog(LOG_INFO,
 					     "[DistroAV] ndi_source_thread: '%s' ptz changed; Sending PTZ pan=%f, tilt=%f, zoom=%f",
-					     obs_source_ndi_receiver_name,
+					     obs_source_name, //
 					     config_most_recent.ptz.pan,
 					     config_most_recent.ptz.tilt,
 					     config_most_recent.ptz.zoom);
@@ -654,7 +656,7 @@ void *ndi_source_thread(void *data)
 
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' tally changed; Sending tally on_preview=%d, on_program=%d",
-			     obs_source_ndi_receiver_name,
+			     obs_source_name, //
 			     config_most_recent.tally.on_preview,
 			     config_most_recent.tally.on_program);
 			ndiLib->recv_set_tally(ndi_receiver,
@@ -677,7 +679,7 @@ void *ndi_source_thread(void *data)
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
 					&config_most_recent, &audio_frame2,
-					obs_source, &obs_audio_frame);
+					s->obs_source, &obs_audio_frame);
 			}
 			ndiLib->framesync_free_audio(ndi_frame_sync,
 						     &audio_frame2);
@@ -695,7 +697,7 @@ void *ndi_source_thread(void *data)
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
-					obs_source, &obs_video_frame);
+					s->obs_source, &obs_video_frame);
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync,
 						     &video_frame2);
@@ -712,7 +714,7 @@ void *ndi_source_thread(void *data)
 			if (frame_received == NDIlib_frame_type_audio) {
 				ndi_source_thread_process_audio3(
 					&config_most_recent, &audio_frame3,
-					obs_source, &obs_audio_frame);
+					s->obs_source, &obs_audio_frame);
 				ndiLib->recv_free_audio_v3(ndi_receiver,
 							   &audio_frame3);
 				continue;
@@ -721,7 +723,7 @@ void *ndi_source_thread(void *data)
 			if (frame_received == NDIlib_frame_type_video) {
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
-					obs_source, &obs_video_frame);
+					s->obs_source, &obs_video_frame);
 				ndiLib->recv_free_video_v2(ndi_receiver,
 							   &video_frame2);
 				continue;
@@ -739,8 +741,8 @@ void *ndi_source_thread(void *data)
 		ndi_receiver = nullptr;
 	}
 
-	blog(LOG_INFO, "[DistroAV] -ndi_source_thread('%s'...)",
-	     obs_source_ndi_receiver_name);
+	blog(LOG_INFO, "[DistroAV] -ndi_source_thread(…): '%s'",
+	     obs_source_name);
 
 	return nullptr;
 }
@@ -893,8 +895,7 @@ void ndi_source_thread_start(ndi_source_t *s)
 	pthread_create(&s->av_thread, nullptr, ndi_source_thread, s);
 	blog(LOG_INFO,
 	     "[DistroAV] ndi_source_thread_start: '%s' Started A/V ndi_source_thread for NDI source '%s'",
-	     s->config.ndi_receiver_name.constData(),
-	     s->config.ndi_source_name.constData());
+	     obs_source_get_name(s->obs_source), s->config.ndi_source_name);
 }
 
 void ndi_source_thread_stop(ndi_source_t *s)
@@ -902,8 +903,18 @@ void ndi_source_thread_stop(ndi_source_t *s)
 	if (s->running) {
 		s->running = false;
 		pthread_join(s->av_thread, NULL);
+		auto obs_source = s->obs_source;
+		auto obs_source_name = obs_source_get_name(obs_source);
+		blog(LOG_INFO,
+		     "[DistroAV] ndi_source_thread_stop: '%s' Stopped A/V ndi_source_thread for NDI source '%s'",
+		     obs_source_name, s->config.ndi_source_name);
 		if (!s->config.remember_last_frame) {
-			obs_source_output_video(s->obs_source, NULL);
+#if 1
+			blog(LOG_INFO,
+			     "[DistroAV] ndi_source_thread_stop: '%s' Audio Only: Forcing a blank/clean video frame",
+			     obs_source_name);
+#endif
+			obs_source_output_video(obs_source, NULL);
 		}
 	}
 }
@@ -912,8 +923,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = (ndi_source_t *)data;
 	auto obs_source = s->obs_source;
-	auto name = obs_source_get_name(obs_source);
-	blog(LOG_INFO, "[DistroAV] +ndi_source_update('%s'...)", name);
+	auto obs_source_name = obs_source_get_name(obs_source);
+	blog(LOG_INFO, "[DistroAV] +ndi_source_update: '%s'", obs_source_name);
 
 	ndi_source_config_t ndi_source_config = s->config;
 
@@ -997,40 +1008,44 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	s->config = ndi_source_config;
 
-	if (!ndi_source_config.ndi_source_name.isEmpty()) {
+	if (strlen(ndi_source_config.ndi_source_name) > 0) {
 		if (!s->running &&
 		    (ndi_source_config.behavior == BEHAVIOR_KEEP ||
 		     obs_source_active(obs_source))) {
 			if (ndi_source_config.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-				// Force a clean frame when source is updated
-				obs_source_output_video(obs_source, NULL);
 #if 1
 				blog(LOG_INFO,
-				     "[DistroAV] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
-				     name);
+				     "[DistroAV] ndi_source_update: '%s': Audio Only: Forcing a blank/clean/reset video frame",
+				     obs_source_name);
 #endif
+				obs_source_output_video(obs_source, NULL);
 			}
+			blog(LOG_INFO,
+			     "[DistroAV] ndi_source_update: '%s': Requesting Source Thread Start.",
+			     obs_source_name);
 			ndi_source_thread_start(s);
 		}
 	} else {
+		blog(LOG_INFO,
+		     "[DistroAV] ndi_source_update: '%s': Requesting Source Thread Stop.",
+		     obs_source_name);
 		ndi_source_thread_stop(s);
 	}
 
-	blog(LOG_INFO, "[DistroAV] -ndi_source_update('%s'...)", name);
+	blog(LOG_INFO, "[DistroAV] -ndi_source_update: '%s'", obs_source_name);
 }
 
 void ndi_source_shown(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	auto name = obs_source_get_name(s->obs_source);
-	blog(LOG_INFO, "[DistroAV] ndi_source_shown('%s'...)", name);
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	blog(LOG_INFO, "[DistroAV] ndi_source_shown: '%s'", obs_source_name);
 	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
-
 	if (!s->running) {
 		blog(LOG_INFO,
-		     "[DistroAV] ndi_source_shown('%s'...) : Requesting Source Thread Start.",
-		     name);
+		     "[DistroAV] ndi_source_shown: '%s': Requesting Source Thread Start.",
+		     obs_source_name);
 		ndi_source_thread_start(s);
 	}
 }
@@ -1038,14 +1053,13 @@ void ndi_source_shown(void *data)
 void ndi_source_hidden(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	auto name = obs_source_get_name(s->obs_source);
-	blog(LOG_INFO, "[DistroAV] ndi_source_hidden('%s'...)", name);
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	blog(LOG_INFO, "[DistroAV] ndi_source_hidden: '%s'", obs_source_name);
 	s->config.tally.on_preview = false;
-
 	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
 		blog(LOG_INFO,
-		     "[DistroAV] ndi_source_hidden('%s'...) : Requesting Source Thread Stop.",
-		     name);
+		     "[DistroAV] ndi_source_hidden: '%s': Requesting Source Thread Stop.",
+		     obs_source_name);
 		ndi_source_thread_stop(s);
 	}
 }
@@ -1053,14 +1067,14 @@ void ndi_source_hidden(void *data)
 void ndi_source_activated(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	auto name = obs_source_get_name(s->obs_source);
-	blog(LOG_INFO, "[DistroAV] ndi_source_activated('%s'...)", name);
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	blog(LOG_INFO, "[DistroAV] ndi_source_activated: '%s'",
+	     obs_source_name);
 	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
-
 	if (!s->running) {
 		blog(LOG_INFO,
-		     "[DistroAV] ndi_source_activated('%s'...) : Requesting Source Thread Start.",
-		     name);
+		     "[DistroAV] ndi_source_activated: '%s' : Requesting Source Thread Start.",
+		     obs_source_name);
 		ndi_source_thread_start(s);
 	}
 }
@@ -1068,54 +1082,73 @@ void ndi_source_activated(void *data)
 void ndi_source_deactivated(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	auto name = obs_source_get_name(s->obs_source);
-	blog(LOG_INFO, "[DistroAV] ndi_source_deactivated('%s'...)", name);
+	blog(LOG_INFO, "[DistroAV] ndi_source_deactivated: '%s'",
+	     obs_source_get_name(s->obs_source));
 	s->config.tally.on_program = false;
 }
 
-void ndi_source_renamed(void *data, calldata_t *)
+void new_ndi_receiver_name(const char *obs_source_name,
+			   char **ndi_receiver_name)
 {
-	auto s = (ndi_source_t *)data;
-	auto name = obs_source_get_name(s->obs_source);
-	blog(LOG_INFO, "[DistroAV] ndi_source_renamed: name='%s'", name);
-	s->config.ndi_receiver_name =
-		QString("DistroAV '%1'").arg(name).toUtf8();
+	if (*ndi_receiver_name) {
+		bfree(*ndi_receiver_name);
+	}
+	*ndi_receiver_name = bstrdup(
+		QString("DistroAV '%1'").arg(obs_source_name).toUtf8().data());
+	// blog(LOG_INFO,
+	//      "[DistroAV] new_ndi_receiver_name: '%s' ndi_receiver_name='%s'",
+	//      obs_source_name, *ndi_receiver_name);
 }
+
+void ndi_source_renamed(void *data, calldata_t *);
 
 void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 {
-	auto name = obs_source_get_name(obs_source);
-	blog(LOG_INFO, "[DistroAV] +ndi_source_create('%s'...)", name);
+	auto obs_source_name = obs_source_get_name(obs_source);
+	blog(LOG_INFO, "[DistroAV] +ndi_source_create: '%s'", obs_source_name);
 
 	auto s = (ndi_source_t *)bzalloc(sizeof(ndi_source_t));
 	s->obs_source = obs_source;
-	s->config.ndi_receiver_name =
-		QString("DistroAV '%1'").arg(name).toUtf8();
+	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
 
 	ndi_source_update(s, settings);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_source_create('%s'...)", name);
+	blog(LOG_INFO, "[DistroAV] -ndi_source_create: '%s'", obs_source_name);
 
 	return s;
+}
+
+void ndi_source_renamed(void *data, calldata_t *)
+{
+	auto s = (ndi_source_t *)data;
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	blog(LOG_INFO,
+	     "[DistroAV] ndi_source_renamed: '%s' ndi_receiver_name='%s'",
+	     obs_source_name, s->config.ndi_receiver_name);
 }
 
 void ndi_source_destroy(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	auto name = obs_source_get_name(s->obs_source);
-	blog(LOG_INFO, "[DistroAV] +ndi_source_destroy('%s'...)", name);
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	blog(LOG_INFO, "[DistroAV] +ndi_source_destroy: '%s'", obs_source_name);
 
 	signal_handler_disconnect(obs_source_get_signal_handler(s->obs_source),
 				  "rename", ndi_source_renamed, s);
 
 	ndi_source_thread_stop(s);
 
+	if (s->config.ndi_receiver_name) {
+		bfree(s->config.ndi_receiver_name);
+		s->config.ndi_receiver_name = nullptr;
+	}
 	bfree(s);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_source_destroy('%s'...)", name);
+	blog(LOG_INFO, "[DistroAV] -ndi_source_destroy: '%s'", obs_source_name);
 }
 
 obs_source_info create_ndi_source_info()
