@@ -667,15 +667,39 @@ void *ndi_source_thread(void *data)
 			config_last_used.hw_accel_enabled =
 				config_most_recent.hw_accel_enabled;
 
+			//
+			// From https://docs.ndi.video/docs/sdk/performance-and-implementation#receiving-video :
+			// > * In the modern versions of NDI, there are internal heuristics that attempt to guess whether hardware
+			// > acceleration would enable better performance. That said, it is possible to explicitly enable hardware
+			// > acceleration if you believe that it would be beneficial for your application. This can be enabled by
+			// > sending an XML metadata message to a receiver as follows:
+			// >	<ndi_video_codec type="hardware"/>
+			//
+			// The wording of this says very unambiguously "it is possible to explicitly enable hardware acceleration",
+			// but this can in reality only ever be a **REQUEST** to enable. The enable could fail, possibly for the
+			// obvious reason that the device may not have/support hardware acceleration.
+			//
+			// Furthermore, there is no documented way to request to *disable* hardware acceleration.
+			// I have tried setting the metadata to `<ndi_video_codec type=""/>` or `<ndi_video_codec/>` and it does not
+			// crash, but I was unable to confirm if this actually disabled hardware acceleration, and am skeptical that
+			// it could/would.
+			// So, it seems like there is no way to disable this.
+			// I have asked on the NewTek NDI SDK forum here:
+			// https://forum.vizrt.com/index.php?threads/any-way-to-explicitly-turn-off-hardware-acceleration.253766/
+			//
+			// Regardless, it makes little sense to have a checkbox that requests to enable this when
+			// checked but do nothing when unchecked. So, I am at least going to fake disabling it.
+			// If there is a bug here, that enabled hardware acceleration cannot be disabled,
+			// then that is NewTek's issue/problem, not ours.
+			//
 			NDIlib_metadata_frame_t hwAccelMetadata;
 			hwAccelMetadata.p_data =
 				config_most_recent.hw_accel_enabled
-					? (char *)"<ndi_hwaccel enabled=\"true\"/>"
-					: (char *)"<ndi_hwaccel enabled=\"false\"/>";
+					? (char *)"<ndi_video_codec type=\"hardware\"/>"
+					: (char *)"<ndi_video_codec type=\"software\"/>";
 			blog(LOG_INFO,
-			     "[DistroAV] ndi_source_thread: '%s' hw_accel_enabled changed; Sending NDI metadata '%s'",
-			     obs_source_name, //
-			     hwAccelMetadata.p_data);
+			     "[DistroAV] ndi_source_thread: '%s' hw_accel_enabled changed; Sending NDI metadata '%s' to request hardware acceleration",
+			     obs_source_name, hwAccelMetadata.p_data);
 			ndiLib->recv_send_metadata(ndi_receiver,
 						   &hwAccelMetadata);
 		}
