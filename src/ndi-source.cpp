@@ -73,14 +73,23 @@ enum behavior_type {
 
 extern NDIlib_find_instance_t ndi_finder;
 
-typedef struct {
+typedef struct ptz_t {
 	bool enabled;
 	float pan;
 	float tilt;
 	float zoom;
+
+	ptz_t(bool enabled_ = false, float pan_ = 0.0f, float tilt_ = 0.0f,
+	      float zoom_ = 0.0f)
+		: enabled(enabled_),
+		  pan(pan_),
+		  tilt(tilt_),
+		  zoom(zoom_)
+	{
+	}
 } ptz_t;
 
-typedef struct {
+typedef struct ndi_source_config_t {
 	char *ndi_receiver_name;
 	const char *ndi_source_name;
 	int bandwidth;
@@ -95,14 +104,41 @@ typedef struct {
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
+
+	ndi_source_config_t(int bandwidth_ = PROP_BW_HIGHEST,
+			    int latency_ = PROP_LATENCY_NORMAL)
+		: ndi_source_name(nullptr),
+		  ndi_receiver_name(nullptr),
+		  bandwidth(bandwidth_),
+		  behavior(BEHAVIOR_KEEP),
+		  remember_last_frame(true),
+		  sync_mode(PROP_SYNC_NDI_SOURCE_TIMECODE),
+		  framesync_enabled(false),
+		  hw_accel_enabled(false),
+		  yuv_range(video_range_type::VIDEO_RANGE_PARTIAL),
+		  yuv_colorspace(video_colorspace::VIDEO_CS_709),
+		  latency(latency_),
+		  audio_enabled(true),
+		  ptz(),
+		  tally()
+	{
+	}
 } ndi_source_config_t;
 
-typedef struct {
+typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
 
 	bool running;
 	pthread_t av_thread;
+
+	ndi_source_t()
+		: obs_source(nullptr),
+		  config(),
+		  running(false),
+		  av_thread()
+	{
+	}
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -387,10 +423,9 @@ void *ndi_source_thread(void *data)
 	blog(LOG_INFO, "[DistroAV] +ndi_source_thread(…): '%s'",
 	     obs_source_name);
 
-	ndi_source_config_t config_most_recent = {};
-	ndi_source_config_t config_last_used = {};
-	config_last_used.bandwidth = PROP_BW_UNDEFINED;
-	config_last_used.latency = PROP_LATENCY_UNDEFINED;
+	auto config_most_recent = ndi_source_config_t();
+	auto config_last_used =
+		ndi_source_config_t(PROP_BW_UNDEFINED, PROP_LATENCY_UNDEFINED);
 
 	obs_source_audio obs_audio_frame = {};
 	obs_source_frame obs_video_frame = {};
@@ -410,7 +445,7 @@ void *ndi_source_thread(void *data)
 	NDIlib_audio_frame_v3_t audio_frame3;
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 
-	NDIlib_recv_create_v3_t *reset_recv_desc = &recv_desc;
+	bool reset_ndi_receiver = false;
 
 	while (s->running) {
 		//
@@ -420,7 +455,11 @@ void *ndi_source_thread(void *data)
 		// semi-atomic not *TOO* heavy snapshot
 		config_most_recent = s->config;
 
-		// Fast pointer comparisons are fine here; no need for slow content comparison
+		//
+		// Check for changes: BEGIN
+		//
+
+		// Fast pointer comparison is fine here; no need for slow content comparison
 		if (config_most_recent.ndi_receiver_name !=
 		    config_last_used.ndi_receiver_name) {
 			config_last_used.ndi_receiver_name =
@@ -429,7 +468,8 @@ void *ndi_source_thread(void *data)
 			// If config.ndi_receiver_name changed, then so did obs_source_name
 			obs_source_name = obs_source_get_name(s->obs_source);
 
-			reset_recv_desc = &recv_desc;
+			reset_ndi_receiver = true;
+
 			recv_desc.p_ndi_recv_name =
 				config_most_recent.ndi_receiver_name;
 			blog(LOG_INFO,
@@ -437,12 +477,15 @@ void *ndi_source_thread(void *data)
 			     obs_source_name, //
 			     recv_desc.p_ndi_recv_name);
 		}
+
+		// Fast pointer comparison is fine here; no need for slow content comparison
 		if (config_most_recent.ndi_source_name !=
 		    config_last_used.ndi_source_name) {
 			config_last_used.ndi_source_name =
 				config_most_recent.ndi_source_name;
 
-			reset_recv_desc = &recv_desc;
+			reset_ndi_receiver = true;
+
 			recv_desc.source_to_connect_to.p_ndi_name =
 				config_most_recent.ndi_source_name;
 			blog(LOG_INFO,
@@ -450,12 +493,14 @@ void *ndi_source_thread(void *data)
 			     obs_source_name, //
 			     recv_desc.source_to_connect_to.p_ndi_name);
 		}
+
 		if (config_most_recent.bandwidth !=
 		    config_last_used.bandwidth) {
 			config_last_used.bandwidth =
 				config_most_recent.bandwidth;
 
-			reset_recv_desc = &recv_desc;
+			reset_ndi_receiver = true;
+
 			switch (config_most_recent.bandwidth) {
 			case PROP_BW_HIGHEST:
 			default:
@@ -476,10 +521,12 @@ void *ndi_source_thread(void *data)
 			     obs_source_name, //
 			     recv_desc.bandwidth);
 		}
+
 		if (config_most_recent.latency != config_last_used.latency) {
 			config_last_used.latency = config_most_recent.latency;
 
-			reset_recv_desc = &recv_desc;
+			reset_ndi_receiver = true;
+
 			if (config_most_recent.latency == PROP_LATENCY_NORMAL)
 				recv_desc.color_format =
 					NDIlib_recv_color_format_UYVY_BGRA;
@@ -491,20 +538,27 @@ void *ndi_source_thread(void *data)
 			     obs_source_name, //
 			     recv_desc.color_format);
 		}
+
 		if (config_most_recent.framesync_enabled !=
 		    config_last_used.framesync_enabled) {
 			config_last_used.framesync_enabled =
 				config_most_recent.framesync_enabled;
 
-			reset_recv_desc = &recv_desc;
+			reset_ndi_receiver = true;
+
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' framesync changed to %s",
 			     obs_source_name, //
 			     config_most_recent.framesync_enabled ? "enabled"
 								  : "disabled");
 		}
-		if (reset_recv_desc) {
-			reset_recv_desc = nullptr;
+
+		//
+		// Check for changes: END
+		//
+
+		if (reset_ndi_receiver) {
+			reset_ndi_receiver = false;
 
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread: '%s' Resetting NDI receiver…",
@@ -515,7 +569,6 @@ void *ndi_source_thread(void *data)
 				ndi_frame_sync = nullptr;
 			}
 
-			// Reset ndi_receiver
 			if (ndi_receiver) {
 #if 1
 				blog(LOG_INFO,
@@ -706,24 +759,35 @@ void *ndi_source_thread(void *data)
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds(5));
 		} else {
+			//
+			// !ndi_frame_sync
+			//
 			frame_received = ndiLib->recv_capture_v3(ndi_receiver,
 								 &video_frame2,
 								 &audio_frame3,
 								 nullptr, 100);
 
 			if (frame_received == NDIlib_frame_type_audio) {
+				//
+				// AUDIO
+				//
 				ndi_source_thread_process_audio3(
 					&config_most_recent, &audio_frame3,
 					s->obs_source, &obs_audio_frame);
+
 				ndiLib->recv_free_audio_v3(ndi_receiver,
 							   &audio_frame3);
 				continue;
 			}
 
 			if (frame_received == NDIlib_frame_type_video) {
+				//
+				// VIDEO
+				//
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
 					s->obs_source, &obs_video_frame);
+
 				ndiLib->recv_free_video_v2(ndi_receiver,
 							   &video_frame2);
 				continue;
@@ -997,7 +1061,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
 	float zoom = (float)obs_data_get_double(settings, PROP_ZOOM);
-	ndi_source_config.ptz = {ptz_enabled, pan, tilt, zoom};
+	ndi_source_config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 
 	// Update tally status
 	auto config = Config::Current();
