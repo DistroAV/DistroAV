@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2024 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -49,22 +49,22 @@
 #			endif // __cplusplus
 #			ifdef _WIN64
 #				define NDILIB_LIBRARY_NAME  "Processing.NDI.Lib.x64.dll"
-#				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#				define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV5"
+#				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V6"
+#				define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV6"
 #			else // _WIN64
 #				define NDILIB_LIBRARY_NAME  "Processing.NDI.Lib.x86.dll"
-#				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#				define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV5"
+#				define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V6"
+#				define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV6"
 #			endif // _WIN64
 #		endif // PROCESSINGNDILIB_EXPORTS
 #	else // _WIN32
 #		ifdef __APPLE__
 #			define NDILIB_LIBRARY_NAME  "libndi.dylib"
-#			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
-#			define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV5Apple"
+#			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V6"
+#			define NDILIB_REDIST_URL    "http://ndi.link/NDIRedistV6Apple"
 #		else // __APPLE__
-#			define NDILIB_LIBRARY_NAME  "libndi.so.5"
-#			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V5"
+#			define NDILIB_LIBRARY_NAME  "libndi.so.6"
+#			define NDILIB_REDIST_FOLDER "NDI_RUNTIME_DIR_V6"
 #			define NDILIB_REDIST_URL    ""
 #		endif // __APPLE__
 #		ifdef __cplusplus

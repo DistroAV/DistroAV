@@ -45,18 +45,18 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "fr.palakis.obs-ndi"
+            "bundleId": "org.distroav.distroav"
         }
     },
-    "name": "obs-ndi",
-    "displayName": "OBS-NDI",
-    "version": "4.14.1",
+    "name": "distroav",
+    "displayName": "DistroAV",
+    "version": "6.0.0",
     "website": "https://distroav.org",
     "author": "DistroAV",
     "email": "contact@distroav.org",
     "uuids": {
-        "macosPackage": "8DB04161-E4F2-43BD-9255-B27421BC0AE9",
-        "macosInstaller": "C830E5F5-B26B-4A37-95DF-7A8FA03DA6B2",
-        "windowsApp": "A9039243-4FE7-45E7-8B11-7DC1ACB67B9D"
+        "macosPackage": "355628AF-6425-4701-84BB-3ACF6B0A72FD",
+        "macosInstaller": "494E0DA2-48C0-4537-957B-5471BF139B4C",
+        "windowsApp": "FF773A8D-7648-4630-8155-3D5190CDF785"
     }
 }

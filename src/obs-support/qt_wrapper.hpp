@@ -16,31 +16,12 @@
 ******************************************************************************/
 
 /******************************************************************************
-Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/obs-app.hpp
-In some places just the method signature is [mostly] copied.
-In some places [nearly] the full code implementation is copied.
+Select methods copied from https://github.com/obsproject/obs-studio/blob/master/UI/qt-wrappers.hpp
 ******************************************************************************/
 
 #pragma once
 
-#include "qt_wrapper.hpp"
+#include <QString>
 
-#include <obs-frontend-api.h>
-#include <obs-module.h>
-
-// Changed to use obs_frontend_get_global_config instead of ((OBSApp*)App())->GetGlobalConfig
-inline config_t *GetGlobalConfig()
-{
-	return obs_frontend_get_global_config();
-}
-
-// Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
-inline const char *Str(const char *lookup)
-{
-	return obs_module_text(lookup);
-}
-
-inline QString QTStr(const char *lookupVal)
-{
-	return QString::fromUtf8(Str(lookupVal));
-}
+#define QT_UTF8(str) QString::fromUtf8(str, -1)
+#define QT_TO_UTF8(str) str.toUtf8().constData()
