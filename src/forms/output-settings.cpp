@@ -37,7 +37,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 		SLOT(onFormAccepted()));
 
 	auto pluginVersionText =
-		QString("%1 %2").arg(PLUGIN_NAME).arg(PLUGIN_VERSION);
+		QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
 	ui->labelDistroAvVersion->setText(
 		makeLink("#", QT_TO_UTF8(pluginVersionText)));
 	connect(ui->labelDistroAvVersion, &QLabel::linkActivated,
@@ -54,7 +54,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 		// TODO: Write our own.
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
-				.arg(PLUGIN_NAME),
+				.arg(PLUGIN_DISPLAY_NAME),
 			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
 			this);
 		progressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -130,9 +130,9 @@ If you are running a local build, don't forget to add your build info to the upd
 				QMessageBox::information(
 					this,
 					QTStr("NDIPlugin.Update.NoUpdateAvailable")
-						.arg(PLUGIN_NAME),
+						.arg(PLUGIN_DISPLAY_NAME),
 					QTStr("NDIPlugin.Update.YouAreUpToDate")
-						.arg(PLUGIN_NAME,
+						.arg(PLUGIN_DISPLAY_NAME,
 						     pluginUpdateInfo
 							     .versionCurrent
 							     .toString()));

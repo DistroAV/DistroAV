@@ -48,7 +48,8 @@
             "bundleId": "org.distroav.distroav"
         }
     },
-    "name": "DistroAV",
+    "name": "distroav",
+    "displayName": "DistroAV",
     "version": "6.0.0",
     "website": "https://distroav.org",
     "author": "DistroAV",

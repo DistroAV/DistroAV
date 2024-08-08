@@ -139,7 +139,7 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title,
 					    const QString &message,
 					    int milliseconds = 2000)
 {
-	auto newTitle = QString("%1 : %2").arg(PLUGIN_NAME, title);
+	auto newTitle = QString("%1 : %2").arg(PLUGIN_DISPLAY_NAME, title);
 
 	auto newMessage = message;
 	newMessage.remove(QRegularExpression("(\r?\n?<br>\r?\n?)+$"));
@@ -151,7 +151,7 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title,
 		QString(newMessageFormat)
 			.arg(newMessage,
 			     QTStr("NDIPlugin.PluginCannotContinueAndWillBeUnloaded")
-				     .arg(PLUGIN_NAME,
+				     .arg(PLUGIN_DISPLAY_NAME,
 					  rehostUrl(
 						  PLUGIN_REDIRECT_REPORT_BUG_URL),
 					  rehostUrl(
@@ -225,7 +225,7 @@ bool obs_module_load(void)
 {
 	blog(LOG_INFO,
 	     "[DistroAV] obs_module_load: you can haz %s (Version %s)",
-	     PLUGIN_NAME, PLUGIN_VERSION);
+	     PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
 	blog(LOG_INFO,
 	     "[DistroAV] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
 	     qVersion(), QT_VERSION_STR);
@@ -235,7 +235,7 @@ bool obs_module_load(void)
 	if (is_obsndi_installed()) {
 		blog(LOG_INFO,
 		     "[DistroAV] obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
-		     PLUGIN_NAME);
+		     PLUGIN_DISPLAY_NAME);
 		showCriticalUnloadingMessageBoxDelayed(
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
