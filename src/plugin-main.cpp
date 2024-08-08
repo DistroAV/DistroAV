@@ -429,7 +429,7 @@ const NDIlib_v5 *load_ndilib()
 		temp_path = QDir::cleanPath(
 			dir.absoluteFilePath(NDILIB_LIBRARY_NAME));
 		blog(LOG_INFO, "[DistroAV] load_ndilib: Trying '%s'",
-		     QT_TO_UTF8(temp_path));
+		     QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
 		auto file_info = QFileInfo(temp_path);
 		if (file_info.exists() && file_info.isFile()) {
 			lib_path = temp_path;
@@ -440,7 +440,7 @@ const NDIlib_v5 *load_ndilib()
 	if (!lib_path.isEmpty()) {
 		blog(LOG_INFO,
 		     "[DistroAV] load_ndilib: Found '%s'; attempting to load NDI library...",
-		     QT_TO_UTF8(lib_path));
+		     QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
 		loaded_lib = new QLibrary(lib_path, nullptr);
 		if (loaded_lib->load()) {
 			blog(LOG_INFO,
