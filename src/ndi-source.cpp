@@ -401,6 +401,16 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	blog(LOG_INFO, "[DistroAV] -ndi_source_getdefaults(…)");
 }
 
+void deactivate_source_output_video_texture(obs_source_t *obs_source)
+{
+	// Per https://docs.obsproject.com/reference-sources#c.obs_source_output_video
+	// ```
+	// void obs_source_output_video(obs_source_t *source, const struct obs_source_frame *frame)
+	// Outputs asynchronous video data. Set to NULL to deactivate the texture.
+	// ```
+	obs_source_output_video(obs_source, NULL);
+}
+
 void ndi_source_thread_process_audio2(ndi_source_config_t *config,
 				      NDIlib_audio_frame_v2_t *ndi_audio_frame2,
 				      obs_source_t *obs_source,
@@ -602,15 +612,14 @@ void *ndi_source_thread(void *data)
 				break;
 			}
 
-			// Force a clean (blank) frame when settings change to Audio only
+			// Deactivate the source output video texture when using Audio only
 			if (recv_desc.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-#if 1
 				blog(LOG_INFO,
-				     "[DistroAV] ndi_source_thread: '%s' Audio Only: Forcing a blank/clean/reset video frame",
+				     "[DistroAV] ndi_source_thread: '%s' reset_ndi_receiver: Audio Only: Deactivating source output video texture",
 				     obs_source_name);
-#endif
-				obs_source_output_video(s->obs_source, NULL);
+				deactivate_source_output_video_texture(
+					s->obs_source);
 			}
 
 			// Apply Framesync Settings
@@ -972,13 +981,12 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		blog(LOG_INFO,
 		     "[DistroAV] ndi_source_thread_stop: '%s' Stopped A/V ndi_source_thread for NDI source '%s'",
 		     obs_source_name, s->config.ndi_source_name);
+
 		if (!s->config.remember_last_frame) {
-#if 1
 			blog(LOG_INFO,
-			     "[DistroAV] ndi_source_thread_stop: '%s' Audio Only: Forcing a blank/clean video frame",
+			     "[DistroAV] ndi_source_thread_stop: '%s' Behavior Blank Frame: Deactivating source output video texture",
 			     obs_source_name);
-#endif
-			obs_source_output_video(obs_source, NULL);
+			deactivate_source_output_video_texture(obs_source);
 		}
 	}
 }
@@ -1074,17 +1082,19 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	if (strlen(ndi_source_config.ndi_source_name) > 0) {
 		if (!s->running &&
-		    (ndi_source_config.behavior == BEHAVIOR_KEEP ||
-		     obs_source_active(obs_source))) {
+		    (obs_source_active(obs_source) ||
+		     // source is not active but user wants to keep NDI receiver running
+		     ndi_source_config.behavior == BEHAVIOR_KEEP)) {
+
 			if (ndi_source_config.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
-#if 1
 				blog(LOG_INFO,
-				     "[DistroAV] ndi_source_update: '%s': Audio Only: Forcing a blank/clean/reset video frame",
+				     "[DistroAV] ndi_source_update: '%s': Audio Only: Deactivating source output video texture",
 				     obs_source_name);
-#endif
-				obs_source_output_video(obs_source, NULL);
+				deactivate_source_output_video_texture(
+					obs_source);
 			}
+
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_update: '%s': Requesting Source Thread Start.",
 			     obs_source_name);
