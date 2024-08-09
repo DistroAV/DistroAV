@@ -790,6 +790,7 @@ void *ndi_source_thread(void *data)
 				//
 				// AUDIO
 				//
+				//blog(LOG_INFO, "v");//ideo_frame";
 				ndi_source_thread_process_audio3(
 					&config_most_recent, &audio_frame3,
 					s->obs_source, &obs_audio_frame);
@@ -803,6 +804,7 @@ void *ndi_source_thread(void *data)
 				//
 				// VIDEO
 				//
+				//blog(LOG_INFO, "v");//ideo_frame";
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,
 					s->obs_source, &obs_video_frame);
