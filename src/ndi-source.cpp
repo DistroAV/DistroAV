@@ -28,7 +28,8 @@
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BANDWIDTH "ndi_bw_mode"
 #define PROP_BEHAVIOR "ndi_behavior"
-#define PROP_BEHAVIOR_LASTFRAME "ndi_behavior_lastframe"
+#define PROP_BEHAVIOR_LASTFRAME_4_14_X "ndi_behavior_lastframe"
+#define PROP_BEHAVIOR_KEEP_LASTFRAME "ndi_behavior_keep_lastframe"
 #define PROP_SYNC "ndi_sync"
 #define PROP_FRAMESYNC "ndi_framesync"
 #define PROP_HW_ACCEL "ndi_recv_hw_accel"
@@ -47,10 +48,13 @@
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
 
-#define PROP_BEHAVIOR_DISCONNECT "disconnect"
-#define PROP_BEHAVIOR_KEEP "keep"
+#define PROP_BEHAVIOR_DISCONNECT_4_14_X "disconnect"
+#define PROP_BEHAVIOR_KEEP_4_14_X "keep"
+#define PROP_BEHAVIOR_DONT_STOP "dont_stop"
+#define PROP_BEHAVIOR_STOP_RESUME_BLANK "stop_resume_blank"
+#define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME "stop_resume_last_frame"
 
-// sync mode "Internal" got removed
+// sync mode "Internal" got removed 2020/04/28 ccbdf30f4929969fe58ede691b3030d1fc5ef590
 #define PROP_SYNC_INTERNAL 0
 #define PROP_SYNC_NDI_TIMESTAMP 1
 #define PROP_SYNC_NDI_SOURCE_TIMECODE 2
@@ -67,8 +71,9 @@
 #define PROP_LATENCY_LOWEST 2
 
 enum behavior_type {
-	BEHAVIOR_DISCONNECT,
-	BEHAVIOR_KEEP,
+	BEHAVIOR_KEEP_ACTIVE,
+	BEHAVIOR_STOP_RESUME_BLANK,
+	BEHAVIOR_STOP_RESUME_LAST_FRAME,
 };
 
 extern NDIlib_find_instance_t ndi_finder;
@@ -230,21 +235,24 @@ obs_properties_t *ndi_source_getproperties(void *)
 					     sources[i].p_ndi_name);
 	}
 
-	obs_property_t *p = obs_properties_add_list(
+	obs_property_t *behavior_list = obs_properties_add_list(
 		props, PROP_BEHAVIOR,
 		obs_module_text("NDIPlugin.SourceProps.Behavior"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
-
 	obs_property_list_add_string(
-		p, obs_module_text("NDIPlugin.SourceProps.Behavior.Keep"),
-		PROP_BEHAVIOR_KEEP);
+		behavior_list,
+		obs_module_text("NDIPlugin.SourceProps.Behavior.DontStop"),
+		PROP_BEHAVIOR_DONT_STOP);
 	obs_property_list_add_string(
-		p, obs_module_text("NDIPlugin.SourceProps.Behavior.Disconnect"),
-		PROP_BEHAVIOR_DISCONNECT);
-
-	obs_properties_add_bool(
-		props, PROP_BEHAVIOR_LASTFRAME,
-		obs_module_text("NDIPlugin.SourceProps.BehaviorLastFrame"));
+		behavior_list,
+		obs_module_text(
+			"NDIPlugin.SourceProps.Behavior.PauseResumeBlank"),
+		PROP_BEHAVIOR_STOP_RESUME_BLANK);
+	obs_property_list_add_string(
+		behavior_list,
+		obs_module_text(
+			"NDIPlugin.SourceProps.Behavior.PauseResumeLastFrame"),
+		PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 
 	obs_property_t *bw_modes = obs_properties_add_list(
 		props, PROP_BANDWIDTH,
@@ -376,8 +384,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	blog(LOG_INFO, "[DistroAV] +ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_string(settings, PROP_BEHAVIOR,
-				    PROP_BEHAVIOR_KEEP);
-	obs_data_set_default_bool(settings, PROP_BEHAVIOR_LASTFRAME, true);
+				    PROP_BEHAVIOR_DONT_STOP);
 	obs_data_set_default_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE,
@@ -602,6 +609,7 @@ void *ndi_source_thread(void *data)
 			}
 
 			// Deactivate the source output video texture when using Audio only
+			// ISSUE: Do we need to do both this and in `ndi_source_update`?
 			if (recv_desc.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
 				blog(LOG_INFO,
@@ -995,6 +1003,14 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		     "[DistroAV] ndi_source_thread_stop: '%s' Stopped A/V ndi_source_thread for NDI source '%s'",
 		     obs_source_name, s->config.ndi_source_name);
 
+		// ISSUE: I am not 100% convinced that we want to do this **here**.
+		// It depends on how we phrase/word the UI text.
+		// Do we really want to blank the video here **after** it stops,
+		// or should we really be blanking the video just **before** it restarts?
+		// Why can't we just blank the video in the receiver thread?
+		// Isn't that what the code did before the changes in this area?
+		// Why was that not sufficient? What were the problems with that?
+
 		if (!s->config.remember_last_frame) {
 			blog(LOG_INFO,
 			     "[DistroAV] ndi_source_thread_stop: '%s' Behavior Blank Frame: Deactivating source output video texture",
@@ -1014,15 +1030,56 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
 	s->config.bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 
-	const char *behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
-	if (strcmp(behavior, PROP_BEHAVIOR_DISCONNECT) == 0) {
-		s->config.behavior = BEHAVIOR_DISCONNECT;
-	} else {
-		s->config.behavior = BEHAVIOR_KEEP;
-	}
+#if 0
+	// Test overloading these in the config file at:
+	// Linux: ~/.config/obs-studio/basic/scenes/...
+	// MacOS: ~/Library/Application Support/obs-studio/basic/scenes/...
+	// Windows: %APPDATA%\obs-studio\basic\scenes\...
+	Example:
+	        "name": "NDI™ Source MACBOOK",
+            "uuid": "be1ef1d6-5eb6-404d-8cb9-7f6d0755f7f1",
+            "id": "ndi_source",
+            "versioned_id": "ndi_source",
+            "settings": {
+                "ndi_fix_alpha_blending": false,
+                "ndi_source_name": "MACBOOK.LOCAL (Scan Converter)",
+                "ndi_behavior_lastframe": true,
+                "ndi_bw_mode": 0,
+                "ndi_behavior": "disconnect"
+            },
+#endif
 
-	s->config.remember_last_frame =
-		obs_data_get_bool(settings, PROP_BEHAVIOR_LASTFRAME);
+	auto behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
+	blog(LOG_INFO, "[DistroAV] ndi_source_update: '%s' behavior='%s'",
+	     obs_source_name, behavior);
+
+	auto remember_last_frame =
+		obs_data_get_bool(settings, PROP_BEHAVIOR_LASTFRAME_4_14_X) ||
+		obs_data_get_bool(settings, PROP_BEHAVIOR_KEEP_LASTFRAME);
+	blog(LOG_INFO,
+	     "[DistroAV] ndi_source_update: '%s' remember_last_frame=%d",
+	     obs_source_name, remember_last_frame);
+
+	if (strcmp(behavior, PROP_BEHAVIOR_DISCONNECT_4_14_X) == 0) {
+		// 4.14.x behavior "disconnect"
+		//... Migrate to current behavior
+	} else if (strcmp(behavior, PROP_BEHAVIOR_KEEP_4_14_X) == 0) {
+		// 4.14.x behavior "keep"
+		//... Migrate to current behavior
+	} else {
+		// 6.0.0 behavior; WIP INCOMPLETE/UNTESTED CODE!!! ...
+		if (strcmp(behavior, PROP_BEHAVIOR_STOP_RESUME_BLANK) == 0) {
+			s->config.behavior = BEHAVIOR_STOP_RESUME_BLANK;
+			s->config.remember_last_frame = false;
+		} else if (strcmp(behavior,
+				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME) == 0) {
+			s->config.behavior = BEHAVIOR_STOP_RESUME_LAST_FRAME;
+			s->config.remember_last_frame = true;
+		} else {
+			s->config.behavior = BEHAVIOR_KEEP_ACTIVE;
+			s->config.remember_last_frame = false;
+		}
+	}
 
 	s->config.sync_mode = (int)obs_data_get_int(settings, PROP_SYNC);
 	// if sync mode is set to the unsupported "Internal" mode, set it
@@ -1083,9 +1140,15 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	if (strlen(s->config.ndi_source_name) > 0) {
 		if (!s->running &&
+		    // Thread is not running; should it be started?
 		    (obs_source_active(obs_source) ||
-		     // source is not active but user wants to keep NDI receiver running
-		     s->config.behavior == BEHAVIOR_KEEP)) {
+		     // source is not active; did the user choose to keep NDI receiver running?
+		     s->config.behavior == BEHAVIOR_KEEP_ACTIVE)) {
+
+			// We are about to start the thread; should the video be blanked for audio only purposes?
+
+			// ISSUE: Do we always only want to do this only if we are starting the thread?
+			// Doesn't the thread take care of doing this when it [re]sets the receiver?
 
 			if (s->config.bandwidth ==
 			    NDIlib_recv_bandwidth_audio_only) {
@@ -1131,7 +1194,8 @@ void ndi_source_hidden(void *data)
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	blog(LOG_INFO, "[DistroAV] ndi_source_hidden: '%s'", obs_source_name);
 	s->config.tally.on_preview = false;
-	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
+
+	if (s->running && s->config.behavior != BEHAVIOR_KEEP_ACTIVE) {
 		blog(LOG_INFO,
 		     "[DistroAV] ndi_source_hidden: '%s': Requesting Source Thread Stop.",
 		     obs_source_name);
