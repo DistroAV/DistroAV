@@ -688,20 +688,19 @@ void *ndi_source_thread(void *data)
 			// https://forum.vizrt.com/index.php?threads/any-way-to-explicitly-turn-off-hardware-acceleration.253766/
 			//
 			// Regardless, it makes little sense to have a checkbox that requests to enable this when
-			// checked but do nothing when unchecked. So, I am at least going to fake disabling it.
-			// If there is a bug here, that enabled hardware acceleration cannot be disabled,
-			// then that is NewTek's issue/problem, not ours.
+			// checked but do nothing when unchecked.
+			// But that is what we are going to do here...
 			//
-			NDIlib_metadata_frame_t hwAccelMetadata;
-			hwAccelMetadata.p_data =
-				config_most_recent.hw_accel_enabled
-					? (char *)"<ndi_video_codec type=\"hardware\"/>"
-					: (char *)"<ndi_video_codec type=\"software\"/>";
-			blog(LOG_INFO,
-			     "[DistroAV] ndi_source_thread: '%s' hw_accel_enabled changed; Sending NDI metadata '%s' to request hardware acceleration",
-			     obs_source_name, hwAccelMetadata.p_data);
-			ndiLib->recv_send_metadata(ndi_receiver,
-						   &hwAccelMetadata);
+			if (config_most_recent.hw_accel_enabled) {
+				NDIlib_metadata_frame_t hwAccelMetadata;
+				hwAccelMetadata.p_data =
+					(char *)"<ndi_video_codec type=\"hardware\"/>";
+				blog(LOG_INFO,
+				     "[DistroAV] ndi_source_thread: '%s' hw_accel_enabled changed to enabled; Sending NDI metadata '%s' to request hardware acceleration",
+				     obs_source_name, hwAccelMetadata.p_data);
+				ndiLib->recv_send_metadata(ndi_receiver,
+							   &hwAccelMetadata);
+			}
 		}
 
 		//
