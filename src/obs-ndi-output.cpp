@@ -64,6 +64,7 @@ static void convert_i444_to_uyvy(uint8_t *input[], uint32_t in_linesize[],
 typedef struct {
 	obs_output_t *output;
 	const char *ndi_name;
+	const char *ndi_groups;
 	bool uses_video;
 	bool uses_audio;
 
@@ -101,6 +102,10 @@ obs_properties_t *ndi_output_getproperties(void *)
 		props, "ndi_name",
 		obs_module_text("NDIPlugin.OutputProps.NDIName"),
 		OBS_TEXT_DEFAULT);
+	obs_properties_add_text(
+		props, "ndi_groups",
+		obs_module_text("NDIPlugin.OutputProps.NDIGroups"),
+		OBS_TEXT_DEFAULT);
 
 	return props;
 }
@@ -108,6 +113,8 @@ obs_properties_t *ndi_output_getproperties(void *)
 void ndi_output_getdefaults(obs_data_t *settings)
 {
 	obs_data_set_default_string(settings, "ndi_name",
+				    "obs-ndi output (changeme)");
+	obs_data_set_default_string(settings, "ndi_groups",
 				    "obs-ndi output (changeme)");
 	obs_data_set_default_bool(settings, "uses_video", true);
 	obs_data_set_default_bool(settings, "uses_audio", true);
@@ -118,21 +125,29 @@ void ndi_output_update(void *data, obs_data_t *settings);
 void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 {
 	auto name = obs_data_get_string(settings, "ndi_name");
-	blog(LOG_INFO, "[obs-ndi] +ndi_output_create('%s'...)", name);
+	auto groups = obs_data_get_string(settings, "ndi_groups");
+	blog(LOG_INFO,
+	     "[obs-ndi] +ndi_output_create(name='%s', groups='%s', ...)", name,
+	     groups);
 	auto o = (ndi_output_t *)bzalloc(sizeof(ndi_output_t));
 	o->output = output;
 	ndi_output_update(o, settings);
-	blog(LOG_INFO, "[obs-ndi] -ndi_output_create('%s'...)", name);
+	blog(LOG_INFO,
+	     "[obs-ndi] -ndi_output_create(name='%s', groups='%s', ...)", name,
+	     groups);
 	return o;
 }
 
 bool ndi_output_start(void *data)
 {
 	auto o = (ndi_output_t *)data;
-	blog(LOG_INFO, "[obs-ndi] +ndi_output_start('%s'...)", o->ndi_name);
+	blog(LOG_INFO,
+	     "[obs-ndi] +ndi_output_start(name='%s', groups='%s', ...)",
+	     o->ndi_name, o->ndi_groups);
 	if (o->started) {
-		blog(LOG_INFO, "[obs-ndi] -ndi_output_start('%s'...)",
-		     o->ndi_name);
+		blog(LOG_INFO,
+		     "[obs-ndi] -ndi_output_start(name='%s', groups='%s', ...)",
+		     o->ndi_name, o->ndi_groups);
 		return false;
 	}
 
@@ -143,8 +158,9 @@ bool ndi_output_start(void *data)
 	if (!video && !audio) {
 		blog(LOG_ERROR, "[obs-ndi] '%s': no video and audio available",
 		     o->ndi_name);
-		blog(LOG_INFO, "[obs-ndi] -ndi_output_start('%s'...)",
-		     o->ndi_name);
+		blog(LOG_INFO,
+		     "[obs-ndi] -ndi_output_start(name='%s', groups='%s', ...)",
+		     o->ndi_name, o->ndi_groups);
 		return false;
 	}
 
@@ -187,8 +203,9 @@ bool ndi_output_start(void *data)
 			blog(LOG_WARNING,
 			     "[obs-ndi] warning: unsupported pixel format %d",
 			     format);
-			blog(LOG_INFO, "[obs-ndi] -ndi_output_start('%s'...)",
-			     o->ndi_name);
+			blog(LOG_INFO,
+			     "[obs-ndi] -ndi_output_start(name='%s', groups='%s', ...)",
+			     o->ndi_name, o->ndi_groups);
 			return false;
 		}
 
@@ -206,7 +223,10 @@ bool ndi_output_start(void *data)
 
 	NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = o->ndi_name;
-	send_desc.p_groups = nullptr;
+	if (o->ndi_groups && o->ndi_groups[0])
+		send_desc.p_groups = o->ndi_groups;
+	else
+		send_desc.p_groups = nullptr;
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
@@ -226,7 +246,8 @@ bool ndi_output_start(void *data)
 		     o->ndi_name);
 	}
 
-	blog(LOG_INFO, "[obs-ndi] -ndi_output_start('%s'...)", o->ndi_name);
+	blog(LOG_INFO, "[obs-ndi] -ndi_output_start(name='%s', groups='%s'...)",
+	     o->ndi_name, o->ndi_groups);
 
 	return o->started;
 }
@@ -235,7 +256,10 @@ void ndi_output_update(void *data, obs_data_t *settings)
 {
 	auto o = (ndi_output_t *)data;
 	o->ndi_name = obs_data_get_string(settings, "ndi_name");
-	blog(LOG_INFO, "[obs-ndi] ndi_output_update('%s'...)", o->ndi_name);
+	o->ndi_groups = obs_data_get_string(settings, "ndi_groups");
+	blog(LOG_INFO,
+	     "[obs-ndi] ndi_output_update(name='%s', groups='%s', ...)",
+	     o->ndi_name, o->ndi_groups);
 	o->uses_video = obs_data_get_bool(settings, "uses_video");
 	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
 }
@@ -243,10 +267,13 @@ void ndi_output_update(void *data, obs_data_t *settings)
 void ndi_output_stop(void *data, uint64_t)
 {
 	auto o = (ndi_output_t *)data;
-	blog(LOG_INFO, "[obs-ndi] +ndi_output_stop('%s'...)", o->ndi_name);
+	blog(LOG_INFO,
+	     "[obs-ndi] +ndi_output_stop(name='%s', groups='%s', ...)",
+	     o->ndi_name, o->ndi_groups);
 	if (!o->started) {
-		blog(LOG_INFO, "[obs-ndi] -ndi_output_stop('%s'...)",
-		     o->ndi_name);
+		blog(LOG_INFO,
+		     "[obs-ndi] -ndi_output_stop(name='%s', groups='%s', ...)",
+		     o->ndi_name, o->ndi_groups);
 		return;
 	}
 
@@ -276,13 +303,17 @@ void ndi_output_stop(void *data, uint64_t)
 	o->audio_channels = 0;
 	o->audio_samplerate = 0;
 
-	blog(LOG_INFO, "[obs-ndi] -ndi_output_stop('%s'...)", o->ndi_name);
+	blog(LOG_INFO,
+	     "[obs-ndi] -ndi_output_stop(name='%s', groups='%s', ...)",
+	     o->ndi_name, o->ndi_groups);
 }
 
 void ndi_output_destroy(void *data)
 {
 	auto o = (ndi_output_t *)data;
-	blog(LOG_INFO, "[obs-ndi] +ndi_output_destroy('%s'...)", o->ndi_name);
+	blog(LOG_INFO,
+	     "[obs-ndi] +ndi_output_destroy(name='%s', groups='%s', ...)",
+	     o->ndi_name, o->ndi_groups);
 	if (o->audio_conv_buffer) {
 		blog(LOG_INFO,
 		     "[obs-ndi] ndi_output_destroy: freeing %zu bytes",
@@ -290,7 +321,9 @@ void ndi_output_destroy(void *data)
 		bfree(o->audio_conv_buffer);
 		o->audio_conv_buffer = nullptr;
 	}
-	blog(LOG_INFO, "[obs-ndi] -ndi_output_destroy('%s'...)", o->ndi_name);
+	blog(LOG_INFO,
+	     "[obs-ndi] -ndi_output_destroy(name='%s', groups='%s', ...)",
+	     o->ndi_name, o->ndi_groups);
 	bfree(o);
 }
 

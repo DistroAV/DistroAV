@@ -16,14 +16,17 @@ add_library(${CMAKE_PROJECT_NAME} MODULE)
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 
+find_package(CURL REQUIRED)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE CURL::libcurl)
+
 if(ENABLE_FRONTEND_API)
   find_package(obs-frontend-api REQUIRED)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
 endif()
 
 if(ENABLE_QT)
-  find_package(Qt6 COMPONENTS Widgets Core)
-  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets)
+  find_package(Qt6 COMPONENTS Core Widgets Network)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)
   target_compile_options(
     ${CMAKE_PROJECT_NAME} PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-quoted-include-in-framework-header
                                   -Wno-comma>)
@@ -36,13 +39,20 @@ endif()
 
 # cmake-format: off
 # Add your custom source files here.
-# Header files are optional and only used for visibility.
-# e.g. in Xcode or Visual Studio
+# Header files are optional and only required for visibility.
+# e.g. in Xcode or Visual Studio.
 # cmake-format: on
 target_sources(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE src/forms/output-settings.cpp
+  PRIVATE src/forms/obsndi-update.cpp
+          src/forms/obsndi-update.h
+          src/forms/output-settings.cpp
           src/forms/output-settings.h
+          src/obs-support/obs-app.hpp
+          src/obs-support/remote-text.cpp
+          src/obs-support/remote-text.hpp
+          src/obs-support/shared-update.cpp
+          src/obs-support/shared-update.hpp
           src/Config.cpp
           src/Config.h
           src/main-output.cpp

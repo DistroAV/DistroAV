@@ -16,32 +16,22 @@ You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
-#include <sys/stat.h>
-
-#include <obs-module.h>
-#include <plugin-support.h>
-#include <obs-frontend-api.h>
-#include <util/platform.h>
-#include <QDir>
-#include <QFileInfo>
-#include <QProcess>
-#include <QLibrary>
-#include <QMainWindow>
-#include <QAction>
-#include <QMessageBox>
-#include <QString>
-#include <QStringList>
-#include <QVersionNumber>
-
 #include "plugin-main.h"
+#include "forms/obsndi-update.h"
+#include "forms/output-settings.h"
 #include "main-output.h"
 #include "preview-output.h"
-#include "Config.h"
-#include "forms/output-settings.h"
+
+#include <obs-frontend-api.h>
+
+#include <QAction>
+#include <QDir>
+#include <QFileInfo>
+#include <QLibrary>
+#include <QMainWindow>
+#include <QMessageBox>
+#include <QPointer>
+#include <QTimer>
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
@@ -53,17 +43,10 @@ const char *obs_module_name()
 
 const char *obs_module_description()
 {
-	return obs_module_text("NDIPlugin.Description");
+	return Str("NDIPlugin.Description");
 }
 
-ConfigPtr _config;
-
-ConfigPtr GetConfig()
-{
-	return _config;
-}
-
-const NDIlib_v4 *ndiLib = nullptr;
+const NDIlib_v5 *ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -86,8 +69,76 @@ typedef const NDIlib_v5 *(*NDIlib_v5_load_)(void);
 QLibrary *loaded_lib = nullptr;
 
 NDIlib_find_instance_t ndi_finder = nullptr;
-
 OutputSettings *output_settings = nullptr;
+
+//
+//
+//
+
+/**
+ * @param url The url to rehost
+ * @return if macro `USE_LOCALHOST` is defined then "https://127.0.0.1:5002...", otherwise url
+ */
+QString rehostUrl(const char *url)
+{
+	auto result = QString::fromUtf8(url);
+	if (Config::UpdateHost() == UpdateHostEnum::LocalEmulator) {
+		result.replace("https://distroav.org",
+			       QString("http://%1:%2")
+				       .arg(PLUGIN_WEB_HOST_LOCAL_EMULATOR)
+				       .arg(Config::UpdateLocalPort()));
+	}
+	return result;
+}
+
+/**
+ * @param url The url to link to
+ * @param text The text to display for the link; if null, the url will be used
+ * @return if macro `USE_LOCALHOST` is defined then "<a href=\"127.0.0.1:5001...\">text|url</a>", otherwise "<a href=\"url\">text|url</a>"
+ */
+QString makeLink(const char *url, const char *text)
+{
+	return QString("<a href=\"%1\">%2</a>")
+		.arg(rehostUrl(url), QString::fromUtf8(text ? text : url));
+}
+
+/**
+ * References:
+ * * QMessageBox::showNewMessageBox
+ *   https://code.qt.io/cgit/qt/qtbase.git/tree/src/widgets/dialogs/qmessagebox.cpp
+ */
+void showUnloadingMessageBoxDelayed(const QString &title,
+				    const QString &message)
+{
+	const QString newTitle = QString("%1 : %2").arg(PLUGIN_NAME).arg(title);
+	const QString newMessage =
+		QString("%1<br><br>%2")
+			.arg(message)
+			.arg(QTStr("NDIPlugin.PluginCannotContinueAndWillBeUnloaded")
+				     .arg(PLUGIN_NAME,
+					  rehostUrl(
+						  PLUGIN_REDIRECT_REPORT_BUG_URL),
+					  rehostUrl(
+						  PLUGIN_REDIRECT_UNINSTALL_URL)));
+	QTimer::singleShot(2000, [newTitle, newMessage] {
+		auto dlg = new QMessageBox(QMessageBox::Critical, newTitle,
+					   newMessage, QMessageBox::Ok,
+					   nullptr);
+#if defined(__APPLE__)
+		// Make title bar show text: https://stackoverflow.com/a/22187538/25683720
+		dlg->QDialog::setWindowTitle(newTitle);
+#endif
+		dlg->setAttribute(Qt::WA_DeleteOnClose, true);
+		dlg->setWindowFlags(dlg->windowFlags() |
+				    Qt::WindowStaysOnTopHint);
+		dlg->setWindowModality(Qt::NonModal);
+		dlg->show();
+	});
+}
+
+//
+//
+//
 
 bool obs_module_load(void)
 {
@@ -98,8 +149,7 @@ bool obs_module_load(void)
 	     "[obs-ndi] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
 	     qVersion(), QT_VERSION_STR);
 
-	_config = ConfigPtr(new Config());
-	_config->Load();
+	Config::Current()->Load();
 
 	QMainWindow *main_window =
 		static_cast<QMainWindow *>(obs_frontend_get_main_window());
@@ -127,23 +177,24 @@ bool obs_module_load(void)
 		return false;
 	}
 
+#if 0
+	// For testing purposes only
+	ndiLib = nullptr;
+#else
 	ndiLib = load_ndilib();
-	//ndiLib = nullptr; // for testing purposes only
+#endif
 	if (!ndiLib) {
+		auto title = Str("NDIPlugin.LibError.Title");
+		auto message = QTStr("NDIPlugin.LibError.Message") + "<br>";
+#ifdef NDI_OFFICIAL_REDIST_URL
+		message += makeLink(NDI_OFFICIAL_REDIST_URL);
+#else
+		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
+#endif
 		blog(LOG_ERROR,
-		     "[obs-ndi] obs_module_load: load_ndilib() failed; Module won't load.");
-
-		QString ndilib_redist_url = QString(NDILIB_REDIST_URL);
-		QString message = obs_module_text("NDIPlugin.LibError.Message");
-		message += QString("<br><a href='%1'>%1</a>")
-				   .arg(ndilib_redist_url);
-		blog(LOG_ERROR, "obs_module_load: load_ndilib() message=%s",
-		     message.toUtf8().constData());
-
-		QMessageBox::critical(
-			main_window,
-			obs_module_text("NDIPlugin.LibError.Title"), message,
-			QMessageBox::Ok, QMessageBox::NoButton);
+		     "[obs-ndi] obs_module_load: ERROR - load_ndilib() failed; message=%s",
+		     QT_TO_UTF8(message));
+		showUnloadingMessageBoxDelayed(title, message);
 		return false;
 	}
 
@@ -178,9 +229,10 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
+		auto conf = Config::Current();
 
-		preview_output_init(
-			GetConfig()->PreviewOutputName.toUtf8().constData());
+		preview_output_init(QT_TO_UTF8(conf->PreviewOutputName),
+				    QT_TO_UTF8(conf->PreviewOutputGroups));
 
 		// Ui setup
 		QAction *menu_action =
@@ -193,7 +245,7 @@ bool obs_module_load(void)
 		obs_frontend_pop_ui_translation();
 
 		auto menu_cb = [] {
-			output_settings->ToggleShowHide();
+			output_settings->toggleShowHide();
 		};
 		menu_action->connect(menu_action, &QAction::triggered, menu_cb);
 
@@ -204,15 +256,17 @@ bool obs_module_load(void)
 					auto config = GetConfig().get();
 					if (config->OutputEnabled) {
 						main_output_start(
-							config->OutputName
-								.toUtf8()
-								.constData());
+							QT_TO_UTF8(
+								conf->OutputName),
+							QT_TO_UTF8(
+								conf->OutputGroups));
 					}
 					if (config->PreviewOutputEnabled) {
 						preview_output_start(
-							config->PreviewOutputName
-								.toUtf8()
-								.constData());
+							QT_TO_UTF8(
+								conf->PreviewOutputName),
+							QT_TO_UTF8(
+								conf->PreviewOutputGroups));
 					}
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					preview_output_stop();
@@ -229,12 +283,18 @@ bool obs_module_load(void)
 
 void obs_module_post_load(void)
 {
-	blog(LOG_INFO, "[obs-ndi] obs_module_post_load: ...");
+	blog(LOG_INFO, "[obs-ndi] +obs_module_post_load()");
+
+	updateCheckStart();
+
+	blog(LOG_INFO, "[obs-ndi] -obs_module_post_load()");
 }
 
 void obs_module_unload(void)
 {
 	blog(LOG_INFO, "[obs-ndi] +obs_module_unload()");
+
+	updateCheckStop();
 
 	if (ndiLib) {
 		if (ndi_finder) {
@@ -249,17 +309,13 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
-	_config.reset();
-
-	blog(LOG_INFO, "[obs-ndi] obs_module_unload: goodbye !");
-
-	blog(LOG_INFO, "[obs-ndi] -obs_module_unload()");
+	blog(LOG_INFO, "[obs-ndi] -obs_module_unload(): goodbye!");
 }
 
-const NDIlib_v4 *load_ndilib()
+const NDIlib_v5 *load_ndilib()
 {
 	QStringList locations;
-	QString path = QString(qgetenv(NDILIB_REDIST_FOLDER));
+	auto path = QString(qgetenv(NDILIB_REDIST_FOLDER));
 	if (!path.isEmpty()) {
 		locations << path;
 	}
@@ -267,24 +323,25 @@ const NDIlib_v4 *load_ndilib()
 	locations << "/usr/lib";
 	locations << "/usr/local/lib";
 #endif
-	for (QString location : locations) {
+	for (auto location : locations) {
 		path = QDir::cleanPath(
 			QDir(location).absoluteFilePath(NDILIB_LIBRARY_NAME));
 		blog(LOG_INFO, "[obs-ndi] load_ndilib: Trying '%s'",
-		     path.toUtf8().constData());
+		     QT_TO_UTF8(path));
 		QFileInfo libPath(path);
 		if (libPath.exists() && libPath.isFile()) {
 			path = libPath.absoluteFilePath();
 			blog(LOG_INFO,
-			     "[obs-ndi] load_ndilib: Found NDI library at '%s'",
-			     path.toUtf8().constData());
+			     "[obs-ndi] load_ndilib: Found '%s'; attempting to load NDI library...",
+			     QT_TO_UTF8(path));
 			loaded_lib = new QLibrary(path, nullptr);
 			if (loaded_lib->load()) {
 				blog(LOG_INFO,
-				     "[obs-ndi] load_ndilib: NDI runtime loaded successfully");
+				     "[obs-ndi] load_ndilib: NDI library loaded successfully");
 				NDIlib_v5_load_ lib_load =
-					(NDIlib_v5_load_)loaded_lib->resolve(
-						"NDIlib_v5_load");
+					reinterpret_cast<NDIlib_v5_load_>(
+						loaded_lib->resolve(
+							"NDIlib_v5_load"));
 				if (lib_load != nullptr) {
 					blog(LOG_INFO,
 					     "[obs-ndi] load_ndilib: NDIlib_v5_load found");
@@ -296,9 +353,7 @@ const NDIlib_v4 *load_ndilib()
 			} else {
 				blog(LOG_ERROR,
 				     "[obs-ndi] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
-				     loaded_lib->errorString()
-					     .toUtf8()
-					     .constData());
+				     QT_TO_UTF8(loaded_lib->errorString()));
 				delete loaded_lib;
 				loaded_lib = nullptr;
 			}

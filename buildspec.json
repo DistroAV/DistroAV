@@ -51,9 +51,9 @@
     "name": "obs-ndi",
     "displayName": "OBS-NDI",
     "version": "6.0.0",
-    "website": "https://obsproject.com/forum/resources/obs-ndi-newtek-ndi%E2%84%A2-integration-into-obs-studio.528/",
-    "author": "OBS-NDI Project",
-    "email": "obsndi@obsndiproject.com",
+    "website": "https://distroav.org",
+    "author": "DistroAV",
+    "email": "contact@distroav.org",
     "discord": "https://discord.gg/ZuTxbUK3ug",
     "uuids": {
         "macosPackage": "8DB04161-E4F2-43BD-9255-B27421BC0AE9",

@@ -15,30 +15,71 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>
 */
+#pragma once
 
-#ifndef CONFIG_H
-#define CONFIG_H
-
-#include <atomic>
 #include <QString>
-#include <util/config-file.h>
+#include <QVersionNumber>
+#include <obs-module.h>
 
-struct Config {
-	Config();
-	void Load();
-	void Save();
-	void SetDefaultsToGlobalStore();
-	static config_t *GetConfigStore();
-
-	std::atomic<bool> OutputEnabled = false;
-	QString OutputName;
-	std::atomic<bool> PreviewOutputEnabled = false;
-	QString PreviewOutputName;
-	std::atomic<bool> TallyProgramEnabled = true;
-	std::atomic<bool> TallyPreviewEnabled = true;
-
-	// Do not persist this to storage
-	std::atomic<bool> VerboseLog = false;
+enum UpdateHostEnum {
+	Production,
+	LocalEmulator,
 };
 
-#endif // CONFIG_H
+/**
+ * Loads and Saves configuration settings from/to:
+ * Linux: TBD...
+ * MacOS: ~/Library/Application Support/obs-studio/global.ini
+ * Windows: %APPDATA%\obs-studio\global.ini
+ * 
+ * ```
+ * [NDIPlugin]
+ * MainOutputEnabled=true
+ * MainOutputName=OBS
+ * PreviewOutputEnabled=false
+ * PreviewOutputName=OBS Preview
+ * TallyProgramEnabled=false
+ * TallyPreviewEnabled=false
+ * CheckForUpdates=true
+ * AutoCheckForUpdates=true
+ * MainOutputGroups=
+ * PreviewOutputGroups=
+ * ```
+ */
+class Config {
+public:
+	static Config *Current();
+	static void Destroy();
+
+	static bool LogVerbose();
+	static bool LogDebug();
+	static bool UpdateForce();
+	static UpdateHostEnum UpdateHost();
+	static int UpdateLocalPort();
+	static bool UpdateLastCheckIgnore();
+
+	Config *Load();
+	Config *Save();
+
+	bool OutputEnabled;
+	QString OutputName;
+	QString OutputGroups;
+	bool PreviewOutputEnabled;
+	QString PreviewOutputName;
+	QString PreviewOutputGroups;
+	bool TallyProgramEnabled;
+	bool TallyPreviewEnabled;
+
+	bool AutoCheckForUpdates();
+	void AutoCheckForUpdates(bool value);
+	void SkipUpdateVersion(const QVersionNumber &version);
+	QVersionNumber SkipUpdateVersion();
+	QDateTime LastUpdateCheck();
+	void LastUpdateCheck(const QDateTime &dateTime);
+	int MinAutoUpdateCheckIntervalSeconds();
+	void MinAutoUpdateCheckIntervalSeconds(int seconds);
+
+private:
+	Config();
+	static Config *_instance;
+};

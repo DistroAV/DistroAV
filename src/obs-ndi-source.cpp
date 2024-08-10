@@ -27,6 +27,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <thread>
 #include <algorithm>
 #include <QString>
+#include <QDesktopServices>
+#include <QUrl>
 
 #include "plugin-main.h"
 #include "Config.h"
@@ -101,7 +103,6 @@ typedef struct {
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
-	obs_source_frame *blank_frame;
 } ndi_source_config_t;
 
 typedef struct {
@@ -195,14 +196,6 @@ static video_range_type prop_to_range_type(int index)
 	case PROP_YUV_RANGE_PARTIAL:
 		return VIDEO_RANGE_PARTIAL;
 	}
-}
-
-static obs_source_frame *blank_video_frame()
-{
-	obs_source_frame *frame =
-		obs_source_frame_create(VIDEO_FORMAT_NONE, 0, 0);
-	frame->timestamp = os_gettime_ns();
-	return frame;
 }
 
 const char *ndi_source_getname(void *)
@@ -362,11 +355,16 @@ obs_properties_t *ndi_source_getproperties(void *)
 				 obs_module_text("NDIPlugin.SourceProps.PTZ"),
 				 OBS_GROUP_CHECKABLE, group_ptz);
 
-	auto ndi_website_button = obs_properties_add_button(
-		props, "ndi_website", NDI_WEB_URL, nullptr);
-	obs_property_button_set_type(ndi_website_button, OBS_BUTTON_URL);
-	obs_property_button_set_url(ndi_website_button,
-				    const_cast<char *>(NDI_WEB_URL));
+	auto group_ndi = obs_properties_create();
+	obs_properties_add_button(
+		group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
+		[](obs_properties_t *, obs_property_t *, void *) {
+			QDesktopServices::openUrl(
+				QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+			return false;
+		});
+	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
+				 group_ndi);
 
 	return props;
 }
@@ -497,9 +495,6 @@ void *ndi_source_thread(void *data)
 			case PROP_BW_AUDIO_ONLY:
 				recv_desc.bandwidth =
 					NDIlib_recv_bandwidth_audio_only;
-				obs_source_output_video(
-					obs_source,
-					config_most_recent.blank_frame);
 				break;
 			}
 			blog(LOG_INFO,
@@ -546,6 +541,7 @@ void *ndi_source_thread(void *data)
 				ndi_frame_sync = nullptr;
 			}
 
+			// Reset ndi_receiver
 			if (ndi_receiver) {
 #if 1
 				blog(LOG_INFO,
@@ -574,6 +570,18 @@ void *ndi_source_thread(void *data)
 				break;
 			}
 
+			// Force a clean (blank) frame when settings change to Audio only
+			if (recv_desc.bandwidth ==
+			    NDIlib_recv_bandwidth_audio_only) {
+				obs_source_output_video(obs_source, NULL);
+#if 1
+				blog(LOG_INFO,
+				     "[obs-ndi] ndi_source_thread: '%s' Reset Frame for Audio Only",
+				     obs_source_ndi_receiver_name);
+#endif
+			}
+
+			// Apply Framesync Settings
 			if (config_most_recent.framesync_enabled) {
 				timestamp_audio = 0;
 				timestamp_video = 0;
@@ -943,8 +951,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		s->running = false;
 		pthread_join(s->av_thread, NULL);
 		if (!s->config.remember_last_frame) {
-			obs_source_output_video(s->obs_source,
-						s->config.blank_frame);
+			obs_source_output_video(s->obs_source, NULL);
 		}
 	}
 }
@@ -1032,6 +1039,17 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	if (!config.ndi_source_name.isEmpty()) {
 		if (!s->running && (config.behavior == BEHAVIOR_KEEP ||
 				    obs_source_active(obs_source))) {
+
+			if (config.bandwidth ==
+			    NDIlib_recv_bandwidth_audio_only) {
+				// Force a clean frame when source is updated
+				obs_source_output_video(obs_source, NULL);
+#if 1
+				blog(LOG_INFO,
+				     "[obs-ndi] ndi_source_update('%s'): Creating a clean frame on update for Audio Only mode",
+				     name);
+#endif
+			}
 			ndi_source_thread_start(s);
 		}
 	} else {
@@ -1100,9 +1118,6 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	s->config.ndi_receiver_name =
 		QString("OBS-NDI '%1'").arg(name).toUtf8();
 
-	// Allocate blank video frame
-	s->config.blank_frame = blank_video_frame();
-
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
 
@@ -1123,8 +1138,6 @@ void ndi_source_destroy(void *data)
 				  "rename", ndi_source_renamed, s);
 
 	ndi_source_thread_stop(s);
-
-	obs_source_frame_destroy(s->config.blank_frame);
 
 	bfree(s);
 
