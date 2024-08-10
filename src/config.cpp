@@ -1,31 +1,29 @@
-/*
-obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
-#include "Config.h"
+#include "config.h"
 
 #include "plugin-main.h"
 
-#include <obs-frontend-api.h>
+#include <util/config-file.h>
 
 #include <QCoreApplication>
-#include <QDateTime>
 
-#define CONFIG_SECTION_NAME "NDIPlugin"
+#define SECTION_NAME "NDIPlugin"
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
 #define PARAM_MAIN_OUTPUT_NAME "MainOutputName"
 #define PARAM_MAIN_OUTPUT_GROUPS "MainOutputGroups"
@@ -44,11 +42,13 @@ Config *Config::_instance = nullptr;
 
 bool _LogVerbose = false;
 bool _LogDebug = false;
+int _LogLevel = LOG_INFO;
 bool _UpdateForce = false;
 UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
 #define DEFAULT_UPDATE_LOCAL_PORT 5002
 int _UpdateLocalPort = DEFAULT_UPDATE_LOCAL_PORT;
 bool _UpdateLastCheckIgnore = false;
+int _DetectObsNdiForce = 0;
 
 bool Config::LogVerbose()
 {
@@ -80,36 +80,41 @@ bool Config::UpdateLastCheckIgnore()
 	return _UpdateLastCheckIgnore;
 }
 
+int Config::DetectObsNdiForce()
+{
+	return _DetectObsNdiForce;
+}
+
 void ProcessCommandLine()
 {
 	auto arguments = QCoreApplication::arguments();
 
-	if (arguments.contains("--obs-ndi-verbose",
+	if (arguments.contains("--DistroAV-verbose",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi verbose logging enabled");
+		     "[DistroAV] config: DistroAV verbose logging enabled");
 		_LogVerbose = true;
 	}
-	if (arguments.contains("--obs-ndi-debug",
+	if (arguments.contains("--DistroAV-debug",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi debug logging enabled");
+		     "[DistroAV] config: DistroAV debug logging enabled");
 		_LogDebug = true;
 	}
 
-	if (arguments.contains("--obs-ndi-update-force",
+	if (arguments.contains("--DistroAV-update-force",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi update force enabled");
+		     "[DistroAV] config: DistroAV update force enabled");
 		_UpdateForce = true;
 	}
 
 	for (int i = 0; i < arguments.size(); i++) {
 		if (arguments.at(i).contains(
-			    "--obs-ndi-update-local",
+			    "--DistroAV-update-local",
 			    Qt::CaseSensitivity::CaseInsensitive)) {
 			blog(LOG_INFO,
-			     "[obs-ndi] Config: obs-ndi update host set to Local");
+			     "[DistroAV] config: DistroAV update host set to Local");
 			_UpdateHost = UpdateHostEnum::LocalEmulator;
 			auto parts = arguments.at(i).split("=");
 			if (parts.size() > 1) {
@@ -120,21 +125,33 @@ void ProcessCommandLine()
 			}
 			if (_UpdateLocalPort != DEFAULT_UPDATE_LOCAL_PORT) {
 				blog(LOG_INFO,
-				     "[obs-ndi] Config: obs-ndi update port set to %d",
+				     "[DistroAV] config: DistroAV update port set to %d",
 				     _UpdateLocalPort);
 			} else {
 				blog(LOG_INFO,
-				     "[obs-ndi] Config: obs-ndi update port using default %d",
+				     "[DistroAV] config: DistroAV update port using default %d",
 				     _UpdateLocalPort);
 			}
 		}
 	}
 
-	if (arguments.contains("--obs-ndi-update-last-check-ignore",
+	if (arguments.contains("--DistroAV-update-last-check-ignore",
 			       Qt::CaseSensitivity::CaseInsensitive)) {
 		blog(LOG_INFO,
-		     "[obs-ndi] Config: obs-ndi update last check ignore enabled");
+		     "[DistroAV] config: DistroAV update last check ignore enabled");
 		_UpdateLastCheckIgnore = true;
+	}
+
+	if (arguments.contains("--DistroAV-detect-obsndi-force-on",
+			       Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV detect OBS-NDI force on");
+		_DetectObsNdiForce = 1;
+	} else if (arguments.contains("--DistroAV-detect-obsndi-force-off",
+				      Qt::CaseSensitivity::CaseInsensitive)) {
+		blog(LOG_INFO,
+		     "[DistroAV] config: DistroAV detect OBS-NDI force off");
+		_DetectObsNdiForce = -1;
 	}
 }
 
@@ -146,11 +163,14 @@ Config::Config()
 	  PreviewOutputName("OBS Preview"),
 	  PreviewOutputGroups(""),
 	  TallyProgramEnabled(true),
-	  TallyPreviewEnabled(true),
-	  VerboseLog(false)
+	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
+	SetDefaultsToGlobalStore();
+}
 
+void Config::SetDefaultsToGlobalStore()
+{
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME,
@@ -185,7 +205,7 @@ Config::Config()
 	}
 }
 
-Config *Config::Load()
+void Config::Load()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
@@ -208,48 +228,40 @@ Config *Config::Load()
 		TallyPreviewEnabled = config_get_bool(
 			obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
 	}
-	return this;
 }
 
-Config *Config::Save()
+void Config::Save()
 {
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
-	config_set_default_string(obs_config, CONFIG_SECTION_NAME,
+		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_NAME,
 				  QT_TO_UTF8(OutputName));
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_MAIN_OUTPUT_GROUPS,
 				  QT_TO_UTF8(OutputGroups));
 
-	config_set_default_bool(obs_config, CONFIG_SECTION_NAME,
+		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_PREVIEW_OUTPUT_ENABLED,
 				PreviewOutputEnabled);
-	config_set_default_string(obs_config, CONFIG_SECTION_NAME,
+		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_NAME,
 				  QT_TO_UTF8(PreviewOutputName));
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_PREVIEW_OUTPUT_GROUPS,
 				  QT_TO_UTF8(PreviewOutputGroups));
 
-	config_set_default_bool(obs_config, CONFIG_SECTION_NAME,
+		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_TALLY_PROGRAM_ENABLED,
 				TallyProgramEnabled);
-	config_set_default_bool(obs_config, CONFIG_SECTION_NAME,
+		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_TALLY_PREVIEW_ENABLED,
 				TallyPreviewEnabled);
-}
 
-void Config::Load()
-{
-	config_t *obs_config = GetConfigStore();
-	if (!obs_config) {
-		blog(LOG_ERROR, "[Config::Load] Unable to fetch OBS config!");
-		return;
+		config_save(obs_config);
 	}
-	return this;
 }
 
 bool Config::AutoCheckForUpdates()
@@ -340,32 +352,15 @@ void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
 	}
 }
 
-Config *Config::Current()
+Config *Config::Current(bool load)
 {
-	config_t *obs_config = GetConfigStore();
-	if (!obs_config) {
-		blog(LOG_ERROR, "[Config::Save] Unable to fetch OBS config!");
-		return;
+	if (!_instance) {
+		_instance = new Config();
 	}
-
-	config_set_bool(obs_config, CONFIG_SECTION_NAME,
-			PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
-	config_set_string(obs_config, CONFIG_SECTION_NAME,
-			  PARAM_MAIN_OUTPUT_NAME,
-			  OutputName.toUtf8().constData());
-
-	config_set_bool(obs_config, CONFIG_SECTION_NAME,
-			PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
-	config_set_string(obs_config, CONFIG_SECTION_NAME,
-			  PARAM_PREVIEW_OUTPUT_NAME,
-			  PreviewOutputName.toUtf8().constData());
-
-	config_set_bool(obs_config, CONFIG_SECTION_NAME,
-			PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
-	config_set_bool(obs_config, CONFIG_SECTION_NAME,
-			PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
-
-	config_save(obs_config);
+	if (load) {
+		_instance->Load();
+	}
+	return _instance;
 }
 
 void Config::Destroy()

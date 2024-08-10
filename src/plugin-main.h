@@ -1,26 +1,27 @@
-/*
-obs-ndi
-Copyright (C) 2016-2024 OBS-NDI Project <obsndi@obsndiproject.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
 #pragma once
 
+#include "config.h"
+#include "obs-support/qt_wrapper.hpp"
 #include "plugin-support.h"
+
 #include "obs-support/obs-app.hpp"
-#include "Config.h"
 
 #include <Processing.NDI.Lib.h>
 
@@ -51,8 +52,8 @@ The following accomplishes two goals:
 	There is always the possibility that the user may **see** a "out of date" url, but when they
 	click on it the distroav.org server will redirect them to the latest url.
 */
-#define PLUGIN_WEB_HOST_LOCAL_EMULATOR "127.0.0.1"
 #define PLUGIN_WEB_HOST_PRODUCTION "distroav.org"
+#define PLUGIN_WEB_HOST_LOCAL_EMULATOR "127.0.0.1"
 
 QString rehostUrl(const char *url);
 QString makeLink(const char *url, const char *text = nullptr);
@@ -63,12 +64,14 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define PLUGIN_REDIRECT_DONATE_URL "https://distroav.org/donate"
 #define PLUGIN_REDIRECT_REPORT_BUG_URL "https://distroav.org/report-bug"
 #define PLUGIN_REDIRECT_TROUBLESHOOTING_URL \
-	"https://distroav.org/wiki/troubleshooting"
-#define PLUGIN_REDIRECT_UNINSTALL_URL "https://distroav.org/wiki/uninstall"
-#if defined(_WIN32)
+	"https://distroav.org/kb/troubleshooting"
+#define PLUGIN_REDIRECT_UNINSTALL_URL "https://distroav.org/kb/uninstall"
+#define PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL \
+	"https://distroav.org/kb/uninstall-obs-ndi"
+#if defined(Q_OS_WIN)
 // Windows
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-windows"
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
 // MacOS
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-macos"
 #else
@@ -90,10 +93,19 @@ QString makeLink(const char *url, const char *text = nullptr);
 // 	2. Then update them here and then release a new version of the plugin.
 //		Clients will then both see and point to the new urls.
 //
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
 #define NDI_OFFICIAL_REDIST_URL NDILIB_REDIST_URL
 #define NDI_OFFICIAL_TOOLS_URL "https://ndi.video/tools/download"
 #endif
 #define NDI_OFFICIAL_CPU_REQUIREMENTS_URL \
 	"https://docs.ndi.video/docs/sdk/cpu-requirements"
+// Required by NDI license:
+// Per https://github.com/DistroAV/DistroAV/blob/master/lib/ndi/NDI%20SDK%20Documentation.pdf
+// "3 Licensing"
+// "Your application must provide a link to https://ndi.video/ in a location close to all locations
+// where NDI is used / selected within the product, on your web site, and in its documentation."
 #define NDI_OFFICIAL_WEB_URL "https://ndi.video"
+// "Your application’s About Box and any other locations where trademark attribution is provided
+// should also specifically indicate that “NDI® is a registered trademark of Vizrt NDI AB”."
+#define NDI_IS_A_REGISTERED_TRADEMARK_TEXT \
+	"NDI® is a registered trademark of Vizrt NDI AB"
