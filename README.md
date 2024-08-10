@@ -16,6 +16,13 @@ DistroAV (Formerly OBS-NDI)
 [![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/distroav)](https://opencollective.com/distroav/donate)  
 [(Please consider making a donation)](https://opencollective.com/distroav)
 </div>
+## Donate
+[![Open Collective Financial Contributors](https://opencollective.com/obs-ndi/all/badge.svg)](https://opencollective.com/obs-ndi)  
+https://opencollective.com/obs-ndi
+
+## Status
+* `master`: [![master: Push](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml/badge.svg)](https://github.com/obs-ndi/obs-ndi/actions/workflows/push.yaml)
+* `develop`: [![develop: Pull Request](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml/badge.svg?branch=develop)](https://github.com/obs-ndi/obs-ndi/actions/workflows/pr-pull.yaml)
 
 ## Features
 - **NDI Source** : Receive NDI video and audio in OBS

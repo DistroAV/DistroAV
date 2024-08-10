@@ -59,14 +59,14 @@ public:
 	static bool UpdateLastCheckIgnore();
 	static int DetectObsNdiForce();
 
-	bool OutputEnabled;
+	std::atomic<bool> OutputEnabled;
 	QString OutputName;
 	QString OutputGroups;
-	bool PreviewOutputEnabled;
+	std::atomic<bool> PreviewOutputEnabled;
 	QString PreviewOutputName;
 	QString PreviewOutputGroups;
-	bool TallyProgramEnabled;
-	bool TallyPreviewEnabled;
+	std::atomic<bool> TallyProgramEnabled;
+	std::atomic<bool> TallyPreviewEnabled;
 
 	bool AutoCheckForUpdates();
 	void AutoCheckForUpdates(bool value);
@@ -82,5 +82,6 @@ public:
 private:
 	void Load();
 	Config();
+	void SetDefaultsToGlobalStore();
 	static Config *_instance;
 };

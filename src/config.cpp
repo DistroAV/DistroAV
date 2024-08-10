@@ -166,7 +166,11 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
+	SetDefaultsToGlobalStore();
+}
 
+void Config::SetDefaultsToGlobalStore()
+{
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME,

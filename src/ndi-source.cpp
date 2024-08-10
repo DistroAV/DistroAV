@@ -282,15 +282,17 @@ obs_properties_t *ndi_source_getproperties(void *)
 		props, PROP_SYNC, obs_module_text("NDIPlugin.SourceProps.Sync"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(
-		sync_modes, obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
+		sync_modes,
+		obs_module_text("NDIPlugin.SourceProps.Sync.NDITimestamp"),
 		PROP_SYNC_NDI_TIMESTAMP);
 	obs_property_list_add_int(
 		sync_modes,
-		obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
+		obs_module_text("NDIPlugin.SourceProps.Sync.NDISourceTimecode"),
 		PROP_SYNC_NDI_SOURCE_TIMECODE);
 
-	obs_properties_add_bool(props, PROP_FRAMESYNC,
-				obs_module_text("NDIPlugin.NDIFrameSync"));
+	obs_properties_add_bool(
+		props, PROP_FRAMESYNC,
+		obs_module_text("NDIPlugin.SourceProps.NDIFrameSync"));
 
 	obs_properties_add_bool(
 		props, PROP_HW_ACCEL,
@@ -322,19 +324,19 @@ obs_properties_t *ndi_source_getproperties(void *)
 
 	obs_property_t *latency_modes = obs_properties_add_list(
 		props, PROP_LATENCY,
-		obs_module_text("NDIPlugin.SourceProps.Latency"),
+		obs_module_text("NDIPlugin.SourceProps.LatencyMode"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(
 		latency_modes,
-		obs_module_text("NDIPlugin.SourceProps.Latency.Normal"),
+		obs_module_text("NDIPlugin.SourceProps.LatencyMode.Normal"),
 		PROP_LATENCY_NORMAL);
 	obs_property_list_add_int(
 		latency_modes,
-		obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
+		obs_module_text("NDIPlugin.SourceProps.LatencyMode.Low"),
 		PROP_LATENCY_LOW);
 	obs_property_list_add_int(
 		latency_modes,
-		obs_module_text("NDIPlugin.SourceProps.Latency.Lowest"),
+		obs_module_text("NDIPlugin.SourceProps.LatencyMode.Lowest"),
 		PROP_LATENCY_LOWEST);
 
 	obs_properties_add_bool(props, PROP_AUDIO,
@@ -747,7 +749,9 @@ void *ndi_source_thread(void *data)
 				1024);
 			if (audio_frame2.p_data &&
 			    (audio_frame2.timestamp > timestamp_audio)) {
-				//blog(LOG_INFO, "a");//udio_frame";
+				if (Config::LogVerbose()) {
+					blog(LOG_INFO, "a"); //udio_frame";
+				}
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
 					&config_most_recent, &audio_frame2,
@@ -765,7 +769,9 @@ void *ndi_source_thread(void *data)
 				NDIlib_frame_format_type_progressive);
 			if (video_frame2.p_data &&
 			    (video_frame2.timestamp > timestamp_video)) {
-				//blog(LOG_INFO, "v");//ideo_frame";
+				if (Config::LogVerbose()) {
+					blog(LOG_INFO, "v"); //ideo_frame";
+				}
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
 					&config_most_recent, &video_frame2,

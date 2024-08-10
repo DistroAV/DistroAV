@@ -54,8 +54,11 @@ void preview_output_init(const char *default_name, const char *default_groups)
 	obs_data_set_string(output_settings, "ndi_name", default_name);
 	obs_data_set_string(output_settings, "ndi_groups", default_groups);
 	obs_data_set_bool(output_settings, "uses_audio", false);
-	context.output = obs_output_create("ndi_output", "NDI Preview Output",
-					   output_settings, nullptr);
+	context.output = obs_output_create(
+		"ndi_output",
+		obs_module_text(
+			"NDIPlugin.OutputSettings.Preview.Name.Default"),
+		output_settings, nullptr);
 	obs_data_release(output_settings);
 }
 

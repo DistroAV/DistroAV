@@ -247,6 +247,29 @@ bool obs_module_load(void)
 	auto main_window =
 		static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
+	QVersionNumber runtimeVersionNumber =
+		QVersionNumber::fromString(qVersion());
+	//runtimeVersionNumber = QVersionNumber::fromString("5.0.0"); // for testing purposes only
+	QVersionNumber minimumRequiredVersionNumber(6, 0, 0);
+	if (QVersionNumber::compare(runtimeVersionNumber,
+				    minimumRequiredVersionNumber) < 0) {
+		QString message =
+			QString(obs_module_text(
+					"NDIPlugin.QtVersionError.Message"))
+				.arg(PLUGIN_NAME, PLUGIN_VERSION,
+				     minimumRequiredVersionNumber.toString(),
+				     runtimeVersionNumber.toString());
+
+		blog(LOG_ERROR, "[obs-ndi] obs_module_load: %s",
+		     message.toUtf8().constData());
+
+		QMessageBox::critical(
+			main_window,
+			obs_module_text("NDIPlugin.QtVersionError.Title"),
+			message, QMessageBox::Ok, QMessageBox::NoButton);
+		return false;
+	}
+
 #if 0
 	// For testing purposes only
 	ndiLib = nullptr;
