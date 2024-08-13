@@ -210,6 +210,8 @@ bool obs_module_load(void)
 
 		preview_output_init(QT_TO_UTF8(conf->PreviewOutputName),
 				    QT_TO_UTF8(conf->PreviewOutputGroups));
+		main_output_init(QT_TO_UTF8(conf->OutputName),
+				 QT_TO_UTF8(conf->OutputGroups));
 
 		// Ui setup
 		QAction *menu_action =
