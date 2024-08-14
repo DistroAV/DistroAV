@@ -21,10 +21,7 @@
 #include <QString>
 #include <QVersionNumber>
 
-enum UpdateHostEnum {
-	Production,
-	LocalEmulator,
-};
+#define DEFAULT_UPDATE_LOCAL_PORT 5002
 
 /**
  * Loads and Saves configuration settings from/to:
@@ -32,6 +29,7 @@ enum UpdateHostEnum {
  * MacOS: ~/Library/Application Support/obs-studio/global.ini
  * Windows: %APPDATA%\obs-studio\global.ini
  * 
+ * Example:
  * ```
  * [NDIPlugin]
  * MainOutputEnabled=true
@@ -51,13 +49,25 @@ public:
 	static Config *Current(bool load = true);
 	static void Destroy();
 
-	static bool LogVerbose();
-	static bool LogDebug();
-	static bool UpdateForce();
-	static UpdateHostEnum UpdateHost();
-	static int UpdateLocalPort();
-	static bool UpdateLastCheckIgnore();
-	static int DetectObsNdiForce();
+	/**
+	 * -1 = `--DistroAV-update-force=-1` : force update less than current version
+	 * 0 = update normally
+	 * 1= `--DistroAV-update-force=1` : force update greater than current version
+	 */
+	static int UpdateForce;
+	/**
+	 * Default: DEFAULT_UPDATE_LOCAL_PORT
+	 * `--DistroAV-update-local`
+	 * `--DistroAV-update-local=5000`
+	 */
+	static int UpdateLocalPort;
+	static bool UpdateLastCheckIgnore;
+	/**
+	 * -1 = `--DistroAV-detect-obsndi-force=off` : force OBS-NDI not detected
+	 *  0 = detect normally
+	 *  1 = `--DistroAV-detect-obsndi-force=on` : force OBS-NDI detected
+	 */
+	static int DetectObsNdiForce;
 
 	bool OutputEnabled;
 	QString OutputName;
@@ -81,6 +91,7 @@ public:
 
 private:
 	void Load();
+	void SetDefaultsToGlobalStore();
 	Config();
 	static Config *_instance;
 };
