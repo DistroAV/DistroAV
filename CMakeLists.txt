@@ -44,22 +44,22 @@ endif()
 # cmake-format: on
 target_sources(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE src/forms/obsndi-update.cpp
-          src/forms/obsndi-update.h
-          src/forms/output-settings.cpp
+  PRIVATE src/forms/output-settings.cpp
           src/forms/output-settings.h
+          src/forms/update.cpp
+          src/forms/update.h
           src/obs-support/obs-app.hpp
           src/obs-support/remote-text.cpp
           src/obs-support/remote-text.hpp
           src/obs-support/shared-update.cpp
           src/obs-support/shared-update.hpp
-          src/Config.cpp
-          src/Config.h
+          src/config.cpp
+          src/config.h
           src/main-output.cpp
           src/main-output.h
-          src/obs-ndi-filter.cpp
-          src/obs-ndi-output.cpp
-          src/obs-ndi-source.cpp
+          src/ndi-filter.cpp
+          src/ndi-output.cpp
+          src/ndi-source.cpp
           src/plugin-main.cpp
           src/plugin-main.h
           src/premultiplied-alpha-filter.cpp
