@@ -41,17 +41,16 @@ bool CalculateFileHash(const char *path, QString &hash)
 {
 	QFile file(path);
 	if (!file.open(QIODevice::ReadOnly)) {
-		blog(LOG_WARNING,
-		     "[DistroAV] CalculateFileHash: Failed to open file: `%s`",
-		     path);
+		obs_log(LOG_WARNING,
+			"CalculateFileHash: Failed to open file: `%s`", path);
 		return false;
 	}
 
 	QCryptographicHash qhash(QCryptographicHash::Sha256);
 	if (!qhash.addData(&file)) {
-		blog(LOG_WARNING,
-		     "[DistroAV] CalculateFileHash: Failed to read data from file: `%s`",
-		     path);
+		obs_log(LOG_WARNING,
+			"CalculateFileHash: Failed to read data from file: `%s`",
+			path);
 		return false;
 	}
 

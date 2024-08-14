@@ -88,7 +88,7 @@ const char *ndi_output_getname(void *)
 
 obs_properties_t *ndi_output_getproperties(void *)
 {
-	blog(LOG_INFO, "[DistroAV] +ndi_output_getproperties()");
+	obs_log(LOG_INFO, "+ndi_output_getproperties()");
 
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
@@ -102,21 +102,21 @@ obs_properties_t *ndi_output_getproperties(void *)
 		obs_module_text("NDIPlugin.OutputProps.NDIGroups"),
 		OBS_TEXT_DEFAULT);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_output_getproperties()");
+	obs_log(LOG_INFO, "-ndi_output_getproperties()");
 
 	return props;
 }
 
 void ndi_output_getdefaults(obs_data_t *settings)
 {
-	blog(LOG_INFO, "[DistroAV] +ndi_output_getdefaults()");
+	obs_log(LOG_INFO, "+ndi_output_getdefaults()");
 	obs_data_set_default_string(settings, "ndi_name",
 				    "DistroAV output (changeme)");
 	obs_data_set_default_string(settings, "ndi_groups",
 				    "DistroAV output (changeme)");
 	obs_data_set_default_bool(settings, "uses_video", true);
 	obs_data_set_default_bool(settings, "uses_audio", true);
-	blog(LOG_INFO, "[DistroAV] -ndi_output_getdefaults()");
+	obs_log(LOG_INFO, "-ndi_output_getdefaults()");
 }
 
 void ndi_output_update(void *data, obs_data_t *settings);
@@ -125,15 +125,14 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 {
 	auto name = obs_data_get_string(settings, "ndi_name");
 	auto groups = obs_data_get_string(settings, "ndi_groups");
-	blog(LOG_INFO,
-	     "[DistroAV] +ndi_output_create(name='%s', groups='%s', ...)", name,
-	     groups);
+	obs_log(LOG_INFO, "+ndi_output_create(name='%s', groups='%s', ...)",
+		name, groups);
 	auto o = (ndi_output_t *)bzalloc(sizeof(ndi_output_t));
 	o->output = output;
 	ndi_output_update(o, settings);
-	blog(LOG_INFO,
-	     "[DistroAV] -ndi_output_create(name='%s', groups='%s', ...)", name,
-	     groups);
+
+	obs_log(LOG_INFO, "-ndi_output_create(name='%s', groups='%s', ...)",
+		name, groups);
 	return o;
 }
 
@@ -142,13 +141,12 @@ bool ndi_output_start(void *data)
 	auto o = (ndi_output_t *)data;
 	auto name = o->ndi_name;
 	auto groups = o->ndi_groups;
-	blog(LOG_INFO,
-	     "[DistroAV] +ndi_output_start(name='%s', groups='%s', ...)", name,
-	     groups);
+	obs_log(LOG_INFO, "+ndi_output_start(name='%s', groups='%s', ...)",
+		name, groups);
 	if (o->started) {
-		blog(LOG_INFO,
-		     "[DistroAV] -ndi_output_start(name='%s', groups='%s', ...)",
-		     name, groups);
+		obs_log(LOG_INFO,
+			"-ndi_output_start(name='%s', groups='%s', ...)", name,
+			groups);
 		return false;
 	}
 
@@ -157,11 +155,10 @@ bool ndi_output_start(void *data)
 	audio_t *audio = obs_output_audio(o->output);
 
 	if (!video && !audio) {
-		blog(LOG_ERROR, "[DistroAV] '%s': no video and audio available",
-		     name);
-		blog(LOG_INFO,
-		     "[DistroAV] -ndi_output_start(name='%s', groups='%s', ...)",
-		     name, groups);
+		obs_log(LOG_ERROR, "'%s': no video and audio available", name);
+		obs_log(LOG_INFO,
+			"-ndi_output_start(name='%s', groups='%s', ...)", name,
+			groups);
 		return false;
 	}
 
@@ -201,12 +198,11 @@ bool ndi_output_start(void *data)
 			break;
 
 		default:
-			blog(LOG_WARNING,
-			     "[DistroAV] warning: unsupported pixel format %d",
-			     format);
-			blog(LOG_INFO,
-			     "[DistroAV] -ndi_output_start(name='%s', groups='%s', ...)",
-			     name, groups);
+			obs_log(LOG_WARNING,
+				"warning: unsupported pixel format %d", format);
+			obs_log(LOG_INFO,
+				"-ndi_output_start(name='%s', groups='%s', ...)",
+				name, groups);
 			return false;
 		}
 
@@ -235,21 +231,17 @@ bool ndi_output_start(void *data)
 	if (o->ndi_sender) {
 		o->started = obs_output_begin_data_capture(o->output, flags);
 		if (o->started) {
-			blog(LOG_INFO, "[DistroAV] '%s': ndi output started",
-			     name);
+			obs_log(LOG_INFO, "'%s': ndi output started", name);
 		} else {
-			blog(LOG_ERROR,
-			     "[DistroAV] '%s': data capture start failed",
-			     name);
+			obs_log(LOG_ERROR, "'%s': data capture start failed",
+				name);
 		}
 	} else {
-		blog(LOG_ERROR, "[DistroAV] '%s': ndi sender init failed",
-		     name);
+		obs_log(LOG_ERROR, "'%s': ndi sender init failed", name);
 	}
 
-	blog(LOG_INFO,
-	     "[DistroAV] -ndi_output_start(name='%s', groups='%s'...)", name,
-	     groups);
+	obs_log(LOG_INFO, "-ndi_output_start(name='%s', groups='%s'...)", name,
+		groups);
 
 	return o->started;
 }
@@ -259,9 +251,8 @@ void ndi_output_update(void *data, obs_data_t *settings)
 	auto o = (ndi_output_t *)data;
 	auto name = obs_data_get_string(settings, "ndi_name");
 	auto groups = obs_data_get_string(settings, "ndi_groups");
-	blog(LOG_INFO,
-	     "[DistroAV] ndi_output_update(name='%s', groups='%s', ...)", name,
-	     groups);
+	obs_log(LOG_INFO, "ndi_output_update(name='%s', groups='%s', ...)",
+		name, groups);
 	o->ndi_name = name;
 	o->ndi_groups = groups;
 	o->uses_video = obs_data_get_bool(settings, "uses_video");
@@ -273,13 +264,12 @@ void ndi_output_stop(void *data, uint64_t)
 	auto o = (ndi_output_t *)data;
 	auto name = o->ndi_name;
 	auto groups = o->ndi_groups;
-	blog(LOG_INFO,
-	     "[DistroAV] +ndi_output_stop(name='%s', groups='%s', ...)", name,
-	     groups);
+	obs_log(LOG_INFO, "+ndi_output_stop(name='%s', groups='%s', ...)", name,
+		groups);
 	if (!o->started) {
-		blog(LOG_INFO,
-		     "[DistroAV] -ndi_output_stop(name='%s', groups='%s', ...)",
-		     name, groups);
+		obs_log(LOG_INFO,
+			"-ndi_output_stop(name='%s', groups='%s', ...)", name,
+			groups);
 		return;
 	}
 
@@ -288,11 +278,9 @@ void ndi_output_stop(void *data, uint64_t)
 	obs_output_end_data_capture(o->output);
 
 	if (o->ndi_sender) {
-		blog(LOG_INFO,
-		     "[DistroAV] +ndiLib->send_destroy(o->ndi_sender)");
+		obs_log(LOG_INFO, "+ndiLib->send_destroy(o->ndi_sender)");
 		ndiLib->send_destroy(o->ndi_sender);
-		blog(LOG_INFO,
-		     "[DistroAV] -ndiLib->send_destroy(o->ndi_sender)");
+		obs_log(LOG_INFO, "-ndiLib->send_destroy(o->ndi_sender)");
 		o->ndi_sender = nullptr;
 	}
 
@@ -309,9 +297,8 @@ void ndi_output_stop(void *data, uint64_t)
 	o->audio_channels = 0;
 	o->audio_samplerate = 0;
 
-	blog(LOG_INFO,
-	     "[DistroAV] -ndi_output_stop(name='%s', groups='%s', ...)", name,
-	     groups);
+	obs_log(LOG_INFO, "-ndi_output_stop(name='%s', groups='%s', ...)", name,
+		groups);
 }
 
 void ndi_output_destroy(void *data)
@@ -319,19 +306,17 @@ void ndi_output_destroy(void *data)
 	auto o = (ndi_output_t *)data;
 	auto name = o->ndi_name;
 	auto groups = o->ndi_groups;
-	blog(LOG_INFO,
-	     "[DistroAV] +ndi_output_destroy(name='%s', groups='%s', ...)",
-	     name, groups);
+	obs_log(LOG_INFO, "+ndi_output_destroy(name='%s', groups='%s', ...)",
+		name, groups);
+
 	if (o->audio_conv_buffer) {
-		blog(LOG_INFO,
-		     "[DistroAV] ndi_output_destroy: freeing %zu bytes",
-		     o->audio_conv_buffer_size);
+		obs_log(LOG_INFO, "ndi_output_destroy: freeing %zu bytes",
+			o->audio_conv_buffer_size);
 		bfree(o->audio_conv_buffer);
 		o->audio_conv_buffer = nullptr;
 	}
-	blog(LOG_INFO,
-	     "[DistroAV] -ndi_output_destroy(name='%s', groups='%s', ...)",
-	     name, groups);
+	obs_log(LOG_INFO, "-ndi_output_destroy(name='%s', groups='%s', ...)",
+		name, groups);
 	bfree(o);
 }
 
@@ -387,18 +372,18 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
 
 	if (data_size > o->audio_conv_buffer_size) {
-		blog(LOG_INFO,
-		     "[DistroAV] ndi_output_rawaudio(`%s`): growing audio_conv_buffer from %zu to %zu bytes",
-		     o->ndi_name, o->audio_conv_buffer_size, data_size);
+		obs_log(LOG_INFO,
+			"ndi_output_rawaudio(`%s`): growing audio_conv_buffer from %zu to %zu bytes",
+			o->ndi_name, o->audio_conv_buffer_size, data_size);
 		if (o->audio_conv_buffer) {
-			blog(LOG_INFO,
-			     "[DistroAV] ndi_output_rawaudio(`%s`): freeing %zu bytes",
-			     o->ndi_name, o->audio_conv_buffer_size);
+			obs_log(LOG_INFO,
+				"ndi_output_rawaudio(`%s`): freeing %zu bytes",
+				o->ndi_name, o->audio_conv_buffer_size);
 			bfree(o->audio_conv_buffer);
 		}
-		blog(LOG_INFO,
-		     "[DistroAV] ndi_output_rawaudio(`%s`): allocating %zu bytes",
-		     o->ndi_name, data_size);
+		obs_log(LOG_INFO,
+			"ndi_output_rawaudio(`%s`): allocating %zu bytes",
+			o->ndi_name, data_size);
 		o->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
 		o->audio_conv_buffer_size = data_size;
 	}
