@@ -68,7 +68,7 @@ void ndi_filter_update(void *data, obs_data_t *settings);
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
-	blog(LOG_INFO, "[DistroAV] +ndi_filter_getproperties(...)");
+	obs_log(LOG_INFO, "+ndi_filter_getproperties(...)");
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
@@ -104,18 +104,18 @@ obs_properties_t *ndi_filter_getproperties(void *)
 	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
 				 group_ndi);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_getproperties(...)");
+	obs_log(LOG_INFO, "-ndi_filter_getproperties(...)");
 	return props;
 }
 
 void ndi_filter_getdefaults(obs_data_t *defaults)
 {
-	blog(LOG_INFO, "[DistroAV] +ndi_filter_getdefaults(...)");
+	obs_log(LOG_INFO, "+ndi_filter_getdefaults(...)");
 	obs_data_set_default_string(
 		defaults, FLT_PROP_NAME,
 		obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
 	obs_data_set_default_string(defaults, FLT_PROP_GROUPS, "");
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_getdefaults(...)");
+	obs_log(LOG_INFO, "-ndi_filter_getdefaults(...)");
 }
 
 void ndi_filter_raw_video(void *data, video_data *frame)
@@ -230,7 +230,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	auto f = (ndi_filter_t *)data;
 	auto obs_source = f->obs_source;
 	auto name = obs_source_get_name(obs_source);
-	blog(LOG_INFO, "[DistroAV] +ndi_filter_update(name=`%s`)", name);
+	obs_log(LOG_INFO, "+ndi_filter_update(name=`%s`)", name);
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 
@@ -256,15 +256,15 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
 	}
 
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_update(name=`%s`)", name);
+	obs_log(LOG_INFO, "-ndi_filter_update(name=`%s`)", name);
 }
 
 void *ndi_filter_create(obs_data_t *settings, obs_source_t *obs_source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
-	blog(LOG_INFO, "[DistroAV] +ndi_filter_create(name=`%s`, groups=`%s`)",
-	     name, groups);
+	obs_log(LOG_INFO, "+ndi_filter_create(name=`%s`, groups=`%s`)", name,
+		groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->obs_source = obs_source;
@@ -276,7 +276,7 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	ndi_filter_update(f, settings);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_create(...)");
+	obs_log(LOG_INFO, "-ndi_filter_create(...)");
 
 	return f;
 }
@@ -286,9 +286,9 @@ void *ndi_filter_create_audioonly(obs_data_t *settings,
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
-	blog(LOG_INFO,
-	     "[DistroAV] +ndi_filter_create_audioonly(name=`%s`, groups=`%s`)",
-	     name, groups);
+	obs_log(LOG_INFO,
+		"+ndi_filter_create_audioonly(name=`%s`, groups=`%s`)", name,
+		groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->is_audioonly = true;
@@ -298,7 +298,7 @@ void *ndi_filter_create_audioonly(obs_data_t *settings,
 
 	ndi_filter_update(f, settings);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_create_audioonly(...)");
+	obs_log(LOG_INFO, "-ndi_filter_create_audioonly(...)");
 
 	return f;
 }
@@ -307,7 +307,7 @@ void ndi_filter_destroy(void *data)
 {
 	auto f = (ndi_filter_t *)data;
 	auto name = obs_source_get_name(f->obs_source);
-	blog(LOG_INFO, "[DistroAV] +ndi_filter_destroy('%s'...)", name);
+	obs_log(LOG_INFO, "+ndi_filter_destroy('%s'...)", name);
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
@@ -323,24 +323,22 @@ void ndi_filter_destroy(void *data)
 	gs_texrender_destroy(f->texrender);
 
 	if (f->audio_conv_buffer) {
-		blog(LOG_INFO,
-		     "[DistroAV] ndi_filter_destroy: freeing %zu bytes",
-		     f->audio_conv_buffer_size);
+		obs_log(LOG_INFO, "ndi_filter_destroy: freeing %zu bytes",
+			f->audio_conv_buffer_size);
 		bfree(f->audio_conv_buffer);
 		f->audio_conv_buffer = nullptr;
 	}
 
 	bfree(f);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_destroy('%s'...)", name);
+	obs_log(LOG_INFO, "-ndi_filter_destroy('%s'...)", name);
 }
 
 void ndi_filter_destroy_audioonly(void *data)
 {
 	auto f = (ndi_filter_t *)data;
 	auto name = obs_source_get_name(f->obs_source);
-	blog(LOG_INFO, "[DistroAV] +ndi_filter_destroy_audioonly('%s'...)",
-	     name);
+	obs_log(LOG_INFO, "+ndi_filter_destroy_audioonly('%s'...)", name);
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(f->ndi_sender);
@@ -353,8 +351,7 @@ void ndi_filter_destroy_audioonly(void *data)
 
 	bfree(f);
 
-	blog(LOG_INFO, "[DistroAV] -ndi_filter_destroy_audioonly('%s'...)",
-	     name);
+	obs_log(LOG_INFO, "-ndi_filter_destroy_audioonly('%s'...)", name);
 }
 
 void ndi_filter_tick(void *data, float)
@@ -388,18 +385,17 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
 
 	if (data_size > f->audio_conv_buffer_size) {
-		blog(LOG_INFO,
-		     "[DistroAV] ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
-		     f->audio_conv_buffer_size, data_size);
+		obs_log(LOG_INFO,
+			"ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
+			f->audio_conv_buffer_size, data_size);
 		if (f->audio_conv_buffer) {
-			blog(LOG_INFO,
-			     "[DistroAV] ndi_filter_asyncaudio: freeing %zu bytes",
-			     f->audio_conv_buffer_size);
+			obs_log(LOG_INFO,
+				"ndi_filter_asyncaudio: freeing %zu bytes",
+				f->audio_conv_buffer_size);
 			bfree(f->audio_conv_buffer);
 		}
-		blog(LOG_INFO,
-		     "[DistroAV] ndi_filter_asyncaudio: allocating %zu bytes",
-		     data_size);
+		obs_log(LOG_INFO, "ndi_filter_asyncaudio: allocating %zu bytes",
+			data_size);
 		f->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
 		f->audio_conv_buffer_size = data_size;
 	}

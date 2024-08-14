@@ -47,8 +47,8 @@ void preview_output_init(const char *default_name, const char *default_groups)
 	if (context.output)
 		return;
 
-	blog(LOG_INFO, "[DistroAV] preview_output_init('%s', '%s')",
-	     default_name, default_groups);
+	obs_log(LOG_INFO, "preview_output_init('%s', '%s')", default_name,
+		default_groups);
 
 	obs_data_t *output_settings = obs_data_create();
 	obs_data_set_string(output_settings, "ndi_name", default_name);
@@ -64,9 +64,9 @@ void preview_output_start(const char *output_name, const char *output_groups)
 	if (context.enabled || !context.output)
 		return;
 
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_start: starting NDI preview output with name '%s'",
-	     output_name);
+	obs_log(LOG_INFO,
+		"preview_output_start: starting NDI preview output with name '%s'",
+		output_name);
 
 	obs_get_video_info(&context.ovi);
 
@@ -130,8 +130,7 @@ void preview_output_start(const char *output_name, const char *output_groups)
 	obs_output_start(context.output);
 	context.enabled = true;
 
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_start: started NDI preview output");
+	obs_log(LOG_INFO, "preview_output_start: started NDI preview output");
 }
 
 void preview_output_stop()
@@ -139,8 +138,7 @@ void preview_output_stop()
 	if (!context.enabled)
 		return;
 
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_stop: stopping NDI preview output");
+	obs_log(LOG_INFO, "preview_output_stop: stopping NDI preview output");
 
 	obs_output_stop(context.output);
 
@@ -161,13 +159,12 @@ void preview_output_stop()
 
 	context.enabled = false;
 
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_stop: stopped NDI preview output");
+	obs_log(LOG_INFO, "preview_output_stop: stopped NDI preview output");
 }
 
 void preview_output_deinit()
 {
-	blog(LOG_INFO, "[DistroAV] preview_output_deinit()");
+	obs_log(LOG_INFO, "preview_output_deinit()");
 
 	obs_output_release(context.output);
 
@@ -182,7 +179,7 @@ bool preview_output_is_enabled()
 
 void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 {
-	blog(LOG_INFO, "[DistroAV] on_preview_scene_changed(%d)", event);
+	obs_log(LOG_INFO, "on_preview_scene_changed(%d)", event);
 	auto ctx = (struct preview_output *)param;
 	switch (event) {
 	case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:
