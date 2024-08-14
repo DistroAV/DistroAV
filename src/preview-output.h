@@ -17,8 +17,5 @@
 
 #pragma once
 
-void preview_output_init(const char *default_name, const char *default_groups);
-void preview_output_start(const char *output_name, const char *output_groups);
-void preview_output_stop();
 void preview_output_deinit();
-bool preview_output_is_enabled();
+void preview_output_init();

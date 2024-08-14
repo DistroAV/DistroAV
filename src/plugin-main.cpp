@@ -305,14 +305,6 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
-		auto conf = Config::Current();
-
-		main_output_init(QT_TO_UTF8(conf->OutputName),
-				    QT_TO_UTF8(conf->OutputGroups));
-		preview_output_init(QT_TO_UTF8(conf->PreviewOutputName),
-				    QT_TO_UTF8(conf->PreviewOutputGroups));
-
-		// Ui setup
 		auto menu_action = static_cast<QAction *>(
 			obs_frontend_add_tools_menu_qaction(obs_module_text(
 				"NDIPlugin.Menu.OutputSettings")));
@@ -330,25 +322,11 @@ bool obs_module_load(void)
 			[](enum obs_frontend_event event, void *) {
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-					auto config_ = Config::Current();
-					if (config_->OutputEnabled) {
-						main_output_start(
-							QT_TO_UTF8(
-								config_->OutputName),
-							QT_TO_UTF8(
-								config_->OutputGroups));
-					}
-					if (config_->PreviewOutputEnabled) {
-						preview_output_start(
-							QT_TO_UTF8(
-								config_->PreviewOutputName),
-							QT_TO_UTF8(
-								config_->PreviewOutputGroups));
-					}
+					main_output_init();
+					preview_output_init();
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
-					preview_output_stop();
-					main_output_stop();
-
+					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
+					main_output_deinit();
 					preview_output_deinit();
 				}
 			},
