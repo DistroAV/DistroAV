@@ -24,12 +24,12 @@ static bool main_output_running = false;
 
 void main_output_start(const char *output_name, const char *output_groups)
 {
-	blog(LOG_INFO, "[DistroAV] +main_output_start(`%s`, `%s`)", output_name,
-	     output_groups);
+	obs_log(LOG_INFO, "+main_output_start(`%s`, `%s`)", output_name,
+		output_groups);
 	if (!main_output_running) {
-		blog(LOG_INFO,
-		     "[DistroAV] main_output_start: starting NDI main output with name '%s'",
-		     output_name);
+		obs_log(LOG_INFO,
+			"main_output_start: starting NDI main output with name '%s'",
+			output_name);
 
 		obs_data_t *settings = obs_data_create();
 		obs_data_set_string(settings, "ndi_name", output_name);
@@ -39,32 +39,31 @@ void main_output_start(const char *output_name, const char *output_groups)
 		obs_data_release(settings);
 		if (main_out) {
 			auto result = obs_output_start(main_out);
-			blog(LOG_INFO,
-			     "[DistroAV] main_output_start: obs_output_start result=%d",
-			     result);
+			obs_log(LOG_INFO,
+				"main_output_start: obs_output_start result=%d",
+				result);
 
 			main_output_running = true;
 
-			blog(LOG_INFO,
-			     "[DistroAV] main_output_start: started NDI main output");
+			obs_log(LOG_INFO,
+				"main_output_start: started NDI main output");
 		} else {
-			blog(LOG_ERROR,
-			     "[DistroAV] main_output_start: failed to create NDI main output");
+			obs_log(LOG_ERROR,
+				"main_output_start: failed to create NDI main output");
 		}
 	} else {
-		blog(LOG_INFO,
-		     "[DistroAV] main_output_start: NDI main output already running");
+		obs_log(LOG_INFO,
+			"main_output_start: NDI main output already running");
 	}
-	blog(LOG_INFO, "[DistroAV] -main_output_start(`%s`, `%s`)", output_name,
-	     output_groups);
+	obs_log(LOG_INFO, "-main_output_start(`%s`, `%s`)", output_name,
+		output_groups);
 }
 
 void main_output_stop()
 {
-	blog(LOG_INFO, "[DistroAV] +main_output_stop()");
+	obs_log(LOG_INFO, "+main_output_stop()");
 	if (main_output_running) {
-		blog(LOG_INFO,
-		     "[DistroAV] main_output_stop: stopping NDI main output");
+		obs_log(LOG_INFO, "main_output_stop: stopping NDI main output");
 
 		obs_output_stop(main_out);
 		obs_output_release(main_out);
@@ -72,13 +71,12 @@ void main_output_stop()
 
 		main_output_running = false;
 
-		blog(LOG_INFO,
-		     "[DistroAV] main_output_stop: stopped NDI main output");
+		obs_log(LOG_INFO, "main_output_stop: stopped NDI main output");
 	} else {
-		blog(LOG_INFO,
-		     "[DistroAV] main_output_stop: NDI main output not running");
+		obs_log(LOG_INFO,
+			"main_output_stop: NDI main output not running");
 	}
-	blog(LOG_INFO, "[DistroAV] -main_output_stop()");
+	obs_log(LOG_INFO, "-main_output_stop()");
 }
 
 bool main_output_is_running()
