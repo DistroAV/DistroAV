@@ -15,8 +15,31 @@
 	along with this program; if not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-#include <plugin-support.h>
+#include "plugin-support.h"
+
+int LOG_LEVEL = LOG_NONE;
 
 const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
 const char *PLUGIN_DISPLAY_NAME = "@PLUGIN_DISPLAY_NAME@";
 const char *PLUGIN_VERSION = "@CMAKE_PROJECT_VERSION@";
+
+extern void blogva(int log_level, const char *format, va_list args);
+
+void obs_log(int log_level, const char *format, ...)
+{
+	if (log_level >= LOG_LEVEL) {
+		size_t length = 4 + strlen(PLUGIN_NAME) + strlen(format);
+
+		char *template = malloc(length + 1);
+
+		snprintf(template, length, "[%s] %s", PLUGIN_NAME, format);
+
+		va_list(args);
+
+		va_start(args, format);
+		blogva(log_level, template, args);
+		va_end(args);
+
+		free(template);
+	}
+}

@@ -40,118 +40,117 @@
 
 Config *Config::_instance = nullptr;
 
-bool _LogVerbose = false;
-bool _LogDebug = false;
-int _LogLevel = LOG_INFO;
-bool _UpdateForce = false;
-UpdateHostEnum _UpdateHost = UpdateHostEnum::Production;
-#define DEFAULT_UPDATE_LOCAL_PORT 5002
-int _UpdateLocalPort = DEFAULT_UPDATE_LOCAL_PORT;
-bool _UpdateLastCheckIgnore = false;
-int _DetectObsNdiForce = 0;
-
-bool Config::LogVerbose()
-{
-	return _LogVerbose;
-}
-
-bool Config::LogDebug()
-{
-	return _LogDebug;
-}
-
-bool Config::UpdateForce()
-{
-	return _UpdateForce;
-}
-
-UpdateHostEnum Config::UpdateHost()
-{
-	return _UpdateHost;
-}
-
-int Config::UpdateLocalPort()
-{
-	return _UpdateLocalPort;
-}
-
-bool Config::UpdateLastCheckIgnore()
-{
-	return _UpdateLastCheckIgnore;
-}
-
-int Config::DetectObsNdiForce()
-{
-	return _DetectObsNdiForce;
-}
+int Config::UpdateForce = 0;
+int Config::UpdateLocalPort = 0;
+bool Config::UpdateLastCheckIgnore = false;
+int Config::DetectObsNdiForce = 0;
 
 void ProcessCommandLine()
 {
 	auto arguments = QCoreApplication::arguments();
-
-	if (arguments.contains("--DistroAV-verbose",
-			       Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV verbose logging enabled");
-		_LogVerbose = true;
-	}
-	if (arguments.contains("--DistroAV-debug",
-			       Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV debug logging enabled");
-		_LogDebug = true;
-	}
-
-	if (arguments.contains("--DistroAV-update-force",
-			       Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV update force enabled");
-		_UpdateForce = true;
-	}
-
 	for (int i = 0; i < arguments.size(); i++) {
-		if (arguments.at(i).contains(
-			    "--DistroAV-update-local",
-			    Qt::CaseSensitivity::CaseInsensitive)) {
-			blog(LOG_INFO,
-			     "[DistroAV] config: DistroAV update host set to Local");
-			_UpdateHost = UpdateHostEnum::LocalEmulator;
-			auto parts = arguments.at(i).split("=");
+		auto argument = arguments.at(i).toLower();
+
+		//
+		// Logging
+		//
+		if (argument == "--distroav-debug") {
+			obs_log(LOG_INFO,
+				"config: DistroAV log level set to `debug`");
+			LOG_LEVEL = LOG_DEBUG;
+			continue;
+		}
+		if (argument == "--distroav-verbose") {
+			obs_log(LOG_INFO,
+				"config: DistroAV log level set to `verbose`");
+			LOG_LEVEL = LOG_VERBOSE;
+			continue;
+		}
+		if (argument.startsWith("--distroav-log")) {
+			auto parts = argument.split("=");
+			LOG_LEVEL = LOG_DEBUG;
+			if (parts.size() > 1) {
+				auto level = parts.at(1).toLower();
+				if (level == "error") {
+					LOG_LEVEL = LOG_ERROR;
+				} else if (level == "warning") {
+					LOG_LEVEL = LOG_WARNING;
+				} else if (level == "info") {
+					LOG_LEVEL = LOG_INFO;
+				} else if (level == "debug") {
+					LOG_LEVEL = LOG_DEBUG;
+				} else if (level == "verbose") {
+					LOG_LEVEL = LOG_VERBOSE;
+				}
+				if (LOG_LEVEL != LOG_NONE) {
+					obs_log(LOG_INFO,
+						"config: DistroAV log level set to `%s`",
+						QT_TO_UTF8(level));
+				}
+			}
+			continue;
+		}
+
+		//
+		// Update
+		//
+		if (argument.startsWith("--distroav-update-force")) {
+			auto parts = argument.split("=");
+			if (parts.size() > 1) {
+				Config::UpdateForce = parts.at(1).toInt();
+				obs_log(LOG_INFO,
+					"config: DistroAV update force set to %d",
+					Config::UpdateForce);
+			}
+			continue;
+		}
+		if (argument == "--distroav-update-last-check-ignore") {
+			obs_log(LOG_INFO,
+				"config: DistroAV update last check ignore enabled");
+			Config::UpdateLastCheckIgnore = true;
+		}
+		if (argument.startsWith("--distroav-update-local")) {
+			obs_log(LOG_INFO,
+				"config: DistroAV update host set to Local");
+			Config::UpdateLocalPort = DEFAULT_UPDATE_LOCAL_PORT;
+			auto parts = argument.split("=");
 			if (parts.size() > 1) {
 				auto port = parts.at(1).toInt();
 				if (port > 0 && port < 65536) {
-					_UpdateLocalPort = port;
+					Config::UpdateLocalPort = port;
 				}
 			}
-			if (_UpdateLocalPort != DEFAULT_UPDATE_LOCAL_PORT) {
-				blog(LOG_INFO,
-				     "[DistroAV] config: DistroAV update port set to %d",
-				     _UpdateLocalPort);
+			if (Config::UpdateLocalPort !=
+			    DEFAULT_UPDATE_LOCAL_PORT) {
+				obs_log(LOG_INFO,
+					"config: DistroAV update port set to %d",
+					Config::UpdateLocalPort);
 			} else {
-				blog(LOG_INFO,
-				     "[DistroAV] config: DistroAV update port using default %d",
-				     _UpdateLocalPort);
+				obs_log(LOG_INFO,
+					"config: DistroAV update port using default %d",
+					Config::UpdateLocalPort);
+			}
+			continue;
+		}
+
+		//
+		// OBS-NDI Detection
+		//
+		if (argument.startsWith("--distroav-detect-obsndi-force")) {
+			auto parts = argument.split("=");
+			if (parts.size() > 1) {
+				auto force = parts.at(1).toLower();
+				if (force == "off") {
+					obs_log(LOG_INFO,
+						"config: DistroAV detect OBS-NDI force off");
+					Config::DetectObsNdiForce = -1;
+				} else if (force == "on") {
+					obs_log(LOG_INFO,
+						"config: DistroAV detect OBS-NDI force on");
+					Config::DetectObsNdiForce = 1;
+				}
 			}
 		}
-	}
-
-	if (arguments.contains("--DistroAV-update-last-check-ignore",
-			       Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV update last check ignore enabled");
-		_UpdateLastCheckIgnore = true;
-	}
-
-	if (arguments.contains("--DistroAV-detect-obsndi-force-on",
-			       Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV detect OBS-NDI force on");
-		_DetectObsNdiForce = 1;
-	} else if (arguments.contains("--DistroAV-detect-obsndi-force-off",
-				      Qt::CaseSensitivity::CaseInsensitive)) {
-		blog(LOG_INFO,
-		     "[DistroAV] config: DistroAV detect OBS-NDI force off");
-		_DetectObsNdiForce = -1;
 	}
 }
 
@@ -166,7 +165,11 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
+	SetDefaultsToGlobalStore();
+}
 
+void Config::SetDefaultsToGlobalStore()
+{
 	auto obs_config = GetGlobalConfig();
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME,
