@@ -23,7 +23,10 @@
 #include <media-io/video-frame.h>
 
 struct preview_output {
-	bool enabled;
+	bool is_running;
+	QString ndi_name;
+	QString ndi_groups;
+
 	obs_source_t *current_source;
 	obs_output_t *output;
 
@@ -42,142 +45,254 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void *param);
 void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
-void preview_output_init(const char *default_name, const char *default_groups)
+void on_output_started(void *data, calldata_t *)
 {
-	if (context.output)
-		return;
-
-	blog(LOG_INFO, "[DistroAV] preview_output_init('%s', '%s')",
-	     default_name, default_groups);
-
-	obs_data_t *output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", default_name);
-	obs_data_set_string(output_settings, "ndi_groups", default_groups);
-	obs_data_set_bool(output_settings, "uses_audio", false);
-	context.output = obs_output_create("ndi_output", "NDI Preview Output",
-					   output_settings, nullptr);
-	obs_data_release(output_settings);
+	blog(LOG_INFO, "+on_output_started()");
+	Config::Current()->PreviewOutputEnabled = true;
+	blog(LOG_INFO, "-on_output_started()");
 }
 
-void preview_output_start(const char *output_name, const char *output_groups)
+void on_output_stopped(void *data, calldata_t *)
 {
-	if (context.enabled || !context.output)
-		return;
-
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_start: starting NDI preview output with name '%s'",
-	     output_name);
-
-	obs_get_video_info(&context.ovi);
-
-	uint32_t width = context.ovi.base_width;
-	uint32_t height = context.ovi.base_height;
-
-	obs_enter_graphics();
-	context.texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
-	context.stagesurface = gs_stagesurface_create(width, height, GS_BGRA);
-	obs_leave_graphics();
-
-	const video_output_info *mainVOI =
-		video_output_get_info(obs_get_video());
-	const audio_output_info *mainAOI =
-		audio_output_get_info(obs_get_audio());
-
-	video_output_info voi = {0};
-	voi.name = output_name;
-	voi.format = VIDEO_FORMAT_BGRA;
-	voi.width = width;
-	voi.height = height;
-	voi.fps_den = context.ovi.fps_den;
-	voi.fps_num = context.ovi.fps_num;
-	voi.cache_size = 16;
-	voi.colorspace = mainVOI->colorspace;
-	voi.range = mainVOI->range;
-
-	video_output_open(&context.video_queue, &voi);
-
-	audio_output_info aoi = {0};
-	aoi.name = output_name;
-	aoi.format = mainAOI->format;
-	aoi.samples_per_sec = mainAOI->samples_per_sec;
-	aoi.speakers = mainAOI->speakers;
-	aoi.input_callback = [](void *, uint64_t, uint64_t, uint64_t *,
-				uint32_t, struct audio_output_data *) {
-		return false;
-	};
-	aoi.input_param = nullptr;
-
-	audio_output_open(&context.dummy_audio_queue, &aoi);
-
-	obs_frontend_add_event_callback(on_preview_scene_changed, &context);
-	if (obs_frontend_preview_program_mode_active()) {
-		context.current_source =
-			obs_frontend_get_current_preview_scene();
-	} else {
-		context.current_source = obs_frontend_get_current_scene();
-	}
-	obs_add_main_render_callback(render_preview_source, &context);
-
-	obs_data_t *settings = obs_output_get_settings(context.output);
-	obs_data_set_string(settings, "ndi_name", output_name);
-	obs_data_set_string(settings, "ndi_groups", output_groups);
-	obs_output_update(context.output, settings);
-	obs_data_release(settings);
-
-	obs_output_set_media(context.output, context.video_queue,
-			     context.dummy_audio_queue);
-
-	obs_output_start(context.output);
-	context.enabled = true;
-
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_start: started NDI preview output");
+	blog(LOG_INFO, "+on_output_stopped()");
+	Config::Current()->PreviewOutputEnabled = false;
+	blog(LOG_INFO, "-on_output_stopped()");
 }
 
 void preview_output_stop()
 {
-	if (!context.enabled)
-		return;
+	blog(LOG_INFO, "[DistroAV] +preview_output_stop()");
+	auto output_name = context.ndi_name.toUtf8().constData();
+	if (context.is_running) {
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_stop: stopping NDI preview output '%s'",
+		     output_name);
+		obs_output_stop(context.output);
 
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_stop: stopping NDI preview output");
+		video_output_stop(context.video_queue);
 
-	obs_output_stop(context.output);
+		obs_remove_main_render_callback(render_preview_source,
+						&context);
+		obs_frontend_remove_event_callback(on_preview_scene_changed,
+						   &context);
 
-	video_output_stop(context.video_queue);
+		obs_source_release(context.current_source);
 
-	obs_remove_main_render_callback(render_preview_source, &context);
-	obs_frontend_remove_event_callback(on_preview_scene_changed, &context);
+		obs_enter_graphics();
+		gs_stagesurface_destroy(context.stagesurface);
+		gs_texrender_destroy(context.texrender);
+		obs_leave_graphics();
 
-	obs_source_release(context.current_source);
+		video_output_close(context.video_queue);
+		audio_output_close(context.dummy_audio_queue);
 
-	obs_enter_graphics();
-	gs_stagesurface_destroy(context.stagesurface);
-	gs_texrender_destroy(context.texrender);
-	obs_leave_graphics();
+		context.is_running = false;
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_stop: successfully stopped NDI preview output '%s'",
+		     output_name);
+	} else {
+		blog(LOG_ERROR,
+		     "[DistroAV] preview_output_stop: NDI preview output '%s' is not running",
+		     output_name);
+	}
+	blog(LOG_INFO, "[DistroAV] -preview_output_stop()");
+}
 
-	video_output_close(context.video_queue);
-	audio_output_close(context.dummy_audio_queue);
+void preview_output_start()
+{
+	blog(LOG_INFO, "[DistroAV] +preview_output_start()");
+	auto output_name = context.ndi_name.toUtf8().constData();
+	if (context.output) {
+		if (context.is_running) {
+			preview_output_stop();
+		}
 
-	context.enabled = false;
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_start: starting NDI preview output '%s'",
+		     output_name);
 
-	blog(LOG_INFO,
-	     "[DistroAV] preview_output_stop: stopped NDI preview output");
+		obs_get_video_info(&context.ovi);
+
+		uint32_t width = context.ovi.base_width;
+		uint32_t height = context.ovi.base_height;
+
+		obs_enter_graphics();
+		context.texrender = gs_texrender_create(GS_BGRA, GS_ZS_NONE);
+		context.stagesurface =
+			gs_stagesurface_create(width, height, GS_BGRA);
+		obs_leave_graphics();
+
+		const video_output_info *mainVOI =
+			video_output_get_info(obs_get_video());
+		const audio_output_info *mainAOI =
+			audio_output_get_info(obs_get_audio());
+
+		video_output_info voi = {0};
+		voi.name = output_name;
+		voi.format = VIDEO_FORMAT_BGRA;
+		voi.width = width;
+		voi.height = height;
+		voi.fps_den = context.ovi.fps_den;
+		voi.fps_num = context.ovi.fps_num;
+		voi.cache_size = 16;
+		voi.colorspace = mainVOI->colorspace;
+		voi.range = mainVOI->range;
+
+		video_output_open(&context.video_queue, &voi);
+
+		audio_output_info aoi = {0};
+		aoi.name = output_name;
+		aoi.format = mainAOI->format;
+		aoi.samples_per_sec = mainAOI->samples_per_sec;
+		aoi.speakers = mainAOI->speakers;
+		aoi.input_callback = [](void *, uint64_t, uint64_t, uint64_t *,
+					uint32_t, struct audio_output_data *) {
+			return false;
+		};
+		aoi.input_param = nullptr;
+
+		audio_output_open(&context.dummy_audio_queue, &aoi);
+
+		obs_frontend_add_event_callback(on_preview_scene_changed,
+						&context);
+		if (obs_frontend_preview_program_mode_active()) {
+			context.current_source =
+				obs_frontend_get_current_preview_scene();
+		} else {
+			context.current_source =
+				obs_frontend_get_current_scene();
+		}
+		obs_add_main_render_callback(render_preview_source, &context);
+
+		obs_data_t *settings = obs_output_get_settings(context.output);
+		obs_data_set_string(settings, "ndi_name", output_name);
+		obs_data_set_string(settings, "ndi_groups",
+				    context.ndi_groups.toUtf8().constData());
+		obs_output_update(context.output, settings);
+		obs_data_release(settings);
+
+		obs_output_set_media(context.output, context.video_queue,
+				     context.dummy_audio_queue);
+
+		context.is_running = obs_output_start(context.output);
+		if (context.is_running) {
+			blog(LOG_INFO,
+			     "[DistroAV] preview_output_start: successfully started NDI preview output '%s'",
+			     output_name);
+		} else {
+			auto error = obs_output_get_last_error(context.output);
+			blog(LOG_ERROR,
+			     "[DistroAV] preview_output_start: failed to start NDI preview output '%s'; error='%s'",
+			     output_name, error);
+		}
+
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_start: started NDI preview output");
+	} else {
+		blog(LOG_ERROR,
+		     "[DistroAV] preview_output_start: NDI preview output '%s' is not initialized",
+		     output_name);
+	}
+	blog(LOG_INFO, "[DistroAV] -preview_output_start()");
 }
 
 void preview_output_deinit()
 {
-	blog(LOG_INFO, "[DistroAV] preview_output_deinit()");
+	blog(LOG_INFO, "[DistroAV] +preview_output_deinit()");
+	if (context.output) {
+		preview_output_stop();
 
-	obs_output_release(context.output);
+		auto output_name = context.ndi_name.toUtf8().constData();
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_deinit: releasing NDI preview output '%s'",
+		     output_name);
 
-	context.output = nullptr;
-	context.enabled = false;
+		// Stop handling remote start/stop events from obs-websocket
+		auto sh = obs_output_get_signal_handler(context.output);
+		signal_handler_disconnect(sh, "start", on_output_started,
+					  nullptr);
+		signal_handler_disconnect(sh, "stop", on_output_stopped,
+					  nullptr);
+
+		obs_output_release(context.output);
+		context.output = nullptr;
+		context.ndi_name.clear();
+		context.ndi_groups.clear();
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_deinit: successfully released NDI preview output '%s'",
+		     output_name);
+	} else {
+		blog(LOG_INFO,
+		     "[DistroAV] preview_output_deinit: NDI preview output not created");
+	}
+
+	blog(LOG_INFO, "[DistroAV] -preview_output_deinit()");
 }
 
-bool preview_output_is_enabled()
+void preview_output_init()
 {
-	return context.enabled;
+	blog(LOG_INFO, "[DistroAV] +preview_output_init()");
+
+	auto config = Config::Current();
+	auto output_name = config->PreviewOutputName;
+	auto output_groups = config->PreviewOutputGroups;
+	auto is_enabled = config->PreviewOutputEnabled;
+
+	if (output_name.isEmpty() || //
+	    (output_name != context.ndi_name) ||
+	    output_groups != context.ndi_groups) {
+		preview_output_deinit();
+
+		if (!output_name.isEmpty()) {
+			auto output_name_ = output_name.toUtf8().constData();
+			blog(LOG_INFO,
+			     "[DistroAV] preview_output_init: creating NDI preview output '%s'",
+			     output_name_);
+			obs_data_t *output_settings = obs_data_create();
+			obs_data_set_string(output_settings, "ndi_name",
+					    output_name_);
+			obs_data_set_string(output_settings, "ndi_groups",
+					    output_groups.toUtf8().constData());
+			obs_data_set_bool(output_settings, "uses_audio",
+					  false); // Preview has no audio
+			context.output = obs_output_create("ndi_output",
+							   "NDI Preview Output",
+							   output_settings,
+							   nullptr);
+			obs_data_release(output_settings);
+			if (context.output) {
+				blog(LOG_INFO,
+				     "[DistroAV] preview_output_init: successfully created NDI preview output '%s'",
+				     output_name_);
+
+				// Start handling remote start/stop events from obs-websocket
+				auto sh = obs_output_get_signal_handler(
+					context.output);
+				signal_handler_connect(sh, "start",
+						       on_output_started,
+						       nullptr);
+				signal_handler_connect(
+					sh, "stop", on_output_stopped, nullptr);
+
+				context.ndi_name = output_name;
+				context.ndi_groups = output_groups;
+			} else {
+				blog(LOG_ERROR,
+				     "[DistroAV] preview_output_init: failed to create NDI preview output '%s'",
+				     output_name_);
+			}
+		}
+	}
+
+	if (context.is_running != is_enabled) {
+		if (is_enabled) {
+			preview_output_start();
+		} else {
+			preview_output_stop();
+		}
+	}
+
+	blog(LOG_INFO, "[DistroAV] -preview_output_init()");
 }
 
 void on_preview_scene_changed(enum obs_frontend_event event, void *param)
