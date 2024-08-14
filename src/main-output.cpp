@@ -30,14 +30,14 @@ struct main_output {
 
 static struct main_output context = {0};
 
-void on_main_output_started(void *data, calldata_t *)
+void on_main_output_started(void *, calldata_t *)
 {
 	obs_log(LOG_INFO, "+on_main_output_started()");
 	Config::Current()->OutputEnabled = true;
 	obs_log(LOG_INFO, "-on_main_output_started()");
 }
 
-void on_main_output_stopped(void *data, calldata_t *)
+void on_main_output_stopped(void *, calldata_t *)
 {
 	obs_log(LOG_INFO, "+on_main_output_stopped()");
 	Config::Current()->OutputEnabled = false;

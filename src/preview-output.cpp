@@ -45,14 +45,14 @@ static struct preview_output context = {0};
 void on_preview_scene_changed(enum obs_frontend_event event, void *param);
 void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
-void on_preview_output_started(void *data, calldata_t *)
+void on_preview_output_started(void *, calldata_t *)
 {
 	obs_log(LOG_INFO, "+on_preview_output_started()");
 	Config::Current()->PreviewOutputEnabled = true;
 	obs_log(LOG_INFO, "-on_preview_output_started()");
 }
 
-void on_preview_output_stopped(void *data, calldata_t *)
+void on_preview_output_stopped(void *, calldata_t *)
 {
 	obs_log(LOG_INFO, "+on_preview_output_stopped()");
 	Config::Current()->PreviewOutputEnabled = false;
