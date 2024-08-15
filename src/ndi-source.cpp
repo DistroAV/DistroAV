@@ -90,16 +90,11 @@ typedef struct ptz_t {
 } ptz_t;
 
 typedef struct ndi_source_config_t {
-	/*
-	 * Changes that require the NDI receiver to be reset:
-	 * * ndi_receiver_name
-	 * * ndi_source_name
-	 * * bandwidth
-	 * * latency
-	 * * framesync_enabled
-	 * * hw_accel_enabled
-	 */
 	bool reset_ndi_receiver;
+
+	//
+	// Changes that require the NDI receiver to be reset:
+	//
 	char *ndi_receiver_name;
 	const char *ndi_source_name;
 	int bandwidth;
@@ -107,6 +102,9 @@ typedef struct ndi_source_config_t {
 	bool framesync_enabled;
 	bool hw_accel_enabled;
 
+	//
+	// Changes that do NOT require the NDI receiver to be reset:
+	//
 	enum behavior_type behavior;
 	bool remember_last_frame;
 	int sync_mode;
@@ -983,7 +981,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	obs_log(LOG_INFO, "'%s' +ndi_source_update(…)", obs_source_name);
 
 	//
-	// Config changes that require resetting the NDI receiver: BEGIN
+	// reset_ndi_receiver: BEGIN
 	//
 
 	bool reset_ndi_receiver = false;
@@ -1013,7 +1011,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.hw_accel_enabled = new_hw_accel_enabled;
 
 	//
-	// Config changes that require resetting the NDI receiver: END
+	// reset_ndi_receiver: END
 	//
 
 	const char *behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
