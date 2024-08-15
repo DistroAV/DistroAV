@@ -348,12 +348,19 @@ void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
 	}
 }
 
-Config *Config::Current(bool load)
+void Config::Initialize()
 {
 	if (!_instance) {
 		_instance = new Config();
+		_instance->Load();
 	}
-	if (load) {
+}
+
+Config *Config::Current(bool load)
+{
+	if (!_instance) {
+		Initialize();
+	} else if (load) {
 		_instance->Load();
 	}
 	return _instance;
