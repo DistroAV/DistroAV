@@ -46,6 +46,7 @@
  */
 class Config {
 public:
+	static void Initialize();
 	static Config *Current(bool load = true);
 	static void Destroy();
 
