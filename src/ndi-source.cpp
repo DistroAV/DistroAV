@@ -1264,10 +1264,11 @@ void new_ndi_receiver_name(const char *obs_source_name,
 		bfree(*ndi_receiver_name);
 	}
 	*ndi_receiver_name = bstrdup(QT_TO_UTF8(
-		QString("%1 '%1'").arg(PLUGIN_DISPLAY_NAME, obs_source_name)));
-	// obs_log(LOG_INFO,
-	//      "'%s' new_ndi_receiver_name: ndi_receiver_name='%s'",
-	//      obs_source_name, *ndi_receiver_name);
+		QString("%1 '%2'").arg(PLUGIN_DISPLAY_NAME, obs_source_name)));
+#if 0
+	obs_log(LOG_INFO, "'%s' new_ndi_receiver_name: ndi_receiver_name='%s'",
+		obs_source_name, *ndi_receiver_name);
+#endif
 }
 
 void ndi_source_renamed(void *data, calldata_t *);
