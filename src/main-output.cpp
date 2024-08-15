@@ -50,16 +50,18 @@ void main_output_stop()
 	if (context.is_running) {
 		obs_log(LOG_INFO,
 			"main_output_stop: stopping NDI main output '%s'",
-			context.ndi_name.toUtf8().constData());
+			QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
+
 		context.is_running = false;
+
 		obs_log(LOG_INFO,
 			"main_output_stop: successfully stopped NDI main output '%s'",
-			context.ndi_name.toUtf8().constData());
+			QT_TO_UTF8(context.ndi_name));
 	} else {
 		obs_log(LOG_ERROR,
 			"main_output_stop: NDI main output `%s` is not running",
-			context.ndi_name.toUtf8().constData());
+			QT_TO_UTF8(context.ndi_name));
 	}
 	obs_log(LOG_INFO, "-main_output_stop()");
 }
@@ -67,29 +69,30 @@ void main_output_stop()
 void main_output_start()
 {
 	obs_log(LOG_INFO, "+main_output_start()");
-	auto output_name = context.ndi_name.toUtf8().constData();
 	if (context.output) {
 		if (context.is_running) {
 			main_output_stop();
 		}
+
 		obs_log(LOG_INFO,
 			"main_output_start: starting NDI main output '%s'",
-			output_name);
+			QT_TO_UTF8(context.ndi_name));
+
 		context.is_running = obs_output_start(context.output);
 		if (context.is_running) {
 			obs_log(LOG_INFO,
 				"main_output_start: successfully started NDI main output '%s'",
-				output_name);
+				QT_TO_UTF8(context.ndi_name));
 		} else {
 			auto error = obs_output_get_last_error(context.output);
 			obs_log(LOG_ERROR,
 				"main_output_start: failed to start NDI main output '%s'; error='%s'",
-				output_name, error);
+				QT_TO_UTF8(context.ndi_name), error);
 		}
 	} else {
 		obs_log(LOG_ERROR,
 			"main_output_start: NDI main output '%s' is not initialized",
-			output_name);
+			QT_TO_UTF8(context.ndi_name));
 	}
 	obs_log(LOG_INFO, "-main_output_start()");
 }
@@ -100,17 +103,16 @@ void main_output_deinit()
 	if (context.output) {
 		main_output_stop();
 
-		auto output_name = context.ndi_name.toUtf8().constData();
 		obs_log(LOG_INFO,
 			"main_output_deinit: releasing NDI main output '%s'",
-			output_name);
+			QT_TO_UTF8(context.ndi_name));
 
 		// Stop handling "remote" start/stop events (ex: from obs-websocket)
 		auto sh = obs_output_get_signal_handler(context.output);
-		signal_handler_disconnect(sh, "start", on_main_output_started,
-					  nullptr);
-		signal_handler_disconnect(sh, "stop", on_main_output_stopped,
-					  nullptr);
+		signal_handler_disconnect(sh, "start", //
+					  on_main_output_started, nullptr);
+		signal_handler_disconnect(sh, "stop", //
+					  on_main_output_stopped, nullptr);
 
 		obs_output_release(context.output);
 		context.output = nullptr;
@@ -118,7 +120,10 @@ void main_output_deinit()
 		context.ndi_groups.clear();
 		obs_log(LOG_INFO,
 			"main_output_deinit: successfully released NDI main output '%s'",
-			output_name);
+			QT_TO_UTF8(context.ndi_name));
+	} else {
+		obs_log(LOG_INFO,
+			"main_output_deinit: NDI main output is not initialized");
 	}
 	obs_log(LOG_INFO, "-main_output_deinit()");
 }
@@ -138,15 +143,15 @@ void main_output_init()
 		main_output_deinit();
 
 		if (!output_name.isEmpty()) {
-			auto output_name_ = output_name.toUtf8().constData();
 			obs_log(LOG_INFO,
 				"main_output_init: creating NDI main output '%s'",
-				output_name_);
+				QT_TO_UTF8(output_name));
 			obs_data_t *output_settings = obs_data_create();
 			obs_data_set_string(output_settings, "ndi_name",
-					    output_name_);
+					    QT_TO_UTF8(output_name));
 			obs_data_set_string(output_settings, "ndi_groups",
-					    output_groups.toUtf8().constData());
+					    QT_TO_UTF8(output_groups));
+
 			context.output = obs_output_create("ndi_output",
 							   "NDI Main Output",
 							   output_settings,
@@ -155,24 +160,24 @@ void main_output_init()
 			if (context.output) {
 				obs_log(LOG_INFO,
 					"main_output_init: successfully created NDI main output '%s'",
-					output_name_);
+					QT_TO_UTF8(output_name));
 
 				// Start handling "remote" start/stop events (ex: from obs-websocket)
 				auto sh = obs_output_get_signal_handler(
 					context.output);
-				signal_handler_connect(sh, "start",
-						       on_main_output_started,
-						       nullptr);
-				signal_handler_connect(sh, "stop",
-						       on_main_output_stopped,
-						       nullptr);
+				signal_handler_connect( //
+					sh, "start", on_main_output_started,
+					nullptr);
+				signal_handler_connect( //
+					sh, "stop", on_main_output_stopped,
+					nullptr);
 
 				context.ndi_name = output_name;
 				context.ndi_groups = output_groups;
 			} else {
 				obs_log(LOG_ERROR,
 					"main_output_init: failed to create NDI main output '%s'",
-					output_name_);
+					QT_TO_UTF8(output_name));
 			}
 		}
 	}
