@@ -229,7 +229,7 @@ bool obs_module_load(void)
 		"obs_module_load: Qt Version: %s (runtime), %s (compiled)",
 		qVersion(), QT_VERSION_STR);
 
-	auto config = Config::Current();
+	Config::Current();
 
 	if (is_obsndi_installed()) {
 		obs_log(LOG_INFO,
