@@ -68,7 +68,6 @@ void ProcessCommandLine()
 		}
 		if (argument.startsWith("--distroav-log")) {
 			auto parts = argument.split("=");
-			LOG_LEVEL = LOG_DEBUG;
 			if (parts.size() > 1) {
 				auto level = parts.at(1).toLower();
 				if (level == "error") {
@@ -82,12 +81,10 @@ void ProcessCommandLine()
 				} else if (level == "verbose") {
 					LOG_LEVEL = LOG_VERBOSE;
 				}
-				if (LOG_LEVEL != LOG_NONE) {
-					obs_log(LOG_INFO,
-						"config: DistroAV log level set to `%s`",
-						QT_TO_UTF8(level));
-				}
 			}
+			obs_log(LOG_INFO,
+				"config: DistroAV log level set to %d",
+				LOG_LEVEL);
 			continue;
 		}
 
