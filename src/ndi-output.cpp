@@ -266,36 +266,33 @@ void ndi_output_stop(void *data, uint64_t)
 	auto groups = o->ndi_groups;
 	obs_log(LOG_INFO, "+ndi_output_stop(name='%s', groups='%s', ...)", name,
 		groups);
-	if (!o->started) {
-		obs_log(LOG_INFO,
-			"-ndi_output_stop(name='%s', groups='%s', ...)", name,
-			groups);
-		return;
+	if (o->started) {
+		o->started = false;
+
+		obs_output_end_data_capture(o->output);
+
+		if (o->ndi_sender) {
+			obs_log(LOG_DEBUG,
+				"ndi_output_stop: +ndiLib->send_destroy(o->ndi_sender)");
+			ndiLib->send_destroy(o->ndi_sender);
+			obs_log(LOG_DEBUG,
+				"ndi_output_stop: -ndiLib->send_destroy(o->ndi_sender)");
+			o->ndi_sender = nullptr;
+		}
+
+		if (o->conv_buffer) {
+			delete o->conv_buffer;
+			o->conv_buffer = nullptr;
+			o->conv_function = nullptr;
+		}
+
+		o->frame_width = 0;
+		o->frame_height = 0;
+		o->video_framerate = 0.0;
+
+		o->audio_channels = 0;
+		o->audio_samplerate = 0;
 	}
-
-	o->started = false;
-
-	obs_output_end_data_capture(o->output);
-
-	if (o->ndi_sender) {
-		obs_log(LOG_INFO, "+ndiLib->send_destroy(o->ndi_sender)");
-		ndiLib->send_destroy(o->ndi_sender);
-		obs_log(LOG_INFO, "-ndiLib->send_destroy(o->ndi_sender)");
-		o->ndi_sender = nullptr;
-	}
-
-	if (o->conv_buffer) {
-		delete o->conv_buffer;
-		o->conv_buffer = nullptr;
-		o->conv_function = nullptr;
-	}
-
-	o->frame_width = 0;
-	o->frame_height = 0;
-	o->video_framerate = 0.0;
-
-	o->audio_channels = 0;
-	o->audio_samplerate = 0;
 
 	obs_log(LOG_INFO, "-ndi_output_stop(name='%s', groups='%s', ...)", name,
 		groups);
