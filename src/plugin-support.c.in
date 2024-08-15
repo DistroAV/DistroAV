@@ -27,12 +27,12 @@ extern void blogva(int log_level, const char *format, va_list args);
 
 void obs_log(int log_level, const char *format, ...)
 {
-	if (log_level >= LOG_LEVEL) {
-		size_t length = 4 + strlen(PLUGIN_NAME) + strlen(format);
+	if (log_level <= LOG_LEVEL) {
+		size_t length = 4 + strlen(PLUGIN_DISPLAY_NAME) + strlen(format);
 
 		char *template = malloc(length + 1);
 
-		snprintf(template, length, "[%s] %s", PLUGIN_NAME, format);
+		snprintf(template, length, "[%s] %s", PLUGIN_DISPLAY_NAME, format);
 
 		va_list(args);
 
