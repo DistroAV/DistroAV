@@ -17,6 +17,5 @@
 
 #pragma once
 
-void main_output_start(const char *output_name, const char *output_groups);
-void main_output_stop();
-bool main_output_is_running();
+void main_output_deinit();
+void main_output_init();
