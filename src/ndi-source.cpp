@@ -90,27 +90,31 @@ typedef struct ptz_t {
 } ptz_t;
 
 typedef struct ndi_source_config_t {
+	/*
+	 * Changes that require the NDI receiver to be reset:
+	 * * ndi_receiver_name
+	 * * ndi_source_name
+	 * * bandwidth
+	 * * latency
+	 * * framesync_enabled
+	 * * hw_accel_enabled
+	 */
+	bool reset_ndi_receiver;
 	char *ndi_receiver_name;
 	const char *ndi_source_name;
 	int bandwidth;
+	int latency;
+	bool framesync_enabled;
+	bool hw_accel_enabled;
+
 	enum behavior_type behavior;
 	bool remember_last_frame;
 	int sync_mode;
-	bool framesync_enabled;
-	bool hw_accel_enabled;
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
-	int latency;
 	bool audio_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
-
-	ndi_source_config_t()
-	{
-		memset(this, 0, sizeof(*this));
-		bandwidth = PROP_BW_UNDEFINED;
-		latency = PROP_LATENCY_UNDEFINED;
-	}
 } ndi_source_config_t;
 
 typedef struct ndi_source_t {
@@ -119,14 +123,6 @@ typedef struct ndi_source_t {
 
 	bool running;
 	pthread_t av_thread;
-
-	ndi_source_t()
-		: obs_source(nullptr),
-		  config(),
-		  running(false),
-		  av_thread()
-	{
-	}
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -420,8 +416,9 @@ void *ndi_source_thread(void *data)
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' +ndi_source_thread(…)", obs_source_name);
 
-	ndi_source_config_t config_most_recent;
-	ndi_source_config_t config_last_used;
+	auto config = Config::Current();
+	ptz_t ptz;
+	NDIlib_tally_t tally;
 
 	obs_source_audio obs_audio_frame = {};
 	obs_source_frame obs_video_frame = {};
@@ -441,63 +438,42 @@ void *ndi_source_thread(void *data)
 	NDIlib_audio_frame_v3_t audio_frame3;
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 
-	bool reset_ndi_receiver = true;
-
 	//
 	// Main NDI receiver loop: BEGIN
 	//
 	while (s->running) {
-
-		// semi-atomic not *TOO* heavy bit copy "snapshot"
-		config_most_recent = s->config;
-
 		//
-		// Check for changes that require resetting ndi_receiver: BEGIN
+		// reset_ndi_receiver: BEGIN
 		//
-
-		// Fast pointer comparison is fine here; no need for slow content comparison
-		if (config_most_recent.ndi_receiver_name !=
-		    config_last_used.ndi_receiver_name) {
-			config_last_used.ndi_receiver_name =
-				config_most_recent.ndi_receiver_name;
+		if (s->config.reset_ndi_receiver) {
+			s->config.reset_ndi_receiver = false;
 
 			// If config.ndi_receiver_name changed, then so did obs_source_name
 			obs_source_name = obs_source_get_name(s->obs_source);
 
-			reset_ndi_receiver = true;
-
-			recv_desc.p_ndi_recv_name =
-				config_most_recent.ndi_receiver_name;
+			//
+			// Update recv_desc.p_ndi_recv_name
+			//
+			recv_desc.p_ndi_recv_name = s->config.ndi_receiver_name;
 			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: ndi_receiver_name changed; Setting recv_desc.p_ndi_recv_name='%s'",
+				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.p_ndi_recv_name='%s'",
 				obs_source_name, //
 				recv_desc.p_ndi_recv_name);
-		}
 
-		// Fast pointer comparison is fine here; no need for slow content comparison
-		if (config_most_recent.ndi_source_name !=
-		    config_last_used.ndi_source_name) {
-			config_last_used.ndi_source_name =
-				config_most_recent.ndi_source_name;
-
-			reset_ndi_receiver = true;
-
+			//
+			// Update recv_desc.source_to_connect_to.p_ndi_name
+			//
 			recv_desc.source_to_connect_to.p_ndi_name =
-				config_most_recent.ndi_source_name;
+				s->config.ndi_source_name;
 			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: ndi_source_name changed; Setting recv_desc.source_to_connect_to.p_ndi_name='%s'",
+				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.source_to_connect_to.p_ndi_name='%s'",
 				obs_source_name, //
 				recv_desc.source_to_connect_to.p_ndi_name);
-		}
 
-		if (config_most_recent.bandwidth !=
-		    config_last_used.bandwidth) {
-			config_last_used.bandwidth =
-				config_most_recent.bandwidth;
-
-			reset_ndi_receiver = true;
-
-			switch (config_most_recent.bandwidth) {
+			//
+			// Update recv_desc.bandwidth
+			//
+			switch (s->config.bandwidth) {
 			case PROP_BW_HIGHEST:
 			default:
 				recv_desc.bandwidth =
@@ -513,52 +489,28 @@ void *ndi_source_thread(void *data)
 				break;
 			}
 			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: bandwidth changed; Setting recv_desc.bandwidth='%d'",
+				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.bandwidth=%d",
 				obs_source_name, //
 				recv_desc.bandwidth);
-		}
 
-		if (config_most_recent.latency != config_last_used.latency) {
-			config_last_used.latency = config_most_recent.latency;
-
-			reset_ndi_receiver = true;
-
-			if (config_most_recent.latency == PROP_LATENCY_NORMAL)
+			//
+			// Update recv_desc.latency
+			//
+			if (s->config.latency == PROP_LATENCY_NORMAL)
 				recv_desc.color_format =
 					NDIlib_recv_color_format_UYVY_BGRA;
 			else
 				recv_desc.color_format =
 					NDIlib_recv_color_format_fastest;
 			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: latency changed; Setting recv_desc.color_format='%d'",
+				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.color_format=%d",
 				obs_source_name, //
 				recv_desc.color_format);
-		}
 
-		if (config_most_recent.framesync_enabled !=
-		    config_last_used.framesync_enabled) {
-			config_last_used.framesync_enabled =
-				config_most_recent.framesync_enabled;
-
-			reset_ndi_receiver = true;
-
-			obs_log(LOG_INFO,
-				"'%s' ndi_source_thread: framesync changed to %s",
-				obs_source_name, //
-				config_most_recent.framesync_enabled
-					? "enabled"
-					: "disabled");
-		}
-		//
-		// Check for changes that require resetting ndi_receiver: END
-		//
-
-		//
-		// Conditionally reset NDI receiver: BEGIN
-		//
-		if (reset_ndi_receiver) {
-			reset_ndi_receiver = false;
-
+			//
+			// recv_desc is fully populated;
+			// now reset the NDI receiver, destroying any existing ndi_frame_sync or ndi_receiver.
+			//
 			obs_log(LOG_INFO,
 				"'%s' ndi_source_thread: reset_ndi_receiver: Resetting NDI receiver…",
 				obs_source_name);
@@ -606,8 +558,49 @@ void *ndi_source_thread(void *data)
 					s->obs_source);
 			}
 
-			// Apply Framesync Settings
-			if (config_most_recent.framesync_enabled) {
+			if (s->config.hw_accel_enabled) {
+				//
+				// From https://docs.ndi.video/docs/sdk/performance-and-implementation#receiving-video :
+				// > * In the modern versions of NDI, there are internal heuristics that attempt to guess whether hardware
+				// > acceleration would enable better performance. That said, it is possible to explicitly enable hardware
+				// > acceleration if you believe that it would be beneficial for your application. This can be enabled by
+				// > sending an XML metadata message to a receiver as follows:
+				// >	<ndi_video_codec type="hardware"/>
+				//
+				// The wording of this says very unambiguously "it is possible to explicitly enable hardware acceleration",
+				// but this can in reality only ever be a **REQUEST** to enable. The enable could possibly fail for the
+				// obvious reason that the device may not have/support hardware acceleration.
+				//
+				// Furthermore, there is no documented way to request to *disable* hardware acceleration.
+				// I have tried setting the metadata to `<ndi_video_codec type=""/>` or `<ndi_video_codec/>` and it does not
+				// crash, but I was unable to confirm if this actually disabled hardware acceleration, and am skeptical that
+				// it could/would.
+				// So, it seems like there is no way to disable this.
+				// I have asked on the NewTek NDI SDK forum here:
+				// https://forum.vizrt.com/index.php?threads/any-way-to-explicitly-turn-off-hardware-acceleration.253766/
+				//
+				// Regardless, it makes little sense to have a checkbox that requests to enable this when
+				// checked but do nothing when unchecked.
+				// But that is basically what we are going to do here.
+				//
+				// One other way we try to mitigate this is to reset the NDI receiver when hw_accel_enabled is changed
+				// [in `ndi_source_update`]
+				// The theory is that the below `recv_send_metadata` is bound to the NDI receiver instance.
+				// Destroy that receiver instance and you also destroy the metadata and thus the hardware acceleration.
+				// There is no confirmation that this works as theorized.
+				//
+				NDIlib_metadata_frame_t hwAccelMetadata;
+				hwAccelMetadata.p_data =
+					(char *)"<ndi_video_codec type=\"hardware\"/>";
+				obs_log(LOG_INFO,
+					"'%s' ndi_source_thread: reset_ndi_receiver; Sending NDI metadata '%s'",
+					obs_source_name, //
+					hwAccelMetadata.p_data);
+				ndiLib->recv_send_metadata(ndi_receiver,
+							   &hwAccelMetadata);
+			}
+
+			if (s->config.framesync_enabled) {
 				timestamp_audio = 0;
 				timestamp_video = 0;
 				obs_log(LOG_VERBOSE,
@@ -630,7 +623,7 @@ void *ndi_source_thread(void *data)
 			}
 		}
 		//
-		// Conditionally reset NDI receiver: END
+		// reset_ndi_receiver: END
 		//
 
 		//
@@ -651,99 +644,49 @@ void *ndi_source_thread(void *data)
 		}
 
 		//
-		// Change hardware acceleration
+		// Change PTZ: Realtime updated from Source settings UI
 		//
-		if (config_most_recent.hw_accel_enabled !=
-		    config_last_used.hw_accel_enabled) {
-			config_last_used.hw_accel_enabled =
-				config_most_recent.hw_accel_enabled;
-
-			//
-			// From https://docs.ndi.video/docs/sdk/performance-and-implementation#receiving-video :
-			// > * In the modern versions of NDI, there are internal heuristics that attempt to guess whether hardware
-			// > acceleration would enable better performance. That said, it is possible to explicitly enable hardware
-			// > acceleration if you believe that it would be beneficial for your application. This can be enabled by
-			// > sending an XML metadata message to a receiver as follows:
-			// >	<ndi_video_codec type="hardware"/>
-			//
-			// The wording of this says very unambiguously "it is possible to explicitly enable hardware acceleration",
-			// but this can in reality only ever be a **REQUEST** to enable. The enable could fail, possibly for the
-			// obvious reason that the device may not have/support hardware acceleration.
-			//
-			// Furthermore, there is no documented way to request to *disable* hardware acceleration.
-			// I have tried setting the metadata to `<ndi_video_codec type=""/>` or `<ndi_video_codec/>` and it does not
-			// crash, but I was unable to confirm if this actually disabled hardware acceleration, and am skeptical that
-			// it could/would.
-			// So, it seems like there is no way to disable this.
-			// I have asked on the NewTek NDI SDK forum here:
-			// https://forum.vizrt.com/index.php?threads/any-way-to-explicitly-turn-off-hardware-acceleration.253766/
-			//
-			// Regardless, it makes little sense to have a checkbox that requests to enable this when
-			// checked but do nothing when unchecked.
-			// But that is what we are going to do here...
-			//
-			if (config_most_recent.hw_accel_enabled) {
-				NDIlib_metadata_frame_t hwAccelMetadata;
-				hwAccelMetadata.p_data =
-					(char *)"<ndi_video_codec type=\"hardware\"/>";
-				obs_log(LOG_INFO,
-					"ndi_source_thread: '%s' hw_accel_enabled changed to enabled; Sending NDI metadata '%s' to request hardware acceleration",
-					obs_source_name,
-					hwAccelMetadata.p_data);
-				ndiLib->recv_send_metadata(ndi_receiver,
-							   &hwAccelMetadata);
-			}
-		}
-
-		//
-		// Change PTZ
-		//
-		if (config_most_recent.ptz.enabled) {
+		if (s->config.ptz.enabled) {
 			const static float tollerance = 0.001f;
-			if (fabs(config_most_recent.ptz.pan -
-				 config_last_used.ptz.pan) > tollerance ||
-			    fabs(config_most_recent.ptz.tilt -
-				 config_last_used.ptz.tilt) > tollerance ||
-			    fabs(config_most_recent.ptz.zoom -
-				 config_last_used.ptz.zoom) > tollerance) {
+			if (fabs(s->config.ptz.pan - ptz.pan) > tollerance ||
+			    fabs(s->config.ptz.tilt - ptz.tilt) > tollerance ||
+			    fabs(s->config.ptz.zoom - ptz.zoom) > tollerance) {
+				ptz = s->config.ptz;
 				if (ndiLib->recv_ptz_is_supported(
 					    ndi_receiver)) {
-					config_last_used.ptz =
-						config_most_recent.ptz;
-
 					obs_log(LOG_INFO,
 						"'%s' ndi_source_thread: ptz changed; Sending PTZ pan=%f, tilt=%f, zoom=%f",
 						obs_source_name, //
-						config_most_recent.ptz.pan,
-						config_most_recent.ptz.tilt,
-						config_most_recent.ptz.zoom);
-					ndiLib->recv_ptz_pan_tilt(
-						ndi_receiver,
-						config_most_recent.ptz.pan,
-						config_most_recent.ptz.tilt);
-					ndiLib->recv_ptz_zoom(
-						ndi_receiver,
-						config_most_recent.ptz.zoom);
+						ptz.pan, ptz.tilt, ptz.zoom);
+					ndiLib->recv_ptz_pan_tilt(ndi_receiver,
+								  ptz.pan,
+								  ptz.tilt);
+					ndiLib->recv_ptz_zoom(ndi_receiver,
+							      ptz.zoom);
 				}
 			}
 		}
 
 		//
-		// Change Tally
+		// Change Tally: Enable/Disable updated from Plugin settings UI
 		//
-		if (config_most_recent.tally.on_preview !=
-			    config_last_used.tally.on_preview ||
-		    config_most_recent.tally.on_program !=
-			    config_last_used.tally.on_program) {
-			config_last_used.tally = config_most_recent.tally;
-
+#if 0
+		obs_log(LOG_INFO, "'%s' t{pre=%d,pro=%d}",
+			obs_source_name, //
+			s->config.tally2.on_preview,
+			s->config.tally2.on_program);
+#endif
+		if ((config->TallyPreviewEnabled &&
+		     s->config.tally.on_preview != tally.on_preview) ||
+		    (config->TallyProgramEnabled &&
+		     s->config.tally.on_program != tally.on_program)) {
+			tally.on_preview = s->config.tally.on_preview;
+			tally.on_program = s->config.tally.on_program;
 			obs_log(LOG_INFO,
 				"'%s' ndi_source_thread: tally changed; Sending tally on_preview=%d, on_program=%d",
 				obs_source_name, //
-				config_most_recent.tally.on_preview,
-				config_most_recent.tally.on_program);
-			ndiLib->recv_set_tally(ndi_receiver,
-					       &config_most_recent.tally);
+				tally.on_preview, tally.on_program);
+			ndiLib->recv_set_tally(ndi_receiver, &tally);
 		}
 
 		if (ndi_frame_sync) {
@@ -765,7 +708,7 @@ void *ndi_source_thread(void *data)
 				//blog(LOG_INFO, "a");//udio_frame");
 				timestamp_audio = audio_frame2.timestamp;
 				ndi_source_thread_process_audio2(
-					&config_most_recent, &audio_frame2,
+					&s->config, &audio_frame2,
 					s->obs_source, &obs_audio_frame);
 			}
 			ndiLib->framesync_free_audio(ndi_frame_sync,
@@ -783,7 +726,7 @@ void *ndi_source_thread(void *data)
 				//blog(LOG_INFO, "v");//ideo_frame");
 				timestamp_video = video_frame2.timestamp;
 				ndi_source_thread_process_video2(
-					&config_most_recent, &video_frame2,
+					&s->config, &video_frame2,
 					s->obs_source, &obs_video_frame);
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync,
@@ -807,7 +750,7 @@ void *ndi_source_thread(void *data)
 				//
 				//blog(LOG_INFO, "a");//udio_frame");
 				ndi_source_thread_process_audio3(
-					&config_most_recent, &audio_frame3,
+					&s->config, &audio_frame3,
 					s->obs_source, &obs_audio_frame);
 
 				ndiLib->recv_free_audio_v3(ndi_receiver,
@@ -821,7 +764,7 @@ void *ndi_source_thread(void *data)
 				//
 				//blog(LOG_INFO, "v");//ideo_frame");
 				ndi_source_thread_process_video2(
-					&config_most_recent, &video_frame2,
+					&s->config, &video_frame2,
 					s->obs_source, &obs_video_frame);
 
 				ndiLib->recv_free_video_v2(ndi_receiver,
@@ -993,6 +936,7 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 
 void ndi_source_thread_start(ndi_source_t *s)
 {
+	s->config.reset_ndi_receiver = true;
 	s->running = true;
 	pthread_create(&s->av_thread, nullptr, ndi_source_thread, s);
 	obs_log(LOG_INFO,
@@ -1020,6 +964,17 @@ void ndi_source_thread_stop(ndi_source_t *s)
 	}
 }
 
+int safe_strcmp(const char *str1, const char *str2)
+{
+	if (str1 == str2)
+		return 0;
+	if (!str1)
+		return -1;
+	if (!str2)
+		return 1;
+	return strcmp(str1, str2);
+}
+
 void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = (ndi_source_t *)data;
@@ -1027,8 +982,39 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_INFO, "'%s' +ndi_source_update(…)", obs_source_name);
 
-	s->config.ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
-	s->config.bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
+	//
+	// Config changes that require resetting the NDI receiver: BEGIN
+	//
+
+	bool reset_ndi_receiver = false;
+
+	auto new_ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
+	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name,
+					  new_ndi_source_name) != 0;
+	s->config.ndi_source_name = new_ndi_source_name;
+
+	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
+	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
+	s->config.bandwidth = new_bandwidth;
+
+	auto new_latency = (int)obs_data_get_int(settings, PROP_LATENCY);
+	reset_ndi_receiver |= (s->config.latency != new_latency);
+	s->config.latency = new_latency;
+
+	auto new_framesync_enabled =
+		obs_data_get_bool(settings, PROP_FRAMESYNC);
+	reset_ndi_receiver |=
+		(s->config.framesync_enabled != new_framesync_enabled);
+	s->config.framesync_enabled = new_framesync_enabled;
+
+	auto new_hw_accel_enabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
+	reset_ndi_receiver |=
+		(s->config.hw_accel_enabled != new_hw_accel_enabled);
+	s->config.hw_accel_enabled = new_hw_accel_enabled;
+
+	//
+	// Config changes that require resetting the NDI receiver: END
+	//
 
 	const char *behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
 	if (strcmp(behavior, PROP_BEHAVIOR_DISCONNECT) == 0) {
@@ -1048,11 +1034,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_data_set_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
-
-	s->config.framesync_enabled =
-		obs_data_get_bool(settings, PROP_FRAMESYNC);
-
-	s->config.hw_accel_enabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
 
 	bool alpha_filter_enabled = obs_data_get_bool(settings, PROP_FIX_ALPHA);
 	// Prevent duplicate filters by not persisting this value in settings
@@ -1076,7 +1057,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.yuv_colorspace = prop_to_colorspace(
 		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
-	s->config.latency = (int)obs_data_get_int(settings, PROP_LATENCY);
 	// Disable OBS buffering only for "Lowest" latency mode
 	const bool is_unbuffered = (s->config.latency == PROP_LATENCY_LOWEST);
 	obs_source_set_async_unbuffered(obs_source, is_unbuffered);
@@ -1099,14 +1079,19 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	if (strlen(s->config.ndi_source_name) == 0) {
 		obs_log(LOG_INFO,
-			"'%s' ndi_source_update: No NDI Source defined; Requesting Source Thread Stop.",
+			"'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
 			obs_source_name);
 		ndi_source_thread_stop(s);
 	} else {
 		obs_log(LOG_INFO,
-			"'%s' ndi_source_update: NDI Source '%s' defined.",
+			"'%s' ndi_source_update: NDI Source '%s' selected.",
 			obs_source_name, s->config.ndi_source_name);
-		if (!s->running) {
+		if (s->running) {
+			//
+			// Thread is running; notify it if it needs to reset the NDI receiver
+			//
+			s->config.reset_ndi_receiver = reset_ndi_receiver;
+		} else {
 			//
 			// Thread is not running; start it if either:
 			// 1. the source is active
@@ -1138,6 +1123,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 void ndi_source_shown(void *data)
 {
+	// NOTE: This does NOT fire when showing a source in Preview that is also in Program.
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_shown(…)", obs_source_name);
@@ -1152,14 +1138,17 @@ void ndi_source_shown(void *data)
 
 void ndi_source_hidden(void *data)
 {
+	// NOTE: This does NOT fire when hiding a source in Preview that is also in Program.
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_hidden(…)", obs_source_name);
 	s->config.tally.on_preview = false;
-	if (s->config.behavior == BEHAVIOR_DISCONNECT && s->running) {
+	if (s->running && s->config.behavior == BEHAVIOR_DISCONNECT) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_hidden: Requesting Source Thread Stop.",
 			obs_source_name);
+		// Stopping the thread may result in `on_preview=false` not getting sent,
+		// but the thread's `ndiLib->recv_destroy` results in an implicit tally off.
 		ndi_source_thread_stop(s);
 	}
 }
@@ -1200,7 +1189,16 @@ void new_ndi_receiver_name(const char *obs_source_name,
 #endif
 }
 
-void ndi_source_renamed(void *data, calldata_t *);
+void on_ndi_source_renamed(void *data, calldata_t *)
+{
+	auto s = (ndi_source_t *)data;
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	s->config.reset_ndi_receiver = true;
+	obs_log(LOG_INFO,
+		"'%s' on_ndi_source_renamed: new ndi_receiver_name='%s'",
+		obs_source_name, s->config.ndi_receiver_name);
+}
 
 void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 {
@@ -1212,7 +1210,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
-	signal_handler_connect(sh, "rename", ndi_source_renamed, s);
+	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
 
 	ndi_source_update(s, settings);
 
@@ -1221,23 +1219,14 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	return s;
 }
 
-void ndi_source_renamed(void *data, calldata_t *)
-{
-	auto s = (ndi_source_t *)data;
-	auto obs_source_name = obs_source_get_name(s->obs_source);
-	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
-	obs_log(LOG_INFO, "'%s' ndi_source_renamed: ndi_receiver_name='%s'",
-		obs_source_name, s->config.ndi_receiver_name);
-}
-
 void ndi_source_destroy(void *data)
 {
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' +ndi_source_destroy(…)", obs_source_name);
 
-	signal_handler_disconnect(obs_source_get_signal_handler(s->obs_source),
-				  "rename", ndi_source_renamed, s);
+	auto sh = obs_source_get_signal_handler(s->obs_source);
+	signal_handler_disconnect(sh, "rename", on_ndi_source_renamed, s);
 
 	ndi_source_thread_stop(s);
 
@@ -1252,6 +1241,7 @@ void ndi_source_destroy(void *data)
 
 obs_source_info create_ndi_source_info()
 {
+	// https://docs.obsproject.com/reference-sources#source-definition-structure-obs-source-info
 	obs_source_info ndi_source_info = {};
 	ndi_source_info.id = "ndi_source";
 	ndi_source_info.type = OBS_SOURCE_TYPE_INPUT;
