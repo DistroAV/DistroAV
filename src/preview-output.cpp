@@ -207,7 +207,7 @@ void preview_output_deinit()
 			"preview_output_deinit: releasing NDI preview output '%s'",
 			output_name);
 
-		// Stop handling remote start/stop events from obs-websocket
+		// Stop handling "remote" start/stop events (ex: from obs-websocket)
 		auto sh = obs_output_get_signal_handler(context.output);
 		signal_handler_disconnect(sh, "start",
 					  on_preview_output_started, nullptr);
@@ -265,7 +265,7 @@ void preview_output_init()
 					"preview_output_init: successfully created NDI preview output '%s'",
 					output_name_);
 
-				// Start handling remote start/stop events from obs-websocket
+				// Start handling "remote" start/stop events (ex: from obs-websocket)
 				auto sh = obs_output_get_signal_handler(
 					context.output);
 				signal_handler_connect(

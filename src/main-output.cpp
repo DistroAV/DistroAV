@@ -105,7 +105,7 @@ void main_output_deinit()
 			"main_output_deinit: releasing NDI main output '%s'",
 			output_name);
 
-		// Stop handling remote start/stop events from obs-websocket
+		// Stop handling "remote" start/stop events (ex: from obs-websocket)
 		auto sh = obs_output_get_signal_handler(context.output);
 		signal_handler_disconnect(sh, "start", on_main_output_started,
 					  nullptr);
@@ -157,7 +157,7 @@ void main_output_init()
 					"main_output_init: successfully created NDI main output '%s'",
 					output_name_);
 
-				// Start handling remote start/stop events from obs-websocket
+				// Start handling "remote" start/stop events (ex: from obs-websocket)
 				auto sh = obs_output_get_signal_handler(
 					context.output);
 				signal_handler_connect(sh, "start",
