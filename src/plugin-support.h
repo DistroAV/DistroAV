@@ -26,7 +26,6 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#define LOG_NONE -1
 #define LOG_VERBOSE 500
 
 extern int LOG_LEVEL;

@@ -17,7 +17,7 @@
 
 #include "plugin-support.h"
 
-int LOG_LEVEL = LOG_NONE;
+int LOG_LEVEL = 300; // util/base.h LOG_INFO
 
 const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
 const char *PLUGIN_DISPLAY_NAME = "@PLUGIN_DISPLAY_NAME@";
