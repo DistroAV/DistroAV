@@ -1,27 +1,26 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
 
 #include "output-settings.h"
 
 #include "plugin-main.h"
 #include "main-output.h"
 #include "preview-output.h"
-#include "obsndi-update.h"
+#include "update.h"
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -33,16 +32,17 @@ OutputSettings::OutputSettings(QWidget *parent)
 	  ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+
 	connect(ui->buttonBox, SIGNAL(accepted()), this,
 		SLOT(onFormAccepted()));
 
-	auto obsNdiVersionText =
-		QString("%1 %2").arg(PLUGIN_NAME).arg(PLUGIN_VERSION);
-	ui->labelObsNdiVersion->setText(
-		makeLink("#", QT_TO_UTF8(obsNdiVersionText)));
-	connect(ui->labelObsNdiVersion, &QLabel::linkActivated,
-		[this, obsNdiVersionText](const QString &) {
-			QApplication::clipboard()->setText(obsNdiVersionText);
+	auto pluginVersionText =
+		QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
+	ui->labelDistroAvVersion->setText(
+		makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	connect(ui->labelDistroAvVersion, &QLabel::linkActivated,
+		[this, pluginVersionText](const QString &) {
+			QApplication::clipboard()->setText(pluginVersionText);
 			QMessageBox::information(
 				this,
 				Str("NDIPlugin.OutputSettings.TextCopied"),
@@ -54,7 +54,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 		// TODO: Write our own.
 		auto progressDialog = new QProgressDialog(
 			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
-				.arg(PLUGIN_NAME),
+				.arg(PLUGIN_DISPLAY_NAME),
 			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
 			this);
 		progressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -72,7 +72,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
 				QString errorData = pluginUpdateInfo.errorData;
-				if (!Config::LogDebug()) {
+				if (LOG_LEVEL >= LOG_DEBUG) {
 					QJsonParseError parseError;
 					QJsonDocument jsonDoc =
 						QJsonDocument::fromJson(
@@ -109,7 +109,7 @@ The update server says you are not using an official release.<br>
 <br>
 Update checks are only supported for official releases.
 )";
-					if (Config::LogDebug()) {
+					if (LOG_LEVEL >= LOG_DEBUG) {
 						errorText += R"(<br>
 <br>
 If you are running a local build, don't forget to add your build info to the update server.
@@ -126,13 +126,13 @@ If you are running a local build, don't forget to add your build info to the upd
 
 			if (pluginUpdateInfo.versionLatest <=
 				    pluginUpdateInfo.versionCurrent &&
-			    !Config::UpdateForce()) {
+			    Config::UpdateForce < 1) {
 				QMessageBox::information(
 					this,
 					QTStr("NDIPlugin.Update.NoUpdateAvailable")
-						.arg(PLUGIN_NAME),
+						.arg(PLUGIN_DISPLAY_NAME),
 					QTStr("NDIPlugin.Update.YouAreUpToDate")
-						.arg(PLUGIN_NAME,
+						.arg(PLUGIN_DISPLAY_NAME,
 						     pluginUpdateInfo
 							     .versionCurrent
 							     .toString()));
@@ -196,6 +196,9 @@ If you are running a local build, don't forget to add your build info to the upd
 	});
 #endif
 
+	ui->labelNdiRegisteredTrademark->setText(
+		NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+
 	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
 	connect(ui->labelDonateUrl, &QLabel::linkActivated,
 		[this](const QString &url) {
@@ -211,72 +214,48 @@ If you are running a local build, don't forget to add your build info to the upd
 
 void OutputSettings::onFormAccepted()
 {
-	auto conf = Config::Current();
+	auto config = Config::Current();
 
-	conf->OutputEnabled = ui->mainOutputGroupBox->isChecked();
-	conf->OutputName = ui->mainOutputName->text();
-	conf->OutputGroups = ui->mainOutputGroups->text();
+	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
+	config->OutputName = ui->mainOutputName->text();
+	config->OutputGroups = ui->mainOutputGroups->text();
 
-	conf->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
-	conf->PreviewOutputName = ui->previewOutputName->text();
-	conf->PreviewOutputGroups = ui->previewOutputGroups->text();
+	config->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
+	config->PreviewOutputName = ui->previewOutputName->text();
+	config->PreviewOutputGroups = ui->previewOutputGroups->text();
 
-	conf->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
-	conf->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
+	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
+	config->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
-	conf->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
+	config->AutoCheckForUpdates(
+		ui->checkBoxAutoCheckForUpdates->isChecked());
 
-	conf->Save();
+	config->Save();
 
-	if (conf->OutputEnabled) {
-		if (main_output_is_running()) {
-			main_output_stop();
-		}
-		main_output_start(QT_TO_UTF8(ui->mainOutputName->text()),
-				  QT_TO_UTF8(ui->mainOutputGroups->text()));
-	} else {
-		main_output_stop();
-	}
-
-	if (conf->PreviewOutputEnabled) {
-		if (preview_output_is_enabled()) {
-			preview_output_stop();
-		}
-		preview_output_start(
-			QT_TO_UTF8(ui->previewOutputName->text()),
-			QT_TO_UTF8(ui->previewOutputGroups->text()));
-	} else {
-		preview_output_stop();
-	}
+	main_output_init();
+	preview_output_init();
 }
 
 void OutputSettings::showEvent(QShowEvent *)
 {
-	auto conf = Config::Current();
+	auto config = Config::Current();
 
-	conf->Load();
+	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
+	ui->mainOutputName->setText(config->OutputName);
+	ui->mainOutputGroups->setText(config->OutputGroups);
 
-	ui->mainOutputGroupBox->setChecked(conf->OutputEnabled);
-	ui->mainOutputName->setText(conf->OutputName);
-	ui->mainOutputGroups->setText(conf->OutputGroups);
+	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
+	ui->previewOutputName->setText(config->PreviewOutputName);
+	ui->previewOutputGroups->setText(config->PreviewOutputGroups);
 
-	ui->previewOutputGroupBox->setChecked(conf->PreviewOutputEnabled);
-	ui->previewOutputName->setText(conf->PreviewOutputName);
-	ui->previewOutputGroups->setText(conf->PreviewOutputGroups);
-
-	ui->tallyProgramCheckBox->setChecked(conf->TallyProgramEnabled);
-	ui->tallyPreviewCheckBox->setChecked(conf->TallyPreviewEnabled);
+	ui->tallyProgramCheckBox->setChecked(config->TallyProgramEnabled);
+	ui->tallyPreviewCheckBox->setChecked(config->TallyPreviewEnabled);
 
 	ui->checkBoxAutoCheckForUpdates->setChecked(
-		conf->AutoCheckForUpdates());
+		config->AutoCheckForUpdates());
 }
 
 void OutputSettings::toggleShowHide()
 {
 	setVisible(!isVisible());
-}
-
-OutputSettings::~OutputSettings()
-{
-	delete ui;
 }

@@ -12,15 +12,17 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
-/*
+
+/******************************************************************************
 Original File: https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.cpp
- */
+******************************************************************************/
 
 #include "curl-helper.h"
 #include "obs-app.hpp"
 #include "remote-text.hpp"
+#include "plugin-support.h"
 
 using namespace std;
 
@@ -67,7 +69,7 @@ void RemoteTextThread::run()
 			header = curl_slist_append(header, h.c_str());
 
 #if 0
-		blog(LOG_INFO, "RemoteTextThread: Requesting `%s`",
+		obs_log(LOG_INFO, "RemoteTextThread: Requesting `%s`",
 		     url.c_str());
 #endif
 		auto session = curl.get();
@@ -102,7 +104,7 @@ void RemoteTextThread::run()
 		curl_easy_getinfo(session, CURLINFO_RESPONSE_CODE,
 				  &httpStatusCode);
 #if 0
-		blog(LOG_INFO, "RemoteTextThread: curlCode=%d, httpCode=%d",
+		obs_log(LOG_INFO, "RemoteTextThread: curlCode=%d, httpCode=%d",
 		     curlCode, (int)httpCode);
 #endif
 		if (curlCode != CURLE_OK) {
@@ -111,9 +113,9 @@ void RemoteTextThread::run()
 					.arg(curlCode)
 					.arg(curl_easy_strerror(curlCode))
 					.arg(error);
-			blog(LOG_WARNING,
-			     "RemoteTextThread: HTTP request failed. `%s`",
-			     QT_TO_UTF8(errorData));
+			obs_log(LOG_WARNING,
+				"RemoteTextThread: HTTP request failed. `%s`",
+				QT_TO_UTF8(errorData));
 		}
 		emit Result((int)httpStatusCode, responseData, errorData);
 

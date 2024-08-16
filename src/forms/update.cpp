@@ -1,20 +1,20 @@
-/*
-obs-ndi
-Copyright (C) 2016-2023 Stéphane Lepin <stephane.lepin@gmail.com>
+/******************************************************************************
+	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program. If not, see <https://www.gnu.org/licenses/>
-*/
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, see <https://www.gnu.org/licenses/>.
+******************************************************************************/
+
 /*
 Inspiration(s):
 * https://github.com/obsproject/obs-studio/tree/master/UI/update
@@ -29,21 +29,16 @@ Inspiration(s):
 * https://github.com/occ-ai/obs-backgroundremoval/blob/main/src/update-checker/github-utils.cpp#L13
  */
 
-#include "obsndi-update.h"
+#include "update.h"
 
 #include "plugin-main.h"
-#include "obs-support/shared-update.hpp"
 
-#include <obs-frontend-api.h>
+#include "obs-support/shared-update.hpp"
 
 #include <QDesktopServices>
 #include <QDialog>
 #include <QMainWindow>
-// #include <QMessageBox>
 #include <QMetaEnum>
-// #include <QNetworkAccessManager>
-// #include <QNetworkReply>
-// #include <QNetworkRequest>
 #include <QPointer>
 #include <QSslSocket>
 #include <QTimer>
@@ -132,20 +127,20 @@ PluginUpdateInfo::PluginUpdateInfo(const int httpStatusCode_,
 	}
 }
 
-class ObsNdiUpdate : public QDialog {
+class PluginUpdate : public QDialog {
 	Q_OBJECT
 private:
-	std::unique_ptr<Ui::ObsNdiUpdate> ui;
+	std::unique_ptr<Ui::PluginUpdate> ui;
 
 public:
-	explicit ObsNdiUpdate(const PluginUpdateInfo &pluginUpdateInfo,
+	explicit PluginUpdate(const PluginUpdateInfo &pluginUpdateInfo,
 			      QWidget *parent = nullptr)
 		: QDialog(parent),
-		  ui(new Ui::ObsNdiUpdate)
+		  ui(new Ui::PluginUpdate)
 	{
 		ui->setupUi(this);
 
-		auto pluginDisplayName = QString(PLUGIN_NAME);
+		auto pluginDisplayName = QString(PLUGIN_DISPLAY_NAME);
 
 		auto config = Config::Current();
 
@@ -185,27 +180,21 @@ public:
 		ui->textReleaseNotes->setMarkdown(
 			pluginUpdateInfo.releaseNotes);
 
-		ui->checkBoxAutoCheckForUpdates->setText(
-			Str("NDIPlugin.Update.ContinueToCheckForUpdate"));
 		ui->checkBoxAutoCheckForUpdates->setChecked(
 			config->AutoCheckForUpdates());
 		connect(ui->checkBoxAutoCheckForUpdates,
 			&QCheckBox::stateChanged, this, [](int state) {
-				Config::Current()->AutoCheckForUpdates(
+				Config::Current(false)->AutoCheckForUpdates(
 					state == Qt::Checked);
 			});
 
-		ui->buttonSkipThisVersion->setText(
-			Str("NDIPlugin.Update.SkipThisVersion"));
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this,
 			[this, pluginUpdateInfo]() {
-				Config::Current()->SkipUpdateVersion(
+				Config::Current(false)->SkipUpdateVersion(
 					pluginUpdateInfo.versionLatest);
 				reject();
 			});
 
-		ui->buttonRemindMeLater->setText(
-			Str("NDIPlugin.Update.RemindMeLater"));
 		connect(ui->buttonRemindMeLater, &QPushButton::clicked, this,
 			[this]() {
 				// do nothing; on next launch the plugin
@@ -213,9 +202,7 @@ public:
 				reject();
 			});
 
-		ui->buttonInstallUpdate->setText(
-			Str("NDIPlugin.Update.InstallUpdate"));
-#ifdef __APPLE__
+#ifdef Q_OS_MACOS
 		// TODO: auto defaultButtonBackgroundColor = MacOSColorHelper::getDefaultButtonColor();
 		auto defaultButtonBackgroundColor =
 			QColor::fromString("#2f65d4");
@@ -231,7 +218,6 @@ public:
 				accept();
 			});
 
-		ui->labelDonate->setText(Str("NDIPlugin.Donate"));
 		ui->labelDonateUrl->setText(
 			makeLink(PLUGIN_REDIRECT_DONATE_URL));
 		connect(ui->labelDonateUrl, &QLabel::linkActivated,
@@ -241,7 +227,7 @@ public:
 	}
 };
 
-#include "obsndi-update.moc"
+#include "update.moc"
 
 //
 //
@@ -253,16 +239,16 @@ QString GetObsCurrentModuleSHA256()
 	auto module = obs_current_module();
 	auto module_binary_path = obs_get_module_binary_path(module);
 #if 0
-	blog(LOG_INFO,
-	     "[obs-ndi] GetObsCurrentModuleSHA256: module_binary_path=`%s`",
+	obs_log(LOG_INFO,
+	     "GetObsCurrentModuleSHA256: module_binary_path=`%s`",
 	     module_binary_path);
 #endif
 	QString module_hash_sha256;
 	auto success =
 		CalculateFileHash(module_binary_path, module_hash_sha256);
 #if 0
-	blog(LOG_INFO,
-	     "[obs-ndi] GetObsCurrentModuleSHA256: module_hash_sha256=`%s`",
+	obs_log(LOG_INFO,
+	     "GetObsCurrentModuleSHA256: module_hash_sha256=`%s`",
 	     QT_TO_UTF8(module_hash_sha256));
 #endif
 	return success ? module_hash_sha256 : "";
@@ -290,6 +276,8 @@ Options:
 	I think the place to watch for changes that fix this is:
 	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.ps1
 	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.zsh
+	* Or one of RytoEX's branches:
+	  https://github.com/RytoEX/obs-studio/branches
 2. Compile DistroAV's own Qt6 dep w/ TLS enabled: No thanks!
 3. Make only http requests; Don't make https requests:
 	Ignoring the security concerns, this works when testing against the emulator but won't work for
@@ -317,7 +305,7 @@ QPointer<QNetworkReply> update_reply = nullptr;
 #include "obs-support/remote-text.hpp"
 QPointer<RemoteTextThread> update_request = nullptr;
 #endif
-QPointer<ObsNdiUpdate> update_dialog = nullptr;
+QPointer<PluginUpdate> update_dialog = nullptr;
 
 bool isUpdatePendingOrShowing()
 {
@@ -333,53 +321,43 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode,
 				   const QString &errorData,
 				   UserRequestCallback userRequestCallback)
 {
-	auto logDebug = Config::LogDebug();
-	auto logVerbose = logDebug || Config::LogVerbose();
-	if (logDebug) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
-		     httpStatusCode, QT_TO_UTF8(responseData),
-		     QT_TO_UTF8(errorData),
-		     userRequestCallback ? "..." : "nullptr");
+	auto logLevel = LOG_LEVEL;
+	if (logLevel >= LOG_DEBUG) {
+		obs_log(LOG_DEBUG,
+			"onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
+			httpStatusCode, QT_TO_UTF8(responseData),
+			QT_TO_UTF8(errorData),
+			userRequestCallback ? "..." : "nullptr");
 	} else {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
-		     httpStatusCode, QT_TO_UTF8(errorData),
-		     userRequestCallback ? "..." : "nullptr");
+		obs_log(LOG_INFO,
+			"onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
+			httpStatusCode, QT_TO_UTF8(errorData),
+			userRequestCallback ? "..." : "nullptr");
 	}
 
 	auto pluginUpdateInfo =
 		PluginUpdateInfo(httpStatusCode, responseData, errorData);
 	if (!pluginUpdateInfo.errorData.isEmpty()) {
-		blog(LOG_WARNING,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData=`%s`; ignoring response",
-		     httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
+		obs_log(LOG_WARNING,
+			"onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData=`%s`; ignoring response",
+			httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
 		if (userRequestCallback) {
 			userRequestCallback(pluginUpdateInfo);
 		}
 		return;
 	}
 
-	if (logVerbose) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d",
-		     httpStatusCode);
-	}
-
-	if (logDebug) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
-		     pluginUpdateInfo.jsonDocument.toJson().constData());
-	}
-	if (logVerbose) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: versionCurrent=%s",
-		     QT_TO_UTF8(pluginUpdateInfo.versionCurrent.toString()));
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: %sversionLatest=%s",
-		     pluginUpdateInfo.fakeVersionLatest ? "FAKE " : "",
-		     QT_TO_UTF8(pluginUpdateInfo.versionLatest.toString()));
-	}
+	obs_log(LOG_VERBOSE,
+		"onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d",
+		httpStatusCode);
+	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
+		pluginUpdateInfo.jsonDocument.toJson().constData());
+	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: versionCurrent=%s",
+		QT_TO_UTF8(pluginUpdateInfo.versionCurrent.toString()));
+	obs_log(LOG_VERBOSE,
+		"onCheckForUpdateNetworkFinish: %sversionLatest=%s",
+		pluginUpdateInfo.fakeVersionLatest ? "FAKE " : "",
+		QT_TO_UTF8(pluginUpdateInfo.versionLatest.toString()));
 
 	auto config = Config::Current();
 
@@ -388,7 +366,7 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode,
 	config->MinAutoUpdateCheckIntervalSeconds(
 		minAutoUpdateCheckIntervalSeconds);
 
-	auto forceUpdate = Config::UpdateForce();
+	auto forceUpdate = Config::UpdateForce;
 
 	if (userRequestCallback) {
 		// User requested update check ignores SkipUpdateVersion
@@ -396,41 +374,40 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode,
 	} else {
 		// Non-user requested update check respects SkipUpdateVersion
 		auto versionSkip = config->SkipUpdateVersion();
-		if (!forceUpdate &&
+		if (forceUpdate < 1 &&
 		    pluginUpdateInfo.versionLatest == versionSkip) {
-			blog(LOG_INFO,
-			     "[obs-ndi] onCheckForUpdateNetworkFinish: versionLatest == versionSkip(%s); ignoring update",
-			     QT_TO_UTF8(versionSkip.toString()));
+			obs_log(LOG_INFO,
+				"onCheckForUpdateNetworkFinish: versionLatest == versionSkip(%s); ignoring update",
+				QT_TO_UTF8(versionSkip.toString()));
 			return;
 		}
 	}
 
 	// Both user requested and non-user requested update checks ignore versionLatest <= versionCurrent
-	if (!forceUpdate &&
+	if (forceUpdate < 1 &&
 	    pluginUpdateInfo.versionLatest <= pluginUpdateInfo.versionCurrent) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
+		obs_log(LOG_INFO,
+			"onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
 		return;
 	}
 
 	auto uiDelayMillis =
 		userRequestCallback ? 0 : pluginUpdateInfo.uiDelayMillis;
-	if (logDebug) {
-		blog(LOG_INFO,
-		     "[obs-ndi] onCheckForUpdateNetworkFinish: uiDelayMillis=%d",
-		     uiDelayMillis);
-	}
+	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: uiDelayMillis=%d",
+		uiDelayMillis);
 
 	QTimer::singleShot(uiDelayMillis, [pluginUpdateInfo]() {
 		auto main_window = static_cast<QMainWindow *>(
 			obs_frontend_get_main_window());
 		if (main_window == nullptr) {
-			blog(LOG_ERROR,
-			     "onCheckForUpdateNetworkFinish: Failed to get main OBS window");
+			obs_log(LOG_ERROR,
+				"onCheckForUpdateNetworkFinish: Failed to get main OBS window");
 			return;
 		}
 
-		update_dialog = new ObsNdiUpdate(pluginUpdateInfo, main_window);
+		obs_frontend_push_ui_translation(obs_module_get_string);
+		update_dialog = new PluginUpdate(pluginUpdateInfo, main_window);
+		obs_frontend_pop_ui_translation();
 		// Our logic needs to set `update_dialog = nullptr` after it finishes...
 		QObject::connect(update_dialog, &QDialog::finished, [](int) {
 			update_dialog->deleteLater();
@@ -442,7 +419,7 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode,
 
 void updateCheckStop()
 {
-	blog(LOG_INFO, "[obs-ndi] +updateCheckStop()");
+	obs_log(LOG_INFO, "+updateCheckStop()");
 #ifdef UPDATE_REQUEST_QT
 	if (update_reply) {
 		if (update_reply->isRunning()) {
@@ -457,24 +434,23 @@ void updateCheckStop()
 			update_request->exit(1);
 		}
 	}
-	blog(LOG_INFO, "[obs-ndi] -updateCheckStop()");
+	obs_log(LOG_INFO, "-updateCheckStop()");
 }
 
 bool updateCheckStart(UserRequestCallback userRequestCallback)
 {
-	auto logDebug = Config::LogDebug();
 	auto methodSignature =
 		QString("updateCheckStart(userRequestCallback=%1)")
 			.arg(userRequestCallback ? "..." : "nullptr");
-	blog(LOG_INFO, "[obs-ndi] +%s", QT_TO_UTF8(methodSignature));
+	obs_log(LOG_INFO, "+%s", QT_TO_UTF8(methodSignature));
 
 	auto isAutoCheck = userRequestCallback == nullptr;
 
 	auto config = Config::Current();
 	if (isAutoCheck && !config->AutoCheckForUpdates()) {
-		blog(LOG_INFO,
-		     "[obs-ndi] updateCheckStart: AutoCheckForUpdates is disabled; ignoring");
-		blog(LOG_INFO, "[obs-ndi] -%s", QT_TO_UTF8(methodSignature));
+		obs_log(LOG_INFO,
+			"updateCheckStart: AutoCheckForUpdates is disabled; ignoring");
+		obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
 		return false;
 	}
 
@@ -482,16 +458,16 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		if (update_dialog) {
 			update_dialog->raise();
 		}
-		blog(LOG_INFO,
-		     "[obs-ndi] updateCheckStart: update pending or showing; ignoring");
-		blog(LOG_INFO, "[obs-ndi] -%s", QT_TO_UTF8(methodSignature));
+		obs_log(LOG_INFO,
+			"updateCheckStart: update pending or showing; ignoring");
+		obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
 		return false;
 	}
 
 	//
 	// Avoid hitting the server too often by limiting auto-checks to every minAutoUpdateCheckIntervalSeconds.
 	//
-	if (isAutoCheck && !Config::UpdateLastCheckIgnore()) {
+	if (isAutoCheck && !Config::UpdateLastCheckIgnore) {
 		auto now = QDateTime::currentDateTime();
 
 		auto minAutoUpdateCheckIntervalSeconds =
@@ -501,12 +477,12 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 			auto elapsedSeconds = lastUpdateCheck.secsTo(now);
 			if (elapsedSeconds <
 			    minAutoUpdateCheckIntervalSeconds) {
-				blog(LOG_INFO,
-				     "[obs-ndi] updateCheckStart: elapsedSeconds=%lld < minAutoUpdateCheckIntervalSeconds=%d; ignoring",
-				     elapsedSeconds,
-				     minAutoUpdateCheckIntervalSeconds);
-				blog(LOG_INFO, "[obs-ndi] -%s",
-				     QT_TO_UTF8(methodSignature));
+				obs_log(LOG_INFO,
+					"updateCheckStart: elapsedSeconds=%lld < minAutoUpdateCheckIntervalSeconds=%d; ignoring",
+					elapsedSeconds,
+					minAutoUpdateCheckIntervalSeconds);
+				obs_log(LOG_INFO, "-%s",
+					QT_TO_UTF8(methodSignature));
 				return false;
 			}
 		}
@@ -523,10 +499,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		"https://api.github.com/repos/DistroAV/DistroAV/releases/latest");
 #else
 	QUrl url(rehostUrl(PLUGIN_UPDATE_URL));
-	if (logDebug) {
-		blog(LOG_INFO, "[obs-ndi] updateCheckStart: url=`%s`",
-		     QT_TO_UTF8(url.toString()));
-	}
+	obs_log(LOG_VERBOSE, "updateCheckStart: url=`%s`",
+		QT_TO_UTF8(url.toString()));
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = GetProgramGUID();
@@ -539,10 +513,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				 .arg(QSysInfo::prettyProductName())
 				 .arg(QSysInfo::currentCpuArchitecture())
 				 .arg(module_hash_sha256);
-	if (logDebug) {
-		blog(LOG_INFO, "[obs-ndi] updateCheckStart: userAgent=`%s`",
-		     QT_TO_UTF8(userAgent));
-	}
+	obs_log(LOG_VERBOSE, "updateCheckStart: userAgent=`%s`",
+		QT_TO_UTF8(userAgent));
 
 	QJsonObject postObj;
 	postObj["config"] =
@@ -555,28 +527,31 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	}
 #endif
 
+#if 0
 	//qputenv("QT_LOGGING_RULES", "qt.network.ssl=true");
-	blog(LOG_INFO,
-	     "[obs-ndi] updateCheckStart: QSslSocket{ supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`}",
-	     QSslSocket::supportsSsl() ? "true" : "false",
-	     QT_TO_UTF8(QSslSocket::sslLibraryBuildVersionString()),
-	     QT_TO_UTF8(QSslSocket::sslLibraryVersionString()));
+	obs_log(LOG_INFO,
+		"updateCheckStart: QSslSocket{ supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`}",
+		QSslSocket::supportsSsl() ? "true" : "false",
+		QT_TO_UTF8(QSslSocket::sslLibraryBuildVersionString()),
+		QT_TO_UTF8(QSslSocket::sslLibraryVersionString()));
 	/*
 	The above should output something like:
 	```
-	info: [obs-ndi] updateCheckStart: QSslSocket{ supportsSsl=true, sslLibraryBuildVersionString=`OpenSSL 1.1.1l  24 Aug 2021`, sslLibraryVersionString=`OpenSSL 1.1.1l  24 Aug 2021`}	
+	info: updateCheckStart: QSslSocket{ supportsSsl=true, sslLibraryBuildVersionString=`OpenSSL 1.1.1l  24 Aug 2021`, sslLibraryVersionString=`OpenSSL 1.1.1l  24 Aug 2021`}	
 	```
 	Instead it is outputting:
 	```
 	warning: No functional TLS backend was found
 	warning: No functional TLS backend was found
 	warning: No functional TLS backend was found
-	info: [obs-ndi] updateCheckStart: QSslSocket{ supportsSsl=false, sslLibraryBuildVersionString=``, sslLibraryVersionString=``}
+	info: updateCheckStart: QSslSocket{ supportsSsl=false, sslLibraryBuildVersionString=``, sslLibraryVersionString=``}
 	```
 	This appears to confirm that OBS' Qt is not built with SSL support. :(
 	*/
+#endif
 
 #ifdef UPDATE_REQUEST_QT
+	// TODO: QScopedPointer<QNetworkReply, QScopedPointerDeleteLater> reply;
 	update_request = new QNetworkRequest(url);
 #else
 	update_request = new RemoteTextThread(url.toString().toStdString(),
@@ -607,8 +582,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	auto timer = new QTimer();
 	timer->setSingleShot(true);
 	QObject::connect(timer, &QTimer::timeout, []() {
-		blog(LOG_WARNING,
-		     "[obs-ndi] updateCheckStart: timer: Request timed out");
+		obs_log(LOG_WARNING,
+			"updateCheckStart: timer: Request timed out");
 		PostToMainThread("timer->timeout", []() { updateCheckStop(); });
 	});
 
@@ -640,8 +615,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				      const QString &responseData,
 				      const QString &errorData) {
 #if 0
-			blog(LOG_INFO,
-			     "[obs-ndi] updateCheckStart: Result: httpStatusCode=%d, responseData=`%s`, errorData=`%s`",
+			obs_log(LOG_INFO,
+			     "updateCheckStart: Result: httpStatusCode=%d, responseData=`%s`, errorData=`%s`",
 			     httpCode, QT_TO_UTF8(responseData),
 			     QT_TO_UTF8(errorData));
 #endif
@@ -652,6 +627,6 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		Qt::QueuedConnection);
 	update_request->start();
 #endif
-	blog(LOG_INFO, "[obs-ndi] -%s", QT_TO_UTF8(methodSignature));
+	obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
 	return true;
 }
