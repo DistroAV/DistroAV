@@ -1108,7 +1108,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 
 	// Update tally status
-	auto config = Config::Current();
 	auto preview_scene = obs_frontend_get_current_preview_scene();
 	s->config.tally.on_preview = source_showing_in_scene(
 		obs_scene_from_source(preview_scene), obs_source);
