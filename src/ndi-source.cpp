@@ -981,9 +981,6 @@ bool source_showing_in_scene(obs_scene_t *scene, obs_source_t *source)
 	obs_scene_enum_items(
 		scene,
 		[](obs_scene_t *, obs_sceneitem_t *item, void *param) -> bool {
-			auto source_map =
-				static_cast<std::map<obs_source_t *, bool> *>(
-					param);
 			obs_source_t *source = obs_sceneitem_get_source(item);
 			auto it = source_map->find(source);
 			if (it != source_map->end()) {
