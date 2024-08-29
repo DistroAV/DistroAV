@@ -975,42 +975,44 @@ int safe_strcmp(const char *str1, const char *str2)
 
 bool source_showing_in_scene(obs_scene_t *scene, obs_source_t *source)
 {
-    std::map<obs_source_t*, bool> source_map;
-    source_map[source] = false;
+	std::map<obs_source_t *, bool> source_map;
+	source_map[source] = false;
 
-    obs_scene_enum_items(scene, [](obs_scene_t*, obs_sceneitem_t* item, void* param) -> bool {
-        auto source_map = static_cast<std::map<obs_source_t*, bool>*>(param);
-        obs_source_t* source = obs_sceneitem_get_source(item);
-        auto it = source_map->find(source);
-        if (it != source_map->end()) {
-            it->second = true;
-            return false;
-        }
-        return true;
-    }, &source_map);
+	obs_scene_enum_items(
+		scene,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) -> bool {
+			auto source_map =
+				static_cast<std::map<obs_source_t *, bool> *>(
+					param);
+			obs_source_t *source = obs_sceneitem_get_source(item);
+			auto it = source_map->find(source);
+			if (it != source_map->end()) {
+				it->second = true;
+				return false;
+			}
+			return true;
+		},
+		&source_map);
 
-    return source_map[source];
+	return source_map[source];
 };
 void on_ndi_source_scene_changed(enum obs_frontend_event event, void *param)
 {
 	switch (event) {
-		case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
-		{
-			auto s = (ndi_source_t *)param;
-			auto preview_scene = obs_frontend_get_current_preview_scene();
-			s->config.tally.on_preview =
-				source_showing_in_scene(obs_scene_from_source(preview_scene),s->obs_source);
-			break;
-		}
-		case OBS_FRONTEND_EVENT_SCENE_CHANGED:
-		{
-			auto s = (ndi_source_t *)param;
-			s->config.tally.on_program =
-				     obs_source_active(s->obs_source);
-			break;
-		}
-		default:
-			break;
+	case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED: {
+		auto s = (ndi_source_t *)param;
+		auto preview_scene = obs_frontend_get_current_preview_scene();
+		s->config.tally.on_preview = source_showing_in_scene(
+			obs_scene_from_source(preview_scene), s->obs_source);
+		break;
+	}
+	case OBS_FRONTEND_EVENT_SCENE_CHANGED: {
+		auto s = (ndi_source_t *)param;
+		s->config.tally.on_program = obs_source_active(s->obs_source);
+		break;
+	}
+	default:
+		break;
 	}
 }
 void ndi_source_update(void *data, obs_data_t *settings)
@@ -1111,10 +1113,9 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	// Update tally status
 	auto config = Config::Current();
 	auto preview_scene = obs_frontend_get_current_preview_scene();
-	s->config.tally.on_preview =
-		source_showing_in_scene(obs_scene_from_source(preview_scene),obs_source);
-	s->config.tally.on_program =
-				     obs_source_active(obs_source);
+	s->config.tally.on_preview = source_showing_in_scene(
+		obs_scene_from_source(preview_scene), obs_source);
+	s->config.tally.on_program = obs_source_active(obs_source);
 	obs_frontend_add_event_callback(on_ndi_source_scene_changed, s);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
