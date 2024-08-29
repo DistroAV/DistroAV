@@ -776,12 +776,12 @@ void *ndi_source_thread(void *data)
 	//
 
 	if (ndi_frame_sync) {
-		ndiLib->framesync_destroy(ndi_frame_sync);
+		if (ndiLib) ndiLib->framesync_destroy(ndi_frame_sync);
 		ndi_frame_sync = nullptr;
 	}
 
 	if (ndi_receiver) {
-		ndiLib->recv_destroy(ndi_receiver);
+		if (ndiLib) ndiLib->recv_destroy(ndi_receiver);
 		ndi_receiver = nullptr;
 	}
 
