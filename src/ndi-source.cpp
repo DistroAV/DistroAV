@@ -781,7 +781,7 @@ void *ndi_source_thread(void *data)
 	if (ndi_frame_sync) {
 		if (ndiLib) {
 			obs_log(LOG_VERBOSE,
-				"'%s' ndi_source_thread: ndiLib->framesync_destroy(ndi_frame_sync)",
+				"'%s' ndi_source_thread: (out of loop) ndiLib->framesync_destroy(ndi_frame_sync)",
 				obs_source_name);
 			ndiLib->framesync_destroy(ndi_frame_sync);
 		}
