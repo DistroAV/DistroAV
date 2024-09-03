@@ -45,16 +45,16 @@
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
 
-#define PROP_BEHAVIOR "ndi_behavior" // As implemented in 4.14.x
-#define PROP_BEHAVIOR_LASTFRAME_4_14_X \
-	"ndi_behavior_lastframe"                     // As implemented in 4.14.x
-#define PROP_BEHAVIOR_DISCONNECT_4_14_X "disconnect" // As implemented in 4.14.x
-#define PROP_BEHAVIOR_KEEP_4_14_X "keep"             // As implemented in 4.14.x
-
+#define PROP_BEHAVIOR "ndi_behavior"
 // New visibility options as of 6.0.x
 #define PROP_BEHAVIOR_KEEP_ACTIVE "keep_active"
 #define PROP_BEHAVIOR_STOP_RESUME_BLANK "stop_resume_blank"
 #define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME "stop_resume_last_frame"
+
+// Deprecated visibility option implemented in 4.14.x
+#define PROP_BEHAVIOR_LASTFRAME_4_14_X "ndi_behavior_lastframe"
+#define PROP_BEHAVIOR_DISCONNECT_4_14_X "disconnect"
+#define PROP_BEHAVIOR_KEEP_4_14_X "keep"
 
 // sync mode "Internal" got removed 2020/04/28 ccbdf30f4929969fe58ede691b3030d1fc5ef590
 #define PROP_SYNC_INTERNAL 0
@@ -635,6 +635,7 @@ void *ndi_source_thread(void *data)
 			     obs_source_name);
 #endif
 			//blog(LOG_INFO, "s");//leep");
+			// This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds(100));
 			continue;
@@ -1067,7 +1068,9 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		s->config.remember_last_frame = true;
 
 	} else {
-		// Old or deprecated values management
+		// Old or deprecated values management.
+		// This code is here to migrate old settings to the new settings.
+		// Remove this code in future releases.
 		if (strcmp(behavior, PROP_BEHAVIOR_KEEP_4_14_X) == 0) {
 			// Old 4.14.x option - deprecated. Used here to migrate settings. Should be removed in future versions.
 			// Performance-wise, maybe better above the "case: PROP_BEHAVIOR_KEEP_ACTIVE:" and not using the break?
