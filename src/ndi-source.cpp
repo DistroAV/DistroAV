@@ -985,7 +985,8 @@ bool source_showing_in_scene(obs_scene_t *scene, obs_source_t *source)
 			obs_source_t *src = obs_sceneitem_get_source(item);
 			auto it = smap->find(src);
 			if (it != smap->end()) {
-				it->second = it->second || obs_sceneitem_visible(item);
+				it->second = it->second ||
+					     obs_sceneitem_visible(item);
 			}
 			return true;
 		},
@@ -1020,7 +1021,9 @@ void on_ndi_source_scene_changed(enum obs_frontend_event event, void *param)
 		s->config.tally.on_preview = source_showing_in_scene(
 			obs_scene_from_source(preview_scene), s->obs_source);
 		auto sh = obs_source_get_signal_handler(preview_scene);
-		signal_handler_connect(sh, "item_visible", on_ndi_scene_item_visible, s); // respond to item_visible events
+		signal_handler_connect(sh, "item_visible",
+				       on_ndi_scene_item_visible,
+				       s); // respond to item_visible events
 		obs_source_release(preview_scene);
 		break;
 	}
@@ -1030,7 +1033,9 @@ void on_ndi_source_scene_changed(enum obs_frontend_event event, void *param)
 		s->config.tally.on_program = source_showing_in_scene(
 			obs_scene_from_source(program_scene), s->obs_source);
 		auto sh = obs_source_get_signal_handler(program_scene);
-		signal_handler_connect(sh, "item_visible", on_ndi_scene_item_visible, s); // respond to item_visible events
+		signal_handler_connect(sh, "item_visible",
+				       on_ndi_scene_item_visible,
+				       s); // respond to item_visible events
 		obs_source_release(program_scene);
 		break;
 	}
@@ -1144,7 +1149,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	obs_source_release(program_scene);
 
 	obs_frontend_add_event_callback(on_ndi_source_scene_changed, s);
-	
+
 	if (strlen(s->config.ndi_source_name) == 0) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
