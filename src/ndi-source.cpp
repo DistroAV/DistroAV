@@ -1200,7 +1200,6 @@ void ndi_source_shown(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_shown(…)", obs_source_name);
-	s->config.tally.on_preview = true;
 	if (!s->running) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_shown: Requesting Source Thread Start.",
@@ -1215,13 +1214,10 @@ void ndi_source_hidden(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_hidden(…)", obs_source_name);
-	s->config.tally.on_preview = false;
 	if (s->running && s->config.behavior == BEHAVIOR_DISCONNECT) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_hidden: Requesting Source Thread Stop.",
 			obs_source_name);
-		// Stopping the thread may result in `on_preview=false` not getting sent,
-		// but the thread's `ndiLib->recv_destroy` results in an implicit tally off.
 		ndi_source_thread_stop(s);
 	}
 }
@@ -1231,7 +1227,6 @@ void ndi_source_activated(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_activated(…)", obs_source_name);
-	s->config.tally.on_program = true;
 	if (!s->running) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_activated: Requesting Source Thread Start.",
@@ -1245,7 +1240,6 @@ void ndi_source_deactivated(void *data)
 	auto s = (ndi_source_t *)data;
 	obs_log(LOG_INFO, "'%s' ndi_source_deactivated(…)",
 		obs_source_get_name(s->obs_source));
-	s->config.tally.on_program = false;
 }
 
 void new_ndi_receiver_name(const char *obs_source_name,
