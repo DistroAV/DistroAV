@@ -1201,7 +1201,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			// 2. the behavior property is set to keep the NDI receiver running
 			//
 			if (obs_source_active(obs_source) ||
-			    s->config.behavior == BEHAVIOR_KEEP_ACTIVE) {				
+			    s->config.behavior == BEHAVIOR_KEEP_ACTIVE) {
 				obs_log(LOG_INFO,
 					"'%s' ndi_source_update: Requesting Source Thread Start.",
 					obs_source_name);
