@@ -631,8 +631,8 @@ void *ndi_source_thread(void *data)
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
 #if 0
 			obs_log(LOG_INFO,
-			     "'%s' ndi_source_thread: No connection; sleep and restart loop",
-			     obs_source_name);
+				"'%s' ndi_source_thread: No connection; sleep and restart loop",
+				obs_source_name);
 #endif
 			//blog(LOG_INFO, "s");//leep");
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
@@ -1037,15 +1037,15 @@ void ndi_source_update(void *data, obs_data_t *settings)
 #endif
 
 	// Source visibility settings update START
-	// In 4.14.x, the "Behavior" property was used to control the visibility of the source via dropdown and an additional tickbox, creating confusion.
-	// In 6.0.0, the "Behavior" property was replaced with a single dropdown.
+	// In 4.14.x, the "Visibility Behavior" property was used to control the visibility of the source via dropdown and an additional tickbox, creating confusion.
+	// In 6.0.0, the "Visibility Behavior" property was replaced with a single dropdown.
 
 	// Default behavior in 4.14.x is to keep the connection active and remenber the last frame. This is migrated to our "Keep Active" behavior in 6.0.x.
 
 	// If behavior use the 4.14.x settings scheme, migrate to the 6.0.x scheme.
 	// If "Disconnect" and "remenber last frame", migrate to Stop/Resume/Last Frame.
 	// If "Disconnect" only, migrate to Stop/Resume/Blank.
-	// Everything else (like "Keep" or invalid), migrate to "Keep Active".
+	// Everything else (like "Keep connected" or invalid), migrate to "Keep Active".
 
 	auto behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
 	obs_log(LOG_INFO, "ndi_source_update: '%s' behavior='%s'",
@@ -1201,22 +1201,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			// 2. the behavior property is set to keep the NDI receiver running
 			//
 			if (obs_source_active(obs_source) ||
-			    s->config.behavior == BEHAVIOR_KEEP_ACTIVE) {
-
-				// ISSUE: Do we always only want to do this only if we are starting the thread?
-				// Doesn't the thread take care of doing this when it [re]sets the receiver?
-				/*
-				if (s->config.bandwidth ==
-				    NDIlib_recv_bandwidth_audio_only) {
-					obs_log(LOG_INFO,
-						"'%s' ndi_source_update: Audio Only: Deactivate source output video texture",
-						obs_source_name);
-					deactivate_source_output_video_texture(
-						obs_source);
-				}
-
-				*/
-
+			    s->config.behavior == BEHAVIOR_KEEP_ACTIVE) {				
 				obs_log(LOG_INFO,
 					"'%s' ndi_source_update: Requesting Source Thread Start.",
 					obs_source_name);
