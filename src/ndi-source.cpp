@@ -958,7 +958,7 @@ void ndi_source_thread_start(ndi_source_t *s)
 	pthread_create(&s->av_thread, nullptr, ndi_source_thread, s);
 	obs_log(LOG_INFO,
 		"'%s' ndi_source_thread_start: Started A/V ndi_source_thread for NDI source '%s'",
-		obs_source_get_name(s->obs_source), s->config.ndi_source_name);
+		obs_source_get_name(s->obs_source), s->config.ndi_source_name.c_str());
 }
 
 void ndi_source_thread_stop(ndi_source_t *s)
@@ -970,7 +970,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		auto obs_source_name = obs_source_get_name(obs_source);
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_thread_stop: Stopped A/V ndi_source_thread for NDI source '%s'",
-			obs_source_name, s->config.ndi_source_name);
+			obs_source_name, s->config.ndi_source_name.c_str());
 
 		if (!s->config.remember_last_frame) {
 			obs_log(LOG_INFO,
@@ -1102,7 +1102,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	} else {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_update: NDI Source '%s' selected.",
-			obs_source_name, s->config.ndi_source_name);
+			obs_source_name, s->config.ndi_source_name.c_str());
 		if (s->running) {
 			//
 			// Thread is running; notify it if it needs to reset the NDI receiver
