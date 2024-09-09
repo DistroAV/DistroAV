@@ -96,7 +96,7 @@ typedef struct ndi_source_config_t {
 	// Changes that require the NDI receiver to be reset:
 	//
 	char *ndi_receiver_name;
-	const char *ndi_source_name;
+	std::string ndi_source_name;
 	int bandwidth;
 	int latency;
 	bool framesync_enabled;
@@ -462,7 +462,7 @@ void *ndi_source_thread(void *data)
 			// Update recv_desc.source_to_connect_to.p_ndi_name
 			//
 			recv_desc.source_to_connect_to.p_ndi_name =
-				s->config.ndi_source_name;
+				s->config.ndi_source_name.c_str();
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.source_to_connect_to.p_ndi_name='%s'",
 				obs_source_name, //
@@ -1006,7 +1006,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	bool reset_ndi_receiver = false;
 
 	auto new_ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
-	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name,
+	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name.c_str(),
 					  new_ndi_source_name) != 0;
 	s->config.ndi_source_name = new_ndi_source_name;
 
@@ -1094,7 +1094,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.tally.on_program = config->TallyProgramEnabled &&
 				     obs_source_active(obs_source);
 
-	if (strlen(s->config.ndi_source_name) == 0) {
+	if (strlen(s->config.ndi_source_name.c_str()) == 0) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
 			obs_source_name);
