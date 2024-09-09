@@ -380,7 +380,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_log(LOG_DEBUG, "+ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_string(settings, PROP_BEHAVIOR,
-				    PROP_BEHAVIOR_KEEP_ACTIVE);
+				    PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 	obs_data_set_default_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE,
