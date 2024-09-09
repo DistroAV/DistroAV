@@ -514,6 +514,9 @@ void *ndi_source_thread(void *data)
 				obs_source_name);
 
 			if (ndi_frame_sync) {
+				obs_log(LOG_VERBOSE,
+					"'%s' ndi_source_thread: ndiLib->framesync_destroy(ndi_frame_sync)",
+					obs_source_name);
 				ndiLib->framesync_destroy(ndi_frame_sync);
 				ndi_frame_sync = nullptr;
 			}
@@ -776,12 +779,28 @@ void *ndi_source_thread(void *data)
 	//
 
 	if (ndi_frame_sync) {
-		ndiLib->framesync_destroy(ndi_frame_sync);
+		if (ndiLib) {
+			obs_log(LOG_VERBOSE,
+				"'%s' ndi_source_thread: (out of loop) ndiLib->framesync_destroy(ndi_frame_sync)",
+				obs_source_name);
+			ndiLib->framesync_destroy(ndi_frame_sync);
+		}
+		obs_log(LOG_VERBOSE,
+			"'%s' ndi_source_thread: Reset NDI Frame Sync",
+			obs_source_name);
 		ndi_frame_sync = nullptr;
 	}
 
 	if (ndi_receiver) {
-		ndiLib->recv_destroy(ndi_receiver);
+		if (ndiLib) {
+			obs_log(LOG_VERBOSE,
+				"'%s' ndi_source_thread: ndiLib->recv_destroy(ndi_receiver)",
+				obs_source_name);
+			ndiLib->recv_destroy(ndi_receiver);
+		}
+		obs_log(LOG_VERBOSE,
+			"'%s' ndi_source_thread: Reset NDI Receiver",
+			obs_source_name);
 		ndi_receiver = nullptr;
 	}
 
