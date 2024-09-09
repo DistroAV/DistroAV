@@ -992,6 +992,76 @@ int safe_strcmp(const char *str1, const char *str2)
 	return strcmp(str1, str2);
 }
 
+bool source_showing_in_scene(obs_scene_t *scene, obs_source_t *source)
+{
+	std::map<obs_source_t *, bool> source_map;
+	source_map[source] = false;
+
+	obs_scene_enum_items(
+		scene,
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) -> bool {
+			auto smap = (std::map<obs_source_t *, bool> *)param;
+			obs_source_t *src = obs_sceneitem_get_source(item);
+			auto it = smap->find(src);
+			if (it != smap->end()) {
+				it->second = it->second ||
+					     obs_sceneitem_visible(item);
+			}
+			return true;
+		},
+		&source_map);
+
+	return source_map[source];
+};
+
+void on_ndi_scene_item_visible(void *data, calldata_t *)
+{
+	auto s = (ndi_source_t *)data;
+	auto preview_scene = obs_frontend_get_current_preview_scene();
+	s->config.tally.on_preview = source_showing_in_scene(
+		obs_scene_from_source(preview_scene), s->obs_source);
+	obs_source_release(preview_scene);
+	auto program_scene = obs_frontend_get_current_scene();
+	s->config.tally.on_program = source_showing_in_scene(
+		obs_scene_from_source(program_scene), s->obs_source);
+	obs_source_release(program_scene);
+	obs_log(LOG_INFO,
+		"'%s' on_ndi_scene_item_visible: on_preview='%d' on_program='%d'",
+		s->config.ndi_source_name, s->config.tally.on_preview,
+		s->config.tally.on_program);
+}
+
+void on_ndi_source_scene_changed(enum obs_frontend_event event, void *param)
+{
+	switch (event) {
+	case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED: {
+		auto s = (ndi_source_t *)param;
+		auto preview_scene = obs_frontend_get_current_preview_scene();
+		s->config.tally.on_preview = source_showing_in_scene(
+			obs_scene_from_source(preview_scene), s->obs_source);
+		auto sh = obs_source_get_signal_handler(preview_scene);
+		signal_handler_connect(sh, "item_visible",
+				       on_ndi_scene_item_visible,
+				       s); // respond to item_visible events
+		obs_source_release(preview_scene);
+		break;
+	}
+	case OBS_FRONTEND_EVENT_SCENE_CHANGED: {
+		auto s = (ndi_source_t *)param;
+		auto program_scene = obs_frontend_get_current_scene();
+		s->config.tally.on_program = source_showing_in_scene(
+			obs_scene_from_source(program_scene), s->obs_source);
+		auto sh = obs_source_get_signal_handler(program_scene);
+		signal_handler_connect(sh, "item_visible",
+				       on_ndi_scene_item_visible,
+				       s); // respond to item_visible events
+		obs_source_release(program_scene);
+		break;
+	}
+	default:
+		break;
+	}
+}
 void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = (ndi_source_t *)data;
@@ -1088,11 +1158,16 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 
 	// Update tally status
-	auto config = Config::Current();
-	s->config.tally.on_preview = config->TallyPreviewEnabled &&
-				     obs_source_showing(obs_source);
-	s->config.tally.on_program = config->TallyProgramEnabled &&
-				     obs_source_active(obs_source);
+	auto preview_scene = obs_frontend_get_current_preview_scene();
+	s->config.tally.on_preview = source_showing_in_scene(
+		obs_scene_from_source(preview_scene), obs_source);
+	obs_source_release(preview_scene);
+	auto program_scene = obs_frontend_get_current_scene();
+	s->config.tally.on_program = source_showing_in_scene(
+		obs_scene_from_source(program_scene), obs_source);
+	obs_source_release(program_scene);
+
+	obs_frontend_add_event_callback(on_ndi_source_scene_changed, s);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
 		obs_log(LOG_INFO,
@@ -1144,7 +1219,6 @@ void ndi_source_shown(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_shown(…)", obs_source_name);
-	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
 	if (!s->running) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_shown: Requesting Source Thread Start.",
@@ -1159,13 +1233,10 @@ void ndi_source_hidden(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_hidden(…)", obs_source_name);
-	s->config.tally.on_preview = false;
 	if (s->running && s->config.behavior == BEHAVIOR_DISCONNECT) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_hidden: Requesting Source Thread Stop.",
 			obs_source_name);
-		// Stopping the thread may result in `on_preview=false` not getting sent,
-		// but the thread's `ndiLib->recv_destroy` results in an implicit tally off.
 		ndi_source_thread_stop(s);
 	}
 }
@@ -1175,7 +1246,6 @@ void ndi_source_activated(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_activated(…)", obs_source_name);
-	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
 	if (!s->running) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_activated: Requesting Source Thread Start.",
@@ -1189,7 +1259,6 @@ void ndi_source_deactivated(void *data)
 	auto s = (ndi_source_t *)data;
 	obs_log(LOG_INFO, "'%s' ndi_source_deactivated(…)",
 		obs_source_get_name(s->obs_source));
-	s->config.tally.on_program = false;
 }
 
 void new_ndi_receiver_name(const char *obs_source_name,
