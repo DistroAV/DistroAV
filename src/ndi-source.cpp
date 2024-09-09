@@ -958,7 +958,8 @@ void ndi_source_thread_start(ndi_source_t *s)
 	pthread_create(&s->av_thread, nullptr, ndi_source_thread, s);
 	obs_log(LOG_INFO,
 		"'%s' ndi_source_thread_start: Started A/V ndi_source_thread for NDI source '%s'",
-		obs_source_get_name(s->obs_source), s->config.ndi_source_name.c_str());
+		obs_source_get_name(s->obs_source),
+		s->config.ndi_source_name.c_str());
 }
 
 void ndi_source_thread_stop(ndi_source_t *s)
