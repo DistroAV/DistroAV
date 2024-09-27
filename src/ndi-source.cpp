@@ -26,6 +26,7 @@
 #include <thread>
 
 #define PROP_SOURCE "ndi_source_name"
+#define PROP_BEHAVIOR "ndi_behavior"
 #define PROP_BANDWIDTH "ndi_bw_mode"
 #define PROP_SYNC "ndi_sync"
 #define PROP_FRAMESYNC "ndi_framesync"
@@ -45,16 +46,9 @@
 #define PROP_BW_LOWEST 1
 #define PROP_BW_AUDIO_ONLY 2
 
-#define PROP_BEHAVIOR "ndi_behavior"
-// New visibility options as of 6.0.x
-#define PROP_BEHAVIOR_KEEP_ACTIVE "keep_active"
-#define PROP_BEHAVIOR_STOP_RESUME_BLANK "stop_resume_blank"
-#define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME "stop_resume_last_frame"
-
-// Deprecated visibility option implemented in 4.14.x
-#define PROP_BEHAVIOR_LASTFRAME_4_14_X "ndi_behavior_lastframe"
-#define PROP_BEHAVIOR_DISCONNECT_4_14_X "disconnect"
-#define PROP_BEHAVIOR_KEEP_4_14_X "keep"
+#define PROP_BEHAVIOR_KEEP_ACTIVE 0
+#define PROP_BEHAVIOR_STOP_RESUME_BLANK 1
+#define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME 2
 
 // sync mode "Internal" got removed 2020/04/28 ccbdf30f4929969fe58ede691b3030d1fc5ef590
 #define PROP_SYNC_INTERNAL 0
@@ -71,12 +65,6 @@
 #define PROP_LATENCY_NORMAL 0
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
-
-enum behavior_type {
-	BEHAVIOR_KEEP_ACTIVE,
-	BEHAVIOR_STOP_RESUME_BLANK,
-	BEHAVIOR_STOP_RESUME_LAST_FRAME,
-};
 
 extern NDIlib_find_instance_t ndi_finder;
 
@@ -97,7 +85,8 @@ typedef struct ptz_t {
 } ptz_t;
 
 typedef struct ndi_source_config_t {
-	bool reset_ndi_receiver;
+	bool reset_ndi_receiver = true;
+	// Initialize value to true to ensure a receiver reset on OBS launch.
 
 	//
 	// Changes that require the NDI receiver to be reset:
@@ -112,8 +101,7 @@ typedef struct ndi_source_config_t {
 	//
 	// Changes that do NOT require the NDI receiver to be reset:
 	//
-	enum behavior_type behavior;
-	bool remember_last_frame = false;
+	int behavior;
 	int sync_mode;
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
@@ -234,17 +222,17 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_property_t *behavior_list = obs_properties_add_list(
 		props, PROP_BEHAVIOR,
 		obs_module_text("NDIPlugin.SourceProps.Behavior"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
-	obs_property_list_add_string(
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(
 		behavior_list,
 		obs_module_text("NDIPlugin.SourceProps.Behavior.KeepActive"),
 		PROP_BEHAVIOR_KEEP_ACTIVE);
-	obs_property_list_add_string(
+	obs_property_list_add_int(
 		behavior_list,
 		obs_module_text(
 			"NDIPlugin.SourceProps.Behavior.StopResumeBlank"),
 		PROP_BEHAVIOR_STOP_RESUME_BLANK);
-	obs_property_list_add_string(
+	obs_property_list_add_int(
 		behavior_list,
 		obs_module_text(
 			"NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
@@ -379,8 +367,8 @@ void ndi_source_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
-	obs_data_set_default_string(settings, PROP_BEHAVIOR,
-				    PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+	obs_data_set_default_int(settings, PROP_BEHAVIOR,
+				 PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 	obs_data_set_default_int(settings, PROP_SYNC,
 				 PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE,
@@ -1001,36 +989,44 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	auto new_ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
 	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name,
 					  new_ndi_source_name) != 0;
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: Check for 'NDI Source Name' changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
+		obs_source_name, new_ndi_source_name,
+		s->config.ndi_source_name);
 	s->config.ndi_source_name = new_ndi_source_name;
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: Check for 'Bandwidth' setting changes: new_bandwidth='%d' vs config.bandwidth='%d'",
+		obs_source_name, new_bandwidth, s->config.bandwidth);
 	s->config.bandwidth = new_bandwidth;
 
 	auto new_latency = (int)obs_data_get_int(settings, PROP_LATENCY);
 	reset_ndi_receiver |= (s->config.latency != new_latency);
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: Check for 'Latency' setting changes: new_latency='%d' vs config.latency='%d'",
+		obs_source_name, new_latency, s->config.latency);
 	s->config.latency = new_latency;
 
 	auto new_framesync_enabled =
 		obs_data_get_bool(settings, PROP_FRAMESYNC);
 	reset_ndi_receiver |=
 		(s->config.framesync_enabled != new_framesync_enabled);
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: Check for 'Framesync' setting changes: new_framesync_enabled='%s' vs config.framesync_enabled='%s'",
+		obs_source_name, new_framesync_enabled ? "true" : "false",
+		s->config.framesync_enabled ? "true" : "false");
 	s->config.framesync_enabled = new_framesync_enabled;
 
 	auto new_hw_accel_enabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
 	reset_ndi_receiver |=
 		(s->config.hw_accel_enabled != new_hw_accel_enabled);
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: Check for 'Hardware Acceleration' setting changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
+		obs_source_name, new_hw_accel_enabled ? "true" : "false",
+		s->config.hw_accel_enabled ? "true" : "false");
 	s->config.hw_accel_enabled = new_hw_accel_enabled;
-
-	// Clean the frame content when settings change unless requested otherwise
-	// Always clean if the source is set to Audio Only
-	if (s->config.bandwidth == PROP_BW_AUDIO_ONLY ||
-	    !s->config.remember_last_frame) {
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_update: Behavior Blank Frame: Deactivate source output video (Actively reset the frame content)",
-			obs_source_get_name(obs_source));
-		deactivate_source_output_video_texture(obs_source);
-	}
 
 	//
 	// reset_ndi_receiver: END
@@ -1051,98 +1047,55 @@ void ndi_source_update(void *data, obs_data_t *settings)
                 "ndi_source_name": "MACBOOK.LOCAL (Scan Converter)",
                 "ndi_behavior_lastframe": true,
                 "ndi_bw_mode": 0,
-                "ndi_behavior": "stop_resume_blank"
+                "ndi_behavior": 1
             },
 #endif
 
 	// Source visibility settings update START
 	// In 4.14.x, the "Visibility Behavior" property was used to control the visibility of the source via dropdown and an additional tickbox, creating confusion.
 	// In 6.0.0, the "Visibility Behavior" property was replaced with a single dropdown.
+	// This is a breaking change in v6.0.0 and invalid "Visibility Behavior" are set to "Keep Active" which is the default from previous versions.
 
-	// Default behavior in 4.14.x is to keep the connection active and remenber the last frame. This is migrated to our "Keep Active" behavior in 6.0.x.
-
-	// If behavior use the 4.14.x settings scheme, migrate to the 6.0.x scheme.
-	// If "Disconnect" and "remenber last frame", migrate to Stop/Resume/Last Frame.
-	// If "Disconnect" only, migrate to Stop/Resume/Blank.
-	// Everything else (like "Keep connected" or invalid), migrate to "Keep Active".
-
-	auto behavior = obs_data_get_string(settings, PROP_BEHAVIOR);
-	obs_log(LOG_INFO, "ndi_source_update: '%s' behavior='%s'",
+	auto behavior = obs_data_get_int(settings, PROP_BEHAVIOR);
+	obs_log(LOG_INFO, "'%s' ndi_source_update: behavior='%d'",
 		obs_source_name, behavior);
 
-	if (strcmp(behavior, PROP_BEHAVIOR_KEEP_ACTIVE) == 0) {
-		// Keep connection active, most likely the default.
-		s->config.behavior = BEHAVIOR_KEEP_ACTIVE;
-		s->config.remember_last_frame = false;
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: Check for 'Behavior' setting changes: behavior='%d' vs config.behavior='%d'",
+		obs_source_name, behavior, s->config.behavior);
 
-	} else if (strcmp(behavior, PROP_BEHAVIOR_STOP_RESUME_BLANK) == 0) {
+	if (behavior == PROP_BEHAVIOR_KEEP_ACTIVE) {
+		// Keep connection active.
+		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
+
+	} else if (behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK) {
 		// Stop the connection and resume it with a clean frame.
-		s->config.behavior = BEHAVIOR_STOP_RESUME_BLANK;
-		s->config.remember_last_frame = false;
+		s->config.behavior = PROP_BEHAVIOR_STOP_RESUME_BLANK;
 
-	} else if (strcmp(behavior, PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME) ==
-		   0) {
-		// Stop the connection and resume it with the last frame.
-		s->config.behavior = BEHAVIOR_STOP_RESUME_LAST_FRAME;
-		s->config.remember_last_frame = true;
+	} else if (behavior == PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME) {
+		// Stop the connection and resume it with the last diplayed frame.
+		s->config.behavior = PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME;
 
 	} else {
-		// Old or deprecated values management.
-		// This code is here to migrate old settings to the new settings.
-		// Remove this code in future releases.
-		if (strcmp(behavior, PROP_BEHAVIOR_KEEP_4_14_X) == 0) {
-			// Old 4.14.x option - deprecated. Used here to migrate settings. Should be removed in future versions.
-			// Performance-wise, maybe better above the "case: PROP_BEHAVIOR_KEEP_ACTIVE:" and not using the break?
-			s->config.behavior = BEHAVIOR_KEEP_ACTIVE;
-			obs_data_set_string(settings, PROP_BEHAVIOR,
-					    PROP_BEHAVIOR_KEEP_ACTIVE);
-
-		} else if (strcmp(behavior, PROP_BEHAVIOR_DISCONNECT_4_14_X) ==
-			   0) {
-			// Old 4.14.x option - deprecated. Used here to migrate settings. Should be removed in future versions.
-			obs_log(LOG_INFO,
-				"ndi_source_update: '%s' Deprecated (4.14.x) behavior found :'%s'",
-				obs_source_name, behavior);
-
-			auto remember_last_frame = obs_data_get_bool(
-				settings, PROP_BEHAVIOR_LASTFRAME_4_14_X);
-			obs_log(LOG_INFO,
-				"ndi_source_update: '%s' Deprecated (4.14.x) option found : remember_last_frame=%d",
-				obs_source_name, remember_last_frame);
-
-			if (!remember_last_frame) {
-				// Migrate to Stop/Resume/Blank.
-				s->config.behavior = BEHAVIOR_STOP_RESUME_BLANK;
-				s->config.remember_last_frame = false;
-				obs_log(LOG_INFO,
-					"ndi_source_update: '%s' Deprecated (4.14.x) behavior :'%s' migrating to ",
-					obs_source_name, behavior);
-				obs_data_set_string(
-					settings, PROP_BEHAVIOR,
-					PROP_BEHAVIOR_STOP_RESUME_BLANK);
-			} else {
-				// Migrate to Stop/Resume/Last Frame.
-				s->config.behavior =
-					BEHAVIOR_STOP_RESUME_LAST_FRAME;
-				s->config.remember_last_frame = true;
-				obs_log(LOG_INFO,
-					"ndi_source_update: '%s' Deprecated (4.14.x) behavior :'%s' migrating to ",
-					obs_source_name, behavior);
-				obs_data_set_string(
-					settings, PROP_BEHAVIOR,
-					PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
-			}
-		} else {
-			// last fallback option
-			obs_log(LOG_INFO,
-				"ndi_source_update: '%s' Invalid behavior detected :'%s' forced to Keep Alive",
-				obs_source_name, behavior);
-			obs_data_set_string(settings, PROP_BEHAVIOR,
-					    PROP_BEHAVIOR_KEEP_ACTIVE);
-			s->config.behavior = BEHAVIOR_KEEP_ACTIVE;
-			s->config.remember_last_frame = false;
-		}
+		// Fallback option. If the behavior is invalid, force it to "Keep Active" as it most likely came from the 4.14.x version.
+		obs_log(LOG_INFO,
+			"'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+			obs_source_name, behavior);
+		obs_data_set_int(settings, PROP_BEHAVIOR,
+				 PROP_BEHAVIOR_KEEP_ACTIVE);
+		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
 	}
+
+	// Clean the source content when settings change unless requested otherwise.
+	// Always clean if the source is set to Audio Only.
+	if (s->config.bandwidth == PROP_BW_AUDIO_ONLY) {
+		// if (s->config.bandwidth == PROP_BW_AUDIO_ONLY || s->config.behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK) {
+		obs_log(LOG_INFO,
+			"'%s' ndi_source_update: Deactivate source output video (Actively reset the frame content)",
+			obs_source_get_name(obs_source));
+		deactivate_source_output_video_texture(obs_source);
+	}
+
 	//
 	// Source visibility settings update END
 	//
@@ -1220,7 +1173,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			// 2. the behavior property is set to keep the NDI receiver running
 			//
 			if (obs_source_active(obs_source) ||
-			    s->config.behavior == BEHAVIOR_KEEP_ACTIVE) {
+			    s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE) {
 				obs_log(LOG_INFO,
 					"'%s' ndi_source_update: Requesting Source Thread Start.",
 					obs_source_name);
@@ -1254,7 +1207,7 @@ void ndi_source_hidden(void *data)
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_INFO, "'%s' ndi_source_hidden(…)", obs_source_name);
 	s->config.tally.on_preview = false;
-	if (s->running && s->config.behavior != BEHAVIOR_KEEP_ACTIVE) {
+	if (s->running && s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_hidden: Requesting Source Thread Stop.",
 			obs_source_name);
