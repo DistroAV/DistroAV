@@ -92,7 +92,7 @@ typedef struct ndi_source_config_t {
 	// Changes that require the NDI receiver to be reset:
 	//
 	char *ndi_receiver_name;
-	const char *ndi_source_name;
+	char *ndi_source_name;
 	int bandwidth;
 	int latency;
 	bool framesync_enabled;
