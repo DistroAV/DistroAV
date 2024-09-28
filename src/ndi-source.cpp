@@ -993,7 +993,14 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		"'%s' ndi_source_update: Check for 'NDI Source Name' changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
 		obs_source_name, new_ndi_source_name,
 		s->config.ndi_source_name);
-	s->config.ndi_source_name = new_ndi_source_name;
+
+	if (s->config.ndi_source_name != nullptr) {
+		bfree(s->config.ndi_source_name);
+	}
+
+	s->config.ndi_source_name =
+		(char *)bzalloc(strlen(new_ndi_source_name) + 1);
+	strcpy(s->config.ndi_source_name, new_ndi_source_name);
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
@@ -1298,6 +1305,12 @@ void ndi_source_destroy(void *data)
 		bfree(s->config.ndi_receiver_name);
 		s->config.ndi_receiver_name = nullptr;
 	}
+
+	if (s->config.ndi_source_name) {
+		bfree(s->config.ndi_source_name);
+		s->config.ndi_source_name = nullptr;
+	}
+
 	bfree(s);
 
 	obs_log(LOG_INFO, "'%s' -ndi_source_destroy(…)", obs_source_name);
