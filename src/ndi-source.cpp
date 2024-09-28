@@ -998,9 +998,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		bfree(s->config.ndi_source_name);
 	}
 
-	s->config.ndi_source_name =
-		(char *)bzalloc(strlen(new_ndi_source_name) + 1);
-	strcpy(s->config.ndi_source_name, new_ndi_source_name);
+	s->config.ndi_source_name = bstrdup(new_ndi_source_name);
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
