@@ -92,7 +92,7 @@ typedef struct ndi_source_config_t {
 	// Changes that require the NDI receiver to be reset:
 	//
 	char *ndi_receiver_name;
-	const char *ndi_source_name;
+	char *ndi_source_name;
 	int bandwidth;
 	int latency;
 	bool framesync_enabled;
@@ -525,6 +525,7 @@ void *ndi_source_thread(void *data)
 				ndiLib->recv_destroy(ndi_receiver);
 				ndi_receiver = nullptr;
 			}
+
 			obs_log(LOG_VERBOSE,
 				"'%s' ndi_source_thread: reset_ndi_receiver: recv_desc = { p_ndi_recv_name='%s', source_to_connect_to.p_ndi_name='%s' }",
 				obs_source_name, //
@@ -533,7 +534,9 @@ void *ndi_source_thread(void *data)
 			obs_log(LOG_VERBOSE,
 				"'%s' ndi_source_thread: reset_ndi_receiver: +ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
 				obs_source_name);
+
 			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
+
 			obs_log(LOG_VERBOSE,
 				"'%s' ndi_source_thread: reset_ndi_receiver: -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
 				obs_source_name);
@@ -993,7 +996,12 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		"'%s' ndi_source_update: Check for 'NDI Source Name' changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
 		obs_source_name, new_ndi_source_name,
 		s->config.ndi_source_name);
-	s->config.ndi_source_name = new_ndi_source_name;
+
+	if (s->config.ndi_source_name != nullptr) {
+		bfree(s->config.ndi_source_name);
+	}
+
+	s->config.ndi_source_name = bstrdup(new_ndi_source_name);
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
@@ -1057,8 +1065,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	// This is a breaking change in v6.0.0 and invalid "Visibility Behavior" are set to "Keep Active" which is the default from previous versions.
 
 	auto behavior = obs_data_get_int(settings, PROP_BEHAVIOR);
-	obs_log(LOG_INFO, "'%s' ndi_source_update: behavior='%d'",
-		obs_source_name, behavior);
 
 	obs_log(LOG_INFO,
 		"'%s' ndi_source_update: Check for 'Behavior' setting changes: behavior='%d' vs config.behavior='%d'",
@@ -1088,8 +1094,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	// Clean the source content when settings change unless requested otherwise.
 	// Always clean if the source is set to Audio Only.
-	if (s->config.bandwidth == PROP_BW_AUDIO_ONLY) {
-		// if (s->config.bandwidth == PROP_BW_AUDIO_ONLY || s->config.behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK) {
+	// Always clean if the receiver is reset as well.
+	if (s->config.bandwidth == PROP_BW_AUDIO_ONLY ||
+	    s->config.behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK ||
+	    reset_ndi_receiver) {
 		obs_log(LOG_INFO,
 			"'%s' ndi_source_update: Deactivate source output video (Actively reset the frame content)",
 			obs_source_get_name(obs_source));
@@ -1298,6 +1306,12 @@ void ndi_source_destroy(void *data)
 		bfree(s->config.ndi_receiver_name);
 		s->config.ndi_receiver_name = nullptr;
 	}
+
+	if (s->config.ndi_source_name) {
+		bfree(s->config.ndi_source_name);
+		s->config.ndi_source_name = nullptr;
+	}
+
 	bfree(s);
 
 	obs_log(LOG_INFO, "'%s' -ndi_source_destroy(…)", obs_source_name);
