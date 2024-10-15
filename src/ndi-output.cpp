@@ -155,7 +155,7 @@ bool ndi_output_start(void *data)
 	audio_t *audio = obs_output_audio(o->output);
 
 	if (!video && !audio) {
-		obs_log(LOG_ERROR, "'%s': no video and audio available", name);
+		obs_log(LOG_ERROR, "'%s' ndi_output_start: no video and audio available", name);
 		obs_log(LOG_INFO,
 			"-ndi_output_start(name='%s', groups='%s', ...)", name,
 			groups);
@@ -231,13 +231,13 @@ bool ndi_output_start(void *data)
 	if (o->ndi_sender) {
 		o->started = obs_output_begin_data_capture(o->output, flags);
 		if (o->started) {
-			obs_log(LOG_INFO, "'%s': ndi output started", name);
+			obs_log(LOG_INFO, "'%s' ndi_output_start: ndi output started", name);
 		} else {
-			obs_log(LOG_ERROR, "'%s': data capture start failed",
+			obs_log(LOG_ERROR, "'%s' ndi_output_start: data capture start failed",
 				name);
 		}
 	} else {
-		obs_log(LOG_ERROR, "'%s': ndi sender init failed", name);
+		obs_log(LOG_ERROR, "'%s' ndi_output_start: ndi sender init failed", name);
 	}
 
 	obs_log(LOG_INFO, "-ndi_output_start(name='%s', groups='%s'...)", name,
