@@ -24,9 +24,8 @@ DistroAV (Formerly OBS-NDI)
 
 ## Requirements
 * OBS >= 30.0.0 (Qt6, x64/ARM64/AppleSilicon)
-* [NDI Runtime](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
-  MacOS/Windows: NDI 6  
-  Linux: NDI 5 ([NDI 6 with a symlink](https://github.com/DistroAV/DistroAV/blob/4fc32df87ebcb9f659fec1e38ffbac8fb7565876/CI/libndi-get.sh#L76); NDI 6 support "Soon™")
+* [NDI Runtime >= 6](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
+* [Remove old OBS-NDI plugin](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Installation
 
@@ -35,6 +34,8 @@ See [Installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installatio
 # Troubleshooting
 
 See [Troubleshooting Wiki](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting)
+
+Conflict with OBS-NDI plugin : [Follow the instructions](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Development
 
