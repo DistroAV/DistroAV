@@ -72,7 +72,7 @@ OutputSettings::OutputSettings(QWidget *parent)
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
 				QString errorData = pluginUpdateInfo.errorData;
-				if (!Config::LogDebug()) {
+				if (LOG_LEVEL >= LOG_DEBUG) {
 					QJsonParseError parseError;
 					QJsonDocument jsonDoc =
 						QJsonDocument::fromJson(
@@ -109,7 +109,7 @@ The update server says you are not using an official release.<br>
 <br>
 Update checks are only supported for official releases.
 )";
-					if (Config::LogDebug()) {
+					if (LOG_LEVEL >= LOG_DEBUG) {
 						errorText += R"(<br>
 <br>
 If you are running a local build, don't forget to add your build info to the update server.
@@ -126,7 +126,7 @@ If you are running a local build, don't forget to add your build info to the upd
 
 			if (pluginUpdateInfo.versionLatest <=
 				    pluginUpdateInfo.versionCurrent &&
-			    !Config::UpdateForce()) {
+			    Config::UpdateForce < 1) {
 				QMessageBox::information(
 					this,
 					QTStr("NDIPlugin.Update.NoUpdateAvailable")
@@ -232,26 +232,8 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-	if (config->OutputEnabled) {
-		if (main_output_is_running()) {
-			main_output_stop();
-		}
-		main_output_start(QT_TO_UTF8(ui->mainOutputName->text()),
-				  QT_TO_UTF8(ui->mainOutputGroups->text()));
-	} else {
-		main_output_stop();
-	}
-
-	if (config->PreviewOutputEnabled) {
-		if (preview_output_is_enabled()) {
-			preview_output_stop();
-		}
-		preview_output_start(
-			QT_TO_UTF8(ui->previewOutputName->text()),
-			QT_TO_UTF8(ui->previewOutputGroups->text()));
-	} else {
-		preview_output_stop();
-	}
+	main_output_init();
+	preview_output_init();
 }
 
 void OutputSettings::showEvent(QShowEvent *)

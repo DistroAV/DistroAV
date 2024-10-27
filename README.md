@@ -31,8 +31,8 @@ https://opencollective.com/obs-ndi
 
 ## Requirements
 * OBS >= 30.0.0 (Qt6, x64/ARM64/AppleSilicon)
-* [NDI Runtime](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
-  NDI 5 & 6 are supported on Linux, MacOS, and Windows.
+* [NDI Runtime >= 6](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
+* [Remove old OBS-NDI plugin](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Installation
 
@@ -41,6 +41,8 @@ See [Installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installatio
 # Troubleshooting
 
 See [Troubleshooting Wiki](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting)
+
+Conflict with OBS-NDI plugin : [Follow the instructions](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Development
 

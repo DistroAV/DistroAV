@@ -21,9 +21,20 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define LOG_VERBOSE 500
+
+extern int LOG_LEVEL;
+
 extern const char *PLUGIN_NAME;
 extern const char *PLUGIN_DISPLAY_NAME;
 extern const char *PLUGIN_VERSION;
+
+void obs_log(int log_level, const char *format, ...);
 
 #ifdef __cplusplus
 }

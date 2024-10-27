@@ -76,16 +76,16 @@ OutputSettings *output_settings = nullptr;
 
 /**
  * @param url The url to rehost
- * @return if macro `USE_LOCALHOST` is defined then "https://127.0.0.1:5002...", otherwise url
+ * @return if command-line `--distroav-update-local[=port]` is defined then "https://127.0.0.1:[port]...", otherwise url
  */
 QString rehostUrl(const char *url)
 {
 	auto result = QString::fromUtf8(url);
-	if (Config::UpdateHost() == UpdateHostEnum::LocalEmulator) {
+	if (Config::UpdateLocalPort > 0) {
 		result.replace("https://distroav.org",
 			       QString("http://%1:%2")
 				       .arg(PLUGIN_WEB_HOST_LOCAL_EMULATOR)
-				       .arg(Config::UpdateLocalPort()));
+				       .arg(Config::UpdateLocalPort));
 	}
 	return result;
 }
@@ -190,15 +190,15 @@ bool is_module_found(const char *module_name)
 				(struct find_module_data *)param;
 			if (strcmp(data_->target_name, module_info->name) ==
 			    0) {
-				blog(LOG_INFO,
-				     "[DistroAV] is_module_found: Found module_info->name == `%s`",
-				     module_info->name);
+				obs_log(LOG_INFO,
+					"is_module_found: Found module_info->name == `%s`",
+					module_info->name);
 #if 0
-				blog(LOG_INFO,
-				     "[DistroAV] is_module_found: module_info->bin_path=`%s`",
+				obs_log(LOG_INFO,
+				     "is_module_found: module_info->bin_path=`%s`",
 				     module_info->bin_path);
-				blog(LOG_INFO,
-				     "[DistroAV] is_module_found: module_info->data_path=`%s`",
+				obs_log(LOG_INFO,
+				     "is_module_found: module_info->data_path=`%s`",
 				     module_info->data_path);
 #endif
 				data_->found = true;
@@ -210,9 +210,9 @@ bool is_module_found(const char *module_name)
 
 bool is_obsndi_installed()
 {
-	auto force = Config::DetectObsNdiForce();
-	if (force) {
-		return force == 1;
+	auto force = Config::DetectObsNdiForce;
+	if (force != 0) {
+		return force > 0;
 	}
 	return is_module_found("obs-ndi");
 }
@@ -223,19 +223,18 @@ bool is_obsndi_installed()
 
 bool obs_module_load(void)
 {
-	blog(LOG_INFO,
-	     "[DistroAV] obs_module_load: you can haz %s (Version %s)",
-	     PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
-	blog(LOG_INFO,
-	     "[DistroAV] obs_module_load: Qt Version: %s (runtime), %s (compiled)",
-	     qVersion(), QT_VERSION_STR);
+	obs_log(LOG_INFO, "obs_module_load: you can haz %s (Version %s)",
+		PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
+	obs_log(LOG_INFO,
+		"obs_module_load: Qt Version: %s (runtime), %s (compiled)",
+		qVersion(), QT_VERSION_STR);
 
-	auto config = Config::Current();
+	Config::Initialize();
 
 	if (is_obsndi_installed()) {
-		blog(LOG_INFO,
-		     "[DistroAV] obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
-		     PLUGIN_DISPLAY_NAME);
+		obs_log(LOG_INFO,
+			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
+			PLUGIN_DISPLAY_NAME);
 		showCriticalUnloadingMessageBoxDelayed(
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
 			QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
@@ -284,9 +283,9 @@ bool obs_module_load(void)
 #else
 		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 #endif
-		blog(LOG_ERROR,
-		     "[DistroAV] obs_module_load: ERROR - load_ndilib() failed; message=%s",
-		     QT_TO_UTF8(message));
+		obs_log(LOG_ERROR,
+			"obs_module_load: ERROR - load_ndilib() failed; message=%s",
+			QT_TO_UTF8(message));
 		showCriticalUnloadingMessageBoxDelayed(title, message);
 		return false;
 	}
@@ -298,14 +297,14 @@ bool obs_module_load(void)
 	auto initialized = ndiLib->initialize();
 #endif
 	if (!initialized) {
-		blog(LOG_ERROR,
-		     "[DistroAV] obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
+		obs_log(LOG_ERROR,
+			"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
-	blog(LOG_INFO,
-	     "[DistroAV] obs_module_load: NDI library initialized successfully ('%s')",
-	     ndiLib->version());
+	obs_log(LOG_INFO,
+		"obs_module_load: NDI library initialized successfully ('%s')",
+		ndiLib->version());
 
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
@@ -328,10 +327,6 @@ bool obs_module_load(void)
 	obs_register_source(&alpha_filter_info);
 
 	if (main_window) {
-		preview_output_init(QT_TO_UTF8(config->PreviewOutputName),
-				    QT_TO_UTF8(config->PreviewOutputGroups));
-
-		// Ui setup
 		auto menu_action = static_cast<QAction *>(
 			obs_frontend_add_tools_menu_qaction(obs_module_text(
 				"NDIPlugin.Menu.OutputSettings")));
@@ -349,25 +344,11 @@ bool obs_module_load(void)
 			[](enum obs_frontend_event event, void *) {
 				if (event ==
 				    OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-					auto config_ = Config::Current();
-					if (config_->OutputEnabled) {
-						main_output_start(
-							QT_TO_UTF8(
-								config_->OutputName),
-							QT_TO_UTF8(
-								config_->OutputGroups));
-					}
-					if (config_->PreviewOutputEnabled) {
-						preview_output_start(
-							QT_TO_UTF8(
-								config_->PreviewOutputName),
-							QT_TO_UTF8(
-								config_->PreviewOutputGroups));
-					}
+					main_output_init();
+					preview_output_init();
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
-					preview_output_stop();
-					main_output_stop();
-
+					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
+					main_output_deinit();
 					preview_output_deinit();
 				}
 			},
@@ -379,16 +360,16 @@ bool obs_module_load(void)
 
 void obs_module_post_load(void)
 {
-	blog(LOG_INFO, "[DistroAV] +obs_module_post_load()");
+	obs_log(LOG_INFO, "+obs_module_post_load()");
 
 	updateCheckStart();
 
-	blog(LOG_INFO, "[DistroAV] -obs_module_post_load()");
+	obs_log(LOG_INFO, "-obs_module_post_load()");
 }
 
 void obs_module_unload(void)
 {
-	blog(LOG_INFO, "[DistroAV] +obs_module_unload()");
+	obs_log(LOG_INFO, "+obs_module_unload()");
 
 	updateCheckStop();
 
@@ -405,7 +386,7 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
-	blog(LOG_INFO, "[DistroAV] -obs_module_unload(): goodbye!");
+	obs_log(LOG_INFO, "-obs_module_unload(): goodbye!");
 }
 
 const NDIlib_v5 *load_ndilib()
@@ -451,8 +432,8 @@ const NDIlib_v5 *load_ndilib()
 		// MacOS, Windows
 		temp_path = QDir::cleanPath(
 			dir.absoluteFilePath(NDILIB_LIBRARY_NAME));
-		blog(LOG_INFO, "[DistroAV] load_ndilib: Trying '%s'",
-		     QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
+		obs_log(LOG_INFO, "load_ndilib: Trying '%s'",
+			QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
 		auto file_info = QFileInfo(temp_path);
 		if (file_info.exists() && file_info.isFile()) {
 			lib_path = temp_path;
@@ -461,34 +442,33 @@ const NDIlib_v5 *load_ndilib()
 #endif
 	}
 	if (!lib_path.isEmpty()) {
-		blog(LOG_INFO,
-		     "[DistroAV] load_ndilib: Found '%s'; attempting to load NDI library...",
-		     QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
+		obs_log(LOG_INFO,
+			"load_ndilib: Found '%s'; attempting to load NDI library...",
+			QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
 		loaded_lib = new QLibrary(lib_path, nullptr);
 		if (loaded_lib->load()) {
-			blog(LOG_INFO,
-			     "[DistroAV] load_ndilib: NDI library loaded successfully");
+			obs_log(LOG_INFO,
+				"load_ndilib: NDI library loaded successfully");
 			NDIlib_v5_load_ lib_load =
 				reinterpret_cast<NDIlib_v5_load_>(
 					loaded_lib->resolve("NDIlib_v5_load"));
 			if (lib_load != nullptr) {
-				blog(LOG_INFO,
-				     "[DistroAV] load_ndilib: NDIlib_v5_load found");
+				obs_log(LOG_INFO,
+					"load_ndilib: NDIlib_v5_load found");
 				return lib_load();
 			} else {
-				blog(LOG_ERROR,
-				     "[DistroAV] load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+				obs_log(LOG_ERROR,
+					"load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 			}
 		} else {
-			blog(LOG_ERROR,
-			     "[DistroAV] load_ndilib: ERROR: QLibrary returned the following error: '%s'",
-			     QT_TO_UTF8(loaded_lib->errorString()));
+			obs_log(LOG_ERROR,
+				"load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+				QT_TO_UTF8(loaded_lib->errorString()));
 			delete loaded_lib;
 			loaded_lib = nullptr;
 		}
 	}
 
-	blog(LOG_ERROR,
-	     "[DistroAV] load_ndilib: ERROR: Can't find the NDI library");
+	obs_log(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;
 }
