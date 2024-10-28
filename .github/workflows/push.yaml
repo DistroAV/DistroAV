@@ -98,9 +98,9 @@ jobs:
           if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
           shopt -s extglob
 
-          echo "### Checksums" > ${{ github.workspace }}/CHECKSUMS.txt
+          echo "### Checksums" | tee -a ${{ github.workspace }}/CHECKSUMS.txt
           for file in ${{ github.workspace }}/@(*.exe|*.deb|*.ddeb|*.pkg|*.tar.xz|*.zip); do
-            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" >> ${{ github.workspace }}/CHECKSUMS.txt
+            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" | tee -a ${{ github.workspace }}/CHECKSUMS.txt
           done
 
       - name: Create Release 🛫
