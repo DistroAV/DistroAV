@@ -29,10 +29,6 @@ Source: "..\release\Package\*"; DestDir: "{app}"; Flags: ignoreversion recursesu
 Source: "..\LICENSE"; Flags: dontcopy
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
-; Could be used to "nullify" obs-ndi.dll (replace with an empty file) then delete this file at the end of the installation
-; Source: "{app}\obs-ndi.dll"; DestDir: "{app}"; Flags: deleteafterinstall
-; Source: "{app}\obs-ndi.pdb"; DestDir: "{app}"; Flags: deleteafterinstall 
-
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
@@ -79,16 +75,15 @@ begin
 end;
 
 
-// Remove OBS-NDI - by @Trouffman for DistroAV
+// Remove old OBS-NDI conflicting plugin - by Trouffman for DistroA https://github.com/DistroAV/DistroAV/
 
-// Based on 4.14.0 AppId
+// CAREFUL : this target the old AppID.
 const UninstallRegisterPath = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
 
-// Find out if the old App uninstaller exists
 function GetOldAppUninstallerPath(Param: String): String;
 var
   UninstallerPathRegistry: String;
-// Param is required but not used.
+// Param is required to be used in other sections.
 begin
   result := '';
   // Check primary registry location
@@ -97,14 +92,8 @@ begin
   // Check alternative Registry location
   else if ( RegQueryStringValue(HKCU, UninstallRegisterPath, 'UninstallString', UninstallerPathRegistry) ) then
       result := RemoveQuotes(UninstallerPathRegistry);
- // else
-      // No old-app uninstaller found
-      // Assume no old-app exist or it is a manual install
-  // end;
 end;
 
-
-// Check for the old App Uninstaller
 function UninstallOldAppAvailable(): Boolean;
 begin
   if (GetOldAppUninstallerPath('') <> '') then Result := True else Result := False;
