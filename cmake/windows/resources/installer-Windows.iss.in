@@ -29,9 +29,25 @@ Source: "..\release\Package\*"; DestDir: "{app}"; Flags: ignoreversion recursesu
 Source: "..\LICENSE"; Flags: dontcopy
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
+; Could be used to "nullify" obs-ndi.dll (replace with an empty file) then delete this file at the end of the installation
+; Source: "{app}\obs-ndi.dll"; DestDir: "{app}"; Flags: deleteafterinstall
+; Source: "{app}\obs-ndi.pdb"; DestDir: "{app}"; Flags: deleteafterinstall 
+
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+
+[InstallDelete]
+; Remove previous obs-ndi plugin files (the hard-way)
+Type: filesandordirs; Name: "{app}\data\obs-plugins\obs-ndi\"
+Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.dll"
+Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.pdb"
+
+[Run]
+; This uninstall the old obs-ndi after installation but before the final dialog when installing DistroAV
+Filename: "{code:GetOldAppUninstallerPath}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Uninstall OBS-NDI"
+; Dev-note: Cannot use : Flags: skipifdoesntexist >> it only takes absolute filename.
+
 
 [Code]
 procedure InitializeWizard();
@@ -62,3 +78,34 @@ begin
     Result := InstallPath
 end;
 
+
+// Remove OBS-NDI - by @Trouffman for DistroAV
+
+// Based on 4.14.0 AppId
+const UninstallRegisterPath = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+
+// Find out if the old App uninstaller exists
+function GetOldAppUninstallerPath(Param: String): String;
+var
+  UninstallerPathRegistry: String;
+// Param is required but not used.
+begin
+  result := '';
+  // Check primary registry location
+  if ( RegQueryStringValue(HKLM, UninstallRegisterPath, 'UninstallString', UninstallerPathRegistry) ) then
+      result := RemoveQuotes(UninstallerPathRegistry)
+  // Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegisterPath, 'UninstallString', UninstallerPathRegistry) ) then
+      result := RemoveQuotes(UninstallerPathRegistry);
+ // else
+      // No old-app uninstaller found
+      // Assume no old-app exist or it is a manual install
+  // end;
+end;
+
+
+// Check for the old App Uninstaller
+function UninstallOldAppAvailable(): Boolean;
+begin
+  if (GetOldAppUninstallerPath('') <> '') then Result := True else Result := False;
+end;
