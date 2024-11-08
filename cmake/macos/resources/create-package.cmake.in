@@ -13,9 +13,10 @@ endif()
 
 make_directory("$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/temp")
 
-# Copy the post-installation script to the package directory
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/UninstallOBS-NDI.sh" DESTINATION "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts")
-file(INSTALL DESTINATION "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts" TYPE FILE FILES "${CMAKE_CURRENT_SOURCE_DIR}/UninstallOBS-NDI.sh" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+# Copy the post-installation script to the package directory and rename it to postinstall
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/build-aux/postinstall" DESTINATION "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts")
+file(INSTALL DESTINATION "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts" TYPE FILE FILES "${CMAKE_CURRENT_SOURCE_DIR}/build-aux/postinstall" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+
 
 execute_process(
   COMMAND /usr/bin/pkgbuild

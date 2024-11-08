@@ -1,0 +1,17 @@
+#!/bin/bash
+# This script exist solely to address user challenges in removeing previous (deprecated) versions of the OBS-NDI plugin.
+# this should be removed in future version.
+
+echo "'Uninstalling' OBS-NDI from OBS..."
+
+# Remove files in the user's Library
+  rm -r -f ~/Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin* 2>/dev/null
+# Remove files in the system Library
+  rm -r -f /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin* 2>/dev/null
+# Check if the obs-ndi.plugin file exists in the system Library
+if [ -e /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin ]; then
+  echo "Some old obs-ndi files still exist in the system library. Please delete them manually : /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin"
+fi
+
+# Dismiss all errors and return 0
+exit 0
