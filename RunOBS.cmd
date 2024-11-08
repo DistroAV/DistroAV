@@ -1,6 +1,6 @@
 @ECHO off
 pushd "%PROGRAMFILES%\obs-studio\bin\64bit"
 cd
-rem --obs-ndi-update-force --obs-ndi-update-local --obs-ndi-update-last-check-ignore --obs-ndi-debug
+rem --distroav-update-force --distroav-update-local --distroav-update-last-check-ignore --distroav-debug
 start obs64.exe --verbose %*
 popd
