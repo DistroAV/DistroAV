@@ -13,11 +13,16 @@ endif()
 
 make_directory("$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/temp")
 
+# Copy the post-installation script to the package directory
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/UninstallOBS-NDI.sh" DESTINATION "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts")
+file(INSTALL DESTINATION "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts" TYPE FILE FILES "${CMAKE_CURRENT_SOURCE_DIR}/UninstallOBS-NDI.sh" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+
 execute_process(
   COMMAND /usr/bin/pkgbuild
     --identifier @MACOS_BUNDLEID@
     --version @CMAKE_PROJECT_VERSION@
     --root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package"
+    --scripts "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/package/scripts"
     "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/temp/@CMAKE_PROJECT_NAME@.pkg"
     COMMAND_ERROR_IS_FATAL ANY
   )
