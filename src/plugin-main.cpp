@@ -191,9 +191,9 @@ bool is_module_found(const char *module_name)
 			if (strcmp(data_->target_name, module_info->name) ==
 			    0) {
 				obs_log(LOG_WARNING,
-				     "is_module_found: `%s` found at `%s` and '%s'",
-					 module_info->name,
-				     module_info->bin_path);
+					"is_module_found: `%s` found at `%s` and '%s'",
+					module_info->name,
+					module_info->bin_path);
 #if 0
 				obs_log(LOG_INFO,
 					"is_module_found: Found module_info->name == `%s`",
