@@ -194,17 +194,15 @@ bool is_module_found(const char *module_name)
 					"is_module_found: `%s` found at `%s`",
 					module_info->name,
 					module_info->bin_path);
-#if 0
 				obs_log(LOG_INFO,
 					"is_module_found: Found module_info->name == `%s`",
 					module_info->name);
-				obs_log(LOG_INFO,
+				obs_log(LOG_EBUG,
 				     "is_module_found: module_info->bin_path=`%s`",
 				     module_info->bin_path);
-				obs_log(LOG_INFO,
+				obs_log(LOG_DEBUG,
 				     "is_module_found: module_info->data_path=`%s`",
 				     module_info->data_path);
-#endif
 				data_->found = true;
 			}
 		},
