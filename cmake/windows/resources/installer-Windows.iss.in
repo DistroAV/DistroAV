@@ -78,7 +78,8 @@ end;
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroA https://github.com/DistroAV/DistroAV/
 
 // CAREFUL : this target the old AppID.
-const UninstallRegisterPath = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+const UninstallRegisteryPath411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+const UninstallRegisteryPath410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
 
 function GetOldAppUninstallerPath(Param: String): String;
 var
@@ -86,11 +87,18 @@ var
 // Param is required to be used in other sections.
 begin
   result := '';
-  // Check primary registry location
-  if ( RegQueryStringValue(HKLM, UninstallRegisterPath, 'UninstallString', UninstallerPathRegistry) ) then
+  // Check primary registry location version 4.11+
+  if ( RegQueryStringValue(HKLM, UninstallRegisteryPath411up, 'UninstallString', UninstallerPathRegistry) ) then
       result := RemoveQuotes(UninstallerPathRegistry)
   // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisterPath, 'UninstallString', UninstallerPathRegistry) ) then
+  else if ( RegQueryStringValue(HKCU, UninstallRegisteryPath411up, 'UninstallString', UninstallerPathRegistry) ) then
+      result := RemoveQuotes(UninstallerPathRegistry)
+
+  // Check primary registry location version 4.10
+  else if ( RegQueryStringValue(HKLM, UninstallRegisteryPath410, 'UninstallString', UninstallerPathRegistry) ) then
+      result := RemoveQuotes(UninstallerPathRegistry)
+  // Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegisteryPath410, 'UninstallString', UninstallerPathRegistry) ) then
       result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
