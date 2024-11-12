@@ -188,21 +188,15 @@ bool is_module_found(const char *module_name)
 		[](void *param, const struct obs_module_info2 *module_info) {
 			struct find_module_data *data_ =
 				(struct find_module_data *)param;
-			if (stricmp(data_->target_name, module_info->name) ==
+			if (strcmp(data_->target_name, module_info->name) ==
 			    0) {
-				obs_log(LOG_WARNING,
+				obs_log(LOG_INFO,
 					"is_module_found: `%s` found at `%s`",
 					module_info->name,
 					module_info->bin_path);
-				obs_log(LOG_INFO,
-					"is_module_found: Found module_info->name == `%s`",
-					module_info->name);
-				obs_log(LOG_EBUG,
-				     "is_module_found: module_info->bin_path=`%s`",
-				     module_info->bin_path);
 				obs_log(LOG_DEBUG,
-				     "is_module_found: module_info->data_path=`%s`",
-				     module_info->data_path);
+					"is_module_found: module_info->data_path=`%s`",
+					module_info->data_path);
 				data_->found = true;
 			}
 		},
