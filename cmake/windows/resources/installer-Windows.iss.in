@@ -75,31 +75,30 @@ begin
 end;
 
 
-// Remove old OBS-NDI conflicting plugin - by Trouffman for DistroA https://github.com/DistroAV/DistroAV/
-
+// Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
 // CAREFUL : this target the old AppID.
-const UninstallRegisteryPath411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
-const UninstallRegisteryPath410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
+const UninstallRegisteryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+const UninstallRegisteryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
 
 function GetOldAppUninstallerPath(Param: String): String;
 var
   UninstallerPathRegistry: String;
-// Param is required to be used in other sections.
+// At least one Param string is required to use this fucntion with {code:}, can be empty.
 begin
-  result := '';
+  Result := '';
   // Check primary registry location version 4.11+
-  if ( RegQueryStringValue(HKLM, UninstallRegisteryPath411up, 'UninstallString', UninstallerPathRegistry) ) then
-      result := RemoveQuotes(UninstallerPathRegistry)
+  if ( RegQueryStringValue(HKLM, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
   // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisteryPath411up, 'UninstallString', UninstallerPathRegistry) ) then
-      result := RemoveQuotes(UninstallerPathRegistry)
+  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
 
   // Check primary registry location version 4.10
-  else if ( RegQueryStringValue(HKLM, UninstallRegisteryPath410, 'UninstallString', UninstallerPathRegistry) ) then
-      result := RemoveQuotes(UninstallerPathRegistry)
+  else if ( RegQueryStringValue(HKLM, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
   // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisteryPath410, 'UninstallString', UninstallerPathRegistry) ) then
-      result := RemoveQuotes(UninstallerPathRegistry);
+  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
 function UninstallOldAppAvailable(): Boolean;
