@@ -190,10 +190,18 @@ bool is_module_found(const char *module_name)
 				(struct find_module_data *)param;
 			if (strcmp(data_->target_name, module_info->name) ==
 			    0) {
+
+                // Privacy tweak : Replace the absolute path to the user's home directory with a relative path
+				QString bin_path = QString::fromUtf8(module_info->bin_path);
+                QString home_path = QDir::homePath();
+                bin_path.replace(home_path, "[Redacted User Home Path]");
+
 				obs_log(LOG_INFO,
 					"is_module_found: `%s` found at `%s`",
 					module_info->name,
-					module_info->bin_path);
+					bin_path.toUtf8().constData());
+				// To revert to full absolute path, use module_info->bin_path
+
 				obs_log(LOG_DEBUG,
 					"is_module_found: module_info->data_path=`%s`",
 					module_info->data_path);
