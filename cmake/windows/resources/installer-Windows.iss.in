@@ -1,4 +1,4 @@
-#define MyAppName "@PLUGIN_DISPLAY_NAME@"
+#define MyAppName "@CMAKE_PROJECT_NAME@"
 #define MyAppVersion "@CMAKE_PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
 #define MyAppURL "@PLUGIN_WEBSITE@"
