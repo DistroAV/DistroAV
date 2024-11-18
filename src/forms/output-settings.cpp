@@ -219,6 +219,7 @@ void OutputSettings::onFormAccepted()
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
 	config->OutputGroups = ui->mainOutputGroups->text();
+	config->OutputLastError = ui->mainOutputLastError->text();
 
 	config->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	config->PreviewOutputName = ui->previewOutputName->text();
@@ -243,6 +244,7 @@ void OutputSettings::showEvent(QShowEvent *)
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
 	ui->mainOutputGroups->setText(config->OutputGroups);
+	ui->mainOutputLastError->setText(config->OutputLastError);
 
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
 	ui->previewOutputName->setText(config->PreviewOutputName);

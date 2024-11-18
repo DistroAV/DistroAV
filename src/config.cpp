@@ -155,6 +155,7 @@ Config::Config()
 	: OutputEnabled(false),
 	  OutputName("OBS"),
 	  OutputGroups(""),
+	  OutputLastError(""),
 	  PreviewOutputEnabled(false),
 	  PreviewOutputName("OBS Preview"),
 	  PreviewOutputGroups(""),

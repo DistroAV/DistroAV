@@ -136,6 +136,11 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 	return o;
 }
 
+static const std::map<video_format, std::string> video_to_color_format_map = {
+	{VIDEO_FORMAT_P010, "P010"}, {VIDEO_FORMAT_I010, "I010"},
+	{VIDEO_FORMAT_P216, "P216"}, {VIDEO_FORMAT_P416, "P416"}
+};
+
 bool ndi_output_start(void *data)
 {
 	auto o = (ndi_output_t *)data;
@@ -205,6 +210,9 @@ bool ndi_output_start(void *data)
 			obs_log(LOG_INFO,
 				"-ndi_output_start(name='%s', groups='%s', ...)",
 				name, groups);
+			obs_output_set_last_error(
+				o->output,
+				video_to_color_format_map.at(format).c_str());
 			return false;
 		}
 

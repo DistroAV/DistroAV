@@ -73,6 +73,7 @@ public:
 	bool OutputEnabled;
 	QString OutputName;
 	QString OutputGroups;
+	QString OutputLastError;
 	bool PreviewOutputEnabled;
 	QString PreviewOutputName;
 	QString PreviewOutputGroups;
