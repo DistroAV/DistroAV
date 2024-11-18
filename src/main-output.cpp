@@ -167,7 +167,7 @@ void main_output_init()
 		obs_data_release(output_settings);
 		if (context.output) {
 			obs_log(LOG_INFO,
-				"main_output_init: successfully created NDI main output '%s'",
+				"main_output_init: creating NDI main output '%s'",
 				QT_TO_UTF8(output_name));
 
 			// Start handling "remote" start/stop events (ex: from obs-websocket)

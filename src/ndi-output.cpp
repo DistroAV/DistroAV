@@ -137,9 +137,10 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 }
 
 static const std::map<video_format, std::string> video_to_color_format_map = {
-	{VIDEO_FORMAT_P010, "P010"}, {VIDEO_FORMAT_I010, "I010"},
-	{VIDEO_FORMAT_P216, "P216"}, {VIDEO_FORMAT_P416, "P416"}
-};
+	{VIDEO_FORMAT_P010, "P010"},
+	{VIDEO_FORMAT_I010, "I010"},
+	{VIDEO_FORMAT_P216, "P216"},
+	{VIDEO_FORMAT_P416, "P416"}};
 
 bool ndi_output_start(void *data)
 {
