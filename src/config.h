@@ -92,7 +92,7 @@ public:
 
 private:
 	void Load();
-	void SetDefaultsToGlobalStore();
+	void SetDefaultsToUserStore();
 	Config();
 	static Config *_instance;
 };

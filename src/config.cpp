@@ -162,12 +162,12 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
-	SetDefaultsToGlobalStore();
+	SetDefaultsToUserStore();
 }
 
-void Config::SetDefaultsToGlobalStore()
+void Config::SetDefaultsToUserStore()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_MAIN_OUTPUT_ENABLED,
@@ -203,7 +203,7 @@ void Config::SetDefaultsToGlobalStore()
 
 void Config::Load()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		OutputEnabled = config_get_bool(obs_config, SECTION_NAME,
 						PARAM_MAIN_OUTPUT_ENABLED);
@@ -228,7 +228,7 @@ void Config::Load()
 
 void Config::Save()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
@@ -262,7 +262,7 @@ void Config::Save()
 
 bool Config::AutoCheckForUpdates()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		return config_get_bool(obs_config, SECTION_NAME,
 				       PARAM_AUTO_CHECK_FOR_UPDATES);
@@ -272,7 +272,7 @@ bool Config::AutoCheckForUpdates()
 
 void Config::AutoCheckForUpdates(bool value)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_AUTO_CHECK_FOR_UPDATES, value);
@@ -282,7 +282,7 @@ void Config::AutoCheckForUpdates(bool value)
 
 void Config::SkipUpdateVersion(const QVersionNumber &version)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_SKIP_UPDATE_VERSION,
@@ -293,7 +293,7 @@ void Config::SkipUpdateVersion(const QVersionNumber &version)
 
 QVersionNumber Config::SkipUpdateVersion()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		auto version = config_get_string(obs_config, SECTION_NAME,
 						 PARAM_SKIP_UPDATE_VERSION);
@@ -306,7 +306,7 @@ QVersionNumber Config::SkipUpdateVersion()
 
 QDateTime Config::LastUpdateCheck()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		auto lastCheck = config_get_int(obs_config, SECTION_NAME,
 						PARAM_LAST_UPDATE_CHECK);
@@ -317,7 +317,7 @@ QDateTime Config::LastUpdateCheck()
 
 void Config::LastUpdateCheck(const QDateTime &dateTime)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_int(obs_config, SECTION_NAME,
 			       PARAM_LAST_UPDATE_CHECK,
@@ -328,7 +328,7 @@ void Config::LastUpdateCheck(const QDateTime &dateTime)
 
 int Config::MinAutoUpdateCheckIntervalSeconds()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		return (int)config_get_int(
 			obs_config, SECTION_NAME,
@@ -339,7 +339,7 @@ int Config::MinAutoUpdateCheckIntervalSeconds()
 
 void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_int(obs_config, SECTION_NAME,
 			       PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS,
