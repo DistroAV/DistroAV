@@ -45,6 +45,19 @@ int Config::UpdateLocalPort = 0;
 bool Config::UpdateLastCheckIgnore = false;
 int Config::DetectObsNdiForce = 0;
 
+enum ObsConfigType { OBS_CONFIG_STRING, OBS_CONFIG_BOOL };
+
+std::map<std::string, enum ObsConfigType> ConfigTypeMap{
+	{PARAM_MAIN_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_MAIN_OUTPUT_NAME, OBS_CONFIG_STRING},
+	{PARAM_MAIN_OUTPUT_GROUPS, OBS_CONFIG_STRING},
+	{PARAM_PREVIEW_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_PREVIEW_OUTPUT_NAME, OBS_CONFIG_STRING},
+	{PARAM_PREVIEW_OUTPUT_GROUPS, OBS_CONFIG_STRING},
+	{PARAM_TALLY_PROGRAM_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_TALLY_PREVIEW_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_AUTO_CHECK_FOR_UPDATES, OBS_CONFIG_BOOL}};
+
 void ProcessCommandLine()
 {
 	auto arguments = QCoreApplication::arguments();
@@ -151,6 +164,32 @@ void ProcessCommandLine()
 	}
 }
 
+void MigrateSetting(config_t *from, config_t *to, const char *section,
+		    const char *name)
+{
+	if (!config_has_user_value(from, section, name))
+		return;
+
+	if (ConfigTypeMap.count(name) == 0)
+		return;
+
+	const enum ObsConfigType type = ConfigTypeMap[name];
+
+	switch (type) {
+	case OBS_CONFIG_STRING:
+		config_set_string(to, section, name,
+				  config_get_string(from, section, name));
+
+		break;
+	case OBS_CONFIG_BOOL:
+		config_set_bool(to, section, name,
+				config_get_bool(from, section, name));
+		break;
+	}
+	config_remove_value(from, section, name);
+	obs_log(LOG_INFO, "config: migrated configuration setting %s", name);
+}
+
 Config::Config()
 	: OutputEnabled(false),
 	  OutputName("OBS"),
@@ -163,6 +202,8 @@ Config::Config()
 {
 	ProcessCommandLine();
 	SetDefaultsToUserStore();
+	if (obs_get_version() >= MAKE_SEMANTIC_VERSION(31, 0, 0))
+		GlobalToUserMigration();
 }
 
 void Config::SetDefaultsToUserStore()
@@ -198,6 +239,39 @@ void Config::SetDefaultsToUserStore()
 
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_AUTO_CHECK_FOR_UPDATES, true);
+	}
+}
+
+void Config::GlobalToUserMigration()
+{
+	auto app_config = GetAppConfig();
+	auto user_config = GetUserConfig();
+
+	if (app_config && user_config) {
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_MAIN_OUTPUT_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_MAIN_OUTPUT_NAME);
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_MAIN_OUTPUT_GROUPS);
+
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_PREVIEW_OUTPUT_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_PREVIEW_OUTPUT_NAME);
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_PREVIEW_OUTPUT_GROUPS);
+
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_TALLY_PROGRAM_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_TALLY_PREVIEW_ENABLED);
+
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_AUTO_CHECK_FOR_UPDATES);
+
+		config_save(app_config);
+		config_save(user_config);
 	}
 }
 
