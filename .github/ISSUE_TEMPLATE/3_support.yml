@@ -17,20 +17,17 @@ body:
       label: "Type of Support needed"
       description: "Please select the category that best fits your support request."
       options:
-      - label: "Installation"
-        value: "Installation"
-      - label: "Configuration"
-        value: "Configuration"
-      - label: "Usage"
-        value: "Usage"
-      - label: "Other / I don't know"
-        value: "Other"
+        - "Installation"
+        - "Configuration"
+        - "Usage"
+        - "Other"
+      default: "Other"
     validations:
       required: true
   - type: checkboxes
     id: issue-latest-checked
-    label: "Before you submit a support request, confirm the following:"
     attributes:
+      label: "Before you submit a support request, confirm the following:"
       description: "These are steps you should complete before submiting a support request. Not doing so will most likely result in your request being closed."
       options:
       - label: "I have checked this is not an existing active bug/feature request"
