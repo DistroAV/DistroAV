@@ -1,7 +1,7 @@
 name: "Support Request (beta)"
 description: "I need help"
 title: "[SR]: "
-labels: ["support", "triage"]
+labels: ["Support (not a bug)", "triage"]
 body:
   - type: checkboxes
     id: gh-sr-tos
