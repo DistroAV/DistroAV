@@ -21,7 +21,6 @@ body:
         - "Configuration"
         - "Usage"
         - "Other"
-      default: "Other"
     validations:
       required: true
   - type: checkboxes
