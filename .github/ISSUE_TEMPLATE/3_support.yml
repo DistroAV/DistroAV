@@ -1,0 +1,131 @@
+name: "Support Request (beta)"
+description: "I need help"
+title: "[SR]: "
+labels: ["support", "triage"]
+body:
+  - type: checkboxes
+    id: gh-sr-tos
+    attributes:
+      label: "This project is community-driven and does NOT provide support."
+      description: "The support requests you are about to file helps track the most common challenges. There is no guarantee of support, it will probably be closed without a resolution."
+      options:
+      - label: "I understand that DistroAV does not provide support and this request might be closed for any reason without resolution."
+        required: true
+  - type: dropdown
+    id: sr-category
+    attributes:
+      label: "Type of Support needed"
+      description: "Please select the category that best fits your support request."
+      options:
+      - label: "Installation"
+        value: "Installation"
+      - label: "Configuration"
+        value: "Configuration"
+      - label: "Usage"
+        value: "Usage"
+      - label: "Other / I don't know"
+        value: "Other"
+    validations:
+      required: true
+  - type: checkboxes
+    id: issue-latest-checked
+    attributes:
+      description: "These are steps you should complete before submiting a support request. Not doing so will most likely result in your request being closed."
+      options:
+      - label: "I have checked this is not an existing active bug/feature request"
+        required: true
+      - label: "I have checked that my OS / OBS / NDI versions are supported"
+        required: true
+      - label: "I have followed the NDI Runtime installation steps as described in the Wiki"
+        required: true
+      - label: "I have followed the DistroAV installation steps as described in the Wiki"
+        required: true
+      - label: "I have tested without firewall"
+        required: true
+      - label: "My version of DistroAV is up-to-date"
+        required: true
+      - label: "My version of OBS is up-to-date"
+        required: true
+      - label: "My version of NDI Runtime is up-to date"
+        required: true
+      - label: "OBS launch without error message (User Interface/popup)"
+        required: false
+      - label: "OBS log file does not show any errors"
+        required: false
+      - label: "I can access the DistroAV settings menu"
+        required: false
+      - label: "The “NDI Source” option exist & a new 'NDI Source' can be added"
+        required: false
+      - label: "OBS / NDI / DistroAV are allowed to use the network connection (Firewall)"
+        required: false
+      - label: "The NDI feed can be viewed using 'NDI Studio Monitor'"
+        required: false
+      - label: "The NDI feed can be received in OBS"
+        required: false
+      - label: "A working NDI feed can be received in 'NDI Studio Monitor'"
+        required: false
+      - label: "A working NDI feed can be received in OBS"
+        required: false
+  - type: input
+    id: obs-log
+    attributes:
+      label: "OBS Log [URL]"
+      description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here."
+      placeholder: "[ex: https://obsproject.com/logs/xp0aoscz...]"
+    validations:
+      required: true
+  - type: checkboxes
+    id: issue-latest-checked
+    attributes:
+      label: "Steps already taken to resolve the issue"
+      description: "These are steps you should complete before submiting a support request. Not doing so will most likely result in your request being closed."
+      options:
+      - label: "OBS is up-to-date"
+        required: true
+      - label: "DistroAV is up-to-date"
+        required: true
+      - label: "NDI Runtime / SDK is up-to date"
+        required: true
+      - label: "OBS launch without error message (User Interface/popup)"
+        required: true
+      - label: "OBS log file does not show any errors"
+        required: true
+      - label: "I can access the DistroAV settings menu"
+        required: true
+      - label: "The “NDI Source” option exist & a new 'NDI Source' can be added"
+        required: true
+      - label: "OBS / NDI / DistroAV are allowed to use the network connection (Firewall)"
+        required: true
+      - label: "The NDI feed can be viewed using 'NDI Studio Monitor'"
+        required: true
+      - label: "The NDI feed can be received in OBS"
+        required: true
+      - label: "A working NDI feed can be received in 'NDI Studio Monitor'"
+        required: true
+      - label: "A working NDI feed can be received in OBS"
+        required: true
+  - type: textarea
+    id: sr-description
+    attributes:
+      label: "I need help with..."
+      description: "A concise description of what you are trying to achieve and where you need help."
+    validations:
+      required: true
+  - type: textarea
+    id: issue-environment
+    attributes:
+      label: "Environment"
+      description: |
+        examples:
+          - **OS**: [Ubuntu 22.04, MacOS 15.1, Windows 10 22H2, Win 11 24H2, ...]
+          - **OBS**: [28.0, 29.0.2, 30.2.3 ...] installed from [.exe, .dep, apt, brew, PPA, Flatpak, Snap, winget, ...]
+          - **DistroAV**: [6.0.0, 6.1 ...] installed from [.exe, .pkg, brew, Flatpak, winget, ...]
+          - **NDI**: [5.60, 6.0.1 ...]
+      value: |
+          - OS:
+          - OBS:
+          - DistroAV: 
+          - NDI:
+      render: markdown
+    validations:
+      required: true
