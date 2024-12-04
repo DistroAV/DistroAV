@@ -30,13 +30,6 @@ body:
     id: rfe-solution
     attributes:
       label: "Solution Idea or Feature description"
-      description: "A concise description of the feature proposed."
-    validations:
-      required: true
-  - type: textarea
-    id: rfe-solution
-    attributes:
-      label: "Solution Idea or Feature description"
       description: "A concise description of the feature proposed, what it is trying to achieve, how it should work."
     validations:
       required: true

@@ -74,36 +74,6 @@ body:
       placeholder: "[ex: https://obsproject.com/logs/xp0aoscz...]"
     validations:
       required: true
-  - type: checkboxes
-    id: issue-latest-checked
-    attributes:
-      label: "Steps already taken to resolve the issue"
-      description: "These are steps you should complete before submiting a support request. Not doing so will most likely result in your request being closed."
-      options:
-      - label: "OBS is up-to-date"
-        required: true
-      - label: "DistroAV is up-to-date"
-        required: true
-      - label: "NDI Runtime / SDK is up-to date"
-        required: true
-      - label: "OBS launch without error message (User Interface/popup)"
-        required: true
-      - label: "OBS log file does not show any errors"
-        required: true
-      - label: "I can access the DistroAV settings menu"
-        required: true
-      - label: "The “NDI Source” option exist & a new 'NDI Source' can be added"
-        required: true
-      - label: "OBS / NDI / DistroAV are allowed to use the network connection (Firewall)"
-        required: true
-      - label: "The NDI feed can be viewed using 'NDI Studio Monitor'"
-        required: true
-      - label: "The NDI feed can be received in OBS"
-        required: true
-      - label: "A working NDI feed can be received in 'NDI Studio Monitor'"
-        required: true
-      - label: "A working NDI feed can be received in OBS"
-        required: true
   - type: textarea
     id: sr-description
     attributes:
