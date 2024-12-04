@@ -1,37 +1,22 @@
 name: Bug Report
-description: File a bug report
+description: Report a Bug
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
   - type: input
-    id: os-version
+    id: obs-log
     attributes:
-      label: Operating System Version
-      description: What Operation System version(s) does this happen on?
-      placeholder: "[ex: MacOS Monterey 12.6.3, MacOS Ventura 13.2, Ubuntu 22.04.1, Windows 10 22H2, Windows 11 22H2, ...]"
-    validations:
-      required: true
-  - type: input
-    id: cpu
-    attributes:
-      label: CPU
-      description: CPU of your system
-  - type: input
-    id: gpu
-    attributes:
-      label: GPU
-      description: GPU of your system
-  - type: input
-    id: ndi-devices
-    attributes:
-      label: NDI Devices
-      description: Relevant NDI devices (cameras, etc)
+      label: "OBS Log [URL] - Important!"
+      description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here."
+      placeholder: "[ex: https://obsproject.com/logs/xp0aoscz...]"
+   validations:
+      required: false
   - type: input
     id: obs-version
     attributes:
       label: OBS Version
       description: What OBS version(s) does this happen on?
-      placeholder: "[ex: 27.2.4, 28.0, 29.0.2]"
+      placeholder: "[ex: 28.0, 29.0.2, 30.2.3]"
     validations:
       required: true
   - type: input
@@ -46,7 +31,7 @@ body:
     id: distroav-version
     attributes:
       label: DistroAV Version
-      description: "What version(s) of DistroAV does this happen on? OBS menu: `Tools`->`NDI Output Settings`, Title: `DistroAV ...`"
+      description: "The version(s) of DistroAV affected by this bug. OBS menu: `Tools`->`NDI Output Settings`, Title: `DistroAV ...`"
       placeholder: "[ex: 4.14.0]"
     validations:
       required: true
@@ -58,52 +43,51 @@ body:
       placeholder: "[ex: .exe, .dep, apt, brew, PPA, Flatpak, Snap, winget, ...]"
     validations:
       required: true
-  - type: textarea
-    id: install-steps
-    attributes:
-      label: "[Extra] Installation Steps"
-      description: "Any noteworthy [extra] installation steps that you performed."
-  - type: input
-    id: obs-log
-    attributes:
-      label: "OBS Log [URL]"
-      description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here."
-      placeholder: "[ex: https://obsproject.com/logs/xp0aosczLhVjs...]"
   - type: input
     id: ndi-version
     attributes:
       label: NDI Version
       description: "What version(s) of NDI does this happen on? OBS menu: `Tools`->`NDI Output Settings`, `NDI SDK ...`"
-      placeholder: "[ex: 4.x, 5.5.3.0]"
+      placeholder: "[ex: 5.6.0, 6.0.1 ...]"
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating System Version
+      description: Operation System version(s) impacted?
+      placeholder: "[ex: MacOS 15.1, Ubuntu 24.02, Windows 10 22H2, Windows 11 22H2, ...]"
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
-      label: Describe the bug
-      description: A clear and concise description of what the bug is.
+      label: Describe the bug or reported behavior
+      description: Describe the issue or the bug experienced.
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce the problem
-      description: What are the steps to reliably reproduce this error?
+      description: List the steps to reliably reproduce this error?
       placeholder: |
         1. Go to ...
         2. Click on ...
         3. Scroll down to ...
         4. See error
+    validations:
+      required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
-      description: A clear and concise description of what you expected to happen.
+      description: Describe what you expected to happen.
   - type: textarea
     id: screenshots
     attributes:
       label: Screenshots
-      description: If applicable, paste screenshots here to help explain your problem.
+      description: If applicable, paste screenshots here to help explain your problem. Recording & uploading a video might be useful as well.
   - type: textarea
     id: additional
     attributes:
