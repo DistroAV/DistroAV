@@ -1,5 +1,5 @@
-name: Bug Report
-description: Report a Bug
+name: "Bug Report"
+description: "Report a Bug"
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
