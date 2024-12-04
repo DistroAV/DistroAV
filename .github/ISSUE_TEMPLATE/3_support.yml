@@ -29,6 +29,7 @@ body:
       required: true
   - type: checkboxes
     id: issue-latest-checked
+    label: "Before you submit a support request, confirm the following:"
     attributes:
       description: "These are steps you should complete before submiting a support request. Not doing so will most likely result in your request being closed."
       options:
