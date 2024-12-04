@@ -9,7 +9,7 @@ body:
       label: "OBS Log [URL] - Important!"
       description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here."
       placeholder: "[ex: https://obsproject.com/logs/xp0aoscz...]"
-   validations:
+    validations:
       required: false
   - type: input
     id: obs-version
