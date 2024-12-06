@@ -159,6 +159,7 @@ bool ndi_output_start(void *data)
 	uint32_t flags = 0;
 	video_t *video = obs_output_video(o->output);
 	audio_t *audio = obs_output_audio(o->output);
+	obs_output_set_last_error(o->output, "");
 
 	if (!video && !audio) {
 		obs_log(LOG_ERROR,
@@ -211,9 +212,13 @@ bool ndi_output_start(void *data)
 			obs_log(LOG_INFO,
 				"-ndi_output_start(name='%s', groups='%s', ...)",
 				name, groups);
+			auto errorString =
+				obs_module_text(
+					"NDIPlugin.OutputSettings.LastError") +
+				video_to_color_format_map.at(format);
 			obs_output_set_last_error(
 				o->output,
-				video_to_color_format_map.at(format).c_str());
+				errorString.c_str());
 			return false;
 		}
 

@@ -23,12 +23,17 @@ struct main_output {
 	bool is_running;
 	QString ndi_name;
 	QString ndi_groups;
-
+	QString last_error;
 	obs_source_t *current_source;
 	obs_output_t *output;
 };
 
 static struct main_output context = {0};
+
+QString main_output_last_error()
+{
+	return context.last_error;
+};
 
 void on_main_output_started(void *, calldata_t *)
 {
@@ -83,20 +88,16 @@ void main_output_start()
 			obs_log(LOG_INFO,
 				"main_output_start: successfully started NDI main output '%s'",
 				QT_TO_UTF8(context.ndi_name));
-			Config::Current()->OutputLastError = QString("");
+			context.last_error = QString("");
 		} else {
-			auto error = obs_output_get_last_error(context.output);
-			Config::Current()->OutputLastError =
-				"Last Error: Unsupported color format " +
-				QString(error);
+			context.last_error =
+				obs_output_get_last_error(context.output);
 			obs_log(LOG_ERROR,
 				"main_output_start: failed to start NDI main output '%s'; error='%s'",
-				QT_TO_UTF8(context.ndi_name), error);
+				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
 			obs_output_stop(context.output);
 		}
 	} else {
-		Config::Current()->OutputLastError =
-			QString("Error: Output not initialized");
 		obs_log(LOG_ERROR,
 			"main_output_start: NDI main output '%s' is not initialized",
 			QT_TO_UTF8(context.ndi_name));
