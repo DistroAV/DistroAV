@@ -243,6 +243,7 @@ void OutputSettings::showEvent(QShowEvent *)
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
 	ui->mainOutputGroups->setText(config->OutputGroups);
+	ui->mainOutputLastError->setText(main_output_last_error());
 
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
 	ui->previewOutputName->setText(config->PreviewOutputName);
