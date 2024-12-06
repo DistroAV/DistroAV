@@ -212,13 +212,12 @@ bool ndi_output_start(void *data)
 			obs_log(LOG_INFO,
 				"-ndi_output_start(name='%s', groups='%s', ...)",
 				name, groups);
-			auto errorString =
+			auto error_string =
 				obs_module_text(
 					"NDIPlugin.OutputSettings.LastError") +
 				video_to_color_format_map.at(format);
-			obs_output_set_last_error(
-				o->output,
-				errorString.c_str());
+			obs_output_set_last_error(o->output,
+						  error_string.c_str());
 			return false;
 		}
 
