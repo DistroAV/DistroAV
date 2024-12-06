@@ -94,7 +94,8 @@ void main_output_start()
 				obs_output_get_last_error(context.output);
 			obs_log(LOG_ERROR,
 				"main_output_start: failed to start NDI main output '%s'; error='%s'",
-				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
+				QT_TO_UTF8(context.ndi_name),
+				QT_TO_UTF8(context.last_error));
 			obs_output_stop(context.output);
 		}
 	} else {
