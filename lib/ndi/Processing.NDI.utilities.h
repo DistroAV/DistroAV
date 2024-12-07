@@ -160,6 +160,14 @@ void NDIlib_util_audio_to_interleaved_16s_v2(
 	NDIlib_audio_frame_interleaved_16s_t* p_dst
 );
 
+// Convert to interleaved 16-bit. The FourCC of the source audio frame must be NDIlib_FourCC_audio_type_FLTP.
+// Returns true if the conversion was successful.
+PROCESSINGNDILIB_API
+bool NDIlib_util_audio_to_interleaved_16s_v3(
+	const NDIlib_audio_frame_v3_t* p_src,
+	NDIlib_audio_frame_interleaved_16s_t* p_dst
+);
+
 // Convert from interleaved 16-bit.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_16s_v2(
@@ -167,10 +175,27 @@ void NDIlib_util_audio_from_interleaved_16s_v2(
 	NDIlib_audio_frame_v2_t* p_dst
 );
 
+// Convert from interleaved 16-bit. The FourCC of the destination audio frame must be
+// NDIlib_FourCC_audio_type_FLTP and its p_data allocated accordingly.
+// Returns true if the conversion was successful.
+PROCESSINGNDILIB_API
+bool NDIlib_util_audio_from_interleaved_16s_v3(
+	const NDIlib_audio_frame_interleaved_16s_t* p_src,
+	NDIlib_audio_frame_v3_t* p_dst
+);
+
 // Convert to interleaved 32-bit.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_to_interleaved_32s_v2(
 	const NDIlib_audio_frame_v2_t* p_src,
+	NDIlib_audio_frame_interleaved_32s_t* p_dst
+);
+
+// Convert to interleaved 32-bit. The FourCC of the source audio frame must be NDIlib_FourCC_audio_type_FLTP.
+// Returns true if the conversion was successful.
+PROCESSINGNDILIB_API
+bool NDIlib_util_audio_to_interleaved_32s_v3(
+	const NDIlib_audio_frame_v3_t* p_src,
 	NDIlib_audio_frame_interleaved_32s_t* p_dst
 );
 
@@ -181,10 +206,27 @@ void NDIlib_util_audio_from_interleaved_32s_v2(
 	NDIlib_audio_frame_v2_t* p_dst
 );
 
+// Convert from interleaved 32-bit. The FourCC of the destination audio frame must be
+// NDIlib_FourCC_audio_type_FLTP and its p_data allocated accordingly.
+// Returns true if the conversion was successful.
+PROCESSINGNDILIB_API
+bool NDIlib_util_audio_from_interleaved_32s_v3(
+	const NDIlib_audio_frame_interleaved_32s_t* p_src,
+	NDIlib_audio_frame_v3_t* p_dst
+);
+
 // Convert to interleaved floating point.
 PROCESSINGNDILIB_API
 void NDIlib_util_audio_to_interleaved_32f_v2(
 	const NDIlib_audio_frame_v2_t* p_src,
+	NDIlib_audio_frame_interleaved_32f_t* p_dst
+);
+
+// Convert to interleaved floating point. The FourCC of the source audio frame must be
+// NDIlib_FourCC_audio_type_FLTP. Returns true if the conversion was successful.
+PROCESSINGNDILIB_API
+bool NDIlib_util_audio_to_interleaved_32f_v3(
+	const NDIlib_audio_frame_v3_t* p_src,
 	NDIlib_audio_frame_interleaved_32f_t* p_dst
 );
 
@@ -193,6 +235,15 @@ PROCESSINGNDILIB_API
 void NDIlib_util_audio_from_interleaved_32f_v2(
 	const NDIlib_audio_frame_interleaved_32f_t* p_src,
 	NDIlib_audio_frame_v2_t* p_dst
+);
+
+// Convert from interleaved floating point. The FourCC of the destination audio frame must be
+// NDIlib_FourCC_audio_type_FLTP and its p_data allocated accordingly.
+// Returns true if the conversion was successful.
+PROCESSINGNDILIB_API
+bool NDIlib_util_audio_from_interleaved_32f_v3(
+	const NDIlib_audio_frame_interleaved_32f_t* p_src,
+	NDIlib_audio_frame_v3_t* p_dst
 );
 
 // This is a helper function that you may use to convert from 10-bit packed UYVY into 16-bit semi-planar. The
