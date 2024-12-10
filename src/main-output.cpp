@@ -106,6 +106,16 @@ void main_output_start()
 	obs_log(LOG_INFO, "-main_output_start()");
 }
 
+bool main_output_is_supported()
+{
+	main_output_init();
+	bool is_supported = context.is_running;
+	bool enabled = Config::Current()->OutputEnabled;
+	main_output_deinit(); // will trigger a stop event if running, which will set OutputEnabled to false
+	Config::Current()->OutputEnabled = enabled;
+	return is_supported;
+}
+
 void main_output_deinit()
 {
 	obs_log(LOG_INFO, "+main_output_deinit()");
@@ -144,14 +154,8 @@ void main_output_init()
 	auto config = Config::Current();
 	auto output_name = config->OutputName;
 	auto output_groups = config->OutputGroups;
-	auto is_enabled = config->OutputEnabled;
 
 	main_output_deinit();
-
-	if (!is_enabled) {
-		obs_log(LOG_INFO, "-main_output_init()");
-		return;
-	}
 
 	if (!output_name.isEmpty()) {
 		obs_log(LOG_INFO,

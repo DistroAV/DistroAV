@@ -232,13 +232,18 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-	main_output_init();
+	if (config->OutputEnabled)
+		main_output_init();
+
 	preview_output_init();
 }
 
 void OutputSettings::showEvent(QShowEvent *)
 {
 	auto config = Config::Current();
+
+	// Set mainOutputGroupBox to enabled if main_output_is_supported()
+	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
