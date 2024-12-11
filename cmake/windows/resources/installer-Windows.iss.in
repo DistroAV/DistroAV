@@ -43,7 +43,9 @@ Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.pdb"
 ; This uninstall the old obs-ndi after installation but before the final dialog when installing DistroAV
 Filename: "{code:GetOldAppUninstallerPath}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Uninstall OBS-NDI"
 ; Dev-note: Cannot use : Flags: skipifdoesntexist >> it only takes absolute filename.
-
+; Unblock OBS from the firewall so DistroAV will work out-of-the-box
+Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=in action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
+Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=out action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
 
 [Code]
 procedure InitializeWizard();
