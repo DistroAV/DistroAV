@@ -13,6 +13,14 @@ if [ -e /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin ]; then
   echo "Some old obs-ndi files still exist in the system library. Please delete them manually : /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin"
 fi
 
+OBS_APP_PATH="/Applications/OBS.app"
+
+# Allow incoming connections for the OBS app
+/usr/bin/codesign --force --deep --sign - "$OBS_APP_PATH"
+/usr/sbin/spctl --add "$OBS_APP_PATH"
+/usr/libexec/ApplicationFirewall/socketfilterfw --add "$OBS_APP_PATH"
+/usr/libexec/ApplicationFirewall/socketfilterfw --unblockapp "$OBS_APP_PATH"
+
 # Get the directory containing the script
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
