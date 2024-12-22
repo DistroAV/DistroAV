@@ -1,0 +1,63 @@
+name: "Feature Request"
+description: "Submit a new feature or improvment."
+title: "[RFE]: "
+labels: ["feature", "triage"]
+body:
+  - type: checkboxes
+    id: gh-rfe-checked
+    attributes:
+      label: "Is there an existing issue or feature request for this?"
+      description: "Please search to see if an issue already exists for the bug you encountered."
+      options:
+      - label: "I have searched and did not find a similar issue or feature request"
+        required: true
+  - type: checkboxes
+    id: rfe-latest-checked
+    attributes:
+      label: "This feature does not exists on the latest available release of DistroAV nor in the upcoming PR?"
+      description: "Feature might be in a planned state or already in development."
+      options:
+      - label: "I have checked and this is not available on the latest DistroAV version nor planned"
+        required: true
+  - type: textarea
+    id: rfe-problem-identified
+    attributes:
+      label: "Explain the context or expected use-case of the feature request (problem, new NDI feature, ...)"
+      description: "A concise description of what the feature would solve. Ex. I wish I could do [..] / I'm frustrated when [...]"
+    validations:
+      required: true
+  - type: textarea
+    id: rfe-solution
+    attributes:
+      label: "Solution Idea or Feature description"
+      description: "A concise description of the feature proposed, what it is trying to achieve, how it should work."
+    validations:
+      required: true
+  - type: textarea
+    id: rfe-argument
+    attributes:
+      label: "How this feature can benefit the community?"
+      description: "List the arguments, potential added-value, impact or user-interest that this feature would bring."
+    validations:
+      required: true
+  - type: textarea
+    id: rfe-implementation
+    attributes:
+      label: "How could this feature be implemented (fac.)?"
+      description: "If you have alreeady thought about how this feature could be implemented, please provide some insights."
+    validations:
+      required: false
+  - type: textarea
+    id: rfe-challenges
+    attributes:
+      label: "Do you see any potential limitation/drawback?"
+      description: "Could this feature impact or create other challenges like code complexity, licensing issues or compatiblity issues."
+    validations:
+      required: false
+  - type: textarea
+    id: rfe-contribution
+    attributes:
+      label: "Are you able to contribute to this feature?"
+      description: "Contribution can be via code, active support, financial, ..."
+    validations:
+      required: true

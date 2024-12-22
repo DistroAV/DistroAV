@@ -1,0 +1,88 @@
+name: "Bug Report"
+description: "Report a Bug"
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: checkboxes
+    id: gh-issue-checked
+    attributes:
+      label: "Is there an existing issue for this?"
+      description: "Please search to see if an issue already exists for the bug you encountered."
+      options:
+      - label: "I have searched the existing issues and did not find a similar issue"
+        required: true
+  - type: checkboxes
+    id: issue-latest-checked
+    attributes:
+      label: "This bug exists on the latest available release of DistroAV and supported environment?"
+      description: "Please fill the environment area as well."
+      options:
+      - label: "I have checked this bug still exist on the latest available version of DistroAV"
+        required: false
+      - label: "I have checked that my OS / OBS / NDI versions are supported"
+        required: false
+  - type: input
+    id: obs-log
+    attributes:
+      label: "OBS Log [URL] - Important!"
+      description: "In OBS' menu: `Help`->`Log Files`->`Upload Current Log File`. Click `Copy URL` and paste the link here."
+      placeholder: "[ex: https://obsproject.com/logs/xp0aoscz...]"
+    validations:
+      required: false   
+  - type: textarea
+    id: issue-behavior-reported
+    attributes:
+      label: "Issue reported - Current Behavior"
+      description: "A concise description of what you're experiencing."
+    validations:
+      required: true
+  - type: textarea
+    id: issue-behavior-expected
+    attributes:
+      label: "Expected Behavior"
+      description: "A concise description of what you expected to happen. Screenshot or recording of the issue might help identify the root cause."
+    validations:
+      required: true
+  - type: textarea
+    id: issue-reproduce-step
+    attributes:
+      label: "Steps To Reproduce"
+      description: "Steps to reproduce the behavior."
+      placeholder: |
+        1. In this environment...
+        1. With this config...
+        1. Run '...'
+        1. See error...
+    validations:
+      required: true
+  - type: textarea
+    id: issue-environment
+    attributes:
+      label: "Environment"
+      description: |
+        examples:
+          - **OS**: [Ubuntu 22.04, MacOS 15.1, Windows 10 22H2, Win 11 24H2, ...]
+          - **OBS**: [28.0, 29.0.2, 30.2.3 ...] installed from [.exe, .dep, apt, brew, PPA, Flatpak, Snap, winget, ...]
+          - **DistroAV**: [6.0.0, 6.1 ...] installed from [.exe, .pkg, brew, Flatpak, winget, ...]
+          - **NDI**: [5.60, 6.0.1 ...]
+      value: |
+          - OS:
+          - OBS:
+          - DistroAV: 
+          - NDI:
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: issue-check-duediligence
+    attributes:
+      label: "Pre-Check for Bug Report"
+      options:
+      - label: "I am able to reproduce the bug following the steps provided above"
+        required: true
+      - label: "I have confirmed this bug exist on more than one device/computer"
+        required: false
+      - label: "I have tested using a new scene collection to reproduce the issue"
+        required: false
+      - label: "I have tested on a 'clean' OBS installation (aka with no other scripts or plugin installed)"
+        required: false
