@@ -1,0 +1,33 @@
+name: "Report something else"
+description: "Report something else that is not a bug, feature request or Support Request"
+title: "[??]: "
+labels: ["triage"]
+body:
+  - type: checkboxes
+    id: gh-rules-checked
+    attributes:
+      label: "Pre-Report Checks"
+      description: "Please use the proper type of issue for reporting."
+      options:
+      - label: "This is not a Bug Report"
+        required: true
+      - label: "This is not a Feature Request"
+        required: true
+      - label: "This is not a Support Request"
+        required: true
+      - label: "This could not be reported anywhere else (Issue/discussion)"
+        required: true
+  - type: textarea
+    id: issue-idea
+    attributes:
+      label: "Description of your report"
+      description: "A concise description of what you want to share / report."
+    validations:
+      required: true
+  - type: textarea
+    id: issue-type-limited
+    attributes:
+      label: "I could not report this anywhere else because..."
+      description: "Explain why this could not be reported elsewhere."
+    validations:
+      required: true
