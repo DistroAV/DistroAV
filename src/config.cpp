@@ -260,6 +260,16 @@ void Config::Save()
 	}
 }
 
+QString Config::GetInstallGUID()
+{
+	auto obs_config = GetGlobalConfig();
+	if (obs_config) {
+		return config_get_string(obs_config, "General",
+						"InstallGUID");
+	}
+	return 0;
+}
+
 bool Config::AutoCheckForUpdates()
 {
 	auto obs_config = GetGlobalConfig();

@@ -503,7 +503,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		QT_TO_UTF8(url.toString()));
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
-	auto obsGuid = GetProgramGUID();
+	auto obsGuid = config->GetInstallGUID();
+	obs_log(LOG_VERBOSE, "GUID detected : '%s' ", QT_TO_UTF8(obsGuid));
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
 	auto userAgent = QString("DistroAV/%1 (OBS/%2 %3; %4; %5; %6) %7")
 				 .arg(pluginVersion)

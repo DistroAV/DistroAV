@@ -28,5 +28,3 @@ In some places [nearly] the full code implementation is copied.
 #include <QString>
 
 bool CalculateFileHash(const char *path, QString &hash);
-void GenerateGUID(QString &guid);
-QString GetProgramGUID();
