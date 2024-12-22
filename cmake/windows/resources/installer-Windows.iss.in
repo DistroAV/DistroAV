@@ -1,4 +1,4 @@
-#define MyAppName "@CMAKE_PROJECT_NAME@"
+#define MyAppName "@PLUGIN_DISPLAY_NAME@"
 #define MyAppVersion "@CMAKE_PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
 #define MyAppURL "@PLUGIN_WEBSITE@"
@@ -33,6 +33,20 @@ Source: "..\LICENSE"; Flags: dontcopy
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
+[InstallDelete]
+; Remove previous obs-ndi plugin files (the hard-way)
+Type: filesandordirs; Name: "{app}\data\obs-plugins\obs-ndi\"
+Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.dll"
+Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.pdb"
+
+[Run]
+; This uninstall the old obs-ndi after installation but before the final dialog when installing DistroAV
+Filename: "{code:GetOldAppUninstallerPath}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Uninstall OBS-NDI"
+; Dev-note: Cannot use : Flags: skipifdoesntexist >> it only takes absolute filename.
+; Unblock OBS from the firewall so DistroAV will work out-of-the-box
+Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=in action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
+Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=out action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
+
 [Code]
 procedure InitializeWizard();
 var
@@ -62,3 +76,34 @@ begin
     Result := InstallPath
 end;
 
+
+// Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
+// CAREFUL : this target the old AppID.
+const UninstallRegisteryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+const UninstallRegisteryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
+
+function GetOldAppUninstallerPath(Param: String): String;
+var
+  UninstallerPathRegistry: String;
+// At least one Param string is required to use this fucntion with {code:}, can be empty.
+begin
+  Result := '';
+  // Check primary registry location version 4.11+
+  if ( RegQueryStringValue(HKLM, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+  // Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+
+  // Check primary registry location version 4.10
+  else if ( RegQueryStringValue(HKLM, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+  // Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry);
+end;
+
+function UninstallOldAppAvailable(): Boolean;
+begin
+  if (GetOldAppUninstallerPath('') <> '') then Result := True else Result := False;
+end;
