@@ -200,7 +200,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 		video_frame output_frame;
 		if (video_output_lock_frame(f->video_output, &output_frame, 1,
-					    os_gettime_ns())) {
+					    obs_get_video_frame_time())) {
 			if (f->video_data) {
 				gs_stagesurface_unmap(f->stagesurface);
 				f->video_data = nullptr;
@@ -241,8 +241,8 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 		send_desc.p_groups = groups;
 	else
 		send_desc.p_groups = nullptr;
-	send_desc.clock_video = false;
-	send_desc.clock_audio = false;
+	send_desc.clock_video = true;
+	send_desc.clock_audio = true;
 
 	if (!f->is_audioonly) {
 		pthread_mutex_lock(&f->ndi_sender_video_mutex);
