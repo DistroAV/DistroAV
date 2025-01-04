@@ -24,6 +24,8 @@
 #include <QCoreApplication>
 
 #define SECTION_NAME "NDIPlugin"
+
+// User Settings
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
 #define PARAM_MAIN_OUTPUT_NAME "MainOutputName"
 #define PARAM_MAIN_OUTPUT_GROUPS "MainOutputGroups"
@@ -32,6 +34,8 @@
 #define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
+
+// App Settings
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
 #define PARAM_LAST_UPDATE_CHECK "LastUpdateCheck"
@@ -40,6 +44,7 @@
 
 Config *Config::_instance = nullptr;
 
+// Execution parameters (not stored in config file)
 int Config::UpdateForce = 0;
 int Config::UpdateLocalPort = 0;
 bool Config::UpdateLastCheckIgnore = false;
@@ -55,8 +60,7 @@ std::map<std::string, enum ObsConfigType> ConfigTypeMap{
 	{PARAM_PREVIEW_OUTPUT_NAME, OBS_CONFIG_STRING},
 	{PARAM_PREVIEW_OUTPUT_GROUPS, OBS_CONFIG_STRING},
 	{PARAM_TALLY_PROGRAM_ENABLED, OBS_CONFIG_BOOL},
-	{PARAM_TALLY_PREVIEW_ENABLED, OBS_CONFIG_BOOL},
-	{PARAM_AUTO_CHECK_FOR_UPDATES, OBS_CONFIG_BOOL}};
+	{PARAM_TALLY_PREVIEW_ENABLED, OBS_CONFIG_BOOL}};
 
 void ProcessCommandLine()
 {
@@ -236,9 +240,6 @@ void Config::SetDefaultsToUserStore()
 		config_set_default_bool(obs_config, SECTION_NAME,
 					PARAM_TALLY_PREVIEW_ENABLED,
 					TallyPreviewEnabled);
-
-		config_set_default_bool(obs_config, SECTION_NAME,
-					PARAM_AUTO_CHECK_FOR_UPDATES, true);
 	}
 }
 
@@ -266,9 +267,6 @@ void Config::GlobalToUserMigration()
 			       PARAM_TALLY_PROGRAM_ENABLED);
 		MigrateSetting(app_config, user_config, SECTION_NAME,
 			       PARAM_TALLY_PREVIEW_ENABLED);
-
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_AUTO_CHECK_FOR_UPDATES);
 
 		config_save(app_config);
 		config_save(user_config);
@@ -336,7 +334,7 @@ void Config::Save()
 
 bool Config::AutoCheckForUpdates()
 {
-	auto obs_config = GetUserConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		return config_get_bool(obs_config, SECTION_NAME,
 				       PARAM_AUTO_CHECK_FOR_UPDATES);
@@ -346,7 +344,7 @@ bool Config::AutoCheckForUpdates()
 
 void Config::AutoCheckForUpdates(bool value)
 {
-	auto obs_config = GetUserConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME,
 				PARAM_AUTO_CHECK_FOR_UPDATES, value);
