@@ -427,11 +427,11 @@ void *ndi_source_thread(void *data)
 	NDIlib_metadata_frame_t metadata_frame;
 	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
 	NDIlib_audio_frame_v2_t audio_frame2;
-	int64_t timestamp_audio = 0;
-	int64_t timestamp_video = 0;
-
 	NDIlib_audio_frame_v3_t audio_frame3;
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
+
+	int64_t timestamp_audio = 0;
+	int64_t timestamp_video = 0;
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -624,11 +624,10 @@ void *ndi_source_thread(void *data)
 		//
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
 #if 0
-			obs_log(LOG_INFO,
+			obs_log(LOG_VERBOSE,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
 				obs_source_name);
 #endif
-			//blog(LOG_INFO, "s");//leep");
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(
 				std::chrono::milliseconds(100));
@@ -689,22 +688,26 @@ void *ndi_source_thread(void *data)
 			//
 			// AUDIO
 			//
-			audio_frame2 = {};
-			ndiLib->framesync_capture_audio(
-				ndi_frame_sync, &audio_frame2,
+			audio_frame3 = {};
+			ndiLib->framesync_capture_audio_v2(
+				ndi_frame_sync, &audio_frame3,
 				0, // "Your desired sample rate. 0 for “use source”."
 				0, // "Your desired channel count. 0 for “use source”."
 				1024);
-			if (audio_frame2.p_data &&
-			    (audio_frame2.timestamp > timestamp_audio)) {
-				//blog(LOG_INFO, "a");//udio_frame");
-				timestamp_audio = audio_frame2.timestamp;
-				ndi_source_thread_process_audio2(
-					&s->config, &audio_frame2,
+			if (audio_frame3.p_data &&
+			    (audio_frame3.timestamp > timestamp_audio)) {
+				//obs_log(LOG_INFO, "a");//udio_frame");
+				timestamp_audio = audio_frame3.timestamp;
+				obs_log(LOG_VERBOSE,
+					"%s: New Audio Frame3 (Framesync ON): ts=%d tc=%d",
+					obs_source_name, audio_frame3.timestamp,
+					audio_frame3.timecode);
+				ndi_source_thread_process_audio3(
+					&s->config, &audio_frame3,
 					s->obs_source, &obs_audio_frame);
 			}
-			ndiLib->framesync_free_audio(ndi_frame_sync,
-						     &audio_frame2);
+			ndiLib->framesync_free_audio_v2(ndi_frame_sync,
+							&audio_frame3);
 
 			//
 			// VIDEO
@@ -715,8 +718,12 @@ void *ndi_source_thread(void *data)
 				NDIlib_frame_format_type_progressive);
 			if (video_frame2.p_data &&
 			    (video_frame2.timestamp > timestamp_video)) {
-				//blog(LOG_INFO, "v");//ideo_frame");
+				//obs_log(LOG_INFO, "v");//ideo_frame");
 				timestamp_video = video_frame2.timestamp;
+				obs_log(LOG_VERBOSE,
+					"%s: New Video Frame2 (Framesync ON): ts=%d tc=%d",
+					obs_source_name, video_frame2.timestamp,
+					video_frame2.timecode);
 				ndi_source_thread_process_video2(
 					&s->config, &video_frame2,
 					s->obs_source, &obs_video_frame);
@@ -740,7 +747,10 @@ void *ndi_source_thread(void *data)
 				//
 				// AUDIO
 				//
-				//blog(LOG_INFO, "a");//udio_frame");
+				obs_log(LOG_VERBOSE,
+					"%s: New Audio Frame3 (Framesync OFF): ts=%d tc=%d",
+					obs_source_name, audio_frame3.timestamp,
+					audio_frame3.timecode);
 				ndi_source_thread_process_audio3(
 					&s->config, &audio_frame3,
 					s->obs_source, &obs_audio_frame);
@@ -754,7 +764,10 @@ void *ndi_source_thread(void *data)
 				//
 				// VIDEO
 				//
-				//blog(LOG_INFO, "v");//ideo_frame");
+				obs_log(LOG_VERBOSE,
+					"%s: New Video Frame2 (Framesync OFF): ts=%d tc=%d",
+					obs_source_name, video_frame2.timestamp,
+					video_frame2.timecode);
 				ndi_source_thread_process_video2(
 					&s->config, &video_frame2,
 					s->obs_source, &obs_video_frame);
