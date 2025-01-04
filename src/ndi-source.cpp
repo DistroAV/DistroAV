@@ -1031,7 +1031,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	reset_ndi_receiver |=
 		(s->config.hw_accel_enabled != new_hw_accel_enabled);
 	obs_log(LOG_INFO,
-		"'%s' ndi_source_update: Check for 'Hardware Acceleration' setting changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
+		"'%s' ndi_source_update: Check for 'Hardware Acceleration' setting changes: new_hw_accel_enabled='%s' vs config.hw_accel_enabled='%s'",
 		obs_source_name, new_hw_accel_enabled ? "true" : "false",
 		s->config.hw_accel_enabled ? "true" : "false");
 	s->config.hw_accel_enabled = new_hw_accel_enabled;
