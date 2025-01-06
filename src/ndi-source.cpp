@@ -814,7 +814,9 @@ void ndi_source_thread_process_audio2(ndi_source_config_t *config,
 			   obs_source_get_name(obs_source),
 			   ndi_audio_frame2->timecode,
 			   ndi_audio_frame2->timestamp);
-
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI -> ndi_source_thread",
+				      obs_source_get_name(obs_source),
+				      ndi_audio_frame2);
 	const int channelCount = ndi_audio_frame2->no_channels > 8
 					 ? 8
 					 : ndi_audio_frame2->no_channels;
@@ -863,6 +865,10 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 			   ndi_audio_frame3->timecode,
 			   ndi_audio_frame3->timestamp);
 
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI -> ndi_source_thread",
+				      obs_source_get_name(obs_source),
+				      ndi_audio_frame3);
+
 	const int channelCount = ndi_audio_frame3->no_channels > 8
 					 ? 8
 					 : ndi_audio_frame3->no_channels;
@@ -906,7 +912,9 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 			   obs_source_get_name(obs_source),
 			   ndi_video_frame->timecode,
 			   ndi_video_frame->timestamp);
-
+	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI -> ndi_source_thread",
+				      obs_source_get_name(obs_source),
+				      ndi_video_frame);
 	switch (ndi_video_frame->FourCC) {
 	case NDIlib_FourCC_type_BGRA:
 		obs_video_frame->format = VIDEO_FORMAT_BGRA;
