@@ -66,8 +66,6 @@
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
 
-extern NDIlib_find_instance_t ndi_finder;
-
 typedef struct ptz_t {
 	bool enabled;
 	float pan;
@@ -211,13 +209,28 @@ obs_properties_t *ndi_source_getproperties(void *)
 		props, PROP_SOURCE,
 		obs_module_text("NDIPlugin.SourceProps.SourceName"),
 		OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
-	uint32_t nbSources = 0;
-	const NDIlib_source_t *sources =
-		ndiLib->find_get_current_sources(ndi_finder, &nbSources);
-	for (uint32_t i = 0; i < nbSources; ++i) {
+
+	NDIlib_find_create_t find_desc = {0};
+	find_desc.show_local_sources = true;
+	find_desc.p_groups = NULL;
+	NDIlib_find_instance_t ndi_find = ndiLib->find_create_v2(&find_desc);
+
+	uint32_t n_sources = 0;
+	uint32_t last_n_sources = 0;
+	const NDIlib_source_t *sources = NULL;
+	do {
+		ndiLib->find_wait_for_sources(ndi_find, 1000);
+		last_n_sources = n_sources;
+		sources =
+			ndiLib->find_get_current_sources(ndi_find, &n_sources);
+	} while (n_sources > last_n_sources);
+
+	for (uint32_t i = 0; i < n_sources; ++i) {
 		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
 					     sources[i].p_ndi_name);
 	}
+
+	ndiLib->find_destroy(ndi_find);
 
 	obs_property_t *behavior_list = obs_properties_add_list(
 		props, PROP_BEHAVIOR,
