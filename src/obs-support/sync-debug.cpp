@@ -1,7 +1,7 @@
 #include "obs-support/sync-debug.h"
 #include <util/platform.h>
 
-	// Shared map to store the last log time for each message
+// Shared map to store the last log time for each message
 static std::map<std::string, std::chrono::steady_clock::time_point> lastLogTime;
 
 // Function to clear the lastLogTime map
@@ -104,8 +104,7 @@ void obs_sync_debug_log_video_time(const char *message,
 	}
 
 	// If white frame is going from off to on, log the frame time, audio time and diff
-	auto white_time = obs_sync_white_time(timestamp,
-					      data);
+	auto white_time = obs_sync_white_time(timestamp, data);
 	if (!wo->second && (white_time > 0)) {
 		white_on[key] = true;
 		white_on_time[key] = white_time;
@@ -137,7 +136,8 @@ void obs_sync_debug_log_video_time(const char *message,
 					   ? "MAX"
 					   : std::to_string(diff / 1000000);
 		}
-		obs_log(LOG_VERBOSE, "~___~___ Sync Test Data Found: AT %14s WT %14s: %5s %s",
+		obs_log(LOG_VERBOSE,
+			"~___~___ Sync Test Data Found: AT %14s WT %14s: %5s %s",
 			atimeStr.c_str(), wtimeStr.c_str(), dtimeStr.c_str(),
 			key.c_str());
 
@@ -147,7 +147,8 @@ void obs_sync_debug_log_video_time(const char *message,
 }
 void obs_sync_debug_log_audio_time(const char *message,
 				   const char *source_ndi_name,
-				   uint64_t timestamp, float *data, int no_samples, int sample_rate)
+				   uint64_t timestamp, float *data,
+				   int no_samples, int sample_rate)
 {
 	if ((LOG_LEVEL != LOG_VERBOSE) || (audio_on.size() >= 100))
 		return;
@@ -161,10 +162,8 @@ void obs_sync_debug_log_audio_time(const char *message,
 	}
 
 	// If audio on, log the frame time
-	auto audio_time = obs_sync_audio_time(timestamp,
-					      data,
-					      no_samples,
-					      sample_rate);
+	auto audio_time =
+		obs_sync_audio_time(timestamp, data, no_samples, sample_rate);
 	if (!ao->second && (audio_time > 0)) {
 		ao->second = true; // set audio on
 		audio_on_time[key] = audio_time;

@@ -358,7 +358,8 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	obs_sync_debug_log("NDI <- ndi_output_rawvideo", o->ndi_name,
 			   video_frame.timecode, video_frame.timestamp);
 	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name,
-				      video_frame.timestamp, (uint8_t *)video_frame.p_data);
+				      video_frame.timestamp,
+				      (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
@@ -410,8 +411,10 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 
 	audio_frame.p_data = o->audio_conv_buffer;
 	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name,
-				      audio_frame.timestamp, (float *)audio_frame.p_data, 
-						audio_frame.no_samples, audio_frame.sample_rate);
+				      audio_frame.timestamp,
+				      (float *)audio_frame.p_data,
+				      audio_frame.no_samples,
+				      audio_frame.sample_rate);
 	obs_sync_debug_log("NDI <- ndi_output_rawaudio", o->ndi_name,
 			   audio_frame.timecode, audio_frame.timestamp);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
