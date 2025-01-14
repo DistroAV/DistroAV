@@ -1,6 +1,7 @@
 #include "obs-support/sync-debug.h"
+#include <util/platform.h>
 
-// Shared map to store the last log time for each message
+	// Shared map to store the last log time for each message
 static std::map<std::string, std::chrono::steady_clock::time_point> lastLogTime;
 
 // Function to clear the lastLogTime map
@@ -38,6 +39,7 @@ void obs_sync_debug_log(const char *message, const char *source_ndi_name,
 		}
 
 		std::string timestampStr = "N/A";
+
 		if (timestamp > (uint64_t)0) {
 			timestampStr =
 				(timestamp == LLONG_MAX)
@@ -88,7 +90,7 @@ int64_t obs_sync_audio_time(int64_t time, float *p_data, int nsamples,
 
 void obs_sync_debug_log_video_time(const char *message,
 				   const char *source_ndi_name,
-				   NDIlib_video_frame_v2_t *video_frame)
+				   uint64_t timestamp, uint8_t *data)
 {
 	if ((LOG_LEVEL != LOG_VERBOSE) || (white_on.size() >= 100))
 		return;
@@ -102,8 +104,8 @@ void obs_sync_debug_log_video_time(const char *message,
 	}
 
 	// If white frame is going from off to on, log the frame time, audio time and diff
-	auto white_time = obs_sync_white_time(video_frame->timecode * 100,
-					      video_frame->p_data);
+	auto white_time = obs_sync_white_time(timestamp,
+					      data);
 	if (!wo->second && (white_time > 0)) {
 		white_on[key] = true;
 		white_on_time[key] = white_time;
@@ -135,7 +137,7 @@ void obs_sync_debug_log_video_time(const char *message,
 					   ? "MAX"
 					   : std::to_string(diff / 1000000);
 		}
-		obs_log(LOG_VERBOSE, "AT %14s WT %14s: %5s %s",
+		obs_log(LOG_VERBOSE, "~___~___ Sync Test Data Found: AT %14s WT %14s: %5s %s",
 			atimeStr.c_str(), wtimeStr.c_str(), dtimeStr.c_str(),
 			key.c_str());
 
@@ -145,7 +147,7 @@ void obs_sync_debug_log_video_time(const char *message,
 }
 void obs_sync_debug_log_audio_time(const char *message,
 				   const char *source_ndi_name,
-				   NDIlib_audio_frame_v2_t *audio_frame2)
+				   uint64_t timestamp, float *data, int no_samples, int sample_rate)
 {
 	if ((LOG_LEVEL != LOG_VERBOSE) || (audio_on.size() >= 100))
 		return;
@@ -159,40 +161,12 @@ void obs_sync_debug_log_audio_time(const char *message,
 	}
 
 	// If audio on, log the frame time
-	auto audio_time = obs_sync_audio_time(audio_frame2->timecode * 100,
-					      audio_frame2->p_data,
-					      audio_frame2->no_samples,
-					      audio_frame2->sample_rate);
+	auto audio_time = obs_sync_audio_time(timestamp,
+					      data,
+					      no_samples,
+					      sample_rate);
 	if (!ao->second && (audio_time > 0)) {
 		ao->second = true; // set audio on
-		audio_on_time[key] = audio_time;
-	} else if (ao->second && (audio_time == 0)) {
-		ao->second = false;
-	}
-}
-
-void obs_sync_debug_log_audio_time(const char *message,
-				   const char *source_ndi_name,
-				   NDIlib_audio_frame_v3_t *audio_frame2)
-{
-	if ((LOG_LEVEL != LOG_VERBOSE) || (audio_on.size() >= 100))
-		return;
-	std::string key = std::string(message) + " [" +
-			  std::string(source_ndi_name) + "]";
-
-	auto ao = audio_on.find(key);
-	if (ao == audio_on.end()) {
-		audio_on[key] = false;
-		ao = audio_on.find(key);
-	}
-
-	// If audio on, log the frame time
-	auto audio_time = obs_sync_audio_time(audio_frame2->timecode * 100,
-					      (float *)audio_frame2->p_data,
-					      audio_frame2->no_samples,
-					      audio_frame2->sample_rate);
-	if (!ao->second && (audio_time > 0)) {
-		ao->second = true;
 		audio_on_time[key] = audio_time;
 	} else if (ao->second && (audio_time == 0)) {
 		ao->second = false;

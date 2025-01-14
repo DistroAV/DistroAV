@@ -139,6 +139,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	video_frame.picture_aspect_ratio = 0; // square pixels
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 	video_frame.timecode = (frame->timestamp / 100);
+	video_frame.timestamp = frame->timestamp;
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 
@@ -149,7 +150,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 			   video_frame.timecode, video_frame.timestamp);
 	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_filter",
 				      obs_source_get_name(f->obs_source),
-				      &video_frame);
+				      video_frame.timestamp, (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
@@ -215,7 +216,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 					    os_gettime_ns())) {
 			obs_sync_debug_log("OBS -> ndi_filter_offscreen_render",
 					   obs_source_get_name(f->obs_source),
-					   0, obs_get_video_frame_time());
+					   0, os_gettime_ns());
 
 			if (f->video_data) {
 				gs_stagesurface_unmap(f->stagesurface);
@@ -398,6 +399,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
 	audio_frame.timecode = audio_data->timestamp / 100;
+	audio_frame.timestamp = audio_data->timestamp;
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.channel_stride_in_bytes = audio_frame.no_samples * 4;
 
@@ -436,7 +438,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 			   audio_frame.timecode, audio_frame.timestamp);
 	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter",
 				      obs_source_get_name(f->obs_source),
-				      &audio_frame);
+				      audio_frame.timestamp, audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v2(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
