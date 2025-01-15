@@ -16,7 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
-
+#include "obs-support/sync-debug.h"
 #include "forms/output-settings.h"
 #include "forms/update.h"
 #include "main-output.h"
@@ -372,6 +372,8 @@ void obs_module_unload(void)
 	if (loaded_lib) {
 		delete loaded_lib;
 	}
+
+	obs_clear_last_log_time();
 
 	obs_log(LOG_INFO, "-obs_module_unload(): goodbye!");
 }
