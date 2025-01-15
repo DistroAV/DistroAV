@@ -150,7 +150,8 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 			   video_frame.timecode, video_frame.timestamp);
 	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_filter",
 				      obs_source_get_name(f->obs_source),
-				      video_frame.timestamp, (uint8_t *)video_frame.p_data);
+				      video_frame.timestamp,
+				      (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
@@ -438,7 +439,9 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 			   audio_frame.timecode, audio_frame.timestamp);
 	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter",
 				      obs_source_get_name(f->obs_source),
-				      audio_frame.timestamp, audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
+				      audio_frame.timestamp, audio_frame.p_data,
+				      audio_frame.no_samples,
+				      audio_frame.sample_rate);
 	ndiLib->send_send_audio_v2(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 

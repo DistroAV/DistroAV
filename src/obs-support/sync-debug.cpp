@@ -62,8 +62,6 @@ int64_t obs_sync_white_time(int64_t time, uint8_t *p_data)
 {
 	uint8_t pixel0 = p_data[0];
 	uint8_t pixel1 = p_data[1];
-	uint8_t pixel2 = p_data[2];
-	uint8_t pixel3 = p_data[3];
 	bool white = (((pixel0 == 128) && (pixel1 == 235)) ||
 		      ((pixel0 == 255) && (pixel1 == 255)));
 	return white ? time : 0;
@@ -112,7 +110,7 @@ void obs_sync_debug_log_video_time(const char *message,
 		auto diff = white_on_time[key] - audio_on_time[key];
 
 		std::string wtimeStr = "N/A";
-		if (white_on_time[key] > (uint64_t)0) {
+		if (white_on_time[key] > (int64_t)0) {
 			wtimeStr = (white_on_time[key] == LLONG_MAX)
 					   ? "MAX"
 					   : std::to_string(white_on_time[key] /
@@ -120,7 +118,7 @@ void obs_sync_debug_log_video_time(const char *message,
 		}
 
 		std::string atimeStr = "N/A";
-		if (audio_on_time[key] > (uint64_t)0) {
+		if (audio_on_time[key] > (int64_t)0) {
 			atimeStr = (audio_on_time[key] == LLONG_MAX)
 					   ? "MAX"
 					   : std::to_string(audio_on_time[key] /
@@ -128,8 +126,8 @@ void obs_sync_debug_log_video_time(const char *message,
 		}
 
 		std::string dtimeStr = "N/A";
-		if ((audio_on_time[key] > (uint64_t)0) &&
-		    (white_on_time[key] > (uint64_t)0)) {
+		if ((audio_on_time[key] > (int64_t)0) &&
+		    (white_on_time[key] > (int64_t)0)) {
 
 			dtimeStr = ((audio_on_time[key] == LLONG_MAX) ||
 				    (white_on_time[key] == LLONG_MAX))
