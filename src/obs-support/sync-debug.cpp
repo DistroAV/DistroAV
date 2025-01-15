@@ -169,3 +169,4 @@ void obs_sync_debug_log_audio_time(const char *message,
 		ao->second = false;
 	}
 }
+
