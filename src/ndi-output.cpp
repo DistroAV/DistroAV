@@ -337,9 +337,10 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.yres = height;
 	video_frame.frame_rate_N = (int)(o->video_framerate * 100);
 	// TODO fixme: broken on fractional framerates
-	video_frame.frame_rate_D = 100;
+	video_frame.frame_rate_D =
+		100; // TODO : investiate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = frame->timestamp / 100;
+	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.FourCC = o->frame_fourcc;
 
 	if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {

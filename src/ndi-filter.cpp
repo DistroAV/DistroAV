@@ -133,7 +133,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	video_frame.frame_rate_D = f->ovi.fps_den;
 	video_frame.picture_aspect_ratio = 0; // square pixels
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = (frame->timestamp / 100);
+	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 
@@ -374,12 +374,17 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 
 	obs_get_audio_info(&f->oai);
 
-	NDIlib_audio_frame_v2_t audio_frame = {0};
+	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
-	audio_frame.timecode = audio_data->timestamp / 100;
+	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = audio_data->frames;
-	audio_frame.channel_stride_in_bytes = audio_frame.no_samples * 4;
+	audio_frame.channel_stride_in_bytes =
+		audio_frame.no_samples *
+		4; // TODO: Check if this correct or should 4 be replaced by number of channels.
+	// audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
+	// audio_frame.p_data = p_frame;
+	audio_frame.p_metadata = NULL; // No metadata support yet!
 
 	const size_t data_size =
 		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
@@ -407,10 +412,10 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 		       audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = (float *)f->audio_conv_buffer;
+	audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-	ndiLib->send_send_audio_v2(f->ndi_sender, &audio_frame);
+	ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	return audio_data;
