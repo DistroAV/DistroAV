@@ -6,28 +6,16 @@ set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
 
 # Use a compiler wrapper to enable ccache in Xcode projects
 if(ENABLE_CCACHE AND CCACHE_PROGRAM)
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/resources/ccache-launcher-c.in"
-        ccache-launcher-c
-    )
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/resources/ccache-launcher-cxx.in"
-        ccache-launcher-cxx
-    )
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/resources/ccache-launcher-c.in" ccache-launcher-c)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/resources/ccache-launcher-cxx.in" ccache-launcher-cxx)
 
-    execute_process(
-        COMMAND
-            chmod a+rx "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-c"
-            "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-cxx"
-    )
-    set(CMAKE_XCODE_ATTRIBUTE_CC
-        "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-c"
-    )
-    set(CMAKE_XCODE_ATTRIBUTE_CXX
-        "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-cxx"
-    )
-    set(CMAKE_XCODE_ATTRIBUTE_LD "${CMAKE_C_COMPILER}")
-    set(CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS "${CMAKE_CXX_COMPILER}")
+  execute_process(
+    COMMAND chmod a+rx "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-c" "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-cxx"
+  )
+  set(CMAKE_XCODE_ATTRIBUTE_CC "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-c")
+  set(CMAKE_XCODE_ATTRIBUTE_CXX "${CMAKE_CURRENT_BINARY_DIR}/ccache-launcher-cxx")
+  set(CMAKE_XCODE_ATTRIBUTE_LD "${CMAKE_C_COMPILER}")
+  set(CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS "${CMAKE_CXX_COMPILER}")
 endif()
 
 # Set project variables
@@ -36,25 +24,23 @@ set(CMAKE_XCODE_ATTRIBUTE_DYLIB_COMPATIBILITY_VERSION 1.0.0)
 set(CMAKE_XCODE_ATTRIBUTE_MARKETING_VERSION ${PLUGIN_VERSION})
 
 # Set deployment target
-set(CMAKE_XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET
-    ${CMAKE_OSX_DEPLOYMENT_TARGET}
-)
+set(CMAKE_XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET})
 
 if(NOT CODESIGN_TEAM)
-    # Switch to manual codesigning if no codesigning team is provided
+  # Switch to manual codesigning if no codesigning team is provided
+  set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_STYLE Manual)
+  set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${CODESIGN_IDENTITY}")
+else()
+  if(CODESIGN_IDENTITY AND NOT CODESIGN_IDENTITY STREQUAL "-")
+    # Switch to manual codesigning if a non-adhoc codesigning identity is provided
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_STYLE Manual)
     set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${CODESIGN_IDENTITY}")
-else()
-    if(CODESIGN_IDENTITY AND NOT CODESIGN_IDENTITY STREQUAL "-")
-        # Switch to manual codesigning if a non-adhoc codesigning identity is provided
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_STYLE Manual)
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "${CODESIGN_IDENTITY}")
-    else()
-        # Switch to automatic codesigning via valid team ID
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic)
-        set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development")
-    endif()
-    set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${CODESIGN_TEAM}")
+  else()
+    # Switch to automatic codesigning via valid team ID
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic)
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development")
+  endif()
+  set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${CODESIGN_TEAM}")
 endif()
 
 # Only create a single Xcode project file
@@ -64,12 +50,8 @@ set(CMAKE_XCODE_LINK_BUILD_PHASE_MODE KNOWN_LOCATION)
 
 # Enable codesigning with secure timestamp when not in Debug configuration (required for Notarization)
 set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS[variant=Release] "--timestamp")
-set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS[variant=RelWithDebInfo]
-    "--timestamp"
-)
-set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS[variant=MinSizeRel]
-    "--timestamp"
-)
+set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS[variant=RelWithDebInfo] "--timestamp")
+set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS[variant=MinSizeRel] "--timestamp")
 
 # Enable codesigning with hardened runtime option when not in Debug configuration (required for Notarization)
 set(CMAKE_XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME[variant=Release] YES)
@@ -78,15 +60,9 @@ set(CMAKE_XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME[variant=MinSizeRel] YES)
 
 # Disable injection of Xcode's base entitlements used for debugging when not in Debug configuration (required for
 # Notarization)
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS[variant=Release]
-    NO
-)
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS[variant=RelWithDebInfo]
-    NO
-)
-set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS[variant=MinSizeRel]
-    NO
-)
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS[variant=Release] NO)
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS[variant=RelWithDebInfo] NO)
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS[variant=MinSizeRel] NO)
 
 # Use Swift version 5.0 by default
 set(CMAKE_XCODE_ATTRIBUTE_SWIFT_VERSION 5.0)
@@ -97,15 +73,9 @@ set(CMAKE_XCODE_ATTRIBUTE_SWIFT_VERSION 5.0)
 #   output configuration. Report to KitWare.
 #
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=Debug] dwarf)
-set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=RelWithDebInfo]
-    dwarf
-)
-set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=Release]
-    dwarf-with-dsym
-)
-set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=MinSizeRel]
-    dwarf-with-dsym
-)
+set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=RelWithDebInfo] dwarf)
+set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=Release] dwarf-with-dsym)
+set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT[variant=MinSizeRel] dwarf-with-dsym)
 
 # Make all symbols hidden by default (currently overriden by CMake's compiler flags)
 set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN YES)
@@ -192,7 +162,7 @@ set(CMAKE_XCODE_ATTRIBUTE_GCC_WARN_UNUSED_VARIABLE YES)
 set(CMAKE_XCODE_ATTRIBUTE_WARNING_CFLAGS "-Wvla -Wformat-security")
 
 if(CMAKE_COMPILE_WARNING_AS_ERROR)
-    set(CMAKE_XCODE_ATTRIBUTE_GCC_TREAT_WARNINGS_AS_ERRORS YES)
+  set(CMAKE_XCODE_ATTRIBUTE_GCC_TREAT_WARNINGS_AS_ERRORS YES)
 endif()
 
 # Enable color diagnostics
@@ -201,6 +171,4 @@ set(CMAKE_COLOR_DIAGNOSTICS TRUE)
 # Disable usage of RPATH in build or install configurations
 set(CMAKE_SKIP_RPATH TRUE)
 # Have Xcode set default RPATH entries
-set(CMAKE_XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS
-    "@executable_path/../Frameworks"
-)
+set(CMAKE_XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/../Frameworks")
