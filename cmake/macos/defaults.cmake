@@ -4,12 +4,17 @@ include_guard(GLOBAL)
 
 # Set empty codesigning team if not specified as cache variable
 if(NOT CODESIGN_TEAM)
-  set(CODESIGN_TEAM "" CACHE STRING "OBS code signing team for macOS" FORCE)
+    set(CODESIGN_TEAM "" CACHE STRING "OBS code signing team for macOS" FORCE)
 
-  # Set ad-hoc codesigning identity if not specified as cache variable
-  if(NOT CODESIGN_IDENTITY)
-    set(CODESIGN_IDENTITY "-" CACHE STRING "OBS code signing identity for macOS" FORCE)
-  endif()
+    # Set ad-hoc codesigning identity if not specified as cache variable
+    if(NOT CODESIGN_IDENTITY)
+        set(CODESIGN_IDENTITY
+            "-"
+            CACHE STRING
+            "OBS code signing identity for macOS"
+            FORCE
+        )
+    endif()
 endif()
 
 include(xcode)
@@ -18,13 +23,12 @@ include(buildspec)
 
 # Use Applications directory as default install destination
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(
-    CMAKE_INSTALL_PREFIX
-    "$ENV{HOME}/Library/Application Support/obs-studio/plugins"
-    CACHE STRING
-    "Default plugin installation directory"
-    FORCE
-  )
+    set(CMAKE_INSTALL_PREFIX
+        "$ENV{HOME}/Library/Application Support/obs-studio/plugins"
+        CACHE STRING
+        "Default plugin installation directory"
+        FORCE
+    )
 endif()
 
 # Enable find_package targets to become globally available targets

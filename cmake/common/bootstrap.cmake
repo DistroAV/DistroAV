@@ -32,12 +32,16 @@ set(
 
 # Prohibit in-source builds
 if("${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  message(
-    FATAL_ERROR
-    "In-source builds are not supported. "
-    "Specify a build directory via 'cmake -S <SOURCE DIRECTORY> -B <BUILD_DIRECTORY>' instead."
-  )
-  file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/CMakeCache.txt" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles")
+    message(
+        FATAL_ERROR
+        "In-source builds are not supported. "
+        "Specify a build directory via 'cmake -S <SOURCE DIRECTORY> -B <BUILD_DIRECTORY>' instead."
+    )
+    file(
+        REMOVE_RECURSE
+        "${CMAKE_CURRENT_SOURCE_DIR}/CMakeCache.txt"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles"
+    )
 endif()
 
 # Add common module directories to default search path
@@ -69,19 +73,18 @@ include(osconfig)
 
 # Allow selection of common build types via UI
 if(NOT CMAKE_GENERATOR MATCHES "(Xcode|Visual Studio .+)")
-  if(NOT CMAKE_BUILD_TYPE)
-    set(
-      CMAKE_BUILD_TYPE
-      "RelWithDebInfo"
-      CACHE STRING
-      "OBS build type [Release, RelWithDebInfo, Debug, MinSizeRel]"
-      FORCE
-    )
-    set_property(
-      CACHE CMAKE_BUILD_TYPE
-      PROPERTY STRINGS Release RelWithDebInfo Debug MinSizeRel
-    )
-  endif()
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE
+            "RelWithDebInfo"
+            CACHE STRING
+            "OBS build type [Release, RelWithDebInfo, Debug, MinSizeRel]"
+            FORCE
+        )
+        set_property(
+            CACHE CMAKE_BUILD_TYPE
+            PROPERTY STRINGS Release RelWithDebInfo Debug MinSizeRel
+        )
+    endif()
 endif()
 
 # Disable exports automatically going into the CMake package registry
