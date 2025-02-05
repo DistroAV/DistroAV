@@ -1,17 +1,5 @@
 {
     "dependencies": {
-        "note": [
-            "To update",
-            "1. Download obs-studio release version source for macos .tar.gz & windows-x64 .zip.",
-            "   Example for https://github.com/obsproject/obs-studio/releases/tag/29.1.3 commit c58e511",
-            "   https://github.com/obsproject/obs-studio/archive/refs/tags/29.1.3.tar.gz",
-            "   https://github.com/obsproject/obs-studio/archive/refs/tags/29.1.3.zip",
-            "2. sha256sum the macos .tar.gz & windows-x64 .zip",
-            "3. Update the obs-studio version and hashes below",
-            "4. Browse the obs-studio code buildspec.json **at that version commit** and copy the `prebuilt` and `qt6` versions and hashes to below",
-            "   Example https://github.com/obsproject/obs-studio/blob/c58e511/buildspec.json",
-            "5. Update libobs.patch following the instructions in ./cmake/common/buildspec_common.cmake ~ line 76-91"
-        ],
         "obs-studio": {
             "version": "31.0.0",
             "baseUrl": "https://github.com/obsproject/obs-studio/archive/refs/tags",
