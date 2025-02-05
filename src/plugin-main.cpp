@@ -16,6 +16,8 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "obs-module.h"
+#include "plugin-support.h"
 
 #include "forms/output-settings.h"
 #include "forms/update.h"
