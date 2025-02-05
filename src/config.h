@@ -83,8 +83,8 @@ public:
 	void AutoCheckForUpdates(bool value);
 	void SkipUpdateVersion(const QVersionNumber &version);
 	QVersionNumber SkipUpdateVersion();
-	QDateTime LastUpdateCheck();
 	void LastUpdateCheck(const QDateTime &dateTime);
+	QDateTime LastUpdateCheck();
 	int MinAutoUpdateCheckIntervalSeconds();
 	void MinAutoUpdateCheckIntervalSeconds(int seconds);
 

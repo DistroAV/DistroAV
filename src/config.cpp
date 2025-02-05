@@ -34,17 +34,17 @@
 #define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
+#define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
 
 // App Settings
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
-#define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
 #define PARAM_LAST_UPDATE_CHECK "LastUpdateCheck"
 #define PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS \
 	"MinAutoUpdateCheckIntervalSeconds"
 
 Config *Config::_instance = nullptr;
 
-// Execution parameters (not stored in config file)
+// Execution parameters (not stored in any config file)
 int Config::UpdateForce = 0;
 int Config::UpdateLocalPort = 0;
 bool Config::UpdateLastCheckIgnore = false;
@@ -268,6 +268,9 @@ void Config::GlobalToUserMigration()
 		MigrateSetting(app_config, user_config, SECTION_NAME,
 			       PARAM_TALLY_PREVIEW_ENABLED);
 
+		MigrateSetting(app_config, user_config, SECTION_NAME,
+			       PARAM_SKIP_UPDATE_VERSION);
+
 		config_save(app_config);
 		config_save(user_config);
 	}
@@ -354,7 +357,7 @@ void Config::AutoCheckForUpdates(bool value)
 
 void Config::SkipUpdateVersion(const QVersionNumber &version)
 {
-	auto obs_config = GetAppConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_string(obs_config, SECTION_NAME,
 				  PARAM_SKIP_UPDATE_VERSION,
@@ -365,7 +368,7 @@ void Config::SkipUpdateVersion(const QVersionNumber &version)
 
 QVersionNumber Config::SkipUpdateVersion()
 {
-	auto obs_config = GetAppConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		auto version = config_get_string(obs_config, SECTION_NAME,
 						 PARAM_SKIP_UPDATE_VERSION);
