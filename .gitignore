@@ -25,12 +25,7 @@
 # Exclude CMake build number cache
 /cmake/.CMakeBuildNumber
 
-# Excepte specific project files (DistroAV)
+# Except specific project files (DistroAV)
 !/CI
 !/lib
 !/tools
-
-# TBC Project specific files
-!cmake-format.json
-
-
