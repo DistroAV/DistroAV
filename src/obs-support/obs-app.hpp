@@ -31,7 +31,7 @@ In some places [nearly] the full code implementation is copied.
 // Changed to use obs_frontend_get_global_config instead of ((OBSApp*)App())->GetGlobalConfig
 inline config_t *GetGlobalConfig()
 {
-	return obs_frontend_get_global_config();
+	return obs_frontend_get_app_config();
 }
 
 // Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
