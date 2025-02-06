@@ -30,7 +30,7 @@
 !/lib
 !/tools
 
-# TBC
+# TBC Project specific files
 !cmake-format.json
 
 
