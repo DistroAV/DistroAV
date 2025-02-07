@@ -26,8 +26,6 @@ extern "C" {
 #include <stdarg.h>
 #include <string.h>
 
-#define LOG_VERBOSE 500
-
 extern int LOG_LEVEL;
 
 extern const char *PLUGIN_NAME;
