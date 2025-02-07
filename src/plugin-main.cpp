@@ -216,7 +216,7 @@ bool is_obsndi_installed()
 bool obs_module_load(void)
 {
 	obs_log(LOG_INFO, "obs_module_load: you can haz %s (Version %s)", PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
-	obs_log(LOG_INFO, "obs_module_load: Qt Version: %s (runtime), %s (compiled)", qVersion(), QT_VERSION_STR);
+	// obs_log(LOG_DEBUG, "obs_module_load: Qt Version: %s (runtime), %s (compiled)", qVersion(), QT_VERSION_STR);
 
 	Config::Initialize();
 
@@ -311,7 +311,7 @@ bool obs_module_load(void)
 			},
 			nullptr);
 	}
-
+	obs_log(LOG_INFO, "plugin loaded successfully (version %s)", PLUGIN_VERSION);
 	return true;
 }
 
