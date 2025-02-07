@@ -48,7 +48,7 @@ inline config_t *GetUserConfig()
 #endif
 }
 
-// Added fro backward compatiblity until the transtion to App + User config is complete
+// Added for backward compatiblity for pre-OBS 31 codebase
 inline config_t *GetGlobalConfig()
 {
 #if LIBOBS_API_MAJOR_VER >= 31
