@@ -25,7 +25,6 @@ In some places [nearly] the full code implementation is copied.
 
 #include "qt_wrapper.hpp"
 
-
 #include <obs-config.h>
 #include <obs-frontend-api.h>
 #include <obs-module.h>
@@ -57,7 +56,6 @@ inline config_t *GetGlobalConfig()
 	return obs_frontend_get_global_config();
 #endif
 }
-
 
 // Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
 inline const char *Str(const char *lookup)
