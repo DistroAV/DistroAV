@@ -48,6 +48,16 @@ inline config_t *GetUserConfig()
 #endif
 }
 
+// Added fro backward compatiblity until the transtion to App + User config is complete
+inline config_t *GetGlobalConfig()
+{
+#if LIBOBS_API_MAJOR_VER >= 31
+	return obs_frontend_get_user_config();
+#else
+	return obs_frontend_get_global_config();
+#endif
+}
+
 
 // Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
 inline const char *Str(const char *lookup)
