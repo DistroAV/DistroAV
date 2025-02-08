@@ -16,7 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
-
+#include "ndi-finder.h"
 #include <util/platform.h>
 #include <util/threading.h>
 
@@ -114,6 +114,9 @@ typedef struct ndi_source_t {
 
 	bool running;
 	pthread_t av_thread;
+	pthread_t find_thread;
+	obs_properties_t *props;
+	
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -198,18 +201,9 @@ const char *ndi_source_getname(void *)
 {
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
-
-obs_properties_t *ndi_source_getproperties(void *)
+void *ndi_find_thread(void *data)
 {
-	obs_log(LOG_DEBUG, "+ndi_source_getproperties(…)");
-
-	obs_properties_t *props = obs_properties_create();
-
-	obs_property_t *source_list = obs_properties_add_list(
-		props, PROP_SOURCE,
-		obs_module_text("NDIPlugin.SourceProps.SourceName"),
-		OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
-
+	auto s = (ndi_source_t *)data;
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
 	find_desc.p_groups = NULL;
@@ -225,12 +219,51 @@ obs_properties_t *ndi_source_getproperties(void *)
 			ndiLib->find_get_current_sources(ndi_find, &n_sources);
 	} while (n_sources > last_n_sources);
 
+	obs_property_t *source_list =
+		obs_properties_get(s->props, PROP_SOURCE);
 	for (uint32_t i = 0; i < n_sources; ++i) {
 		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
 					     sources[i].p_ndi_name);
 	}
 
 	ndiLib->find_destroy(ndi_find);
+	//pthread_join(s->find_thread, NULL);
+
+	obs_source_update_properties(s->obs_source);
+
+	obs_log(LOG_INFO, "'%s' ndi_find_thread: Stopped ndi_find_thread",
+		obs_source_get_name(s->obs_source));
+
+	return nullptr;
+}
+
+obs_properties_t *ndi_source_getproperties(void *data)
+{
+	auto s = (ndi_source_t *)data;
+	obs_log(LOG_DEBUG, "+ndi_source_getproperties(…)");
+
+	obs_properties_t *props = obs_properties_create();
+
+	obs_property_t *source_list = obs_properties_add_list(
+		props, PROP_SOURCE,
+		obs_module_text("NDIPlugin.SourceProps.SourceName"),
+		OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
+
+	NDIFinder finder;
+	// Create a callback that is called when the NDI source list is complete
+	auto finder_callback = [source_list,s](void *data) {
+		auto ndi_sources = (std::vector<std::string> *)data;
+		for (auto &source : *ndi_sources) {
+			obs_property_list_add_string(
+				source_list, source.c_str(), source.c_str());
+		}
+		obs_source_update_properties(s->obs_source);
+	};
+	auto ndi_sources = finder.getNDISourceList(finder_callback);
+	for (auto &source : ndi_sources) {
+		obs_property_list_add_string(source_list, source.c_str(),
+					     source.c_str());
+	}
 
 	obs_property_t *behavior_list = obs_properties_add_list(
 		props, PROP_BEHAVIOR,
