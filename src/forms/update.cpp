@@ -310,12 +310,12 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 		return;
 	}
 
-	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d", httpStatusCode);
+	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d", httpStatusCode);
 	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
 		pluginUpdateInfo.jsonDocument.toJson().constData());
-	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: versionCurrent=%s",
+	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: versionCurrent=%s",
 		QT_TO_UTF8(pluginUpdateInfo.versionCurrent.toString()));
-	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: %sversionLatest=%s",
+	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: %sversionLatest=%s",
 		pluginUpdateInfo.fakeVersionLatest ? "FAKE " : "",
 		QT_TO_UTF8(pluginUpdateInfo.versionLatest.toString()));
 
@@ -441,7 +441,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	QUrl url("https://api.github.com/repos/DistroAV/DistroAV/releases/latest");
 #else
 	QUrl url(rehostUrl(PLUGIN_UPDATE_URL));
-	obs_log(LOG_DEBUG, "updateCheckStart: url=`%s`", QT_TO_UTF8(url.toString()));
+	obs_log(LOG_VERBOSE, "updateCheckStart: url=`%s`", QT_TO_UTF8(url.toString()));
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = GetProgramGUID();
@@ -454,7 +454,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				 .arg(QSysInfo::prettyProductName())
 				 .arg(QSysInfo::currentCpuArchitecture())
 				 .arg(module_hash_sha256);
-	obs_log(LOG_DEBUG, "updateCheckStart: userAgent=`%s`", QT_TO_UTF8(userAgent));
+	obs_log(LOG_VERBOSE, "updateCheckStart: userAgent=`%s`", QT_TO_UTF8(userAgent));
 
 	QJsonObject postObj;
 	postObj["config"] = QJsonObject{{"autoCheck", config->AutoCheckForUpdates()}};

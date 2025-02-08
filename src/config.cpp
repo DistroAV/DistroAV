@@ -60,7 +60,7 @@ void ProcessCommandLine()
 		}
 		if (argument == "--distroav-verbose") {
 			obs_log(LOG_INFO, "config: DistroAV log level set to `verbose`");
-			LOG_LEVEL = LOG_DEBUG;
+			LOG_LEVEL = LOG_VERBOSE;
 			continue;
 		}
 		if (argument.startsWith("--distroav-log")) {
@@ -76,7 +76,7 @@ void ProcessCommandLine()
 				} else if (level == "debug") {
 					LOG_LEVEL = LOG_DEBUG;
 				} else if (level == "verbose") {
-					LOG_LEVEL = LOG_DEBUG;
+					LOG_LEVEL = LOG_VERBOSE;
 				}
 			}
 			obs_log(LOG_INFO, "config: DistroAV log level set to %d", LOG_LEVEL);

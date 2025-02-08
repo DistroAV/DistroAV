@@ -23,6 +23,9 @@ const char *PLUGIN_NAME = "@CMAKE_PROJECT_NAME@";
 const char *PLUGIN_DISPLAY_NAME = "@PLUGIN_DISPLAY_NAME@";
 const char *PLUGIN_VERSION = "@CMAKE_PROJECT_VERSION@";
 
+// This is here instead of plugin-support.h to void linkage errors.
+extern void blogva(int log_level, const char *format, va_list args);
+
 void obs_log(int log_level, const char *format, ...)
 {
 		size_t length = 4 + strlen(PLUGIN_NAME) + strlen(format);
