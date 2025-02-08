@@ -114,9 +114,6 @@ typedef struct ndi_source_t {
 
 	bool running;
 	pthread_t av_thread;
-	pthread_t find_thread;
-	obs_properties_t *props;
-	
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -200,41 +197,6 @@ static video_range_type prop_to_range_type(int index)
 const char *ndi_source_getname(void *)
 {
 	return obs_module_text("NDIPlugin.NDISourceName");
-}
-void *ndi_find_thread(void *data)
-{
-	auto s = (ndi_source_t *)data;
-	NDIlib_find_create_t find_desc = {0};
-	find_desc.show_local_sources = true;
-	find_desc.p_groups = NULL;
-	NDIlib_find_instance_t ndi_find = ndiLib->find_create_v2(&find_desc);
-
-	uint32_t n_sources = 0;
-	uint32_t last_n_sources = 0;
-	const NDIlib_source_t *sources = NULL;
-	do {
-		ndiLib->find_wait_for_sources(ndi_find, 1000);
-		last_n_sources = n_sources;
-		sources =
-			ndiLib->find_get_current_sources(ndi_find, &n_sources);
-	} while (n_sources > last_n_sources);
-
-	obs_property_t *source_list =
-		obs_properties_get(s->props, PROP_SOURCE);
-	for (uint32_t i = 0; i < n_sources; ++i) {
-		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
-					     sources[i].p_ndi_name);
-	}
-
-	ndiLib->find_destroy(ndi_find);
-	//pthread_join(s->find_thread, NULL);
-
-	obs_source_update_properties(s->obs_source);
-
-	obs_log(LOG_INFO, "'%s' ndi_find_thread: Stopped ndi_find_thread",
-		obs_source_get_name(s->obs_source));
-
-	return nullptr;
 }
 
 obs_properties_t *ndi_source_getproperties(void *data)
