@@ -1,8 +1,7 @@
 #include "ndi-finder.h"
 
 std::vector<std::string> NDIFinder::NDISourceList;
-std::chrono::time_point<std::chrono::steady_clock>
-	NDIFinder::lastRefreshTime;
+std::chrono::time_point<std::chrono::steady_clock> NDIFinder::lastRefreshTime;
 std::mutex NDIFinder::listMutex;
 bool NDIFinder::isRefreshing = false;
 
@@ -27,7 +26,7 @@ void NDIFinder::refreshNDISourceList(Callback callback)
 	retrieveNDISourceList();
 	std::lock_guard<std::mutex> lock(listMutex);
 	lastRefreshTime = std::chrono::steady_clock::now();
-	callback(&NDISourceList);		
+	callback(&NDISourceList);
 	isRefreshing = false;
 }
 

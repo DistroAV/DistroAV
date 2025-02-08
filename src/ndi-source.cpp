@@ -213,7 +213,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 
 	NDIFinder finder;
 	// Create a callback that is called when the NDI source list is complete
-	auto finder_callback = [source_list,s](void *data) {
+	auto finder_callback = [source_list, s](void *data) {
 		auto ndi_sources = (std::vector<std::string> *)data;
 		for (auto &source : *ndi_sources) {
 			obs_property_list_add_string(
