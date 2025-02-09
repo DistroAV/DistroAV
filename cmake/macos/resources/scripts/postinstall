@@ -1,6 +1,7 @@
 #!/bin/bash
-# This script exist solely to address user challenges in removeing previous (deprecated) versions of the OBS-NDI plugin.
-# this should be removed in future version.
+# This script exist solely to address user challenges in removing previous (deprecated) versions of the OBS-NDI plugin.
+# It should be removed in future version.
+# This script is only used if integrated in the create-package.cmake.in file.
 
 echo "'Uninstalling' OBS-NDI from OBS..."
 
