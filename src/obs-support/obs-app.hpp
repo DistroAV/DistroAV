@@ -25,13 +25,36 @@ In some places [nearly] the full code implementation is copied.
 
 #include "qt_wrapper.hpp"
 
+#include <obs-config.h>
 #include <obs-frontend-api.h>
 #include <obs-module.h>
 
-// Changed to use obs_frontend_get_global_config instead of ((OBSApp*)App())->GetGlobalConfig
+inline config_t *GetAppConfig()
+{
+#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time but really depends on the version of OBS used at runtime
+	return obs_frontend_get_app_config();
+#else
+	return obs_frontend_get_global_config();
+#endif
+}
+
+inline config_t *GetUserConfig()
+{
+#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time but really depends on the version of OBS used at runtime
+	return obs_frontend_get_user_config();
+#else
+	return obs_frontend_get_global_config();
+#endif
+}
+
+// Added for backward compatiblity for pre-OBS 31 codebase
 inline config_t *GetGlobalConfig()
 {
+#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time but really depends on the version of OBS used at runtime
+	return obs_frontend_get_user_config();
+#else
 	return obs_frontend_get_global_config();
+#endif
 }
 
 // Changed to use obs_module_text instead of ((OBSApp*)App())->GetString

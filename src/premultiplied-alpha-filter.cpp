@@ -37,8 +37,7 @@ void alpha_filter_update(void *, obs_data_t *) {}
 
 void *alpha_filter_create(obs_data_t *, obs_source_t *source)
 {
-	struct alpha_filter *s =
-		(struct alpha_filter *)bzalloc(sizeof(struct alpha_filter));
+	struct alpha_filter *s = (struct alpha_filter *)bzalloc(sizeof(struct alpha_filter));
 	s->context = source;
 	s->effect = obs_get_base_effect(OBS_EFFECT_PREMULTIPLIED_ALPHA);
 	return s;
@@ -54,8 +53,7 @@ void alpha_filter_videorender(void *data, gs_effect_t *)
 {
 	struct alpha_filter *s = (struct alpha_filter *)data;
 
-	if (!obs_source_process_filter_begin(s->context, GS_RGBA,
-					     OBS_ALLOW_DIRECT_RENDERING))
+	if (!obs_source_process_filter_begin(s->context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 		return;
 
 	obs_source_process_filter_end(s->context, s->effect, 0, 0);

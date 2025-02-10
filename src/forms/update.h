@@ -28,8 +28,7 @@
 
 class PluginUpdateInfo {
 public:
-	PluginUpdateInfo(const int httpStatusCode, const QString &responseData,
-			 const QString &errorData);
+	PluginUpdateInfo(const int httpStatusCode, const QString &responseData, const QString &errorData);
 
 	int httpStatusCode = -1;
 	QString responseData;
@@ -45,8 +44,7 @@ public:
 	QString releaseDate;
 	QString releaseNotes;
 	int uiDelayMillis = DEFAULT_UI_DELAY_MILLIS;
-	int minAutoUpdateCheckIntervalSeconds =
-		DEFAULT_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS;
+	int minAutoUpdateCheckIntervalSeconds = DEFAULT_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS;
 
 	bool fakeVersionLatest = false;
 	QVersionNumber versionLatest;
@@ -56,8 +54,7 @@ public:
 /**
  * @return true if the callback handled the update check response, otherwise false
  */
-typedef std::function<bool(const PluginUpdateInfo &pluginUpdateInfo)>
-	UserRequestCallback;
+typedef std::function<bool(const PluginUpdateInfo &pluginUpdateInfo)> UserRequestCallback;
 
 void updateCheckStop();
 bool updateCheckStart(UserRequestCallback userRequestCallback = nullptr);
