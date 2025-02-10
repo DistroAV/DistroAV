@@ -1,2 +1,0 @@
-package 'cmake', path: 'Cmake\bin', bin: 'cmake'
-package 'JRSoftware.InnoSetup', path: 'Inno Setup 6', bin: 'iscc'

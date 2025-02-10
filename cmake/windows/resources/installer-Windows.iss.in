@@ -1,3 +1,5 @@
+; IMPORTANT : This file is ONLY used when building with Inno Setup
+
 #define MyAppName "@PLUGIN_DISPLAY_NAME@"
 #define MyAppVersion "@CMAKE_PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
