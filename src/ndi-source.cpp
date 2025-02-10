@@ -205,23 +205,20 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_property_t *source_list = obs_properties_add_list(props, PROP_SOURCE,
-							     obs_module_text("NDIPlugin.SourceProps.SourceName"),
-							     OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
+							      obs_module_text("NDIPlugin.SourceProps.SourceName"),
+							      OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
 	NDIFinder finder;
 	// Create a callback that is called when the NDI source list is complete
 	auto finder_callback = [source_list, s](void *ndi_names) {
 		auto ndi_sources = (std::vector<std::string> *)ndi_names;
 		for (auto &source : *ndi_sources) {
-			obs_property_list_add_string(
-				source_list, source.c_str(), source.c_str());
+			obs_property_list_add_string(source_list, source.c_str(), source.c_str());
 		}
 		obs_source_update_properties(s->obs_source);
 	};
 	auto ndi_sources = finder.getNDISourceList(finder_callback);
 	for (auto &source : ndi_sources) {
-		obs_property_list_add_string(source_list, source.c_str(),
-					     source.c_str());
-
+		obs_property_list_add_string(source_list, source.c_str(), source.c_str());
 	}
 
 	obs_property_t *behavior_list = obs_properties_add_list(props, PROP_BEHAVIOR,

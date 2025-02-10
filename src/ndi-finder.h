@@ -16,8 +16,7 @@ public:
 
 private:
 	static std::vector<std::string> NDISourceList;
-	static std::chrono::time_point<std::chrono::steady_clock>
-		lastRefreshTime;
+	static std::chrono::time_point<std::chrono::steady_clock> lastRefreshTime;
 	static std::mutex listMutex;
 	static bool isRefreshing;
 	static void refreshNDISourceList(Callback callback);

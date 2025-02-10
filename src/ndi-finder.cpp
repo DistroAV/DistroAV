@@ -9,9 +9,7 @@ std::vector<std::string> NDIFinder::getNDISourceList(Callback callback)
 {
 	std::lock_guard<std::mutex> lock(listMutex);
 	auto now = std::chrono::steady_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::seconds>(
-				now - lastRefreshTime)
-				.count();
+	auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - lastRefreshTime).count();
 
 	if (duration > 5 && !isRefreshing) {
 		isRefreshing = true;
@@ -47,8 +45,7 @@ void NDIFinder::retrieveNDISourceList()
 	do {
 		ndiLib->find_wait_for_sources(ndi_find, 1000);
 		last_n_sources = n_sources;
-		sources =
-			ndiLib->find_get_current_sources(ndi_find, &n_sources);
+		sources = ndiLib->find_get_current_sources(ndi_find, &n_sources);
 	} while (n_sources > last_n_sources);
 
 	std::vector<std::string> newList;

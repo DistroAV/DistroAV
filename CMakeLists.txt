@@ -39,7 +39,6 @@ endif()
 
 target_sources(
   ${CMAKE_PROJECT_NAME}
-
   PRIVATE
     src/forms/output-settings.cpp
     src/forms/output-settings.h
