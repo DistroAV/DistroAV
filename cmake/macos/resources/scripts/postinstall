@@ -1,7 +1,15 @@
 #!/bin/bash
+
 # This script exist solely to address user challenges in removing previous (deprecated) versions of the OBS-NDI plugin.
 # It should be removed in future version.
 # This script is only used if integrated in the create-package.cmake.in file.
+
+# installer script variables:
+# $0 = path to the script
+# $1 = path to the package
+# $2 = target location, i.e., /Applications
+# $3 = target volume, i.e., /Volumes/Macintosh HD
+# $4 = "/" if this is the startup disk
 
 echo "'Uninstalling' OBS-NDI from OBS..."
 
@@ -14,9 +22,11 @@ if [ -e /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin ]; then
   echo "Some old obs-ndi files still exist in the system library. Please delete them manually : /Library/Application\ Support/obs-studio/plugins/obs-ndi.plugin"
 fi
 
-OBS_APP_PATH="/Applications/OBS.app"
 
 # Allow incoming connections for the OBS app
+OBS_APP_PATH="/Applications/OBS.app"
+echo "DistroAV - Prompt for firewall rule update"
+
 /usr/bin/codesign --force --deep --sign - "$OBS_APP_PATH"
 /usr/sbin/spctl --add "$OBS_APP_PATH"
 /usr/libexec/ApplicationFirewall/socketfilterfw --add "$OBS_APP_PATH"
@@ -31,5 +41,5 @@ rm -f "$0"
 # Remove the directory containing the script
 rm -rf "$SCRIPT_DIR"
 
-# Dismiss all errors and return 0
+# Dismiss all errors and return 0 (expected default)
 exit 0
