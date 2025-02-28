@@ -307,6 +307,10 @@ bool obs_module_load(void)
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
 					main_output_deinit();
 					preview_output_deinit();
+				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
+					main_output_deinit();
+				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
+					main_output_init();
 				}
 			},
 			nullptr);
