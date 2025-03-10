@@ -139,6 +139,7 @@ void main_output_init()
 	auto config = Config::Current();
 	auto output_name = config->OutputName;
 	auto output_groups = config->OutputGroups;
+	auto is_enabled = config->OutputEnabled;
 
 	main_output_deinit();
 
@@ -168,8 +169,6 @@ void main_output_init()
 		}
 		main_output_start();
 	}
-
-	main_output_start();
 
 	obs_log(LOG_INFO, "-main_output_init()");
 }
