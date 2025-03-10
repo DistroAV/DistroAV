@@ -101,7 +101,7 @@ bool main_output_is_supported()
 	bool is_supported = context.is_running;
 	bool enabled = Config::Current()->OutputEnabled;
 	main_output_deinit(); // will trigger a stop event if running, which will set OutputEnabled to false
-	Config::Current()->OutputEnabled = enabled;
+	Config::Current()->OutputEnabled = true;
 	return is_supported;
 }
 
