@@ -142,7 +142,7 @@ void main_output_init()
 
 	main_output_deinit();
 
-	if (!output_name.isEmpty()) {
+	if (is_enabled && !output_name.isEmpty()) {
 		obs_log(LOG_INFO, "main_output_init: creating NDI main output '%s'", QT_TO_UTF8(output_name));
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
@@ -151,7 +151,7 @@ void main_output_init()
 		context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
-			obs_log(LOG_INFO, "main_output_init: creating NDI main output '%s'", QT_TO_UTF8(output_name));
+			obs_log(LOG_INFO, "main_output_init: created NDI main output '%s'", QT_TO_UTF8(output_name));
 
 			// Start handling "remote" start/stop events (ex: from obs-websocket)
 			auto sh = obs_output_get_signal_handler(context.output);
@@ -166,6 +166,7 @@ void main_output_init()
 			obs_log(LOG_ERROR, "main_output_init: failed to create NDI main output '%s'",
 				QT_TO_UTF8(output_name));
 		}
+		main_output_start();
 	}
 
 	main_output_start();

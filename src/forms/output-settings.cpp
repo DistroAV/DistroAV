@@ -168,6 +168,7 @@ If you are running a local build, don't forget to add your build info to the upd
 void OutputSettings::onFormAccepted()
 {
 	auto config = Config::Current();
+	auto last_config = *config;
 
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
@@ -184,10 +185,15 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-	if (config->OutputEnabled)
+	if ((last_config.OutputEnabled != config->OutputEnabled) || (last_config.OutputName != config->OutputName) ||
+	    (last_config.OutputGroups != config->OutputGroups)) {
 		main_output_init();
-
-	preview_output_init();
+	}
+	if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
+	    (last_config.PreviewOutputName != config->PreviewOutputName) ||
+	    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+		preview_output_init();
+	}
 }
 
 void OutputSettings::showEvent(QShowEvent *)
