@@ -184,14 +184,14 @@ bool is_module_found(const char *module_name)
 				QString home_path = QDir::homePath();
 				bin_path.replace(home_path, "[Redacted User Home Path]");
 
-				obs_log(LOG_INFO, "is_module_found: `%s` found at `%s`", module_info->name,
+				obs_log(LOG_INFO, "is_module_found: '%s' found at '%s'", module_info->name,
 					bin_path.toUtf8().constData());
 
 				// DEBUG logging will output the absolute path.
-				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path=`%s`",
+				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path='%s'",
 					module_info->bin_path);
 				data_->found = true;
-				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path=`%s`",
+				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path='%s'",
 					module_info->data_path);
 				data_->found = true;
 			}
@@ -209,10 +209,6 @@ bool is_obsndi_installed()
 	return is_module_found("obs-ndi");
 }
 
-//
-//
-//
-
 bool obs_module_load(void)
 {
 	obs_log(LOG_INFO, "obs_module_load: you can haz %s (Version %s)", PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
@@ -221,7 +217,9 @@ bool obs_module_load(void)
 	Config::Initialize();
 
 	if (is_obsndi_installed()) {
-		obs_log(LOG_INFO,
+		obs_log(LOG_ERROR, "OBS-NDI is detected and needs to be uninstalled before %s can work. ERR-403",
+			PLUGIN_DISPLAY_NAME);
+		obs_log(LOG_DEBUG,
 			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
 			PLUGIN_DISPLAY_NAME);
 		showCriticalUnloadingMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
@@ -317,16 +315,16 @@ bool obs_module_load(void)
 
 void obs_module_post_load(void)
 {
-	obs_log(LOG_INFO, "+obs_module_post_load()");
+	obs_log(LOG_DEBUG, "+obs_module_post_load()");
 
 	updateCheckStart();
 
-	obs_log(LOG_INFO, "-obs_module_post_load()");
+	obs_log(LOG_DEBUG, "-obs_module_post_load()");
 }
 
 void obs_module_unload(void)
 {
-	obs_log(LOG_INFO, "+obs_module_unload()");
+	obs_log(LOG_DEBUG, "+obs_module_unload()");
 
 	updateCheckStop();
 
@@ -343,7 +341,7 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
-	obs_log(LOG_INFO, "-obs_module_unload(): goodbye!");
+	obs_log(LOG_DEBUG, "-obs_module_unload(): goodbye!");
 }
 
 const NDIlib_v5 *load_ndilib()
@@ -387,7 +385,7 @@ const NDIlib_v5 *load_ndilib()
 #else
 		// MacOS, Windows
 		temp_path = QDir::cleanPath(dir.absoluteFilePath(NDILIB_LIBRARY_NAME));
-		obs_log(LOG_INFO, "load_ndilib: Trying '%s'", QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
+		obs_log(LOG_DEBUG, "load_ndilib: Trying '%s'", QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
 		auto file_info = QFileInfo(temp_path);
 		if (file_info.exists() && file_info.isFile()) {
 			lib_path = temp_path;
@@ -396,18 +394,20 @@ const NDIlib_v5 *load_ndilib()
 #endif
 	}
 	if (!lib_path.isEmpty()) {
-		obs_log(LOG_INFO, "load_ndilib: Found '%s'; attempting to load NDI library...",
+		obs_log(LOG_DEBUG, "load_ndilib: Found '%s'; attempting to load NDI library...",
 			QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
 		loaded_lib = new QLibrary(lib_path, nullptr);
 		if (loaded_lib->load()) {
-			obs_log(LOG_INFO, "load_ndilib: NDI library loaded successfully");
+			obs_log(LOG_DEBUG, "load_ndilib: NDI library loaded successfully");
 			NDIlib_v5_load_ lib_load =
 				reinterpret_cast<NDIlib_v5_load_>(loaded_lib->resolve("NDIlib_v5_load"));
 			if (lib_load != nullptr) {
-				obs_log(LOG_INFO, "load_ndilib: NDIlib_v5_load found");
+				obs_log(LOG_DEBUG, "load_ndilib: NDIlib_v5_load found");
 				return lib_load();
 			} else {
-				obs_log(LOG_ERROR, "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+				obs_log(LOG_ERROR, "load_ndilib: ERR-405 - Error loading the NDI Library from '%s'",
+					QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
+				obs_log(LOG_DEBUG, "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 			}
 		} else {
 			obs_log(LOG_ERROR, "load_ndilib: ERROR: QLibrary returned the following error: '%s'",
@@ -417,6 +417,6 @@ const NDIlib_v5 *load_ndilib()
 		}
 	}
 
-	obs_log(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library");
+	obs_log(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library - ERR-404");
 	return nullptr;
 }

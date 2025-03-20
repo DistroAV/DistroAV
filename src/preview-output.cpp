@@ -47,23 +47,23 @@ void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
 void on_preview_output_started(void *, calldata_t *)
 {
-	obs_log(LOG_INFO, "+on_preview_output_started()");
+	obs_log(LOG_DEBUG, "+on_preview_output_started()");
 	Config::Current()->PreviewOutputEnabled = true;
-	obs_log(LOG_INFO, "-on_preview_output_started()");
+	obs_log(LOG_DEBUG, "-on_preview_output_started()");
 }
 
 void on_preview_output_stopped(void *, calldata_t *)
 {
-	obs_log(LOG_INFO, "+on_preview_output_stopped()");
+	obs_log(LOG_DEBUG, "+on_preview_output_stopped()");
 	Config::Current()->PreviewOutputEnabled = false;
-	obs_log(LOG_INFO, "-on_preview_output_stopped()");
+	obs_log(LOG_DEBUG, "-on_preview_output_stopped()");
 }
 
 void preview_output_stop()
 {
-	obs_log(LOG_INFO, "+preview_output_stop()");
+	obs_log(LOG_DEBUG, "+preview_output_stop()");
 	if (context.is_running) {
-		obs_log(LOG_INFO, "preview_output_stop: stopping NDI preview output '%s'",
+		obs_log(LOG_DEBUG, "preview_output_stop: stopping NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
 
@@ -84,24 +84,24 @@ void preview_output_stop()
 
 		context.is_running = false;
 
-		obs_log(LOG_INFO, "preview_output_stop: successfully stopped NDI preview output '%s'",
+		obs_log(LOG_DEBUG, "preview_output_stop: successfully stopped NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
 		obs_log(LOG_ERROR, "preview_output_stop: NDI preview output '%s' is not running",
 			QT_TO_UTF8(context.ndi_name));
 	}
-	obs_log(LOG_INFO, "-preview_output_stop()");
+	obs_log(LOG_DEBUG, "-preview_output_stop()");
 }
 
 void preview_output_start()
 {
-	obs_log(LOG_INFO, "+preview_output_start()");
+	obs_log(LOG_DEBUG, "+preview_output_start()");
 	if (context.output) {
 		if (context.is_running) {
 			preview_output_stop();
 		}
 
-		obs_log(LOG_INFO, "preview_output_start: starting NDI preview output '%s'",
+		obs_log(LOG_DEBUG, "preview_output_start: starting NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 
 		obs_get_video_info(&context.ovi);
@@ -171,16 +171,16 @@ void preview_output_start()
 		obs_log(LOG_ERROR, "preview_output_start: NDI preview output '%s' is not initialized",
 			QT_TO_UTF8(context.ndi_name));
 	}
-	obs_log(LOG_INFO, "-preview_output_start()");
+	obs_log(LOG_DEBUG, "-preview_output_start()");
 }
 
 void preview_output_deinit()
 {
-	obs_log(LOG_INFO, "+preview_output_deinit()");
+	obs_log(LOG_DEBUG, "+preview_output_deinit()");
 	if (context.output) {
 		preview_output_stop();
 
-		obs_log(LOG_INFO, "preview_output_deinit: releasing NDI preview output '%s'",
+		obs_log(LOG_DEBUG, "preview_output_deinit: releasing NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 
 		// Stop handling "remote" start/stop events (ex: from obs-websocket)
@@ -194,18 +194,18 @@ void preview_output_deinit()
 		context.output = nullptr;
 		context.ndi_name.clear();
 		context.ndi_groups.clear();
-		obs_log(LOG_INFO, "preview_output_deinit: successfully released NDI preview output '%s'",
+		obs_log(LOG_DEBUG, "preview_output_deinit: successfully released NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
 		obs_log(LOG_INFO, "preview_output_deinit: NDI preview output is not initialized");
 	}
 
-	obs_log(LOG_INFO, "-preview_output_deinit()");
+	obs_log(LOG_DEBUG, "-preview_output_deinit()");
 }
 
 void preview_output_init()
 {
-	obs_log(LOG_INFO, "+preview_output_init()");
+	obs_log(LOG_DEBUG, "+preview_output_init()");
 
 	auto config = Config::Current();
 	auto output_name = config->PreviewOutputName;
@@ -217,7 +217,7 @@ void preview_output_init()
 		preview_output_deinit();
 
 		if (!output_name.isEmpty()) {
-			obs_log(LOG_INFO, "preview_output_init: creating NDI preview output '%s'",
+			obs_log(LOG_DEBUG, "preview_output_init: creating NDI preview output '%s'",
 				QT_TO_UTF8(output_name));
 			obs_data_t *output_settings = obs_data_create();
 			obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
@@ -257,12 +257,12 @@ void preview_output_init()
 		}
 	}
 
-	obs_log(LOG_INFO, "-preview_output_init()");
+	obs_log(LOG_DEBUG, "-preview_output_init()");
 }
 
 void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 {
-	obs_log(LOG_INFO, "on_preview_scene_changed(%d)", event);
+	obs_log(LOG_DEBUG, "on_preview_scene_changed(%d)", event);
 	auto ctx = (struct preview_output *)param;
 	switch (event) {
 	case OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED:

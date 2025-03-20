@@ -208,15 +208,15 @@ QString GetObsCurrentModuleSHA256()
 	auto module = obs_current_module();
 	auto module_binary_path = obs_get_module_binary_path(module);
 #if 0
-	obs_log(LOG_INFO,
-	     "GetObsCurrentModuleSHA256: module_binary_path=`%s`",
+	obs_log(LOG_DEBUG,
+	     "GetObsCurrentModuleSHA256: module_binary_path='%s'",
 	     module_binary_path);
 #endif
 	QString module_hash_sha256;
 	auto success = CalculateFileHash(module_binary_path, module_hash_sha256);
 #if 0
-	obs_log(LOG_INFO,
-	     "GetObsCurrentModuleSHA256: module_hash_sha256=`%s`",
+	obs_log(LOG_DEBUG,
+	     "GetObsCurrentModuleSHA256: module_hash_sha256='%s'",
 	     QT_TO_UTF8(module_hash_sha256));
 #endif
 	return success ? module_hash_sha256 : "";
@@ -290,19 +290,19 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 	auto logLevel = LOG_LEVEL;
 	if (logLevel >= LOG_DEBUG) {
 		obs_log(LOG_DEBUG,
-			"onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=`%s`, errorData=`%s`, userRequestCallback=%s)",
+			"onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData='%s', errorData='%s', userRequestCallback=%s)",
 			httpStatusCode, QT_TO_UTF8(responseData), QT_TO_UTF8(errorData),
 			userRequestCallback ? "..." : "nullptr");
 	} else {
-		obs_log(LOG_INFO,
-			"onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=..., errorData=`%s`, userRequestCallback=%s)",
+		obs_log(LOG_DEBUG,
+			"onCheckForUpdateNetworkFinish(httpStatusCode=%d, responseData=..., errorData='%s', userRequestCallback=%s)",
 			httpStatusCode, QT_TO_UTF8(errorData), userRequestCallback ? "..." : "nullptr");
 	}
 
 	auto pluginUpdateInfo = PluginUpdateInfo(httpStatusCode, responseData, errorData);
 	if (!pluginUpdateInfo.errorData.isEmpty()) {
 		obs_log(LOG_WARNING,
-			"onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData=`%s`; ignoring response",
+			"onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData='%s'; ignoring response",
 			httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
 		if (userRequestCallback) {
 			userRequestCallback(pluginUpdateInfo);
@@ -310,12 +310,12 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 		return;
 	}
 
-	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d", httpStatusCode);
-	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: jsonDocument=`%s`",
+	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: Success! httpStatusCode=%d", httpStatusCode);
+	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: jsonDocument='%s'",
 		pluginUpdateInfo.jsonDocument.toJson().constData());
-	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: versionCurrent=%s",
+	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: versionCurrent=%s",
 		QT_TO_UTF8(pluginUpdateInfo.versionCurrent.toString()));
-	obs_log(LOG_VERBOSE, "onCheckForUpdateNetworkFinish: %sversionLatest=%s",
+	obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: %sversionLatest=%s",
 		pluginUpdateInfo.fakeVersionLatest ? "FAKE " : "",
 		QT_TO_UTF8(pluginUpdateInfo.versionLatest.toString()));
 
@@ -333,7 +333,7 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 		// Non-user requested update check respects SkipUpdateVersion
 		auto versionSkip = config->SkipUpdateVersion();
 		if (forceUpdate < 1 && pluginUpdateInfo.versionLatest == versionSkip) {
-			obs_log(LOG_INFO,
+			obs_log(LOG_DEBUG,
 				"onCheckForUpdateNetworkFinish: versionLatest == versionSkip(%s); ignoring update",
 				QT_TO_UTF8(versionSkip.toString()));
 			return;
@@ -342,7 +342,7 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 
 	// Both user requested and non-user requested update checks ignore versionLatest <= versionCurrent
 	if (forceUpdate < 1 && pluginUpdateInfo.versionLatest <= pluginUpdateInfo.versionCurrent) {
-		obs_log(LOG_INFO, "onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
+		obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: versionLatest <= versionCurrent; ignoring update");
 		return;
 	}
 
@@ -370,7 +370,7 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 
 void updateCheckStop()
 {
-	obs_log(LOG_INFO, "+updateCheckStop()");
+	obs_log(LOG_DEBUG, "+updateCheckStop()");
 #ifdef UPDATE_REQUEST_QT
 	if (update_reply) {
 		if (update_reply->isRunning()) {
@@ -385,21 +385,21 @@ void updateCheckStop()
 			update_request->exit(1);
 		}
 	}
-	obs_log(LOG_INFO, "-updateCheckStop()");
+	obs_log(LOG_DEBUG, "-updateCheckStop()");
 }
 
 bool updateCheckStart(UserRequestCallback userRequestCallback)
 {
 	auto methodSignature =
 		QString("updateCheckStart(userRequestCallback=%1)").arg(userRequestCallback ? "..." : "nullptr");
-	obs_log(LOG_INFO, "+%s", QT_TO_UTF8(methodSignature));
+	obs_log(LOG_DEBUG, "+%s", QT_TO_UTF8(methodSignature));
 
 	auto isAutoCheck = userRequestCallback == nullptr;
 
 	auto config = Config::Current();
 	if (isAutoCheck && !config->AutoCheckForUpdates()) {
-		obs_log(LOG_INFO, "updateCheckStart: AutoCheckForUpdates is disabled; ignoring");
-		obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
+		obs_log(LOG_DEBUG, "updateCheckStart: AutoCheckForUpdates is disabled; ignoring");
+		obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
 		return false;
 	}
 
@@ -407,8 +407,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		if (update_dialog) {
 			update_dialog->raise();
 		}
-		obs_log(LOG_INFO, "updateCheckStart: update pending or showing; ignoring");
-		obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
+		obs_log(LOG_DEBUG, "updateCheckStart: update pending or showing; ignoring");
+		obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
 		return false;
 	}
 
@@ -423,10 +423,10 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 			auto lastUpdateCheck = config->LastUpdateCheck();
 			auto elapsedSeconds = lastUpdateCheck.secsTo(now);
 			if (elapsedSeconds < minAutoUpdateCheckIntervalSeconds) {
-				obs_log(LOG_INFO,
+				obs_log(LOG_DEBUG,
 					"updateCheckStart: elapsedSeconds=%lld < minAutoUpdateCheckIntervalSeconds=%d; ignoring",
 					elapsedSeconds, minAutoUpdateCheckIntervalSeconds);
-				obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
+				obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
 				return false;
 			}
 		}
@@ -441,7 +441,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	QUrl url("https://api.github.com/repos/DistroAV/DistroAV/releases/latest");
 #else
 	QUrl url(rehostUrl(PLUGIN_UPDATE_URL));
-	obs_log(LOG_VERBOSE, "updateCheckStart: url=`%s`", QT_TO_UTF8(url.toString()));
+	obs_log(LOG_DEBUG, "updateCheckStart: url='%s'", QT_TO_UTF8(url.toString()));
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = GetProgramGUID();
@@ -454,7 +454,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				 .arg(QSysInfo::prettyProductName())
 				 .arg(QSysInfo::currentCpuArchitecture())
 				 .arg(module_hash_sha256);
-	obs_log(LOG_VERBOSE, "updateCheckStart: userAgent=`%s`", QT_TO_UTF8(userAgent));
+	obs_log(LOG_DEBUG, "updateCheckStart: userAgent='%s'", QT_TO_UTF8(userAgent));
 
 	QJsonObject postObj;
 	postObj["config"] = QJsonObject{{"autoCheck", config->AutoCheckForUpdates()}};
@@ -468,8 +468,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 
 #if 0
 	//qputenv("QT_LOGGING_RULES", "qt.network.ssl=true");
-	obs_log(LOG_INFO,
-		"updateCheckStart: QSslSocket{ supportsSsl=%s, sslLibraryBuildVersionString=`%s`, sslLibraryVersionString=`%s`}",
+	obs_log(LOG_DEBUG,
+		"updateCheckStart: QSslSocket{ supportsSsl=%s, sslLibraryBuildVersionString='%s', sslLibraryVersionString='%s'}",
 		QSslSocket::supportsSsl() ? "true" : "false",
 		QT_TO_UTF8(QSslSocket::sslLibraryBuildVersionString()),
 		QT_TO_UTF8(QSslSocket::sslLibraryVersionString()));
@@ -548,8 +548,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		update_request, &RemoteTextThread::Result, main_window,
 		[userRequestCallback](int httpStatusCode, const QString &responseData, const QString &errorData) {
 #if 0
-			obs_log(LOG_INFO,
-			     "updateCheckStart: Result: httpStatusCode=%d, responseData=`%s`, errorData=`%s`",
+			obs_log(LOG_DEBUG,
+			     "updateCheckStart: Result: httpStatusCode=%d, responseData='%s', errorData='%s'",
 			     httpCode, QT_TO_UTF8(responseData),
 			     QT_TO_UTF8(errorData));
 #endif
@@ -558,6 +558,6 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		Qt::QueuedConnection);
 	update_request->start();
 #endif
-	obs_log(LOG_INFO, "-%s", QT_TO_UTF8(methodSignature));
+	obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
 	return true;
 }
