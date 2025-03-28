@@ -97,9 +97,9 @@ void main_output_start()
 
 bool main_output_is_supported()
 {
-	main_output_init();
-	bool is_supported = context.is_running;
 	bool enabled = Config::Current()->OutputEnabled;
+	main_output_init(true); // true = tryit out to see if we can support the current output
+	bool is_supported = context.is_running;
 	main_output_deinit(); // will trigger a stop event if running, which will set OutputEnabled to false
 	Config::Current()->OutputEnabled = enabled;
 	return is_supported;
@@ -132,7 +132,7 @@ void main_output_deinit()
 	obs_log(LOG_INFO, "-main_output_deinit()");
 }
 
-void main_output_init()
+void main_output_init(bool tryit)
 {
 	obs_log(LOG_INFO, "+main_output_init()");
 
@@ -143,13 +143,13 @@ void main_output_init()
 
 	main_output_deinit();
 
-	if (is_enabled && !output_name.isEmpty()) {
+	if ((tryit || is_enabled) && !output_name.isEmpty()) {
 		obs_log(LOG_INFO, "main_output_init: creating NDI main output '%s'", QT_TO_UTF8(output_name));
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
 		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
 
-		context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+		context.output = obs_output_create("ndi_output", "NDI Output", output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
 			obs_log(LOG_INFO, "main_output_init: created NDI main output '%s'", QT_TO_UTF8(output_name));

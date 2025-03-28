@@ -168,7 +168,6 @@ If you are running a local build, don't forget to add your build info to the upd
 void OutputSettings::onFormAccepted()
 {
 	auto config = Config::Current();
-	auto last_config = *config;
 
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
@@ -185,14 +184,15 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-	if ((last_config.OutputEnabled != config->OutputEnabled) || (last_config.OutputName != config->OutputName) ||
-	    (last_config.OutputGroups != config->OutputGroups)) {
+	if (config->OutputEnabled && !config->OutputName.isEmpty()) {
 		main_output_init();
+	} else {
+		main_output_deinit();
 	}
-	if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
-	    (last_config.PreviewOutputName != config->PreviewOutputName) ||
-	    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
 		preview_output_init();
+	} else {
+		preview_output_deinit();
 	}
 }
 
