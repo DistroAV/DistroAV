@@ -23,12 +23,17 @@ struct main_output {
 	bool is_running;
 	QString ndi_name;
 	QString ndi_groups;
-
+	QString last_error;
 	obs_source_t *current_source;
 	obs_output_t *output;
 };
 
 static struct main_output context = {0};
+
+QString main_output_last_error()
+{
+	return context.last_error;
+};
 
 void on_main_output_started(void *, calldata_t *)
 {
@@ -76,16 +81,28 @@ void main_output_start()
 		if (context.is_running) {
 			obs_log(LOG_INFO, "main_output_start: successfully started NDI main output '%s'",
 				QT_TO_UTF8(context.ndi_name));
+			context.last_error = QString("");
 		} else {
-			auto error = obs_output_get_last_error(context.output);
+			context.last_error = obs_output_get_last_error(context.output);
 			obs_log(LOG_ERROR, "main_output_start: failed to start NDI main output '%s'; error='%s'",
-				QT_TO_UTF8(context.ndi_name), error);
+				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
+			obs_output_stop(context.output);
 		}
 	} else {
 		obs_log(LOG_ERROR, "main_output_start: NDI main output '%s' is not initialized",
 			QT_TO_UTF8(context.ndi_name));
 	}
 	obs_log(LOG_INFO, "-main_output_start()");
+}
+
+bool main_output_is_supported()
+{
+	bool enabled = Config::Current()->OutputEnabled;
+	main_output_init(true); // true = tryit out to see if we can support the current output
+	bool is_supported = context.is_running;
+	main_output_deinit(); // will trigger a stop event if running, which will set OutputEnabled to false
+	Config::Current()->OutputEnabled = enabled;
+	return is_supported;
 }
 
 void main_output_deinit()
@@ -115,7 +132,7 @@ void main_output_deinit()
 	obs_log(LOG_INFO, "-main_output_deinit()");
 }
 
-void main_output_init()
+void main_output_init(bool tryit)
 {
 	obs_log(LOG_INFO, "+main_output_init()");
 
@@ -126,13 +143,13 @@ void main_output_init()
 
 	main_output_deinit();
 
-	if (is_enabled && !output_name.isEmpty()) {
+	if ((tryit || is_enabled) && !output_name.isEmpty()) {
 		obs_log(LOG_INFO, "main_output_init: creating NDI main output '%s'", QT_TO_UTF8(output_name));
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
 		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
 
-		context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+		context.output = obs_output_create("ndi_output", "NDI Output", output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
 			obs_log(LOG_INFO, "main_output_init: created NDI main output '%s'", QT_TO_UTF8(output_name));
