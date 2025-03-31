@@ -186,7 +186,8 @@ void OutputSettings::onFormAccepted()
 	// Output settings for debugging & diagnosis
 	obs_log(LOG_INFO,
 		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
-		config->OutputEnabled, config->OutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->OutputEnabled, config->OutputName.toUtf8().constData(),
+		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
 		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
 
 	config->Save();

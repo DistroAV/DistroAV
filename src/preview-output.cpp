@@ -221,18 +221,17 @@ void preview_output_init()
 		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
 
 		obs_data_set_bool(output_settings, "uses_audio",
-			false); // Preview has no audio
+				  false); // Preview has no audio
 		context.output = obs_output_create("ndi_output", "NDI Preview Output", output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
-			obs_log(LOG_INFO, "preview_output_init: Successfully created NDI Preview Output '%s'", QT_TO_UTF8(output_name));
+			obs_log(LOG_INFO, "preview_output_init: Successfully created NDI Preview Output '%s'",
+				QT_TO_UTF8(output_name));
 
 			// Start handling "remote" start/stop events (ex: from obs-websocket)
 			auto sh = obs_output_get_signal_handler(context.output);
-			signal_handler_connect( //
-				sh, "start", on_preview_output_started, nullptr);
-			signal_handler_connect( //
-				sh, "stop", on_preview_output_stopped, nullptr);
+			signal_handler_connect(sh, "start", on_preview_output_started, nullptr);
+			signal_handler_connect(sh, "stop", on_preview_output_stopped, nullptr);
 
 			context.ndi_name = output_name;
 			context.ndi_groups = output_groups;
@@ -245,7 +244,6 @@ void preview_output_init()
 
 	obs_log(LOG_INFO, "-preview_output_init()");
 }
-
 
 void on_preview_scene_changed(enum obs_frontend_event event, void *param)
 {
