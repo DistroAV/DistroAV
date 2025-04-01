@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+// #include "plugin-support.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -460,10 +461,11 @@ void *ndi_source_thread(void *data)
 				"'%s' ndi_source_thread: reset_ndi_receiver: -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
 				obs_source_name);
 			if (!ndi_receiver) {
-				obs_log(LOG_ERROR,
+				obs_log(LOG_ERROR, "ERR-407 - Error creating the NDI Receiver '%s' set for '%s'",
+					recv_desc.source_to_connect_to.p_ndi_name, obs_source_name);
+				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: reset_ndi_receiver: Cannot create ndi_receiver for NDI source '%s'",
-					obs_source_name, //
-					recv_desc.source_to_connect_to.p_ndi_name);
+					obs_source_name, recv_desc.source_to_connect_to.p_ndi_name);
 				break;
 			}
 
@@ -519,9 +521,11 @@ void *ndi_source_thread(void *data)
 					ndi_frame_sync);
 				if (!ndi_frame_sync) {
 					obs_log(LOG_ERROR,
+						"ERR-408 - Error creating the NDI Frame Sync for '%s' for '%s'",
+						recv_desc.source_to_connect_to.p_ndi_name, obs_source_name);
+					obs_log(LOG_DEBUG,
 						"'%s' ndi_source_thread: Cannot create ndi_frame_sync for NDI source '%s'",
-						obs_source_name, //
-						recv_desc.source_to_connect_to.p_ndi_name);
+						obs_source_name, recv_desc.source_to_connect_to.p_ndi_name);
 					break;
 				}
 			}

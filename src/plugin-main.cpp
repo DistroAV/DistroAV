@@ -217,7 +217,7 @@ bool obs_module_load(void)
 	Config::Initialize();
 
 	if (is_obsndi_installed()) {
-		obs_log(LOG_ERROR, "OBS-NDI is detected and needs to be uninstalled before %s can work. ERR-403",
+		obs_log(LOG_ERROR, "ERR-403 - OBS-NDI is detected and needs to be uninstalled before %s can work.",
 			PLUGIN_DISPLAY_NAME);
 		obs_log(LOG_DEBUG,
 			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
@@ -244,7 +244,9 @@ bool obs_module_load(void)
 #else
 		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 #endif
-		obs_log(LOG_ERROR, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
+		obs_log(LOG_ERROR, "ERR-401 - NDI library failed to load with message: '%s'", QT_TO_UTF8(message));
+		showCriticalUnloadingMessageBoxDelayed(title, message);
+		obs_log(LOG_DEBUG, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
 		showCriticalUnloadingMessageBoxDelayed(title, message);
 		return false;
 	}
@@ -256,7 +258,8 @@ bool obs_module_load(void)
 	auto initialized = ndiLib->initialize();
 #endif
 	if (!initialized) {
-		obs_log(LOG_ERROR,
+		obs_log(LOG_ERROR, "ERR-406 - NDI library could not initialize due to unsupported CPU.");
+		obs_log(LOG_DEBUG,
 			"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
@@ -409,18 +412,22 @@ const NDIlib_v5 *load_ndilib()
 				obs_log(LOG_DEBUG, "load_ndilib: NDIlib_v5_load found");
 				return lib_load();
 			} else {
-				obs_log(LOG_ERROR, "load_ndilib: ERR-405 - Error loading the NDI Library from '%s'",
+				obs_log(LOG_ERROR, "ERR-405 - Error loading the NDI Library from path: '%s'",
 					QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
 				obs_log(LOG_DEBUG, "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 			}
 		} else {
-			obs_log(LOG_ERROR, "load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+			obs_log(LOG_ERROR, "ERR-402 - Error loading QLibrary with error: '%s'",
+				QT_TO_UTF8(loaded_lib->errorString()));
+			obs_log(LOG_DEBUG, "load_ndilib: ERROR: QLibrary returned the following error: '%s'",
 				QT_TO_UTF8(loaded_lib->errorString()));
 			delete loaded_lib;
 			loaded_lib = nullptr;
 		}
 	}
 
-	obs_log(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library - ERR-404");
+	obs_log(LOG_ERROR,
+		"ERR-404 - NDI library not found, DistroAV cannot continue. Read the wiki and install the NDI Libraries.");
+	obs_log(LOG_DEBUG, "load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;
 }

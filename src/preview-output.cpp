@@ -87,7 +87,7 @@ void preview_output_stop()
 		obs_log(LOG_DEBUG, "preview_output_stop: successfully stopped NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
-		obs_log(LOG_ERROR, "preview_output_stop: NDI preview output '%s' is not running",
+		obs_log(LOG_DEBUG, "preview_output_stop: NDI preview output '%s' is not running. Nothing to Stop.",
 			QT_TO_UTF8(context.ndi_name));
 	}
 	obs_log(LOG_DEBUG, "-preview_output_stop()");
@@ -160,15 +160,17 @@ void preview_output_start()
 
 		context.is_running = obs_output_start(context.output);
 		if (context.is_running) {
-			obs_log(LOG_INFO, "preview_output_start: successfully started NDI preview output '%s'",
+			obs_log(LOG_DEBUG, "preview_output_start: successfully started NDI preview output '%s'",
 				QT_TO_UTF8(context.ndi_name));
 		} else {
 			auto error = obs_output_get_last_error(context.output);
-			obs_log(LOG_ERROR, "preview_output_start: failed to start NDI preview output '%s'; error='%s'",
+			obs_log(LOG_WARNING,
+				"preview_output_start: failed to start NDI preview output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), error);
 		}
 	} else {
-		obs_log(LOG_ERROR, "preview_output_start: NDI preview output '%s' is not initialized",
+		obs_log(LOG_WARNING,
+			"preview_output_start: NDI preview output '%s' is not initialized and cannot start.",
 			QT_TO_UTF8(context.ndi_name));
 	}
 	obs_log(LOG_DEBUG, "-preview_output_start()");
@@ -197,7 +199,7 @@ void preview_output_deinit()
 		obs_log(LOG_DEBUG, "preview_output_deinit: successfully released NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
-		obs_log(LOG_INFO, "preview_output_deinit: NDI preview output is not initialized");
+		obs_log(LOG_DEBUG, "preview_output_deinit: NDI preview output is not initialized. Nothing to deinit.");
 	}
 
 	obs_log(LOG_DEBUG, "-preview_output_deinit()");
@@ -236,7 +238,7 @@ void preview_output_init()
 			context.ndi_name = output_name;
 			context.ndi_groups = output_groups;
 		} else {
-			obs_log(LOG_ERROR, "preview_output_init: failed to create NDI Preview Output '%s'",
+			obs_log(LOG_WARNING, "preview_output_init: failed to create NDI Preview Output '%s'",
 				QT_TO_UTF8(output_name));
 		}
 		preview_output_start();

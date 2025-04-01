@@ -352,7 +352,8 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 	QTimer::singleShot(uiDelayMillis, [pluginUpdateInfo]() {
 		auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
 		if (main_window == nullptr) {
-			obs_log(LOG_ERROR, "onCheckForUpdateNetworkFinish: Failed to get main OBS window");
+			obs_log(LOG_ERROR, "ERR-409 - Check for update failed: Cannot get the main OBS window");
+			obs_log(LOG_DEBUG, "onCheckForUpdateNetworkFinish: Failed to get main OBS window");
 			return;
 		}
 

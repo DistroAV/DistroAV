@@ -108,7 +108,6 @@ void ndi_output_getdefaults(obs_data_t *settings)
 	obs_data_set_default_string(settings, "ndi_groups", "DistroAV output (changeme)");
 	obs_data_set_default_bool(settings, "uses_video", true);
 	obs_data_set_default_bool(settings, "uses_audio", true);
-	obs_log(LOG_INFO, "NDI Output Defaults Settings applied");
 	obs_log(LOG_DEBUG, "-ndi_output_getdefaults()");
 }
 
@@ -241,7 +240,8 @@ void ndi_output_update(void *data, obs_data_t *settings)
 	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
 
 	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
-	// obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%d', uses_audio='%d')", name, groups, o->uses_video ? "true" : "false", o->uses_audio ? "true" : "false");
+	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,
+		o->uses_video ? "true" : "false", o->uses_audio ? "true" : "false");
 }
 
 void ndi_output_stop(void *data, uint64_t)
