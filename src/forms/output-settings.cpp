@@ -183,15 +183,24 @@ void OutputSettings::onFormAccepted()
 
 	config->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
 
+	// Output settings for debugging & diagnosis
+	obs_log(LOG_INFO,
+		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
+		config->OutputEnabled, config->OutputName.toUtf8().constData(),
+		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
+
 	config->Save();
 
 	if ((last_config.OutputEnabled != config->OutputEnabled) || (last_config.OutputName != config->OutputName) ||
 	    (last_config.OutputGroups != config->OutputGroups)) {
+		obs_log(LOG_INFO, "Initializing Main output");
 		main_output_init();
 	}
 	if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
 	    (last_config.PreviewOutputName != config->PreviewOutputName) ||
 	    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+		obs_log(LOG_INFO, "Initializing Preview output");
 		preview_output_init();
 	}
 }
