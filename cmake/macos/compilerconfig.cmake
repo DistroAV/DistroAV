@@ -15,7 +15,6 @@ include(compiler_common)
 add_compile_options("$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:-fopenmp-simd>")
 
 # Ensure recent enough Xcode and platform SDK
-# Ensure recent enough Xcode and platform SDK
 function(check_sdk_requirements)
   set(obs_macos_minimum_sdk 15.0) # Keep in sync with Xcode
   set(obs_macos_minimum_xcode 16.0) # Keep in sync with SDK
