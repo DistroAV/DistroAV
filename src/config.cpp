@@ -68,18 +68,23 @@ void ProcessCommandLine()
 			if (parts.size() > 1) {
 				auto level = parts.at(1).toLower();
 				if (level == "error") {
+					obs_log(LOG_INFO, "config: DistroAV log level set to `error`");
 					LOG_LEVEL = LOG_ERROR;
 				} else if (level == "warning") {
+					obs_log(LOG_INFO, "config: DistroAV log level set to `warning`");
 					LOG_LEVEL = LOG_WARNING;
 				} else if (level == "info") {
+					obs_log(LOG_INFO, "config: DistroAV log level set to `info`");
 					LOG_LEVEL = LOG_INFO;
 				} else if (level == "debug") {
+					obs_log(LOG_INFO, "config: DistroAV log level set to `debug`");
 					LOG_LEVEL = LOG_DEBUG;
 				} else if (level == "verbose") {
+					obs_log(LOG_INFO, "config: DistroAV log level set to `verbose`");
 					LOG_LEVEL = LOG_VERBOSE;
 				}
 			}
-			obs_log(LOG_INFO, "config: DistroAV log level set to %d", LOG_LEVEL);
+			obs_log(LOG_DEBUG, "config: DistroAV log level set to %d", LOG_LEVEL);
 			continue;
 		}
 
