@@ -244,7 +244,7 @@ void preview_output_init()
 		} else {
 
 			obs_log(LOG_ERROR, "Failed to create NDI preview output : '%s'", QT_TO_UTF8(output_name));
-      obs_log(LOG_DEBUG, "preview_output_init: failed to create NDI preview output '%s'",
+			obs_log(LOG_DEBUG, "preview_output_init: failed to create NDI preview output '%s'",
 				QT_TO_UTF8(output_name));
 		}
 		preview_output_start();

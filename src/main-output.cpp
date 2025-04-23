@@ -90,7 +90,6 @@ void main_output_start()
 			obs_log(LOG_WARNING, "main_output_start: failed to start NDI main output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
 			obs_output_stop(context.output);
-
 		}
 	} else {
 		obs_log(LOG_WARNING, "main_output_start: NDI main output '%s' is not initialized and cannot start.",
@@ -147,10 +146,9 @@ void main_output_init(bool tryit)
 
 	main_output_deinit();
 
-
 	if ((tryit || is_enabled) && !output_name.isEmpty()) {
-    obs_log(LOG_DEBUG, "main_output_init: creating NDI main output '%s'", QT_TO_UTF8(output_name));
-    obs_log(LOG_INFO, "Creating NDI main output : '%s'", QT_TO_UTF8(output_name));
+		obs_log(LOG_DEBUG, "main_output_init: creating NDI main output '%s'", QT_TO_UTF8(output_name));
+		obs_log(LOG_INFO, "Creating NDI main output : '%s'", QT_TO_UTF8(output_name));
 
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));

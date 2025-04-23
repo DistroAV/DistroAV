@@ -191,25 +191,25 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-  if (config->OutputEnabled && !config->OutputName.isEmpty()) {
-    if ((last_config.OutputEnabled != config->OutputEnabled) || 
-        (last_config.OutputName != config->OutputName) ||
-        (last_config.OutputGroups != config->OutputGroups)) {
-      // The Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
-      obs_log(LOG_INFO, "Initializing Main output");
-		  main_output_init();
-    }
+	if (config->OutputEnabled && !config->OutputName.isEmpty()) {
+		if ((last_config.OutputEnabled != config->OutputEnabled) ||
+		    (last_config.OutputName != config->OutputName) ||
+		    (last_config.OutputGroups != config->OutputGroups)) {
+			// The Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Main output");
+			main_output_init();
+		}
 	} else {
 		main_output_deinit();
 	}
 	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
-    if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
-        (last_config.PreviewOutputName != config->PreviewOutputName) ||
-        (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
-      // The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
-      obs_log(LOG_INFO, "Initializing Preview output");
-		  preview_output_init();
-    }
+		if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
+		    (last_config.PreviewOutputName != config->PreviewOutputName) ||
+		    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+			// The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Preview output");
+			preview_output_init();
+		}
 	} else {
 		preview_output_deinit();
 	}
