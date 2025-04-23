@@ -37,7 +37,13 @@ void obs_log(int log_level, const char *format, ...)
 		va_list(args);
 
 		va_start(args, format);
-		blogva(log_level, template, args);
+
+		if (LOG_LEVEL >= log_level) {
+			blogva(0, template, args);
+		} else {
+			blogva(log_level, template, args);
+		}
+
 		va_end(args);
 
 		free(template);
