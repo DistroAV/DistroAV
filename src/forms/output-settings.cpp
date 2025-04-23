@@ -182,15 +182,34 @@ void OutputSettings::onFormAccepted()
 
 	config->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
 
+	// Output settings for debugging & diagnosis
+	obs_log(LOG_INFO,
+		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
+		config->OutputEnabled, config->OutputName.toUtf8().constData(),
+		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
+
 	config->Save();
 
-	if (config->OutputEnabled && !config->OutputName.isEmpty()) {
-		main_output_init();
+  if (config->OutputEnabled && !config->OutputName.isEmpty()) {
+    if ((last_config.OutputEnabled != config->OutputEnabled) || 
+        (last_config.OutputName != config->OutputName) ||
+        (last_config.OutputGroups != config->OutputGroups)) {
+      // The Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+      obs_log(LOG_INFO, "Initializing Main output");
+		  main_output_init();
+    }
 	} else {
 		main_output_deinit();
 	}
 	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
-		preview_output_init();
+    if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
+        (last_config.PreviewOutputName != config->PreviewOutputName) ||
+        (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+      // The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+      obs_log(LOG_INFO, "Initializing Preview output");
+		  preview_output_init();
+    }
 	} else {
 		preview_output_deinit();
 	}
