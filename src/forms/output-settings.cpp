@@ -168,6 +168,7 @@ If you are running a local build, don't forget to add your build info to the upd
 void OutputSettings::onFormAccepted()
 {
 	auto config = Config::Current();
+	auto last_config = *config;
 
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
