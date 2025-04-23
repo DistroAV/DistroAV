@@ -42,6 +42,7 @@ Inspiration(s):
 #include <QPointer>
 #include <QSslSocket>
 #include <QTimer>
+#include <QTimeZone>
 #include <QUrlQuery>
 
 #define UPDATE_TIMEOUT_SEC 10
