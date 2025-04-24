@@ -217,9 +217,7 @@ void preview_output_init()
 	preview_output_deinit();
 
 	if (is_enabled && !output_name.isEmpty()) {
-
 		obs_log(LOG_DEBUG, "preview_output_init: creating NDI Preview Output '%s'", QT_TO_UTF8(output_name));
-
 		obs_data_t *output_settings = obs_data_create();
 		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
 		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
@@ -230,21 +228,19 @@ void preview_output_init()
 		context.output = obs_output_create("ndi_output", "NDI Preview Output", output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
-			obs_log(LOG_DEBUG, "preview_output_init: successfully created NDI preview output '%s'",
+			obs_log(LOG_DEBUG, "preview_output_init: Successfully created NDI Preview Output '%s'",
 				QT_TO_UTF8(output_name));
 
 			// Start handling "remote" start/stop events (ex: from obs-websocket)
 			auto sh = obs_output_get_signal_handler(context.output);
-
 			signal_handler_connect(sh, "start", on_preview_output_started, nullptr);
 			signal_handler_connect(sh, "stop", on_preview_output_stopped, nullptr);
 
 			context.ndi_name = output_name;
 			context.ndi_groups = output_groups;
 		} else {
-
-			obs_log(LOG_ERROR, "Failed to create NDI preview output : '%s'", QT_TO_UTF8(output_name));
-			obs_log(LOG_DEBUG, "preview_output_init: failed to create NDI preview output '%s'",
+			obs_log(LOG_WARNING, "Failed to create NDI Preview Output : '%s'", QT_TO_UTF8(output_name));
+			obs_log(LOG_DEBUG, "preview_output_init: failed to create NDI Preview Output '%s'",
 				QT_TO_UTF8(output_name));
 		}
 		preview_output_start();
