@@ -109,7 +109,8 @@ void RemoteTextThread::run()
 					    .arg(curlCode)
 					    .arg(curl_easy_strerror(curlCode))
 					    .arg(error);
-			obs_log(LOG_WARNING, "WARN-419 - RemoteTextThread: HTTP request failed. `%s`", QT_TO_UTF8(errorData));
+			obs_log(LOG_WARNING, "WARN-419 - Update Check request failed: `%s`", QT_TO_UTF8(errorData));
+			obs_log(LOG_DEBUG, "RemoteTextThread: HTTP request failed. `%s`", QT_TO_UTF8(errorData));
 		}
 		emit Result((int)httpStatusCode, responseData, errorData);
 
