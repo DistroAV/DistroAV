@@ -83,13 +83,12 @@ void main_output_start()
 			obs_log(LOG_DEBUG, "main_output_start: failed to start NDI Main Output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), error);
 			obs_log(LOG_ERR, "ERR-400 - Failed to start NDI Main Output '%s'; error='%s'",
-					QT_TO_UTF8(context.ndi_name), error);
+				QT_TO_UTF8(context.ndi_name), error);
 		}
 	} else {
 		obs_log(LOG_DEBUG, "main_output_start: NDI Main Output '%s' is not initialized and cannot start.",
 			QT_TO_UTF8(context.ndi_name));
-		obs_log(LOG_ERR, "ERR-411 - Failed to initialize NDI Main Output '%s'",
-				QT_TO_UTF8(context.ndi_name));
+		obs_log(LOG_ERR, "ERR-411 - Failed to initialize NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
 	}
 	obs_log(LOG_DEBUG, "-main_output_start()");
 }
@@ -156,7 +155,7 @@ void main_output_init()
 			obs_log(LOG_DEBUG, "main_output_init: failed to create NDI Main Output '%s'",
 				QT_TO_UTF8(output_name));
 			obs_log(LOG_ERR, "ERR-412 - Failed to create NDI Main Output '%s'",
-					QT_TO_UTF8(context.ndi_name));
+				QT_TO_UTF8(context.ndi_name));
 		}
 		main_output_start();
 	}
