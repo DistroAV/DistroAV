@@ -82,7 +82,7 @@ void main_output_start()
 			auto error = obs_output_get_last_error(context.output);
 			obs_log(LOG_DEBUG, "main_output_start: failed to start NDI Main Output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), error);
-			obs_log(LOG_ERR, "ERR-411 : Failed to start NDI Main Output '%s'; error='%s'",
+			obs_log(LOG_ERR, "ERR-400 : Failed to start NDI Main Output '%s'; error='%s'",
 					QT_TO_UTF8(context.ndi_name), error);
 		}
 	} else {
