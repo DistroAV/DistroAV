@@ -41,13 +41,15 @@ bool CalculateFileHash(const char *path, QString &hash)
 {
 	QFile file(path);
 	if (!file.open(QIODevice::ReadOnly)) {
-		obs_log(LOG_WARNING, "CalculateFileHash: Failed to open file: `%s`", path);
+		obs_log(LOG_WARNING, "WARN-421 - Update Check could not open the update file : `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to open file: `%s`", path);
 		return false;
 	}
 
 	QCryptographicHash qhash(QCryptographicHash::Sha256);
 	if (!qhash.addData(&file)) {
-		obs_log(LOG_WARNING, "CalculateFileHash: Failed to read data from file: `%s`", path);
+		obs_log(LOG_WARNING, "WARN-422 - Update Check could not verify the update file: `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to read data from file: `%s`", path);
 		return false;
 	}
 

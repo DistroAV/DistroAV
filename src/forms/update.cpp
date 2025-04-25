@@ -302,6 +302,9 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 	auto pluginUpdateInfo = PluginUpdateInfo(httpStatusCode, responseData, errorData);
 	if (!pluginUpdateInfo.errorData.isEmpty()) {
 		obs_log(LOG_WARNING,
+			"WARN-417 - Update Check received a non-expected response. httpStatusCode=%d, errorData='%s'; ignoring response",
+			httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
+		obs_log(DEBUG,
 			"onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData='%s'; ignoring response",
 			httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
 		if (userRequestCallback) {
@@ -521,7 +524,9 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	auto timer = new QTimer();
 	timer->setSingleShot(true);
 	QObject::connect(timer, &QTimer::timeout, []() {
-		obs_log(LOG_WARNING, "updateCheckStart: timer: Request timed out");
+		obs_log(LOG_WARNING, "WARN-418 - Update Check took too long for a response");
+		PostToMainThread("timer->timeout", []() { updateCheckStop(); });
+		obs_log(LOG_DEBUG, "updateCheckStart: timer: Request timed out");
 		PostToMainThread("timer->timeout", []() { updateCheckStop(); });
 	});
 
