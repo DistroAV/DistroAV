@@ -134,9 +134,9 @@ bool main_output_is_supported()
 
 void main_output_deinit()
 {
-	if (context.output) {
-		obs_log(LOG_DEBUG, "+main_output_deinit()");
+	obs_log(LOG_DEBUG, "+main_output_deinit()");
 
+	if (context.output) {
 		main_output_stop();
 
 		obs_log(LOG_DEBUG, "main_output_deinit: releasing NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
@@ -154,8 +154,8 @@ void main_output_deinit()
 		context.ndi_groups.clear();
 		obs_log(LOG_DEBUG, "main_output_deinit: successfully released NDI Main Output '%s'",
 			QT_TO_UTF8(context.ndi_name));
-		obs_log(LOG_DEBUG, "-main_output_deinit()");
 	}
+	obs_log(LOG_DEBUG, "-main_output_deinit()");
 }
 
 void main_output_init()
