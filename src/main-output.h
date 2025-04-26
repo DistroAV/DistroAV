@@ -18,6 +18,6 @@
 #pragma once
 #include <QString>
 void main_output_deinit();
-void main_output_init(bool tryit = false);
+void main_output_init();
 QString main_output_last_error();
 bool main_output_is_supported();
