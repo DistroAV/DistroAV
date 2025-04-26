@@ -185,7 +185,7 @@ void OutputSettings::onFormAccepted()
 
 	auto mainSupported = ui->mainOutputGroupBox->isEnabled();
 
-	obs_log(LOG_INFO, "Main output supported='%d'", mainSupported);	
+	obs_log(LOG_INFO, "Main output supported='%d'", mainSupported);
 
 	// Output settings for debugging & diagnosis
 	obs_log(LOG_INFO,

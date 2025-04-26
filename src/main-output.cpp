@@ -105,7 +105,7 @@ bool main_output_is_supported()
 	auto output_groups = config->OutputGroups;
 
 	obs_data_t *output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", ""); 
+	obs_data_set_string(output_settings, "ndi_name", "");
 	obs_data_set_string(output_settings, "ndi_groups", "");
 
 	bool is_supported = true;
@@ -120,16 +120,15 @@ bool main_output_is_supported()
 		if (!is_running) {
 			is_supported = false;
 			context.last_error = obs_output_get_last_error(output);
-			obs_log(LOG_DEBUG, "main_output_is_supported: '%s'",
-				QT_TO_UTF8(context.last_error));
-		}		
+			obs_log(LOG_DEBUG, "main_output_is_supported: '%s'", QT_TO_UTF8(context.last_error));
+		}
 		obs_output_stop(output);
 		obs_output_release(output);
 	} else {
 		is_supported = false;
 		obs_log(LOG_DEBUG, "main_output_is_supported: NDI Main Output could not created");
 	}
-	
+
 	return is_supported;
 }
 
@@ -154,7 +153,7 @@ void main_output_deinit()
 		context.ndi_name.clear();
 		context.ndi_groups.clear();
 		obs_log(LOG_DEBUG, "main_output_deinit: successfully released NDI Main Output '%s'",
-			QT_TO_UTF8(context.ndi_name));	
+			QT_TO_UTF8(context.ndi_name));
 		obs_log(LOG_DEBUG, "-main_output_deinit()");
 	}
 }
