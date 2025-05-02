@@ -304,7 +304,7 @@ void onCheckForUpdateNetworkFinish(const int httpStatusCode, const QString &resp
 		obs_log(LOG_WARNING,
 			"WARN-417 - Update Check received a non-expected response. httpStatusCode=%d, errorData='%s'; ignoring response",
 			httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
-		obs_log(DEBUG,
+		obs_log(LOG_DEBUG,
 			"onCheckForUpdateNetworkFinish: Error! httpStatusCode=%d, errorData='%s'; ignoring response",
 			httpStatusCode, QT_TO_UTF8(pluginUpdateInfo.errorData));
 		if (userRequestCallback) {
