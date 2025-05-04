@@ -608,8 +608,7 @@ void *ndi_source_thread(void *data)
 			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
 			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 				timestamp_audio = audio_frame.timestamp;
-				obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name,
-					audio_frame.timestamp, audio_frame.timecode);
+				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
 			}
@@ -623,8 +622,7 @@ void *ndi_source_thread(void *data)
 							NDIlib_frame_format_type_progressive);
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
-				obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name,
-					video_frame.timestamp, video_frame.timecode);
+				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
 				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
 								 &obs_video_frame);
 			}
@@ -643,8 +641,7 @@ void *ndi_source_thread(void *data)
 				//
 				// AUDIO
 				//
-				obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name,
-					audio_frame.timestamp, audio_frame.timecode);
+				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
 
@@ -656,8 +653,7 @@ void *ndi_source_thread(void *data)
 				//
 				// VIDEO
 				//
-				obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name,
-					video_frame.timestamp, video_frame.timecode);
+				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
 				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
 								 &obs_video_frame);
 
