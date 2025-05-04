@@ -742,8 +742,11 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		break;
 
 	case NDIlib_FourCC_type_UYVY:
-	case NDIlib_FourCC_type_UYVA:
 		obs_video_frame->format = VIDEO_FORMAT_UYVY;
+		break;
+		
+	case NDIlib_FourCC_type_UYVA:
+		obs_video_frame->format = VIDEO_FORMAT_UYVA;
 		break;
 
 	case NDIlib_FourCC_type_I420:
@@ -776,6 +779,11 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 	obs_video_frame->height = ndi_video_frame->yres;
 	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
+
+	if (ndi_video_frame->FourCC == NDIlib_FourCC_video_type_UYVA) {
+		obs_video_frame->linesize[1] = ndi_video_frame->xres;
+		obs_video_frame->data[1] = (uint8_t *)ndi_video_frame->p_data + (ndi_video_frame->data_size_in_bytes * ndi_video_frame->yres);
+	}
 
 	video_format_get_parameters(config->yuv_colorspace, config->yuv_range, obs_video_frame->color_matrix,
 				    obs_video_frame->color_range_min, obs_video_frame->color_range_max);
