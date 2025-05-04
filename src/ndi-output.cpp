@@ -143,7 +143,8 @@ bool ndi_output_start(void *data)
 	audio_t *audio = obs_output_audio(o->output);
 
 	if (!video && !audio) {
-		obs_log(LOG_WARNING, "NDI Output could not start. No Audio/Video data available. ('%s')", name);
+		obs_log(LOG_WARNING, "WARN-413 - NDI Output could not start. No Audio/Video data available. ('%s')",
+			name);
 		obs_log(LOG_DEBUG, "'%s'('%s') ndi_output_start: no video nor audio available", name, groups);
 		return false;
 	}
@@ -182,7 +183,8 @@ bool ndi_output_start(void *data)
 			break;
 
 		default:
-			obs_log(LOG_WARNING, "Unsupported pixel format %d. ('%s')", format, name);
+			obs_log(LOG_ERROR, "ERR-410 - NDI Output cannot start : Unsupported pixel format %d. ('%s')",
+				format, name);
 			obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s', ...)", name, groups);
 			return false;
 		}
@@ -214,11 +216,11 @@ bool ndi_output_start(void *data)
 		if (o->started) {
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi output started", name);
 		} else {
-			obs_log(LOG_WARNING, "NDI Sender data capture failed. '%s'", name);
+			obs_log(LOG_WARNING, "WARN-415 - NDI Sender data capture failed. '%s'", name);
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: data capture start failed", name);
 		}
 	} else {
-		obs_log(LOG_WARNING, "NDI Sender initialisation failed. '%s'", name);
+		obs_log(LOG_WARNING, "WARN-416 - NDI Sender initialisation failed. '%s'", name);
 		obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi sender init failed", name);
 	}
 

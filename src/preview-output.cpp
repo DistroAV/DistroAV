@@ -238,7 +238,9 @@ void preview_output_init()
 			context.ndi_name = output_name;
 			context.ndi_groups = output_groups;
 		} else {
-			obs_log(LOG_WARNING, "preview_output_init: failed to create NDI Preview Output '%s'",
+			obs_log(LOG_WARNING, "WARN-423 - Failed to create NDI Preview Output '%s'",
+				QT_TO_UTF8(output_name));
+			obs_log(LOG_DEBUG, "preview_output_init: failed to create NDI Preview Output '%s'",
 				QT_TO_UTF8(output_name));
 		}
 		preview_output_start();
