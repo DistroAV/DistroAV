@@ -16,7 +16,6 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
-
 #include "ndi-finder.h"
 
 #include <util/platform.h>

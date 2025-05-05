@@ -11,7 +11,6 @@
 class NDIFinder {
 public:
 	using Callback = std::function<void(void *)>;
-
 	static std::vector<std::string> getNDISourceList(Callback callback);
 
 private:
