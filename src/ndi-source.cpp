@@ -762,7 +762,8 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		break;
 
 	default:
-		obs_log(LOG_WARNING, "NDI Source uses an unsupported video pixel format: %d.", ndi_video_frame->FourCC);
+		obs_log(LOG_ERROR, "ERR-430 - NDI Source uses an unsupported video pixel format: %d.",
+			ndi_video_frame->FourCC);
 		obs_log(LOG_DEBUG, "ndi_source_thread_process_video2: warning: unsupported video pixel format: %d",
 			ndi_video_frame->FourCC);
 		break;
@@ -927,8 +928,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	} else {
 		// Fallback option. If the behavior is invalid, force it to "Keep Active" as it most likely came from the 4.14.x version.
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_log(LOG_WARNING,
-			"'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%s' forced to '%d'",
 			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_data_set_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_KEEP_ACTIVE);
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
