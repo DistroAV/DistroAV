@@ -85,13 +85,13 @@ void main_output_start()
 				QT_TO_UTF8(context.ndi_name));
 			context.last_error = QString("");
 		} else {
-      context.last_error = obs_output_get_last_error(context.output);
+			context.last_error = obs_output_get_last_error(context.output);
 			obs_log(LOG_DEBUG, "main_output_start: failed to start NDI Main Output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
 			obs_log(LOG_ERROR, "ERR-400 - Failed to start NDI Main Output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
-      // Could not start Output, still trigger it to stop.
-      obs_output_stop(context.output);
+			// Could not start Output, still trigger it to stop.
+			obs_output_stop(context.output);
 		}
 	} else {
 		obs_log(LOG_DEBUG, "main_output_start: NDI Main Output '%s' is not initialized and cannot start.",
