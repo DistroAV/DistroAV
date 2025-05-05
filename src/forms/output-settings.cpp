@@ -234,7 +234,7 @@ void OutputSettings::showEvent(QShowEvent *)
 	auto lastError = main_output_last_error();
 	ui->mainOutputLastError->setText(lastError);
 	if (lastError.isEmpty()) {
-		ui->mainOutputLastError->setFixedHeight(0); // don't was dialog space
+		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space is error is no longer valid.
 	} else {
 		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());
 	}
