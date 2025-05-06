@@ -111,7 +111,22 @@ void ndi_output_getdefaults(obs_data_t *settings)
 	obs_log(LOG_DEBUG, "-ndi_output_getdefaults()");
 }
 
-void ndi_output_update(void *data, obs_data_t *settings);
+void ndi_output_update(void *data, obs_data_t *settings)
+{
+	auto o = (ndi_output_t *)data;
+	auto name = obs_data_get_string(settings, "ndi_name");
+	auto groups = obs_data_get_string(settings, "ndi_groups");
+	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', ...)", name, groups);
+
+	o->ndi_name = name;
+	o->ndi_groups = groups;
+	o->uses_video = obs_data_get_bool(settings, "uses_video");
+	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+
+	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
+	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,
+		o->uses_video ? "true" : "false", o->uses_audio ? "true" : "false");
+}
 
 void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 {
@@ -227,23 +242,6 @@ bool ndi_output_start(void *data)
 	obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s'...)", name, groups);
 
 	return o->started;
-}
-
-void ndi_output_update(void *data, obs_data_t *settings)
-{
-	auto o = (ndi_output_t *)data;
-	auto name = obs_data_get_string(settings, "ndi_name");
-	auto groups = obs_data_get_string(settings, "ndi_groups");
-	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', ...)", name, groups);
-
-	o->ndi_name = name;
-	o->ndi_groups = groups;
-	o->uses_video = obs_data_get_bool(settings, "uses_video");
-	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
-
-	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
-	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,
-		o->uses_video ? "true" : "false", o->uses_audio ? "true" : "false");
 }
 
 void ndi_output_stop(void *data, uint64_t)
