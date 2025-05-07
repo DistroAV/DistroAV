@@ -26,7 +26,8 @@
 #include <Processing.NDI.Lib.h>
 
 #define PLUGIN_MIN_QT_VERSION "6.0.0"
-#define PLUGIN_MIN_OBS_VERSION "30.0.0"
+#define PLUGIN_MIN_OBS_VERSION "31.0.0"
+#define PLUGIN_MIN_NDI_VERSION "6.0.0"
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
