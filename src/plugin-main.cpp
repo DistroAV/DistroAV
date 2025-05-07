@@ -305,8 +305,7 @@ bool obs_module_load(void)
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
 					main_output_deinit();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
-					if (main_output_is_supported())
-						main_output_init();
+					main_output_init();
 				}
 			},
 			nullptr);

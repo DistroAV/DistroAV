@@ -108,8 +108,8 @@ bool main_output_is_supported()
 	auto output_groups = config->OutputGroups;
 
 	obs_data_t *output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", "");
-	obs_data_set_string(output_settings, "ndi_groups", "");
+	obs_data_set_string(output_settings, "ndi_name", "NDI Output Support Test");
+	obs_data_set_string(output_settings, "ndi_groups", "DistroAV Config");
 
 	bool is_supported = true;
 	context.last_error = QString("");
@@ -169,6 +169,13 @@ void main_output_init()
 	auto output_name = config->OutputName;
 	auto output_groups = config->OutputGroups;
 	auto is_enabled = config->OutputEnabled;
+
+	if (is_enabled && !main_output_is_supported()) {
+		config->OutputEnabled = false;
+		config->Save();
+		is_enabled = false;
+		obs_log(LOG_INFO, "NDI Main Output disabled, not supported");
+	}
 
 	main_output_deinit();
 
