@@ -184,7 +184,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 			f->known_height = height;
 		}
 
-		struct video_frame output_frame;		
+		struct video_frame output_frame;
 		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
 			gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
 
@@ -193,8 +193,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 				for (uint32_t i = 0; i < f->known_height; i++) {
 					uint32_t dst_offset = linesize * i;
 					uint32_t src_offset = f->video_linesize * i;
-					memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset,
-					       linesize);
+					memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset, linesize);
 				}
 
 				gs_stagesurface_unmap(f->stagesurface);
