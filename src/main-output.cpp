@@ -103,6 +103,7 @@ void main_output_start()
 
 bool main_output_is_supported()
 {
+	obs_log(LOG_DEBUG, "+main_output_is_supported()");
 	auto config = Config::Current();
 	auto output_name = config->OutputName;
 	auto output_groups = config->OutputGroups;
@@ -131,7 +132,7 @@ bool main_output_is_supported()
 		is_supported = false;
 		obs_log(LOG_DEBUG, "main_output_is_supported: NDI Main Output could not created");
 	}
-
+	obs_log(LOG_DEBUG, "-main_output_is_supported()");
 	return is_supported;
 }
 
@@ -174,7 +175,7 @@ void main_output_init()
 		config->OutputEnabled = false;
 		config->Save();
 		is_enabled = false;
-		obs_log(LOG_INFO, "NDI Main Output disabled, not supported");
+		obs_log(LOG_WARNING, "WARN-426 - NDI Main Output disabled, format not supported");
 	}
 
 	main_output_deinit();
