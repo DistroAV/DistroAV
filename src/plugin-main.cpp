@@ -232,7 +232,6 @@ bool is_version_supported(const char *version, const char *min_version)
 
 bool obs_module_load(void)
 {
-
 	obs_log(LOG_INFO, "obs_module_load: you can haz %s (Version %s)", PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
 	// obs_log(LOG_DEBUG, "obs_module_load: Qt Version: %s (runtime), %s (compiled)", qVersion(), QT_VERSION_STR);
 
@@ -258,7 +257,7 @@ bool obs_module_load(void)
 			PLUGIN_MIN_OBS_VERSION);
 		obs_log(LOG_DEBUG,
 			"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
-			PLUGIN_DISPLAY_NAME, obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
+			obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
 		return false;
 	}
 	obs_log(LOG_DEBUG, "obs_module_load: Minimum OBS version met. Continuing...");
@@ -310,7 +309,7 @@ bool obs_module_load(void)
 		obs_log(LOG_ERROR, "ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s",
 			PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
 		obs_log(LOG_DEBUG, "obs_module_load: NDI minimum version not met (%s). NDI version detected: %s.",
-			QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION, ndiLib->version());
+			PLUGIN_MIN_NDI_VERSION, ndiLib->version());
 
 		obs_log(LOG_WARNING,
 			"Update the NDI SDK to at least %s. Plugin will continue to load but things will break.",
