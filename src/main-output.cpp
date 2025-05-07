@@ -23,12 +23,17 @@ struct main_output {
 	bool is_running;
 	QString ndi_name;
 	QString ndi_groups;
-
+	QString last_error;
 	obs_source_t *current_source;
 	obs_output_t *output;
 };
 
 static struct main_output context = {0};
+
+QString main_output_last_error()
+{
+	return context.last_error;
+};
 
 void on_main_output_started(void *, calldata_t *)
 {
@@ -78,12 +83,15 @@ void main_output_start()
 		if (context.is_running) {
 			obs_log(LOG_DEBUG, "main_output_start: successfully started NDI Main Output '%s'",
 				QT_TO_UTF8(context.ndi_name));
+			context.last_error = QString("");
 		} else {
-			auto error = obs_output_get_last_error(context.output);
+			context.last_error = obs_output_get_last_error(context.output);
 			obs_log(LOG_DEBUG, "main_output_start: failed to start NDI Main Output '%s'; error='%s'",
-				QT_TO_UTF8(context.ndi_name), error);
+				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
 			obs_log(LOG_ERROR, "ERR-400 - Failed to start NDI Main Output '%s'; error='%s'",
-				QT_TO_UTF8(context.ndi_name), error);
+				QT_TO_UTF8(context.ndi_name), QT_TO_UTF8(context.last_error));
+			// Could not start Output, still trigger it to stop.
+			obs_output_stop(context.output);
 		}
 	} else {
 		obs_log(LOG_DEBUG, "main_output_start: NDI Main Output '%s' is not initialized and cannot start.",
@@ -93,9 +101,45 @@ void main_output_start()
 	obs_log(LOG_DEBUG, "-main_output_start()");
 }
 
+bool main_output_is_supported()
+{
+	obs_log(LOG_DEBUG, "+main_output_is_supported()");
+	auto config = Config::Current();
+	auto output_name = config->OutputName;
+	auto output_groups = config->OutputGroups;
+
+	obs_data_t *output_settings = obs_data_create();
+	obs_data_set_string(output_settings, "ndi_name", "NDI Output Support Test");
+	obs_data_set_string(output_settings, "ndi_groups", "DistroAV Config");
+
+	bool is_supported = true;
+	context.last_error = QString("");
+
+	auto output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+	obs_data_release(output_settings);
+
+	if (output != nullptr) {
+		bool is_running = obs_output_start(output);
+
+		if (!is_running) {
+			is_supported = false;
+			context.last_error = obs_output_get_last_error(output);
+			obs_log(LOG_DEBUG, "main_output_is_supported: '%s'", QT_TO_UTF8(context.last_error));
+		}
+		obs_output_stop(output);
+		obs_output_release(output);
+	} else {
+		is_supported = false;
+		obs_log(LOG_DEBUG, "main_output_is_supported: NDI Main Output could not created");
+	}
+	obs_log(LOG_DEBUG, "-main_output_is_supported()");
+	return is_supported;
+}
+
 void main_output_deinit()
 {
 	obs_log(LOG_DEBUG, "+main_output_deinit()");
+
 	if (context.output) {
 		main_output_stop();
 
@@ -114,8 +158,6 @@ void main_output_deinit()
 		context.ndi_groups.clear();
 		obs_log(LOG_DEBUG, "main_output_deinit: successfully released NDI Main Output '%s'",
 			QT_TO_UTF8(context.ndi_name));
-	} else {
-		obs_log(LOG_DEBUG, "main_output_deinit: NDI Main Output is not initialized");
 	}
 	obs_log(LOG_DEBUG, "-main_output_deinit()");
 }
@@ -128,6 +170,13 @@ void main_output_init()
 	auto output_name = config->OutputName;
 	auto output_groups = config->OutputGroups;
 	auto is_enabled = config->OutputEnabled;
+
+	if (is_enabled && !main_output_is_supported()) {
+		config->OutputEnabled = false;
+		config->Save();
+		is_enabled = false;
+		obs_log(LOG_WARNING, "WARN-426 - NDI Main Output disabled, format not supported");
+	}
 
 	main_output_deinit();
 
