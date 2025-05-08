@@ -260,10 +260,9 @@ bool obs_module_load(void)
 			obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
 
 		auto title = "OBS version not supported";
-		auto message = "Error-424: Plugin requires OBS " +
-			       QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
+		auto message = "Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
 		showCriticalUnloadingMessageBoxDelayed(title, message);
-		
+
 		return false;
 	}
 	obs_log(LOG_DEBUG, "obs_module_load: Minimum OBS version met. Continuing...");
@@ -312,16 +311,18 @@ bool obs_module_load(void)
 	obs_log(LOG_INFO, "NDI Version detected: %s", QT_TO_UTF8(ndi_version_short));
 
 	if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION)) {
-		obs_log(LOG_ERROR, "ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s. Plugin will unload.",
+		obs_log(LOG_ERROR,
+			"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s. Plugin will unload.",
 			PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
 		obs_log(LOG_DEBUG, "obs_module_load: NDI minimum version not met (%s). NDI version detected: %s.",
 			PLUGIN_MIN_NDI_VERSION, ndiLib->version());
-			
-			auto title = "NDI Library version not supported";
-			auto message = "Error-425: Plugin requires NDI " + QTStr(PLUGIN_MIN_NDI_VERSION) + " or higher <br> <br> Version detected: " +
-				       QT_TO_UTF8(ndi_version_short) + "<br> Get the latest NDI library at: <br>";
-			message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
-			showCriticalUnloadingMessageBoxDelayed(title, message);
+
+		auto title = "NDI Library version not supported";
+		auto message = "Error-425: Plugin requires NDI " + QTStr(PLUGIN_MIN_NDI_VERSION) +
+			       " or higher <br> <br> Version detected: " + QT_TO_UTF8(ndi_version_short) +
+			       "<br> Get the latest NDI library at: <br>";
+		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
+		showCriticalUnloadingMessageBoxDelayed(title, message);
 		return false;
 	}
 
