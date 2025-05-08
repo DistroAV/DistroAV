@@ -42,6 +42,7 @@ Inspiration(s):
 #include <QPointer>
 #include <QSslSocket>
 #include <QTimer>
+#include <QTimeZone>
 #include <QUrlQuery>
 
 #define UPDATE_TIMEOUT_SEC 10
@@ -108,11 +109,11 @@ PluginUpdateInfo::PluginUpdateInfo(const int httpStatusCode_, const QString &res
 	versionCurrent = QVersionNumber::fromString(PLUGIN_VERSION);
 
 #if 0
-	// For testing purposes only
-	fakeVersionLatest = true;
-	versionLatest = QVersionNumber(versionCurrent.majorVersion(),
-				       versionCurrent.minorVersion() + 1,
-				       versionCurrent.microVersion());
+	 // For testing purposes only
+	 fakeVersionLatest = true;
+	 versionLatest = QVersionNumber(versionCurrent.majorVersion(),
+						versionCurrent.minorVersion() + 1,
+						versionCurrent.microVersion());
 #else
 	versionLatest = QVersionNumber::fromString(releaseTag);
 #endif
@@ -156,7 +157,7 @@ public:
 		ui->labelReleaseNotes->setText(textTemp);
 
 		auto utcDateTime = QDateTime::fromString(pluginUpdateInfo.releaseDate, Qt::ISODate);
-		utcDateTime.setTimeSpec(Qt::UTC);
+		utcDateTime.setTimeZone(QTimeZone::UTC);
 		auto formattedUtcDateTime = utcDateTime.toString("yyyy-MM-dd hh:mm:ss 'UTC'");
 		textTemp = QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseDate"));
 		ui->labelReleaseDate->setText(textTemp);
@@ -165,8 +166,14 @@ public:
 		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes);
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::checkStateChanged, this,
+			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+#else
 		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
 			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+#endif
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
@@ -211,13 +218,16 @@ QString GetObsCurrentModuleSHA256()
 	obs_log(LOG_DEBUG,
 	     "GetObsCurrentModuleSHA256: module_binary_path='%s'",
 	     module_binary_path);
+
 #endif
 	QString module_hash_sha256;
 	auto success = CalculateFileHash(module_binary_path, module_hash_sha256);
 #if 0
+
 	obs_log(LOG_DEBUG,
 	     "GetObsCurrentModuleSHA256: module_hash_sha256='%s'",
 	     QT_TO_UTF8(module_hash_sha256));
+
 #endif
 	return success ? module_hash_sha256 : "";
 }
@@ -225,48 +235,48 @@ QString GetObsCurrentModuleSHA256()
 //#define UPDATE_REQUEST_QT
 #ifdef UPDATE_REQUEST_QT
 /*
-On 2024/07/06 @paulpv asked on OBS Discord #development and @RytoEX confirmed
-that OBS removed TLS support from Qt:
-https://discord.com/channels/348973006581923840/374636084883095554/1259188627699925167
-> @paulpv Q: Why does obs-deps/deps.qt set -DINPUT_openssl:STRING=no?
->	Is there some problem letting Qt use OpenSSL?
->	When I try to call QNetworkAccessManager.get("https://www.github.com") in my plugin,
->	I get a bunch of `No functional TLS backend was found`, `No TLS backend is available`, and
->	`TLS initialization failed` errors; my code works fine on http urls.
-https://discord.com/channels/348973006581923840/374636084883095554/1259193095652638879
-> @RytoEX A: We accidentally disabled copying the Qt TLS backends. It'll be fixed in a future release. 
->	It's on my backlog of "local branches that fix this that haven't been PR'd".
->	We decided intentionally to opt for the native TLS backends for Qt on Windows and macOS,
->	but see other messages where copying it got accidentally disabled.
-
-Options:
-1. Wait for OBS to fix this: Unknown how long this will be.
-	I think the place to watch for changes that fix this is:
-	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.ps1
-	* https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.zsh
-	* Or one of RytoEX's branches:
-	  https://github.com/RytoEX/obs-studio/branches
-2. Compile DistroAV's own Qt6 dep w/ TLS enabled: No thanks!
-3. Make only http requests; Don't make https requests:
-	Ignoring the security concerns, this works when testing against the emulator but won't work for
-	non-emulator (actual cloud) due to http://distroav.org auto-redirecting to https://distroav.org.
-	My original thought was that even though https requests are failing for TLS reasons, http
-	requests are still working fine and this code can use those until the TLS issue is fixed.
-	I could swear that http requests to firebase ussed to work fine.
-	But latest testing shows that http requests are auto forwarding to https, so it looks like this
-	https/TLS problem cannot be avoided by calling just http. :/
-	Until OBS adds back TLS support, this code will have to resort to using non-Qt https requests.
-4. Make https requests a non-Qt way (ex: "libcurl"):
-	OBS does this:
-		https://github.com/obsproject/obs-studio/tree/master/UI/update
-		https://github.com/obsproject/obs-studio/blob/master/UI/update/shared-update.cpp
-		https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.cpp
-	occ-ai/obs-backgroundremoval does things a little different:
-		https://github.com/occ-ai/obs-backgroundremoval/tree/main/src/update-checker
-	Neither of these are highly complicated, but it is silly this has to be done and I
-	would prefer to write little to no knowlingly future throwaway code (see Option #1).
-5. Direct calls to Firebase Functions: the problem with this is "how to cancel any pending function call"?
-*/
+ On 2024/07/06 @paulpv asked on OBS Discord #development and @RytoEX confirmed
+ that OBS removed TLS support from Qt:
+ https://discord.com/channels/348973006581923840/374636084883095554/1259188627699925167
+ > @paulpv Q: Why does obs-deps/deps.qt set -DINPUT_openssl:STRING=no?
+ >	Is there some problem letting Qt use OpenSSL?
+ >	When I try to call QNetworkAccessManager.get("https://www.github.com") in my plugin,
+ >	I get a bunch of `No functional TLS backend was found`, `No TLS backend is available`, and
+ >	`TLS initialization failed` errors; my code works fine on http urls.
+ https://discord.com/channels/348973006581923840/374636084883095554/1259193095652638879
+ > @RytoEX A: We accidentally disabled copying the Qt TLS backends. It'll be fixed in a future release. 
+ >	It's on my backlog of "local branches that fix this that haven't been PR'd".
+ >	We decided intentionally to opt for the native TLS backends for Qt on Windows and macOS,
+ >	but see other messages where copying it got accidentally disabled.
+ 
+ Options:
+ 1. Wait for OBS to fix this: Unknown how long this will be.
+	 I think the place to watch for changes that fix this is:
+	 * https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.ps1
+	 * https://github.com/obsproject/obs-deps/blob/master/deps.qt/qt6.zsh
+	 * Or one of RytoEX's branches:
+	   https://github.com/RytoEX/obs-studio/branches
+ 2. Compile DistroAV's own Qt6 dep w/ TLS enabled: No thanks!
+ 3. Make only http requests; Don't make https requests:
+	 Ignoring the security concerns, this works when testing against the emulator but won't work for
+	 non-emulator (actual cloud) due to http://distroav.org auto-redirecting to https://distroav.org.
+	 My original thought was that even though https requests are failing for TLS reasons, http
+	 requests are still working fine and this code can use those until the TLS issue is fixed.
+	 I could swear that http requests to firebase ussed to work fine.
+	 But latest testing shows that http requests are auto forwarding to https, so it looks like this
+	 https/TLS problem cannot be avoided by calling just http. :/
+	 Until OBS adds back TLS support, this code will have to resort to using non-Qt https requests.
+ 4. Make https requests a non-Qt way (ex: "libcurl"):
+	 OBS does this:
+		 https://github.com/obsproject/obs-studio/tree/master/UI/update
+		 https://github.com/obsproject/obs-studio/blob/master/UI/update/shared-update.cpp
+		 https://github.com/obsproject/obs-studio/blob/master/UI/remote-text.cpp
+	 occ-ai/obs-backgroundremoval does things a little different:
+		 https://github.com/occ-ai/obs-backgroundremoval/tree/main/src/update-checker
+	 Neither of these are highly complicated, but it is silly this has to be done and I
+	 would prefer to write little to no knowlingly future throwaway code (see Option #1).
+ 5. Direct calls to Firebase Functions: the problem with this is "how to cancel any pending function call"?
+ */
 QNetworkRequest *update_request = nullptr;
 QPointer<QNetworkReply> update_reply = nullptr;
 #else
@@ -471,6 +481,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 #endif
 
 #if 0
+
 	//qputenv("QT_LOGGING_RULES", "qt.network.ssl=true");
 	obs_log(LOG_DEBUG,
 		"updateCheckStart: QSslSocket{ supportsSsl=%s, sslLibraryBuildVersionString='%s', sslLibraryVersionString='%s'}",
@@ -491,6 +502,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	```
 	This appears to confirm that OBS' Qt is not built with SSL support. :(
 	*/
+
 #endif
 
 #ifdef UPDATE_REQUEST_QT
@@ -547,8 +559,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				 timer->deleteLater();
 				 manager->deleteLater();
 			 });
-	timer->start(UPDATE_TIMEOUT_SEC * 1000));
-	update_reply = manager->get(*update_request);
+	 timer->start(UPDATE_TIMEOUT_SEC * 1000));
+	 update_reply = manager->get(*update_request);
 #else
 	QObject::connect(
 		update_request, &RemoteTextThread::Result, main_window,
@@ -564,6 +576,8 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 		Qt::QueuedConnection);
 	update_request->start();
 #endif
+
 	obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
 	return true;
+
 }
