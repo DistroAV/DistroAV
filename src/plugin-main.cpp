@@ -307,7 +307,8 @@ bool obs_module_load(void)
 	obs_log(LOG_INFO, "obs_module_load: NDI library detected ('%s')", ndiLib->version());
 
 	// Check if the minimum NDI Runtime/SDK required by this plugin is used
-	QString ndi_version_short = QRegularExpression(R"((\d+\.\d+\.\d+\.\d+)$)").match(ndiLib->version()).captured(1);
+	QString ndi_version_short =
+		QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
 	obs_log(LOG_INFO, "NDI Version detected: %s", QT_TO_UTF8(ndi_version_short));
 
 	if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION)) {
