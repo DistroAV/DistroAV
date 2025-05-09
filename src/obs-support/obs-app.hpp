@@ -47,16 +47,6 @@ inline config_t *GetUserConfig()
 #endif
 }
 
-// Added for backward compatiblity for pre-OBS 31 codebase
-inline config_t *GetGlobalConfig()
-{
-#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time
-	return obs_frontend_get_user_config();
-#else
-	return obs_frontend_get_global_config();
-#endif
-}
-
 // Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
 inline const char *Str(const char *lookup)
 {
