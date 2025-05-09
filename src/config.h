@@ -33,7 +33,7 @@
  * ```
  * [NDIPlugin]
  * MainOutputEnabled=true
- * MainOutputName=OBS
+ * MainOutputName=OBS PGM
  * PreviewOutputEnabled=false
  * PreviewOutputName=OBS Preview
  * TallyProgramEnabled=false

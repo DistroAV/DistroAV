@@ -9,3 +9,5 @@ build_x64/
 certs/
 release/
 scratch/
+.vscode/settings.json
+.vscode/
