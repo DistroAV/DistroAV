@@ -159,8 +159,7 @@ void ProcessCommandLine()
 	}
 }
 
-void MigrateSetting(config_t *from, config_t *to, const char *section,
-		    const char *name)
+void MigrateSetting(config_t *from, config_t *to, const char *section, const char *name)
 {
 	if (!config_has_user_value(from, section, name))
 		return;
@@ -172,13 +171,11 @@ void MigrateSetting(config_t *from, config_t *to, const char *section,
 
 	switch (type) {
 	case OBS_CONFIG_STRING:
-		config_set_string(to, section, name,
-				  config_get_string(from, section, name));
+		config_set_string(to, section, name, config_get_string(from, section, name));
 
 		break;
 	case OBS_CONFIG_BOOL:
-		config_set_bool(to, section, name,
-				config_get_bool(from, section, name));
+		config_set_bool(to, section, name, config_get_bool(from, section, name));
 		break;
 	}
 	config_remove_value(from, section, name);
@@ -215,12 +212,8 @@ void Config::SetDefaultsToUserStore()
 		config_set_default_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
 					  QT_TO_UTF8(PreviewOutputGroups));
 
-		config_set_default_bool(obs_config, SECTION_NAME,
-					PARAM_TALLY_PROGRAM_ENABLED,
-					TallyProgramEnabled);
-		config_set_default_bool(obs_config, SECTION_NAME,
-					PARAM_TALLY_PREVIEW_ENABLED,
-					TallyPreviewEnabled);
+		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
+		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
 	}
 }
 
@@ -230,31 +223,21 @@ void Config::GlobalToUserMigration()
 	auto user_config = GetUserConfig();
 
 	if (app_config && user_config) {
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_MAIN_OUTPUT_ENABLED);
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_MAIN_OUTPUT_NAME);
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_MAIN_OUTPUT_GROUPS);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS);
 
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_PREVIEW_OUTPUT_ENABLED);
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_PREVIEW_OUTPUT_NAME);
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_PREVIEW_OUTPUT_GROUPS);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS);
 
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_TALLY_PROGRAM_ENABLED);
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_TALLY_PREVIEW_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
 
-		MigrateSetting(app_config, user_config, SECTION_NAME,
-			       PARAM_SKIP_UPDATE_VERSION);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_SKIP_UPDATE_VERSION);
 
 		config_save(app_config);
 		config_save(user_config);
-
 	}
 }
 
