@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "ndi-finder.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -66,16 +67,13 @@
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
 
-extern NDIlib_find_instance_t ndi_finder;
-
 typedef struct ptz_t {
 	bool enabled;
 	float pan;
 	float tilt;
 	float zoom;
 
-	ptz_t(bool enabled_ = false, float pan_ = 0.0f, float tilt_ = 0.0f,
-	      float zoom_ = 0.0f)
+	ptz_t(bool enabled_ = false, float pan_ = 0.0f, float tilt_ = 0.0f, float zoom_ = 0.0f)
 		: enabled(enabled_),
 		  pan(pan_),
 		  tilt(tilt_),
@@ -135,8 +133,7 @@ static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 	obs_source_enum_filters(
 		context,
 		[](obs_source_t *, obs_source_t *filter, void *param) {
-			search_context_t *filter_search_ =
-				static_cast<search_context_t *>(param);
+			search_context_t *filter_search_ = static_cast<search_context_t *>(param);
 			const char *obs_source_id = obs_source_get_id(filter);
 			if (strcmp(obs_source_id, filter_search_->query) == 0) {
 				obs_source_get_ref(filter);
@@ -201,162 +198,116 @@ const char *ndi_source_getname(void *)
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
-obs_properties_t *ndi_source_getproperties(void *)
+obs_properties_t *ndi_source_getproperties(void *data)
 {
+	auto s = (ndi_source_t *)data;
 	obs_log(LOG_DEBUG, "+ndi_source_getproperties(…)");
 
 	obs_properties_t *props = obs_properties_create();
 
-	obs_property_t *source_list = obs_properties_add_list(
-		props, PROP_SOURCE,
-		obs_module_text("NDIPlugin.SourceProps.SourceName"),
-		OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
-	uint32_t nbSources = 0;
-	const NDIlib_source_t *sources =
-		ndiLib->find_get_current_sources(ndi_finder, &nbSources);
-	for (uint32_t i = 0; i < nbSources; ++i) {
-		obs_property_list_add_string(source_list, sources[i].p_ndi_name,
-					     sources[i].p_ndi_name);
+	obs_property_t *source_list = obs_properties_add_list(props, PROP_SOURCE,
+							      obs_module_text("NDIPlugin.SourceProps.SourceName"),
+							      OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
+	NDIFinder finder;
+	// Create a callback that is called when the NDI source list is complete
+	auto finder_callback = [source_list, s](void *ndi_names) {
+		auto ndi_sources = (std::vector<std::string> *)ndi_names;
+		for (auto &source : *ndi_sources) {
+			obs_property_list_add_string(source_list, source.c_str(), source.c_str());
+		}
+		obs_source_update_properties(s->obs_source);
+	};
+	auto ndi_sources = finder.getNDISourceList(finder_callback);
+	for (auto &source : ndi_sources) {
+		obs_property_list_add_string(source_list, source.c_str(), source.c_str());
 	}
 
-	obs_property_t *behavior_list = obs_properties_add_list(
-		props, PROP_BEHAVIOR,
-		obs_module_text("NDIPlugin.SourceProps.Behavior"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(
-		behavior_list,
-		obs_module_text("NDIPlugin.SourceProps.Behavior.KeepActive"),
-		PROP_BEHAVIOR_KEEP_ACTIVE);
-	obs_property_list_add_int(
-		behavior_list,
-		obs_module_text(
-			"NDIPlugin.SourceProps.Behavior.StopResumeBlank"),
-		PROP_BEHAVIOR_STOP_RESUME_BLANK);
-	obs_property_list_add_int(
-		behavior_list,
-		obs_module_text(
-			"NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
-		PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+	obs_property_t *behavior_list = obs_properties_add_list(props, PROP_BEHAVIOR,
+								obs_module_text("NDIPlugin.SourceProps.Behavior"),
+								OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.KeepActive"),
+				  PROP_BEHAVIOR_KEEP_ACTIVE);
+	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeBlank"),
+				  PROP_BEHAVIOR_STOP_RESUME_BLANK);
+	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
+				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 
-	obs_property_t *bw_modes = obs_properties_add_list(
-		props, PROP_BANDWIDTH,
-		obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(bw_modes,
-				  obs_module_text("NDIPlugin.BWMode.Highest"),
-				  PROP_BW_HIGHEST);
-	obs_property_list_add_int(bw_modes,
-				  obs_module_text("NDIPlugin.BWMode.Lowest"),
-				  PROP_BW_LOWEST);
-	obs_property_list_add_int(bw_modes,
-				  obs_module_text("NDIPlugin.BWMode.AudioOnly"),
-				  PROP_BW_AUDIO_ONLY);
-	obs_property_set_modified_callback(
-		bw_modes, [](obs_properties_t *props_, obs_property_t *,
-			     obs_data_t *settings_) {
-			bool is_audio_only =
-				(obs_data_get_int(settings_, PROP_BANDWIDTH) ==
-				 PROP_BW_AUDIO_ONLY);
+	obs_property_t *bw_modes = obs_properties_add_list(props, PROP_BANDWIDTH,
+							   obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
+							   OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(bw_modes, obs_module_text("NDIPlugin.BWMode.Highest"), PROP_BW_HIGHEST);
+	obs_property_list_add_int(bw_modes, obs_module_text("NDIPlugin.BWMode.Lowest"), PROP_BW_LOWEST);
+	obs_property_list_add_int(bw_modes, obs_module_text("NDIPlugin.BWMode.AudioOnly"), PROP_BW_AUDIO_ONLY);
+	obs_property_set_modified_callback(bw_modes, [](obs_properties_t *props_, obs_property_t *,
+							obs_data_t *settings_) {
+		bool is_audio_only = (obs_data_get_int(settings_, PROP_BANDWIDTH) == PROP_BW_AUDIO_ONLY);
 
-			obs_property_t *yuv_range =
-				obs_properties_get(props_, PROP_YUV_RANGE);
-			obs_property_t *yuv_colorspace =
-				obs_properties_get(props_, PROP_YUV_COLORSPACE);
+		obs_property_t *yuv_range = obs_properties_get(props_, PROP_YUV_RANGE);
+		obs_property_t *yuv_colorspace = obs_properties_get(props_, PROP_YUV_COLORSPACE);
 
-			obs_property_set_visible(yuv_range, !is_audio_only);
-			obs_property_set_visible(yuv_colorspace,
-						 !is_audio_only);
+		obs_property_set_visible(yuv_range, !is_audio_only);
+		obs_property_set_visible(yuv_colorspace, !is_audio_only);
 
-			return true;
-		});
+		return true;
+	});
 
-	obs_property_t *sync_modes = obs_properties_add_list(
-		props, PROP_SYNC, obs_module_text("NDIPlugin.SourceProps.Sync"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(
-		sync_modes, obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
-		PROP_SYNC_NDI_TIMESTAMP);
-	obs_property_list_add_int(
-		sync_modes,
-		obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
-		PROP_SYNC_NDI_SOURCE_TIMECODE);
+	obs_property_t *sync_modes = obs_properties_add_list(props, PROP_SYNC,
+							     obs_module_text("NDIPlugin.SourceProps.Sync"),
+							     OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(sync_modes, obs_module_text("NDIPlugin.SyncMode.NDITimestamp"),
+				  PROP_SYNC_NDI_TIMESTAMP);
+	obs_property_list_add_int(sync_modes, obs_module_text("NDIPlugin.SyncMode.NDISourceTimecode"),
+				  PROP_SYNC_NDI_SOURCE_TIMECODE);
 
-	obs_properties_add_bool(props, PROP_FRAMESYNC,
-				obs_module_text("NDIPlugin.NDIFrameSync"));
+	obs_properties_add_bool(props, PROP_FRAMESYNC, obs_module_text("NDIPlugin.NDIFrameSync"));
 
-	obs_properties_add_bool(
-		props, PROP_HW_ACCEL,
-		obs_module_text("NDIPlugin.SourceProps.HWAccel"));
+	obs_properties_add_bool(props, PROP_HW_ACCEL, obs_module_text("NDIPlugin.SourceProps.HWAccel"));
 
-	obs_properties_add_bool(
-		props, PROP_FIX_ALPHA,
-		obs_module_text("NDIPlugin.SourceProps.AlphaBlendingFix"));
+	obs_properties_add_bool(props, PROP_FIX_ALPHA, obs_module_text("NDIPlugin.SourceProps.AlphaBlendingFix"));
 
-	obs_property_t *yuv_ranges = obs_properties_add_list(
-		props, PROP_YUV_RANGE,
-		obs_module_text("NDIPlugin.SourceProps.ColorRange"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(
-		yuv_ranges,
-		obs_module_text("NDIPlugin.SourceProps.ColorRange.Partial"),
-		PROP_YUV_RANGE_PARTIAL);
-	obs_property_list_add_int(
-		yuv_ranges,
-		obs_module_text("NDIPlugin.SourceProps.ColorRange.Full"),
-		PROP_YUV_RANGE_FULL);
+	obs_property_t *yuv_ranges = obs_properties_add_list(props, PROP_YUV_RANGE,
+							     obs_module_text("NDIPlugin.SourceProps.ColorRange"),
+							     OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(yuv_ranges, obs_module_text("NDIPlugin.SourceProps.ColorRange.Partial"),
+				  PROP_YUV_RANGE_PARTIAL);
+	obs_property_list_add_int(yuv_ranges, obs_module_text("NDIPlugin.SourceProps.ColorRange.Full"),
+				  PROP_YUV_RANGE_FULL);
 
-	obs_property_t *yuv_spaces = obs_properties_add_list(
-		props, PROP_YUV_COLORSPACE,
-		obs_module_text("NDIPlugin.SourceProps.ColorSpace"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_t *yuv_spaces = obs_properties_add_list(props, PROP_YUV_COLORSPACE,
+							     obs_module_text("NDIPlugin.SourceProps.ColorSpace"),
+							     OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
 
-	obs_property_t *latency_modes = obs_properties_add_list(
-		props, PROP_LATENCY,
-		obs_module_text("NDIPlugin.SourceProps.Latency"),
-		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(
-		latency_modes,
-		obs_module_text("NDIPlugin.SourceProps.Latency.Normal"),
-		PROP_LATENCY_NORMAL);
-	obs_property_list_add_int(
-		latency_modes,
-		obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
-		PROP_LATENCY_LOW);
-	obs_property_list_add_int(
-		latency_modes,
-		obs_module_text("NDIPlugin.SourceProps.Latency.Lowest"),
-		PROP_LATENCY_LOWEST);
+	obs_property_t *latency_modes = obs_properties_add_list(props, PROP_LATENCY,
+								obs_module_text("NDIPlugin.SourceProps.Latency"),
+								OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(latency_modes, obs_module_text("NDIPlugin.SourceProps.Latency.Normal"),
+				  PROP_LATENCY_NORMAL);
+	obs_property_list_add_int(latency_modes, obs_module_text("NDIPlugin.SourceProps.Latency.Low"),
+				  PROP_LATENCY_LOW);
+	obs_property_list_add_int(latency_modes, obs_module_text("NDIPlugin.SourceProps.Latency.Lowest"),
+				  PROP_LATENCY_LOWEST);
 
-	obs_properties_add_bool(props, PROP_AUDIO,
-				obs_module_text("NDIPlugin.SourceProps.Audio"));
+	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
 
 	obs_properties_t *group_ptz = obs_properties_create();
-	obs_properties_add_float_slider(
-		group_ptz, PROP_PAN,
-		obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0, 0.001);
-	obs_properties_add_float_slider(
-		group_ptz, PROP_TILT,
-		obs_module_text("NDIPlugin.SourceProps.Tilt"), -1.0, 1.0,
-		0.001);
-	obs_properties_add_float_slider(
-		group_ptz, PROP_ZOOM,
-		obs_module_text("NDIPlugin.SourceProps.Zoom"), 0.0, 1.0, 0.001);
-	obs_properties_add_group(props, PROP_PTZ,
-				 obs_module_text("NDIPlugin.SourceProps.PTZ"),
-				 OBS_GROUP_CHECKABLE, group_ptz);
+	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
+					0.001);
+	obs_properties_add_float_slider(group_ptz, PROP_TILT, obs_module_text("NDIPlugin.SourceProps.Tilt"), -1.0, 1.0,
+					0.001);
+	obs_properties_add_float_slider(group_ptz, PROP_ZOOM, obs_module_text("NDIPlugin.SourceProps.Zoom"), 0.0, 1.0,
+					0.001);
+	obs_properties_add_group(props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE,
+				 group_ptz);
 
 	auto group_ndi = obs_properties_create();
-	obs_properties_add_button(
-		group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
-		[](obs_properties_t *, obs_property_t *, void *) {
-			QDesktopServices::openUrl(
-				QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
-			return false;
-		});
-	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
-				 group_ndi);
+	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
+				  [](obs_properties_t *, obs_property_t *, void *) {
+					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+					  return false;
+				  });
+	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL, group_ndi);
 
 	obs_log(LOG_DEBUG, "-ndi_source_getproperties(…)");
 
@@ -367,14 +318,10 @@ void ndi_source_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
-	obs_data_set_default_int(settings, PROP_BEHAVIOR,
-				 PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
-	obs_data_set_default_int(settings, PROP_SYNC,
-				 PROP_SYNC_NDI_SOURCE_TIMECODE);
-	obs_data_set_default_int(settings, PROP_YUV_RANGE,
-				 PROP_YUV_RANGE_PARTIAL);
-	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE,
-				 PROP_YUV_SPACE_BT709);
+	obs_data_set_default_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
+	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
+	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
@@ -390,21 +337,17 @@ void deactivate_source_output_video_texture(obs_source_t *obs_source)
 	obs_source_output_video(obs_source, NULL);
 }
 
-void ndi_source_thread_process_audio3(ndi_source_config_t *config,
-				      NDIlib_audio_frame_v3_t *ndi_audio_frame,
-				      obs_source_t *obs_source,
-				      obs_source_audio *obs_audio_frame);
+void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_frame_v3_t *ndi_audio_frame,
+				      obs_source_t *obs_source, obs_source_audio *obs_audio_frame);
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config,
-				      NDIlib_video_frame_v2_t *ndi_video_frame,
-				      obs_source *obs_source,
-				      obs_source_frame *obs_video_frame);
+void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
+				      obs_source *obs_source, obs_source_frame *obs_video_frame);
 
 void *ndi_source_thread(void *data)
 {
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
-	obs_log(LOG_INFO, "'%s' +ndi_source_thread(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' +ndi_source_thread(…)", obs_source_name);
 
 	auto config = Config::Current();
 	ptz_t ptz;
@@ -452,8 +395,7 @@ void *ndi_source_thread(void *data)
 			//
 			// Update recv_desc.source_to_connect_to.p_ndi_name
 			//
-			recv_desc.source_to_connect_to.p_ndi_name =
-				s->config.ndi_source_name;
+			recv_desc.source_to_connect_to.p_ndi_name = s->config.ndi_source_name;
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.source_to_connect_to.p_ndi_name='%s'",
 				obs_source_name, //
@@ -465,20 +407,16 @@ void *ndi_source_thread(void *data)
 			switch (s->config.bandwidth) {
 			case PROP_BW_HIGHEST:
 			default:
-				recv_desc.bandwidth =
-					NDIlib_recv_bandwidth_highest;
+				recv_desc.bandwidth = NDIlib_recv_bandwidth_highest;
 				break;
 			case PROP_BW_LOWEST:
-				recv_desc.bandwidth =
-					NDIlib_recv_bandwidth_lowest;
+				recv_desc.bandwidth = NDIlib_recv_bandwidth_lowest;
 				break;
 			case PROP_BW_AUDIO_ONLY:
-				recv_desc.bandwidth =
-					NDIlib_recv_bandwidth_audio_only;
+				recv_desc.bandwidth = NDIlib_recv_bandwidth_audio_only;
 				break;
 			}
-			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.bandwidth=%d",
+			obs_log(LOG_DEBUG, "'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.bandwidth=%d",
 				obs_source_name, //
 				recv_desc.bandwidth);
 
@@ -486,11 +424,9 @@ void *ndi_source_thread(void *data)
 			// Update recv_desc.latency
 			//
 			if (s->config.latency == PROP_LATENCY_NORMAL)
-				recv_desc.color_format =
-					NDIlib_recv_color_format_UYVY_BGRA;
+				recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
 			else
-				recv_desc.color_format =
-					NDIlib_recv_color_format_fastest;
+				recv_desc.color_format = NDIlib_recv_color_format_fastest;
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.color_format=%d",
 				obs_source_name, //
@@ -500,46 +436,43 @@ void *ndi_source_thread(void *data)
 			// recv_desc is fully populated;
 			// now reset the NDI receiver, destroying any existing ndi_frame_sync or ndi_receiver.
 			//
-			obs_log(LOG_INFO,
-				"'%s' ndi_source_thread: reset_ndi_receiver: Resetting NDI receiver…",
+			obs_log(LOG_DEBUG, "'%s' ndi_source_thread: reset_ndi_receiver: Resetting NDI receiver…",
 				obs_source_name);
 
 			if (ndi_frame_sync) {
-				obs_log(LOG_VERBOSE,
-					"'%s' ndi_source_thread: ndiLib->framesync_destroy(ndi_frame_sync)",
+				obs_log(LOG_DEBUG, "'%s' ndi_source_thread: ndiLib->framesync_destroy(ndi_frame_sync)",
 					obs_source_name);
 				ndiLib->framesync_destroy(ndi_frame_sync);
 				ndi_frame_sync = nullptr;
 			}
 
 			if (ndi_receiver) {
-				obs_log(LOG_VERBOSE,
+				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: reset_ndi_receiver: ndiLib->recv_destroy(ndi_receiver)",
 					obs_source_name);
 				ndiLib->recv_destroy(ndi_receiver);
 				ndi_receiver = nullptr;
 			}
 
-			obs_log(LOG_VERBOSE,
+			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: recv_desc = { p_ndi_recv_name='%s', source_to_connect_to.p_ndi_name='%s' }",
 				obs_source_name, //
-				recv_desc.p_ndi_recv_name,
-				recv_desc.source_to_connect_to.p_ndi_name);
-			obs_log(LOG_VERBOSE,
+				recv_desc.p_ndi_recv_name, recv_desc.source_to_connect_to.p_ndi_name);
+			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: +ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
 				obs_source_name);
 
 			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
 
-			obs_log(LOG_VERBOSE,
+			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
 				obs_source_name);
 			if (!ndi_receiver) {
-				obs_log(LOG_ERROR,
+				obs_log(LOG_ERROR, "ERR-407 - Error creating the NDI Receiver '%s' set for '%s'",
+					recv_desc.source_to_connect_to.p_ndi_name, obs_source_name);
+				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: reset_ndi_receiver: Cannot create ndi_receiver for NDI source '%s'",
-					obs_source_name, //
-					recv_desc.source_to_connect_to
-						.p_ndi_name);
+					obs_source_name, recv_desc.source_to_connect_to.p_ndi_name);
 				break;
 			}
 
@@ -575,34 +508,31 @@ void *ndi_source_thread(void *data)
 				// There is no confirmation that this works as theorized.
 				//
 				NDIlib_metadata_frame_t hwAccelMetadata;
-				hwAccelMetadata.p_data =
-					(char *)"<ndi_video_codec type=\"hardware\"/>";
-				obs_log(LOG_INFO,
-					"'%s' ndi_source_thread: reset_ndi_receiver; Sending NDI metadata '%s'",
-					obs_source_name, //
-					hwAccelMetadata.p_data);
-				ndiLib->recv_send_metadata(ndi_receiver,
-							   &hwAccelMetadata);
+				hwAccelMetadata.p_data = (char *)"<ndi_video_codec type=\"hardware\"/>";
+				obs_log(LOG_DEBUG,
+					"'%s' ndi_source_thread: reset_ndi_receiver; Sending NDI Hardware Acceleration metadata: '%s'",
+					obs_source_name, hwAccelMetadata.p_data);
+				ndiLib->recv_send_metadata(ndi_receiver, &hwAccelMetadata);
 			}
 
 			if (s->config.framesync_enabled) {
 				timestamp_audio = 0;
 				timestamp_video = 0;
-				obs_log(LOG_VERBOSE,
+				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: +ndi_frame_sync = ndiLib->framesync_create(ndi_receiver)",
 					obs_source_name);
-				ndi_frame_sync =
-					ndiLib->framesync_create(ndi_receiver);
-				obs_log(LOG_VERBOSE,
+				ndi_frame_sync = ndiLib->framesync_create(ndi_receiver);
+				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: -ndi_frame_sync = ndiLib->framesync_create(ndi_receiver); ndi_frame_sync=%p",
 					obs_source_name, //
 					ndi_frame_sync);
 				if (!ndi_frame_sync) {
 					obs_log(LOG_ERROR,
+						"ERR-408 - Error creating the NDI Frame Sync for '%s' for '%s'",
+						recv_desc.source_to_connect_to.p_ndi_name, obs_source_name);
+					obs_log(LOG_DEBUG,
 						"'%s' ndi_source_thread: Cannot create ndi_frame_sync for NDI source '%s'",
-						obs_source_name, //
-						recv_desc.source_to_connect_to
-							.p_ndi_name);
+						obs_source_name, recv_desc.source_to_connect_to.p_ndi_name);
 					break;
 				}
 			}
@@ -618,13 +548,12 @@ void *ndi_source_thread(void *data)
 		//
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
 #if 0
-			obs_log(LOG_VERBOSE,
+			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
 				obs_source_name);
 #endif
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
-			std::this_thread::sleep_for(
-				std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
 
@@ -637,17 +566,13 @@ void *ndi_source_thread(void *data)
 			    fabs(s->config.ptz.tilt - ptz.tilt) > tollerance ||
 			    fabs(s->config.ptz.zoom - ptz.zoom) > tollerance) {
 				ptz = s->config.ptz;
-				if (ndiLib->recv_ptz_is_supported(
-					    ndi_receiver)) {
-					obs_log(LOG_INFO,
+				if (ndiLib->recv_ptz_is_supported(ndi_receiver)) {
+					obs_log(LOG_DEBUG,
 						"'%s' ndi_source_thread: ptz changed; Sending PTZ pan=%f, tilt=%f, zoom=%f",
 						obs_source_name, //
 						ptz.pan, ptz.tilt, ptz.zoom);
-					ndiLib->recv_ptz_pan_tilt(ndi_receiver,
-								  ptz.pan,
-								  ptz.tilt);
-					ndiLib->recv_ptz_zoom(ndi_receiver,
-							      ptz.zoom);
+					ndiLib->recv_ptz_pan_tilt(ndi_receiver, ptz.pan, ptz.tilt);
+					ndiLib->recv_ptz_zoom(ndi_receiver, ptz.zoom);
 				}
 			}
 		}
@@ -656,21 +581,20 @@ void *ndi_source_thread(void *data)
 		// Change Tally: Enable/Disable updated from Plugin settings UI
 		//
 #if 0
-		obs_log(LOG_INFO, "'%s' t{pre=%d,pro=%d}",
+		obs_log(LOG_DEBUG, "'%s' t{pre=%d,pro=%d}",
 			obs_source_name, //
 			s->config.tally2.on_preview,
 			s->config.tally2.on_program);
 #endif
-		if ((config->TallyPreviewEnabled &&
-		     s->config.tally.on_preview != tally.on_preview) ||
-		    (config->TallyProgramEnabled &&
-		     s->config.tally.on_program != tally.on_program)) {
+		if ((config->TallyPreviewEnabled && s->config.tally.on_preview != tally.on_preview) ||
+		    (config->TallyProgramEnabled && s->config.tally.on_program != tally.on_program)) {
 			tally.on_preview = s->config.tally.on_preview;
 			tally.on_program = s->config.tally.on_program;
-			obs_log(LOG_INFO,
-				"'%s' ndi_source_thread: tally changed; Sending tally on_preview=%d, on_program=%d",
-				obs_source_name, //
+			obs_log(LOG_INFO, "'%s': Tally status : on_preview=%d, on_program=%d", obs_source_name,
 				tally.on_preview, tally.on_program);
+			obs_log(LOG_DEBUG,
+				"'%s' ndi_source_thread: tally changed; Sending tally on_preview=%d, on_program=%d",
+				obs_source_name, tally.on_preview, tally.on_program);
 			ndiLib->recv_set_tally(ndi_receiver, &tally);
 		}
 
@@ -685,71 +609,50 @@ void *ndi_source_thread(void *data)
 			audio_frame = {};
 			ndiLib->framesync_capture_audio_v2(
 				ndi_frame_sync, &audio_frame,
-				0, // "The desired sample rate. 0 to get the source value."
-				0, // "The desired channel count. 0 to get the source value."
+				0,     // "The desired sample rate. 0 to get the source value."
+				0,     // "The desired channel count. 0 to get the source value."
 				1024); // "The desired sample count. 0 to get the source value."
 			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
-			if (audio_frame.p_data &&
-			    (audio_frame.timestamp > timestamp_audio)) {
+			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 				timestamp_audio = audio_frame.timestamp;
-				obs_log(LOG_VERBOSE,
-					"%s: New Audio Frame (Framesync ON): ts=%d tc=%d",
-					obs_source_name, audio_frame.timestamp,
-					audio_frame.timecode);
-				ndi_source_thread_process_audio3(
-					&s->config, &audio_frame, s->obs_source,
-					&obs_audio_frame);
+				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
+				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
+								 &obs_audio_frame);
 			}
-			ndiLib->framesync_free_audio_v2(ndi_frame_sync,
-							&audio_frame);
+			ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
 
 			//
 			// VIDEO
 			//
 			video_frame = {};
-			ndiLib->framesync_capture_video(
-				ndi_frame_sync, &video_frame,
-				NDIlib_frame_format_type_progressive);
-			if (video_frame.p_data &&
-			    (video_frame.timestamp > timestamp_video)) {
+			ndiLib->framesync_capture_video(ndi_frame_sync, &video_frame,
+							NDIlib_frame_format_type_progressive);
+			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
-				obs_log(LOG_VERBOSE,
-					"%s: New Video Frame (Framesync ON): ts=%d tc=%d",
-					obs_source_name, video_frame.timestamp,
-					video_frame.timecode);
-				ndi_source_thread_process_video2(
-					&s->config, &video_frame, s->obs_source,
-					&obs_video_frame);
+				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
+				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
+								 &obs_video_frame);
 			}
-			ndiLib->framesync_free_video(ndi_frame_sync,
-						     &video_frame);
+			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
 
 			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
-			std::this_thread::sleep_for(
-				std::chrono::milliseconds(5));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		} else {
 			//
 			// !ndi_frame_sync
 			//
-			frame_received = ndiLib->recv_capture_v3(ndi_receiver,
-								 &video_frame,
-								 &audio_frame,
-								 nullptr, 100);
+			frame_received =
+				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
 			if (frame_received == NDIlib_frame_type_audio) {
 				//
 				// AUDIO
 				//
-				obs_log(LOG_VERBOSE,
-					"%s: New Audio Frame (Framesync OFF): ts=%d tc=%d",
-					obs_source_name, audio_frame.timestamp,
-					audio_frame.timecode);
-				ndi_source_thread_process_audio3(
-					&s->config, &audio_frame, s->obs_source,
-					&obs_audio_frame);
+				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
+				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
+								 &obs_audio_frame);
 
-				ndiLib->recv_free_audio_v3(ndi_receiver,
-							   &audio_frame);
+				ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				continue;
 			}
 
@@ -757,16 +660,11 @@ void *ndi_source_thread(void *data)
 				//
 				// VIDEO
 				//
-				obs_log(LOG_VERBOSE,
-					"%s: New Video Frame (Framesync OFF): ts=%d tc=%d",
-					obs_source_name, video_frame.timestamp,
-					video_frame.timecode);
-				ndi_source_thread_process_video2(
-					&s->config, &video_frame, s->obs_source,
-					&obs_video_frame);
+				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
+				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
+								 &obs_video_frame);
 
-				ndiLib->recv_free_video_v2(ndi_receiver,
-							   &video_frame);
+				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
 				continue;
 			}
 		}
@@ -777,59 +675,48 @@ void *ndi_source_thread(void *data)
 
 	if (ndi_frame_sync) {
 		if (ndiLib) {
-			obs_log(LOG_VERBOSE,
+			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: (out of loop) ndiLib->framesync_destroy(ndi_frame_sync)",
 				obs_source_name);
 			ndiLib->framesync_destroy(ndi_frame_sync);
 		}
-		obs_log(LOG_VERBOSE,
-			"'%s' ndi_source_thread: Reset NDI Frame Sync",
-			obs_source_name);
-		ndi_frame_sync = nullptr;
+		ndi_frame_sync = nullptr; // TODO: Investigate if this should be put right after framesync_destroy() ?
+		obs_log(LOG_DEBUG, "'%s' ndi_source_thread: Reset NDI Frame Sync", obs_source_name);
 	}
 
 	if (ndi_receiver) {
 		if (ndiLib) {
-			obs_log(LOG_VERBOSE,
-				"'%s' ndi_source_thread: ndiLib->recv_destroy(ndi_receiver)",
+			obs_log(LOG_DEBUG, "'%s' ndi_source_thread: ndiLib->recv_destroy(ndi_receiver)",
 				obs_source_name);
 			ndiLib->recv_destroy(ndi_receiver);
 		}
-		obs_log(LOG_VERBOSE,
-			"'%s' ndi_source_thread: Reset NDI Receiver",
-			obs_source_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_source_thread: Reset NDI Receiver", obs_source_name);
 		ndi_receiver = nullptr;
 	}
 
-	obs_log(LOG_INFO, "'%s' -ndi_source_thread(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' -ndi_source_thread(…)", obs_source_name);
 
 	return nullptr;
 }
 
-void ndi_source_thread_process_audio3(ndi_source_config_t *config,
-				      NDIlib_audio_frame_v3_t *ndi_audio_frame,
-				      obs_source_t *obs_source,
-				      obs_source_audio *obs_audio_frame)
+void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_frame_v3_t *ndi_audio_frame,
+				      obs_source_t *obs_source, obs_source_audio *obs_audio_frame)
 {
 	if (!config->audio_enabled) {
 		return;
 	}
 
-	const int channelCount = ndi_audio_frame->no_channels > 8
-					 ? 8
-					 : ndi_audio_frame->no_channels;
+	const int channelCount = ndi_audio_frame->no_channels > 8 ? 8 : ndi_audio_frame->no_channels;
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
 	switch (config->sync_mode) {
 	case PROP_SYNC_NDI_TIMESTAMP:
-		obs_audio_frame->timestamp =
-			(uint64_t)(ndi_audio_frame->timestamp * 100);
+		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timestamp * 100);
 		break;
 
 	case PROP_SYNC_NDI_SOURCE_TIMECODE:
-		obs_audio_frame->timestamp =
-			(uint64_t)(ndi_audio_frame->timecode * 100);
+		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100);
 		break;
 	}
 
@@ -838,17 +725,14 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 	obs_audio_frame->frames = ndi_audio_frame->no_samples;
 	for (int i = 0; i < channelCount; ++i) {
 		obs_audio_frame->data[i] =
-			(uint8_t *)ndi_audio_frame->p_data +
-			(i * ndi_audio_frame->channel_stride_in_bytes);
+			(uint8_t *)ndi_audio_frame->p_data + (i * ndi_audio_frame->channel_stride_in_bytes);
 	}
 
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config,
-				      NDIlib_video_frame_v2_t *ndi_video_frame,
-				      obs_source *obs_source,
-				      obs_source_frame *obs_video_frame)
+void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
+				      obs_source *obs_source, obs_source_frame *obs_video_frame)
 {
 	switch (ndi_video_frame->FourCC) {
 	case NDIlib_FourCC_type_BGRA:
@@ -878,21 +762,20 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 		break;
 
 	default:
-		obs_log(LOG_WARNING,
-			"ndi_source_thread_process_video2: warning: unsupported video pixel format: %d",
+		obs_log(LOG_ERROR, "ERR-430 - NDI Source uses an unsupported video pixel format: %d.",
+			ndi_video_frame->FourCC);
+		obs_log(LOG_DEBUG, "ndi_source_thread_process_video2: warning: unsupported video pixel format: %d",
 			ndi_video_frame->FourCC);
 		break;
 	}
 
 	switch (config->sync_mode) {
 	case PROP_SYNC_NDI_TIMESTAMP:
-		obs_video_frame->timestamp =
-			(uint64_t)(ndi_video_frame->timestamp * 100);
+		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timestamp * 100);
 		break;
 
 	case PROP_SYNC_NDI_SOURCE_TIMECODE:
-		obs_video_frame->timestamp =
-			(uint64_t)(ndi_video_frame->timecode * 100);
+		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
 		break;
 	}
 
@@ -901,10 +784,8 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config,
 	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
 
-	video_format_get_parameters(config->yuv_colorspace, config->yuv_range,
-				    obs_video_frame->color_matrix,
-				    obs_video_frame->color_range_min,
-				    obs_video_frame->color_range_max);
+	video_format_get_parameters(config->yuv_colorspace, config->yuv_range, obs_video_frame->color_matrix,
+				    obs_video_frame->color_range_min, obs_video_frame->color_range_max);
 
 	obs_source_output_video(obs_source, obs_video_frame);
 }
@@ -914,8 +795,9 @@ void ndi_source_thread_start(ndi_source_t *s)
 	s->config.reset_ndi_receiver = true;
 	s->running = true;
 	pthread_create(&s->av_thread, nullptr, ndi_source_thread, s);
-	obs_log(LOG_INFO,
-		"'%s' ndi_source_thread_start: Started A/V ndi_source_thread for NDI source '%s'",
+	obs_log(LOG_INFO, "'Started Receiver Thread for OBS source: '%s' and NDI Source Name: %s'",
+		obs_source_get_name(s->obs_source), s->config.ndi_source_name);
+	obs_log(LOG_DEBUG, "'%s' ndi_source_thread_start: Started A/V ndi_source_thread for NDI source '%s'",
 		obs_source_get_name(s->obs_source), s->config.ndi_source_name);
 }
 
@@ -926,8 +808,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 		pthread_join(s->av_thread, NULL);
 		auto obs_source = s->obs_source;
 		auto obs_source_name = obs_source_get_name(obs_source);
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_thread_stop: Stopped A/V ndi_source_thread for NDI source '%s'",
+		obs_log(LOG_DEBUG, "'%s' ndi_source_thread_stop: Stopped A/V ndi_source_thread for NDI source '%s'",
 			obs_source_name, s->config.ndi_source_name);
 	}
 }
@@ -948,21 +829,20 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	auto s = (ndi_source_t *)data;
 	auto obs_source = s->obs_source;
 	auto obs_source_name = obs_source_get_name(obs_source);
-	obs_log(LOG_INFO, "'%s' +ndi_source_update(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' +ndi_source_update(…)", obs_source_name);
 
 	//
 	// reset_ndi_receiver: BEGIN
 	//
 
 	bool reset_ndi_receiver = false;
+	// TODO : Should this ba a if statement and simplify each following check ?
 
 	auto new_ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
-	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name,
-					  new_ndi_source_name) != 0;
-	obs_log(LOG_INFO,
+	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name, new_ndi_source_name) != 0;
+	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'NDI Source Name' changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
-		obs_source_name, new_ndi_source_name,
-		s->config.ndi_source_name);
+		obs_source_name, new_ndi_source_name, s->config.ndi_source_name);
 
 	if (s->config.ndi_source_name != nullptr) {
 		bfree(s->config.ndi_source_name);
@@ -972,32 +852,29 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
-	obs_log(LOG_INFO,
+	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'Bandwidth' setting changes: new_bandwidth='%d' vs config.bandwidth='%d'",
 		obs_source_name, new_bandwidth, s->config.bandwidth);
 	s->config.bandwidth = new_bandwidth;
 
 	auto new_latency = (int)obs_data_get_int(settings, PROP_LATENCY);
 	reset_ndi_receiver |= (s->config.latency != new_latency);
-	obs_log(LOG_INFO,
+	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'Latency' setting changes: new_latency='%d' vs config.latency='%d'",
 		obs_source_name, new_latency, s->config.latency);
 	s->config.latency = new_latency;
 
-	auto new_framesync_enabled =
-		obs_data_get_bool(settings, PROP_FRAMESYNC);
-	reset_ndi_receiver |=
-		(s->config.framesync_enabled != new_framesync_enabled);
-	obs_log(LOG_INFO,
+	auto new_framesync_enabled = obs_data_get_bool(settings, PROP_FRAMESYNC);
+	reset_ndi_receiver |= (s->config.framesync_enabled != new_framesync_enabled);
+	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'Framesync' setting changes: new_framesync_enabled='%s' vs config.framesync_enabled='%s'",
 		obs_source_name, new_framesync_enabled ? "true" : "false",
 		s->config.framesync_enabled ? "true" : "false");
 	s->config.framesync_enabled = new_framesync_enabled;
 
 	auto new_hw_accel_enabled = obs_data_get_bool(settings, PROP_HW_ACCEL);
-	reset_ndi_receiver |=
-		(s->config.hw_accel_enabled != new_hw_accel_enabled);
-	obs_log(LOG_INFO,
+	reset_ndi_receiver |= (s->config.hw_accel_enabled != new_hw_accel_enabled);
+	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'Hardware Acceleration' setting changes: new_hw_accel_enabled='%s' vs config.hw_accel_enabled='%s'",
 		obs_source_name, new_hw_accel_enabled ? "true" : "false",
 		s->config.hw_accel_enabled ? "true" : "false");
@@ -1026,14 +903,14 @@ void ndi_source_update(void *data, obs_data_t *settings)
             },
 #endif
 
-	// Source visibility settings update START
+	// Source visibility settings update: START
 	// In 4.14.x, the "Visibility Behavior" property was used to control the visibility of the source via dropdown and an additional tickbox, creating confusion.
 	// In 6.0.0, the "Visibility Behavior" property was replaced with a single dropdown.
 	// This is a breaking change in v6.0.0 and invalid "Visibility Behavior" are set to "Keep Active" which is the default from previous versions.
 
 	auto behavior = obs_data_get_int(settings, PROP_BEHAVIOR);
 
-	obs_log(LOG_INFO,
+	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'Behavior' setting changes: behavior='%d' vs config.behavior='%d'",
 		obs_source_name, behavior, s->config.behavior);
 
@@ -1051,23 +928,23 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	} else {
 		// Fallback option. If the behavior is invalid, force it to "Keep Active" as it most likely came from the 4.14.x version.
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
-			obs_source_name, behavior);
-		obs_data_set_int(settings, PROP_BEHAVIOR,
-				 PROP_BEHAVIOR_KEEP_ACTIVE);
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
+		obs_log(LOG_WARNING,
+			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%s' forced to '%d'",
+			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
+		obs_data_set_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_KEEP_ACTIVE);
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
 	}
 
 	// Clean the source content when settings change unless requested otherwise.
 	// Always clean if the source is set to Audio Only.
 	// Always clean if the receiver is reset as well.
-	if (s->config.bandwidth == PROP_BW_AUDIO_ONLY ||
-	    s->config.behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK ||
+	if (s->config.bandwidth == PROP_BW_AUDIO_ONLY || s->config.behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK ||
 	    reset_ndi_receiver) {
-		obs_log(LOG_INFO,
+		obs_log(LOG_DEBUG,
 			"'%s' ndi_source_update: Deactivate source output video (Actively reset the frame content)",
-			obs_source_get_name(obs_source));
+			obs_source_name);
 		deactivate_source_output_video_texture(obs_source);
 	}
 
@@ -1080,31 +957,25 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	// to "Source Timing" mode and apply that change to the settings data
 	if (s->config.sync_mode == PROP_SYNC_INTERNAL) {
 		s->config.sync_mode = PROP_SYNC_NDI_SOURCE_TIMECODE;
-		obs_data_set_int(settings, PROP_SYNC,
-				 PROP_SYNC_NDI_SOURCE_TIMECODE);
+		obs_data_set_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
 	}
 
 	bool alpha_filter_enabled = obs_data_get_bool(settings, PROP_FIX_ALPHA);
 	// Prevent duplicate filters by not persisting this value in settings
 	obs_data_set_bool(settings, PROP_FIX_ALPHA, false);
 	if (alpha_filter_enabled) {
-		obs_source_t *existing_filter =
-			find_filter_by_id(obs_source, OBS_NDI_ALPHA_FILTER_ID);
+		obs_source_t *existing_filter = find_filter_by_id(obs_source, OBS_NDI_ALPHA_FILTER_ID);
 		if (!existing_filter) {
 			obs_source_t *new_filter = obs_source_create(
-				OBS_NDI_ALPHA_FILTER_ID,
-				obs_module_text(
-					"NDIPlugin.PremultipliedAlphaFilterName"),
+				OBS_NDI_ALPHA_FILTER_ID, obs_module_text("NDIPlugin.PremultipliedAlphaFilterName"),
 				nullptr, nullptr);
 			obs_source_filter_add(obs_source, new_filter);
 			obs_source_release(new_filter);
 		}
 	}
 
-	s->config.yuv_range = prop_to_range_type(
-		(int)obs_data_get_int(settings, PROP_YUV_RANGE));
-	s->config.yuv_colorspace = prop_to_colorspace(
-		(int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
+	s->config.yuv_range = prop_to_range_type((int)obs_data_get_int(settings, PROP_YUV_RANGE));
+	s->config.yuv_colorspace = prop_to_colorspace((int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
 	// Disable OBS buffering only for "Lowest" latency mode
 	const bool is_unbuffered = (s->config.latency == PROP_LATENCY_LOWEST);
@@ -1121,20 +992,16 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	// Update tally status
 	auto config = Config::Current();
-	s->config.tally.on_preview = config->TallyPreviewEnabled &&
-				     obs_source_showing(obs_source);
-	s->config.tally.on_program = config->TallyProgramEnabled &&
-				     obs_source_active(obs_source);
+	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_showing(obs_source);
+	s->config.tally.on_program = config->TallyProgramEnabled && obs_source_active(obs_source);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
 			obs_source_name);
 		ndi_source_thread_stop(s);
 	} else {
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_update: NDI Source '%s' selected.",
-			obs_source_name, s->config.ndi_source_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: NDI Source '%s' selected.", obs_source_name,
+			s->config.ndi_source_name);
 		if (s->running) {
 			//
 			// Thread is running; notify it if it needs to reset the NDI receiver
@@ -1147,17 +1014,22 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			//    -or-
 			// 2. the behavior property is set to keep the NDI receiver running
 			//
-			if (obs_source_active(obs_source) ||
-			    s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE) {
-				obs_log(LOG_INFO,
-					"'%s' ndi_source_update: Requesting Source Thread Start.",
+			if (obs_source_active(obs_source) || s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE) {
+				obs_log(LOG_DEBUG, "'%s' ndi_source_update: Requesting Source Thread Start.",
 					obs_source_name);
 				ndi_source_thread_start(s);
 			}
 		}
 	}
+	// Provide all the source config when updated
+	obs_log(LOG_INFO,
+		"NDI Source Updated: '%s', 'Bandwidth'='%d', Latency='%d', Framesync='%s', HardwareAcceleration='%s', behavior='%d', sync_mode='%d', yuv_range='%d', yuv_colorspace='%d'",
+		s->config.ndi_source_name, s->config.bandwidth, s->config.latency,
+		s->config.framesync_enabled ? "enabled" : "disabled",
+		s->config.hw_accel_enabled ? "enabled" : "disabled", s->config.behavior, s->config.sync_mode,
+		s->config.yuv_range, s->config.yuv_colorspace);
 
-	obs_log(LOG_INFO, "'%s' -ndi_source_update(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' -ndi_source_update(…)", obs_source_name);
 }
 
 void ndi_source_shown(void *data)
@@ -1165,12 +1037,10 @@ void ndi_source_shown(void *data)
 	// NOTE: This does NOT fire when showing a source in Preview that is also in Program.
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
-	obs_log(LOG_INFO, "'%s' ndi_source_shown(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' ndi_source_shown(…)", obs_source_name);
 	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
 	if (!s->running) {
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_shown: Requesting Source Thread Start.",
-			obs_source_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_source_shown: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
 	}
 }
@@ -1180,12 +1050,10 @@ void ndi_source_hidden(void *data)
 	// NOTE: This does NOT fire when hiding a source in Preview that is also in Program.
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
-	obs_log(LOG_INFO, "'%s' ndi_source_hidden(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' ndi_source_hidden(…)", obs_source_name);
 	s->config.tally.on_preview = false;
 	if (s->running && s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE) {
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_hidden: Requesting Source Thread Stop.",
-			obs_source_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_source_hidden: Requesting Source Thread Stop.", obs_source_name);
 		// Stopping the thread may result in `on_preview=false` not getting sent,
 		// but the thread's `ndiLib->recv_destroy` results in an implicit tally off.
 		ndi_source_thread_stop(s);
@@ -1196,12 +1064,10 @@ void ndi_source_activated(void *data)
 {
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
-	obs_log(LOG_INFO, "'%s' ndi_source_activated(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' ndi_source_activated(…)", obs_source_name);
 	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
 	if (!s->running) {
-		obs_log(LOG_INFO,
-			"'%s' ndi_source_activated: Requesting Source Thread Start.",
-			obs_source_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_source_activated: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
 	}
 }
@@ -1209,21 +1075,18 @@ void ndi_source_activated(void *data)
 void ndi_source_deactivated(void *data)
 {
 	auto s = (ndi_source_t *)data;
-	obs_log(LOG_INFO, "'%s' ndi_source_deactivated(…)",
-		obs_source_get_name(s->obs_source));
+	obs_log(LOG_DEBUG, "'%s' ndi_source_deactivated(…)", obs_source_get_name(s->obs_source));
 	s->config.tally.on_program = false;
 }
 
-void new_ndi_receiver_name(const char *obs_source_name,
-			   char **ndi_receiver_name)
+void new_ndi_receiver_name(const char *obs_source_name, char **ndi_receiver_name)
 {
 	if (*ndi_receiver_name) {
 		bfree(*ndi_receiver_name);
 	}
-	*ndi_receiver_name = bstrdup(QT_TO_UTF8(
-		QString("%1 '%2'").arg(PLUGIN_DISPLAY_NAME, obs_source_name)));
+	*ndi_receiver_name = bstrdup(QT_TO_UTF8(QString("%1 '%2'").arg(PLUGIN_NAME, obs_source_name)));
 #if 0
-	obs_log(LOG_INFO, "'%s' new_ndi_receiver_name: ndi_receiver_name='%s'",
+	obs_log(LOG_DEBUG, "'%s' new_ndi_receiver_name: ndi_receiver_name='%s'",
 		obs_source_name, *ndi_receiver_name);
 #endif
 }
@@ -1234,15 +1097,14 @@ void on_ndi_source_renamed(void *data, calldata_t *)
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
 	s->config.reset_ndi_receiver = true;
-	obs_log(LOG_INFO,
-		"'%s' on_ndi_source_renamed: new ndi_receiver_name='%s'",
-		obs_source_name, s->config.ndi_receiver_name);
+	obs_log(LOG_DEBUG, "'%s' on_ndi_source_renamed: new ndi_receiver_name='%s'", obs_source_name,
+		s->config.ndi_receiver_name);
 }
 
 void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 {
 	auto obs_source_name = obs_source_get_name(obs_source);
-	obs_log(LOG_INFO, "'%s' +ndi_source_create(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' +ndi_source_create(…)", obs_source_name);
 
 	auto s = (ndi_source_t *)bzalloc(sizeof(ndi_source_t));
 	s->obs_source = obs_source;
@@ -1253,7 +1115,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	ndi_source_update(s, settings);
 
-	obs_log(LOG_INFO, "'%s' -ndi_source_create(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
 
 	return s;
 }
@@ -1262,7 +1124,7 @@ void ndi_source_destroy(void *data)
 {
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
-	obs_log(LOG_INFO, "'%s' +ndi_source_destroy(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' +ndi_source_destroy(…)", obs_source_name);
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_disconnect(sh, "rename", on_ndi_source_renamed, s);
@@ -1281,7 +1143,7 @@ void ndi_source_destroy(void *data)
 
 	bfree(s);
 
-	obs_log(LOG_INFO, "'%s' -ndi_source_destroy(…)", obs_source_name);
+	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
 }
 
 obs_source_info create_ndi_source_info()
@@ -1290,9 +1152,7 @@ obs_source_info create_ndi_source_info()
 	obs_source_info ndi_source_info = {};
 	ndi_source_info.id = "ndi_source";
 	ndi_source_info.type = OBS_SOURCE_TYPE_INPUT;
-	ndi_source_info.output_flags = OBS_SOURCE_ASYNC_VIDEO |
-				       OBS_SOURCE_AUDIO |
-				       OBS_SOURCE_DO_NOT_DUPLICATE;
+	ndi_source_info.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE;
 
 	ndi_source_info.get_name = ndi_source_getname;
 	ndi_source_info.get_properties = ndi_source_getproperties;

@@ -41,16 +41,15 @@ bool CalculateFileHash(const char *path, QString &hash)
 {
 	QFile file(path);
 	if (!file.open(QIODevice::ReadOnly)) {
-		obs_log(LOG_WARNING,
-			"CalculateFileHash: Failed to open file: `%s`", path);
+		obs_log(LOG_WARNING, "WARN-421 - Update Check could not open the update file : `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to open file: `%s`", path);
 		return false;
 	}
 
 	QCryptographicHash qhash(QCryptographicHash::Sha256);
 	if (!qhash.addData(&file)) {
-		obs_log(LOG_WARNING,
-			"CalculateFileHash: Failed to read data from file: `%s`",
-			path);
+		obs_log(LOG_WARNING, "WARN-422 - Update Check could not verify the update file: `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to read data from file: `%s`", path);
 		return false;
 	}
 
@@ -86,13 +85,12 @@ QString GetProgramGUID()
 	 * MacOS: ~/Library/Application Support/obs-studio/global.ini
 	 * Windows: %APPDATA%\obs-studio\global.ini
 	 */
-	QString guid =
-		config_get_string(GetAppConfig(), "General", "InstallGUID");
+
+	QString guid = config_get_string(GetGlobalConfig(), "General", "InstallGUID");
 	if (guid.isEmpty()) {
 		GenerateGUID(guid);
 		if (!guid.isEmpty())
-			config_set_string(GetAppConfig(), "General",
-					  "InstallGUID", QT_TO_UTF8(guid));
+			config_set_string(GetGlobalConfig(), "General", "InstallGUID", QT_TO_UTF8(guid));
 	}
 	return guid;
 }

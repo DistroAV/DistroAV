@@ -39,27 +39,31 @@ endif()
 
 target_sources(
   ${CMAKE_PROJECT_NAME}
-  PRIVATE src/forms/output-settings.cpp
-          src/forms/output-settings.h
-          src/forms/update.cpp
-          src/forms/update.h
-          src/obs-support/obs-app.hpp
-          src/obs-support/remote-text.cpp
-          src/obs-support/remote-text.hpp
-          src/obs-support/shared-update.cpp
-          src/obs-support/shared-update.hpp
-          src/config.cpp
-          src/config.h
-          src/main-output.cpp
-          src/main-output.h
-          src/ndi-filter.cpp
-          src/ndi-output.cpp
-          src/ndi-source.cpp
-          src/plugin-main.cpp
-          src/plugin-main.h
-          src/premultiplied-alpha-filter.cpp
-          src/preview-output.cpp
-          src/preview-output.h)
+  PRIVATE
+    src/forms/output-settings.cpp
+    src/forms/output-settings.h
+    src/forms/update.cpp
+    src/forms/update.h
+    src/obs-support/obs-app.hpp
+    src/obs-support/remote-text.cpp
+    src/obs-support/remote-text.hpp
+    src/obs-support/shared-update.cpp
+    src/obs-support/shared-update.hpp
+    src/config.cpp
+    src/config.h
+    src/main-output.cpp
+    src/main-output.h
+    src/ndi-filter.cpp
+    src/ndi-finder.h
+    src/ndi-finder.cpp
+    src/ndi-output.cpp
+    src/ndi-source.cpp
+    src/plugin-main.cpp
+    src/plugin-main.h
+    src/premultiplied-alpha-filter.cpp
+    src/preview-output.cpp
+    src/preview-output.h
+)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

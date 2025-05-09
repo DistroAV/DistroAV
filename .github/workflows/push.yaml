@@ -1,4 +1,4 @@
-name: Push to master
+name: Push
 run-name: ${{ github.ref_name }} push run 🚀
 on:
   push:
@@ -10,13 +10,10 @@ on:
       - '*'
 permissions:
   contents: write
-concurrency:
-  group: '${{ github.workflow }} @ ${{ github.ref }}'
-  cancel-in-progress: ${{ github.ref_type == 'tag' }}
 jobs:
   check-format:
     name: Check Formatting 🔍
-    if: github.ref_name == 'master'
+    if: github.ref_name == 'master' || github.ref_name == 'main'
     uses: ./.github/workflows/check-format.yaml
     permissions:
       contents: read
@@ -31,7 +28,7 @@ jobs:
   create-release:
     name: Create Release 🛫
     if: github.ref_type == 'tag'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-project
     defaults:
       run:
@@ -98,15 +95,15 @@ jobs:
           if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
           shopt -s extglob
 
-          echo "### Checksums" | tee -a ${{ github.workspace }}/CHECKSUMS.txt
+          echo "### Checksums" > ${{ github.workspace }}/CHECKSUMS.txt
           for file in ${{ github.workspace }}/@(*.exe|*.deb|*.ddeb|*.pkg|*.tar.xz|*.zip); do
-            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" | tee -a ${{ github.workspace }}/CHECKSUMS.txt
+            echo "    ${file##*/}: $(sha256sum "${file}" | cut -d " " -f 1)" >> ${{ github.workspace }}/CHECKSUMS.txt
           done
 
       - name: Create Release 🛫
         if: fromJSON(steps.check.outputs.validTag)
         id: create_release
-        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
+        uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
         with:
           draft: true
           prerelease: ${{ fromJSON(steps.check.outputs.prerelease) }}
