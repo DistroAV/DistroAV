@@ -21,6 +21,19 @@
 
 # Exclude macOS legacy resource forks
 .DS_Store
+.ccache.conf
+.Brewfile.lock.json
+.CMakeBuildNumber
+*.code-workspace
+.deps/
+build_macos/
+build_x64/
+certs/
+release/
+scratch/
+.vscode/settings.json
+.vscode/
+
 
 # Exclude CMake build number cache
 /cmake/.CMakeBuildNumber

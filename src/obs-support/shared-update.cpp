@@ -85,11 +85,12 @@ QString GetProgramGUID()
 	 * MacOS: ~/Library/Application Support/obs-studio/global.ini
 	 * Windows: %APPDATA%\obs-studio\global.ini
 	 */
-	QString guid = config_get_string(GetGlobalConfig(), "General", "InstallGUID");
+
+	QString guid = config_get_string(GetAppConfig(), "General", "InstallGUID");
 	if (guid.isEmpty()) {
 		GenerateGUID(guid);
 		if (!guid.isEmpty())
-			config_set_string(GetGlobalConfig(), "General", "InstallGUID", QT_TO_UTF8(guid));
+			config_set_string(GetAppConfig(), "General", "InstallGUID", QT_TO_UTF8(guid));
 	}
 	return guid;
 }

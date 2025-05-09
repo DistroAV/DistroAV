@@ -31,7 +31,7 @@ In some places [nearly] the full code implementation is copied.
 
 inline config_t *GetAppConfig()
 {
-#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time but really depends on the version of OBS used at runtime
+#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time
 	return obs_frontend_get_app_config();
 #else
 	return obs_frontend_get_global_config();
@@ -40,17 +40,7 @@ inline config_t *GetAppConfig()
 
 inline config_t *GetUserConfig()
 {
-#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time but really depends on the version of OBS used at runtime
-	return obs_frontend_get_user_config();
-#else
-	return obs_frontend_get_global_config();
-#endif
-}
-
-// Added for backward compatiblity for pre-OBS 31 codebase
-inline config_t *GetGlobalConfig()
-{
-#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time but really depends on the version of OBS used at runtime
+#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time
 	return obs_frontend_get_user_config();
 #else
 	return obs_frontend_get_global_config();
