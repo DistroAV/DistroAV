@@ -186,13 +186,16 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 		video_frame output_frame;
 		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
-			if (f->video_data) {
-				gs_stagesurface_unmap(f->stagesurface);
-				f->video_data = nullptr;
-			}
+			//if (f->video_data) {
+			//	gs_stagesurface_unmap(f->stagesurface);
+			//	f->video_data = nullptr;
+			//}
 
 			gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
-			gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize);
+			if (f->video_data == NULL) {
+				gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize);
+				gs_stagesurface_unmap(f->stagesurface);
+			};
 
 			uint32_t linesize = output_frame.linesize[0];
 			for (uint32_t i = 0; i < f->known_height; ++i) {
