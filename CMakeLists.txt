@@ -64,6 +64,7 @@ target_sources(
     src/preview-output.cpp
     src/preview-output.h
 )
-configure_file(cmake/windows/resources/installer-Windows.iss.in "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss")
+configure_file(cmake/windows/resources/installer-Windows.iss.in 
+  "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss")
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
