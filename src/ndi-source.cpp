@@ -114,6 +114,9 @@ typedef struct ndi_source_t {
 
 	bool running;
 	pthread_t av_thread;
+
+	uint32_t width;
+	uint32_t height;
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -340,7 +343,7 @@ void deactivate_source_output_video_texture(obs_source_t *obs_source)
 void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_frame_v3_t *ndi_audio_frame,
 				      obs_source_t *obs_source, obs_source_audio *obs_audio_frame);
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
+void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame);
 
 void *ndi_source_thread(void *data)
@@ -630,7 +633,7 @@ void *ndi_source_thread(void *data)
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
+				ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
 								 &obs_video_frame);
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
@@ -661,7 +664,7 @@ void *ndi_source_thread(void *data)
 				// VIDEO
 				//
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
+				ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
 								 &obs_video_frame);
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
@@ -731,9 +734,16 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
+void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame)
 {
+	if (ndi_video_frame->picture_aspect_ratio == -1) {
+		source->width = 0;
+		source->height = 0;
+		obs_source_output_video(obs_source, NULL);
+		return;
+	}
+
 	switch (ndi_video_frame->FourCC) {
 	case NDIlib_FourCC_type_BGRA:
 		obs_video_frame->format = VIDEO_FORMAT_BGRA;
@@ -769,6 +779,8 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		break;
 	}
 
+	auto config = &source->config;
+
 	switch (config->sync_mode) {
 	case PROP_SYNC_NDI_TIMESTAMP:
 		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timestamp * 100);
@@ -778,6 +790,9 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
 		break;
 	}
+
+	source->width = ndi_video_frame->xres;
+	source->height = ndi_video_frame->yres;
 
 	obs_video_frame->width = ndi_video_frame->xres;
 	obs_video_frame->height = ndi_video_frame->yres;
@@ -1146,6 +1161,18 @@ void ndi_source_destroy(void *data)
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
 }
 
+uint32_t ndi_source_get_width(void *data)
+{
+	auto s = (ndi_source_t *)data;
+	return s->width;
+}
+
+uint32_t ndi_source_get_height(void *data)
+{
+	auto s = (ndi_source_t *)data;
+	return s->height;
+}
+
 obs_source_info create_ndi_source_info()
 {
 	// https://docs.obsproject.com/reference-sources#source-definition-structure-obs-source-info
@@ -1165,6 +1192,9 @@ obs_source_info create_ndi_source_info()
 	ndi_source_info.hide = ndi_source_hidden;
 	ndi_source_info.deactivate = ndi_source_deactivated;
 	ndi_source_info.destroy = ndi_source_destroy;
+
+	ndi_source_info.get_width = ndi_source_get_width;
+	ndi_source_info.get_height = ndi_source_get_height;
 
 	return ndi_source_info;
 }
