@@ -50,6 +50,9 @@ typedef struct {
 	video_t *video_output;
 	bool is_audioonly;
 
+	// Used in ndi_filter_raw_video to send empty_frame metadate to NDI
+	bool is_empty_frame;
+
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
 } ndi_filter_t;
@@ -65,6 +68,7 @@ const char *ndi_audiofilter_getname(void *)
 }
 
 void ndi_filter_update(void *data, obs_data_t *settings);
+void send_empty_frame(ndi_filter_t* filter);
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
@@ -111,9 +115,6 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 {
 	auto f = (ndi_filter_t *)data;
 
-	if (!frame || !frame->data[0])
-		return;
-
 	NDIlib_video_frame_v2_t video_frame = {0};
 	video_frame.xres = f->known_width;
 	video_frame.yres = f->known_height;
@@ -125,6 +126,10 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
+
+	if (f->is_empty_frame) {
+		video_frame.p_metadata = "<empty_frame/>";
+	}
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
 	ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
@@ -145,6 +150,19 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 	gs_texrender_reset(f->texrender);
 
+	// If width or height is 0 (when a capture window is closed), then send empty frame
+	f->is_empty_frame = (width == 0) || (height == 0);
+
+	if (f->is_empty_frame) {
+		if (f->known_width != 0 || f->known_height != 0) {
+			send_empty_frame(f);
+
+			f->known_width = 0;
+			f->known_height = 0;
+		}
+		return;
+	}
+
 	if (gs_texrender_begin(f->texrender, width, height)) {
 		vec4 background;
 		vec4_zero(&background);
@@ -161,7 +179,6 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		gs_texrender_end(f->texrender);
 
 		if (f->known_width != width || f->known_height != height) {
-
 			gs_stagesurface_destroy(f->stagesurface);
 			f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
 
@@ -283,6 +300,24 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 	return f;
 }
 
+void send_empty_frame(ndi_filter_t* filter)
+{
+	auto name = obs_source_get_name(filter->obs_source);
+	obs_log(LOG_DEBUG, "+send_empty_frame('%s')", name);
+
+	// Create an empty frame using the last known width and height
+	video_data empty_frame = {};
+	empty_frame.linesize[0] = filter->known_width * 4;
+	empty_frame.data[0] = (uint8_t *)bzalloc(filter->known_height * empty_frame.linesize[0]);
+
+	filter->is_empty_frame = true;
+	ndi_filter_raw_video(filter, &empty_frame);
+
+	free(empty_frame.data[0]);
+
+	obs_log(LOG_DEBUG, "-send_empty_frame('%s')", name);
+}
+
 void ndi_filter_destroy(void *data)
 {
 	auto f = (ndi_filter_t *)data;
@@ -291,6 +326,8 @@ void ndi_filter_destroy(void *data)
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
+
+	send_empty_frame(f);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
