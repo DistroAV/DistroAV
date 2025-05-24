@@ -313,7 +313,7 @@ void send_empty_frame(ndi_filter_t* filter)
 	filter->is_empty_frame = true;
 	ndi_filter_raw_video(filter, &empty_frame);
 
-	free(empty_frame.data[0]);
+	bfree(empty_frame.data[0]);
 
 	obs_log(LOG_DEBUG, "-send_empty_frame('%s')", name);
 }
