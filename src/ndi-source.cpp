@@ -737,7 +737,7 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame)
 {
-	if (ndi_video_frame->picture_aspect_ratio == -1) {
+	if (ndi_video_frame->p_metadata && strcmp(ndi_video_frame->p_metadata, "<empty_frame/>") == 0) {
 		source->width = 0;
 		source->height = 0;
 		obs_source_output_video(obs_source, NULL);

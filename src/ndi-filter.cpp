@@ -55,7 +55,7 @@ typedef struct {
 	This is because gs_texrender_begin will not proceed if width or height are 0.
 	That's why we have to set a custom variable so it can properly format an empty frame.
 	*/
-	bool is_zero_width_height;
+	bool is_empty_frame;
 
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
@@ -131,8 +131,8 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 
-	if (f->is_zero_width_height) {
-		video_frame.picture_aspect_ratio = -1;
+	if (f->is_empty_frame) {
+		video_frame.p_metadata = "<empty_frame/>";
 	}
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
@@ -152,12 +152,12 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 	uint32_t width = obs_source_get_base_width(target);
 	uint32_t height = obs_source_get_base_height(target);
 
-	f->is_zero_width_height = width == 0 || height == 0;
-
 	gs_texrender_reset(f->texrender);
 
-	if (f->is_zero_width_height) {
-		if (f->known_width != 0 && f->known_height != 0) {
+	f->is_empty_frame = width == 0 || height == 0;
+
+	if (f->is_empty_frame) {
+		if (f->known_width != 0 || f->known_height != 0) {
 			send_empty_frame(f);
 
 			f->known_width = 0;
@@ -305,11 +305,12 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 
 void send_empty_frame(ndi_filter_t* filter)
 {
+	// Create an empty frame using the last known width and height
 	video_data empty_frame = {};
 	empty_frame.linesize[0] = filter->known_width * 4;
 	empty_frame.data[0] = (uint8_t *)calloc(filter->known_height, empty_frame.linesize[0]);
 
-	filter->is_zero_width_height = true;
+	filter->is_empty_frame = true;
 	ndi_filter_raw_video(filter, &empty_frame);
 
 	free(empty_frame.data[0]);
