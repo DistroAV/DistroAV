@@ -50,11 +50,7 @@ typedef struct {
 	video_t *video_output;
 	bool is_audioonly;
 
-	/*
-	When closing a Window or Game Capture it will not send a "clear frame" over.
-	This is because gs_texrender_begin will not proceed if width or height are 0.
-	That's why we have to set a custom variable so it can properly format an empty frame.
-	*/
+	// Used in ndi_filter_raw_video to send empty_frame metadate to NDI
 	bool is_empty_frame;
 
 	uint8_t *audio_conv_buffer;
@@ -154,7 +150,8 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 	gs_texrender_reset(f->texrender);
 
-	f->is_empty_frame = width == 0 || height == 0;
+	// If width or height is 0 (when a capture window is closed), then send empty frame
+	f->is_empty_frame = (width == 0) || (height == 0);
 
 	if (f->is_empty_frame) {
 		if (f->known_width != 0 || f->known_height != 0) {
@@ -305,15 +302,20 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 
 void send_empty_frame(ndi_filter_t* filter)
 {
+	auto name = obs_source_get_name(filter->obs_source);
+	obs_log(LOG_DEBUG, "+send_empty_frame('%s')", name);
+
 	// Create an empty frame using the last known width and height
 	video_data empty_frame = {};
 	empty_frame.linesize[0] = filter->known_width * 4;
-	empty_frame.data[0] = (uint8_t *)calloc(filter->known_height, empty_frame.linesize[0]);
+	empty_frame.data[0] = (uint8_t *)bzalloc(filter->known_height * empty_frame.linesize[0]);
 
 	filter->is_empty_frame = true;
 	ndi_filter_raw_video(filter, &empty_frame);
 
 	free(empty_frame.data[0]);
+
+	obs_log(LOG_DEBUG, "-send_empty_frame('%s')", name);
 }
 
 void ndi_filter_destroy(void *data)
@@ -325,7 +327,6 @@ void ndi_filter_destroy(void *data)
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
 
-	// Send empty frame
 	send_empty_frame(f);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
