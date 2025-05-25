@@ -154,7 +154,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 	// Additionally, check if the filter is enabled - if it's not, treat it as an empty frame, too
 	bool is_empty_frame = (width == 0) || (height == 0) || !obs_source_enabled(f->obs_source);
 
-	// If this new frame is empty and the previous one wasn'T
+	// If this new frame is empty and the previous one wasn't
 	if (is_empty_frame) {
 		if (!f->is_empty_frame) {
 			send_empty_frame(f);
