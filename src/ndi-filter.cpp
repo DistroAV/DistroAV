@@ -131,11 +131,11 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
-void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
+void ndi_filter_offscreen_render(void *data)
 {
 	auto f = (ndi_filter_t *)data;
 
-	obs_source_t *target = obs_filter_get_parent(f->obs_source);
+	obs_source_t *target = obs_filter_get_target(f->obs_source);
 	if (!target) {
 		return;
 	}
@@ -155,7 +155,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		gs_blend_state_push();
 		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-		obs_source_video_render(target);
+		obs_source_skip_video_filter(f->obs_source);
 
 		gs_blend_state_pop();
 		gs_texrender_end(f->texrender);
@@ -213,7 +213,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	auto name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
+	obs_remove_main_rendered_callback(ndi_filter_offscreen_render, f);
 
 	NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
@@ -234,7 +234,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 	if (!f->is_audioonly) {
 		pthread_mutex_unlock(&f->ndi_sender_video_mutex);
-		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
+		obs_add_main_rendered_callback(ndi_filter_offscreen_render, f);
 	}
 
 	obs_log(LOG_INFO, "NDI Filter Updated: '%s'", name);
@@ -289,7 +289,7 @@ void ndi_filter_destroy(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
+	obs_remove_main_rendered_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
