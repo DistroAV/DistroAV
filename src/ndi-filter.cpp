@@ -68,7 +68,7 @@ const char *ndi_audiofilter_getname(void *)
 }
 
 void ndi_filter_update(void *data, obs_data_t *settings);
-void send_empty_frame(ndi_filter_t* filter);
+void send_empty_frame(ndi_filter_t *filter);
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
@@ -151,17 +151,18 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 	gs_texrender_reset(f->texrender);
 
 	// If width or height is 0 (when a capture window is closed), then send empty frame
-	f->is_empty_frame = (width == 0) || (height == 0);
+	// Additionally, check if the filter is enabled - if it's not, treat it as an empty frame, too
+	bool is_empty_frame = (width == 0) || (height == 0) || !obs_source_enabled(f->obs_source);
 
-	if (f->is_empty_frame) {
-		if (f->known_width != 0 || f->known_height != 0) {
+	// If this new frame is empty and the previous one wasn'T
+	if (is_empty_frame) {
+		if (!f->is_empty_frame) {
 			send_empty_frame(f);
-
-			f->known_width = 0;
-			f->known_height = 0;
 		}
 		return;
 	}
+
+	f->is_empty_frame = false;
 
 	if (gs_texrender_begin(f->texrender, width, height)) {
 		vec4 background;
@@ -300,12 +301,16 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 	return f;
 }
 
-void send_empty_frame(ndi_filter_t* filter)
+void send_empty_frame(ndi_filter_t *filter)
 {
 	auto name = obs_source_get_name(filter->obs_source);
 	obs_log(LOG_DEBUG, "+send_empty_frame('%s')", name);
 
-	// Create an empty frame using the last known width and height
+	// Ensure a minimum of 2x2 for the empty frame. NDI doesn't seem to like 1x1
+	filter->known_width = 2;
+	filter->known_height = 2;
+
+	// Create an empty frame using the last known width and height (with 1x1 as fallback)
 	video_data empty_frame = {};
 	empty_frame.linesize[0] = filter->known_width * 4;
 	empty_frame.data[0] = (uint8_t *)bzalloc(filter->known_height * empty_frame.linesize[0]);
