@@ -633,8 +633,7 @@ void *ndi_source_thread(void *data)
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
-								 &obs_video_frame);
+				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
 
@@ -664,8 +663,7 @@ void *ndi_source_thread(void *data)
 				// VIDEO
 				//
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
-								 &obs_video_frame);
+				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
 				continue;
