@@ -6,6 +6,7 @@
 !/build-aux
 !/cmake
 !/data
+!/assets
 !/src
 !.clang-format
 !.gersemirc
@@ -33,7 +34,6 @@ release/
 scratch/
 .vscode/settings.json
 .vscode/
-
 
 # Exclude CMake build number cache
 /cmake/.CMakeBuildNumber
