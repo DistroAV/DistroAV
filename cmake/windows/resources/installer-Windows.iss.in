@@ -52,8 +52,8 @@ Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=out action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
 
 [Code]
-; Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
-; CAREFUL : this target the old AppID.
+// ; Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
+// ; CAREFUL : this target the old AppID.
 const UninstallRegisteryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
 const UninstallRegisteryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
 
