@@ -23,6 +23,7 @@ OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Windows-Installer
 Compression=lzma
 SolidCompression=yes
 DirExistsWarning=no
+RestartIfNeededByRun=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
