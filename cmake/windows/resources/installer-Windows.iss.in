@@ -42,8 +42,8 @@ Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 [Code]
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
 // CAREFUL : this target the old AppID.
-const UninstallRegisteryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
-const UninstallRegisteryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
+const UninstallRegistryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+const UninstallRegistryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
 
 function GetOldAppUninstallerPath(Param: String): String;
 var
@@ -52,17 +52,17 @@ var
 begin
   Result := '';
 // Check primary registry location version 4.11+
-  if ( RegQueryStringValue(HKLM, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
       Result := RemoveQuotes(UninstallerPathRegistry)
 // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
       Result := RemoveQuotes(UninstallerPathRegistry)
 
 // Check primary registry location version 4.10
-  else if ( RegQueryStringValue(HKLM, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+  else if ( RegQueryStringValue(HKLM, UninstallRegistryKey410, 'UninstallString', UninstallerPathRegistry) ) then
       Result := RemoveQuotes(UninstallerPathRegistry)
 // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey410, 'UninstallString', UninstallerPathRegistry) ) then
       Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
@@ -99,9 +99,9 @@ end;
 
 // Helper script to find the OBS installation path
 // credit where it's due :
-// following function come from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
+// following function comes from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
 // This is deprecated as it is not super reliable if portable install are used. Replace with a more reliable method in the future.
-function GetOBSDirName(Value: string): string;
+function GetOBSDirName(Value: String): String;
 var
   InstallPath: String;
 begin
@@ -128,7 +128,7 @@ begin
         begin
           Log('Uninstalling old OBS-NDI plugin...');
           // Uninstall OBS-NDI (former plugin name)
-          // This trigger the uninstall process of the old obs-ndi after installation of DistroAV but before the final dialog
+          // This triggers the uninstall process of the old obs-ndi after installation of DistroAV but before the final dialog
           Exec(ExpandConstant('{code:GetOldAppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
           Log('Uninstall OBS-NDI return code: ' + IntToStr(ResultCode));
         end;
