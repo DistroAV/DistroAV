@@ -133,8 +133,9 @@ begin
           Log('Uninstall OBS-NDI return code: ' + IntToStr(ResultCode));
         end
       else
-        Log('No old OBS-NDI uninstaller found, skipping uninstallation.');
-      end;
+        begin
+          Log('No old OBS-NDI uninstaller found, skipping uninstallation.');
+        end;
 
       // Remove previous obs-ndi plugin folders & files (the hard-way)
       if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'), True, True, True) ) then
