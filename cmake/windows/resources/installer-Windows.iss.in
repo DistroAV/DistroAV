@@ -56,9 +56,9 @@ begin
   begin
     // Remove old OBS-NDI
     // Remove previous obs-ndi plugin folers & files (the hard-way)
-    if ( DelTree('{code:GetOBSDirName}\data\obs-plugins\obs-ndi', True, True, True) ) then
+    if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'), True, True, True) ) then
       Log('Removed old obs-ndi plugin folder: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'));
-    if ( DelTree('{code:GetOBSDirName}\data\obs-plugins\obs-ndi*', False, True, True) ) then
+    if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi*'), False, True, True) ) then
       Log('Removed old obs-ndi plugin files: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi*'));
 
     // Allow DistroAV & OBS in windows firewall
@@ -121,12 +121,12 @@ begin
   // Add rule if missing
   else if Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" group="' + FirewallRuleGroup + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
       begin
-        Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+        Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
         Result := True;
       end;
     else
       begin
-        Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed.');
+        Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed.');
         Result := False;
       end;
 end;
