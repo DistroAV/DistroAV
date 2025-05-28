@@ -132,9 +132,9 @@ begin
           Exec(ExpandConstant('{code:GetOldAppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
           Log('Uninstall OBS-NDI return code: ' + IntToStr(ResultCode));
         end
-      else begin
+      else
         Log('No old OBS-NDI uninstaller found, skipping uninstallation.');
-      end
+      end;
 
       // Remove previous obs-ndi plugin folders & files (the hard-way)
       if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'), True, True, True) ) then
