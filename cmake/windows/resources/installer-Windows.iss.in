@@ -51,9 +51,8 @@ Filename: "{code:GetOldAppUninstallerPath}"; Parameters: "/VERYSILENT /NORESTART
 ; Unblock OBS from the firewall so DistroAV will work out-of-the-box
 ; Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS - DistroAV"" group=""Audio-Video Tools"" dir=in action=allow program=""{code:GetOBSDirName}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
 ; Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS - DistroAV"" group=""Audio-Video Tools"" dir=out action=allow program=""{code:GetOBSDirName}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
-Filename: "{code:ConfigureFirewallRules}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV"
-
-
+Filename: "{code:SetFirewallRules('out')}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV Outbound"
+Filename: "{code:SetFirewallRules('in')}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV Inbound"
 
 [Code]
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
@@ -95,46 +94,29 @@ const FirewallRuleName = 'OBS - DistroAV';
 const FirewallRuleGroup = 'Audio-Video Tools';
 const FirewallRulesDescription = 'Rules added by DistroAV installer for ease of use.';
 
-function ConfigureFirewallRules(Value: string): Boolean;
+function SetFirewallRules(Direction: string): Boolean;
 var
   ResultCode: Integer;
 begin
-  ResultCode := '';
-  // Inbound Rule
+  ResultCode := 0;
   // Update firewall rule if exist
-  if Exec('netsh', 'advfirewall firewall set rule name="' + FirewallRuleName + '" new group="' + FirewallRuleGroup + '" dir=in action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
+  if Exec('netsh', 'advfirewall firewall set rule name="' + FirewallRuleName + '" new group="' + FirewallRuleGroup + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
     begin
-      Log('Update Firewall Inbound Rule ' + FirewallRuleName + ': Successfull.');
+      Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+      Result := True;
     end
-  else begin
-    // Add rule if missing
-    if Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" group="' + FirewallRuleGroup + '" dir=in action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
+  // Add rule if missing
+  else if Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" group="' + FirewallRuleGroup + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
       begin
-        Log('Add Firewall Inbound Rule ' + FirewallRuleName + ': Successfull.');
+        Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+        Result := True;
       end
-    else begin
-        Log('Add Firewall Inbound Rule ' + FirewallRuleName + ': Failed - Please allow manually. Error: "' +  SysErrorMessage(ResultCode) +'"');
-    end
-  end
-
-  // Outbound Rule
-  // Update firewall rule if exist
-  if Exec('netsh', 'advfirewall firewall set rule name="' + FirewallRuleName + '" new group="' + FirewallRuleGroup + '" dir=out action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
-    begin
-      Log('Update Firewall Outbound Rule ' + FirewallRuleName + ': Successfull.');
-    end
-  else begin
-    // Add rule if missing
-    if Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" group="' + FirewallRuleGroup + '" dir=out action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then 
+    else
       begin
-        Log('Add Firewall Outbound Rule ' + FirewallRuleName + ': Successfull.');
+        Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed.');
+        Result := False;
       end
-    else begin
-        Log('Add Firewall Outbound Rule ' + FirewallRuleName + ': Failed - Please allow manually. Error: "' +  SysErrorMessage(ResultCode) +'"');
-    end
-  end
 end;
-
 
 // Helper script to find the OBS installation path
 // credit where it's due :
