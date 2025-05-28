@@ -51,8 +51,8 @@ Filename: "{code:GetOldAppUninstallerPath}"; Parameters: "/VERYSILENT /NORESTART
 ; Unblock OBS from the firewall so DistroAV will work out-of-the-box
 ; Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS - DistroAV"" group=""Audio-Video Tools"" dir=in action=allow program=""{code:GetOBSDirName}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
 ; Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS - DistroAV"" group=""Audio-Video Tools"" dir=out action=allow program=""{code:GetOBSDirName}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
-Filename: "{code:SetFirewallRules('out')}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV Outbound"
-Filename: "{code:SetFirewallRules('in')}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV Inbound"
+Filename: "{code:SetFirewallRules|out}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV Outbound"
+Filename: "{code:SetFirewallRules|in}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Create or update Windows Firewall Rules to allow DistroAV Inbound"
 
 [Code]
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
@@ -94,7 +94,7 @@ const FirewallRuleName = 'OBS - DistroAV';
 const FirewallRuleGroup = 'Audio-Video Tools';
 const FirewallRulesDescription = 'Rules added by DistroAV installer for ease of use.';
 
-function SetFirewallRules(Direction: string): Boolean;
+function SetFirewallRules(Direction: String): Boolean;
 var
   ResultCode: Integer;
 begin
@@ -124,7 +124,7 @@ end;
 // This is deprecated as not super reliable if portable install are used. No better way so far.
 function GetOBSDirName(Value: string): string;
 var
-  InstallPath: string;
+  InstallPath: String;
 begin
   // initialize default path, which will be returned when the following registry
   // key queries fail due to missing keys or for some different reason
