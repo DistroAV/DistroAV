@@ -33,7 +33,7 @@ Name: RemoveOBSNDI; Description: "Remove OBS-NDI plugin"; GroupDescription: "Cle
 Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall"; GroupDescription: "Post-Install Actions";
 
 [Files]
-Source: "..\release\Package\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\release\Package\{#MyProjectName}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 ; NOTE: Do not use "Flags: ignoreversion" on any shared system files
 
 [Icons]
