@@ -81,18 +81,24 @@ begin
   // Update firewall rule if exist
   if ( Exec('netsh', 'advfirewall firewall set rule name="' + FirewallRuleName + '" new group="' + FirewallRuleGroup + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) ) then 
     begin
-      Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
-      Result := True;
+     if ( ResultCode = 0 ) then
+     begin
+        Log('Update Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+        Result := True;
+     end
     end
   // Add rule if missing
   else if ( Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" group="' + FirewallRuleGroup + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) ) then 
     begin
-      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
-      Result := True;
+      if ( ResultCode = 0 ) then
+      begin
+        Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+        Result := True;
+      end
     end
   else
     begin
-      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed.');
+      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed. Error: ' + IntToStr(ResultCode) + '');
       Result := False;
     end;
 end;
