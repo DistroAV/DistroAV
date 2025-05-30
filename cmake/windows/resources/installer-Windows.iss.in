@@ -145,8 +145,9 @@ begin
       // Remove previous obs-ndi plugin folders & files (the hard-way)
       if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'), True, True, True) ) then
         Log('Removed old obs-ndi plugin folder: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'));
-      if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi*'), False, True, True) ) then
-        Log('Removed old obs-ndi plugin files: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi*'));
+      if ( DelTree(ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'), False, True, True) ) then
+      Log('Removed old obs-ndi plugin files: ' + ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'));
+
     end;
 
     // Allow DistroAV & OBS in Windows Firewall
