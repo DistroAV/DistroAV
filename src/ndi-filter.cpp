@@ -307,8 +307,8 @@ void send_empty_frame(ndi_filter_t *filter)
 	obs_log(LOG_DEBUG, "+send_empty_frame('%s')", name);
 
 	// Ensure a minimum of 2x2 for the empty frame. NDI doesn't seem to like 1x1
-	filter->known_width = 2;
-	filter->known_height = 2;
+	filter->known_width = filter->known_width > 1 ? filter->known_width : 2;
+	filter->known_height = filter->known_height > 1 ? filter->known_height : 2;
 
 	// Create an empty frame using the last known width and height (with 1x1 as fallback)
 	video_data empty_frame = {};
