@@ -70,7 +70,6 @@ end;
 // Add or Update the firewall rules to allow DistroAV & OBS
 // Log entries are visible only when using /LOG
 const FirewallRuleName = 'OBS - DistroAV';
-const FirewallRuleGroup = 'Audio-Video Tools';
 const FirewallRulesDescription = 'Rules added by DistroAV installer for ease of use.';
 
 function SetFirewallRules(Direction: String): Boolean;
