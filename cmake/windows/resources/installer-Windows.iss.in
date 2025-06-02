@@ -30,7 +30,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: RemoveOBSNDI; Description: "Remove OBS-NDI plugin"; GroupDescription: "Clean-up";
-Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall"; GroupDescription: "Post-Install Actions";
+Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall (requires admin privileges)"; GroupDescription: "Post-Install Actions";
 
 [Files]
 Source: "..\release\Package\{#MyProjectName}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
@@ -70,7 +70,6 @@ end;
 // Add or Update the firewall rules to allow DistroAV & OBS
 // Log entries are visible only when using /LOG
 const FirewallRuleName = 'OBS - DistroAV';
-const FirewallRuleGroup = 'Audio-Video Tools';
 const FirewallRulesDescription = 'Rules added by DistroAV installer for ease of use.';
 
 function SetFirewallRules(Direction: String): Boolean;
@@ -82,14 +81,14 @@ begin
   Exec('netsh', 'advfirewall firewall delete rule name="' + FirewallRuleName + '" dir=' + Direction, '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   // Add firewall rule
   Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
-  if ( ResultCode = 1 ) then
+  if ( ResultCode = 0 ) then
     begin
       Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
       Result := True;
     end
   else
     begin
-      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed. Code returned: ' + IntToStr(ResultCode) + '');
+      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed. Code returned: ' + IntToStr(ResultCode) + ' - ' + SysErrorMessage(ResultCode) + '');
       Result := False;
     end;
 end;
@@ -97,7 +96,7 @@ end;
 // Helper script to find the OBS installation path
 // credit where it's due :
 // following function comes from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
-// This is deprecated as it is not super reliable if portable install are used. Replace with a more reliable method in the future.
+// This is deprecated as it is not super reliable if portable installs are used. Replace with a more reliable method in the future.
 function GetOBSDirName(Value: String): String;
 var
   InstallPath: String;
@@ -138,8 +137,7 @@ begin
       if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'), True, True, True) ) then
         Log('Removed old obs-ndi plugin folder: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'));
       if ( DelTree(ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'), False, True, True) ) then
-      Log('Removed old obs-ndi plugin files: ' + ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'));
-
+        Log('Removed old obs-ndi plugin files (if found): ' + ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'));
     end;
 
     // Allow DistroAV & OBS in Windows Firewall
