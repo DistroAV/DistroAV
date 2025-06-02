@@ -77,21 +77,19 @@ function SetFirewallRules(Direction: String): Boolean;
 var
   ResultCode: Integer;
 begin
-  ResultCode := 0;
   // Delete rule if it exists
-  Exec('netsh', 'advfirewall firewall delete rule name="' + FirewallRuleName + '" dir=' + Direction, '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  if ( Exec('netsh', 'advfirewall firewall delete rule name="' + FirewallRuleName + '" dir=' + Direction, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) ) then
+    Log('Removed Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
   // Add firewall rule
-  Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
-  if ( ResultCode = 0 ) then
-    begin
-      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
-      Result := True;
-    end
-  else
-    begin
-      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed. Code returned: ' + IntToStr(ResultCode) + '');
-      Result := False;
-    end;
+  if ( Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) ) then
+  begin
+    Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+    Result := True;
+  end
+  else begin
+    Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed. Code returned: ' + SysErrorMessage(ResultCode) + '');
+    Result := False;
+  end;
 end;
 
 // Helper script to find the OBS installation path
