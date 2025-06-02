@@ -65,7 +65,6 @@ const char *ndi_audiofilter_getname(void *)
 }
 
 void ndi_filter_update(void *data, obs_data_t *settings);
-void send_empty_frame(ndi_filter_t *filter);
 void destroy_ndi_sender(ndi_filter_t *filter);
 void destroy_and_create_ndi_sender(ndi_filter_t *filter, obs_data_t *settings);
 
@@ -151,9 +150,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 	if (is_empty_frame) {
 		// If this frame is empty and the sender is not null
-		if (f->ndi_sender) {
-			destroy_ndi_sender(f);
-		}
+		destroy_ndi_sender(f);
 		return;
 	} else if (!f->ndi_sender) {
 		// If the sender is null then recreate it
@@ -222,7 +219,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 void destroy_ndi_sender(ndi_filter_t *filter)
 {
-	if (!filter) {
+	if (!filter || !filter->ndi_sender) {
 		return;
 	}
 
@@ -335,27 +332,6 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 	return f;
 }
 
-void send_empty_frame(ndi_filter_t *filter)
-{
-	auto name = obs_source_get_name(filter->obs_source);
-	obs_log(LOG_DEBUG, "+send_empty_frame('%s')", name);
-
-	// Ensure a minimum of 2x2 for the empty frame. NDI doesn't seem to like 1x1
-	filter->known_width = filter->known_width > 1 ? filter->known_width : 2;
-	filter->known_height = filter->known_height > 1 ? filter->known_height : 2;
-
-	// Create an empty frame using the last known width and height (with 1x1 as fallback)
-	video_data empty_frame = {};
-	empty_frame.linesize[0] = filter->known_width * 4;
-	empty_frame.data[0] = (uint8_t *)bzalloc(filter->known_height * empty_frame.linesize[0]);
-
-	ndi_filter_raw_video(filter, &empty_frame);
-
-	bfree(empty_frame.data[0]);
-
-	obs_log(LOG_DEBUG, "-send_empty_frame('%s')", name);
-}
-
 void ndi_filter_destroy(void *data)
 {
 	auto f = (ndi_filter_t *)data;
@@ -364,8 +340,6 @@ void ndi_filter_destroy(void *data)
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
-
-	send_empty_frame(f);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
