@@ -118,7 +118,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     // Clean-up old OBS-NDI plugin
-    if ( IsTaskSelected('RemoveOBSNDI') ) then
+    if ( WizardIsTaskSelected('RemoveOBSNDI') ) then
     begin
       if (GetOldAppUninstallerPath('') <> '') then
         begin
@@ -141,7 +141,7 @@ begin
     end;
 
     // Allow DistroAV & OBS in Windows Firewall
-    if ( IsTaskSelected('AddFirewallEntry') ) then
+    if ( WizardIsTaskSelected('AddFirewallEntry') ) then
       begin
         SetFirewallRules('out');
         SetFirewallRules('in');
