@@ -65,6 +65,8 @@ const char *ndi_audiofilter_getname(void *)
 }
 
 void ndi_filter_update(void *data, obs_data_t *settings);
+void destroy_ndi_sender(ndi_filter_t *filter);
+void destroy_and_create_ndi_sender(ndi_filter_t *filter, obs_data_t *settings);
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
@@ -111,9 +113,6 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 {
 	auto f = (ndi_filter_t *)data;
 
-	if (!frame || !frame->data[0])
-		return;
-
 	NDIlib_video_frame_v2_t video_frame = {0};
 	video_frame.xres = f->known_width;
 	video_frame.yres = f->known_height;
@@ -145,6 +144,19 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 	gs_texrender_reset(f->texrender);
 
+	// If width or height is 0 (when a capture window is closed), then send empty frame
+	// Additionally, check if the filter is enabled - if it's not, treat it as an empty frame, too
+	bool is_empty_frame = (width == 0) || (height == 0) || !obs_source_enabled(f->obs_source);
+
+	if (is_empty_frame) {
+		// If this frame is empty and the sender is not null
+		destroy_ndi_sender(f);
+		return;
+	} else if (!f->ndi_sender) {
+		// If the sender is null then recreate it
+		destroy_and_create_ndi_sender(f, nullptr);
+	}
+
 	if (gs_texrender_begin(f->texrender, width, height)) {
 		vec4 background;
 		vec4_zero(&background);
@@ -161,7 +173,6 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		gs_texrender_end(f->texrender);
 
 		if (f->known_width != width || f->known_height != height) {
-
 			gs_stagesurface_destroy(f->stagesurface);
 			f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
 
@@ -206,14 +217,35 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 	}
 }
 
-void ndi_filter_update(void *data, obs_data_t *settings)
+void destroy_ndi_sender(ndi_filter_t *filter)
 {
-	auto f = (ndi_filter_t *)data;
-	auto obs_source = f->obs_source;
-	auto name = obs_source_get_name(obs_source);
-	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
+	if (!filter || !filter->ndi_sender) {
+		return;
+	}
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
+	if (!filter->is_audioonly) {
+		pthread_mutex_lock(&filter->ndi_sender_video_mutex);
+	}
+	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
+	ndiLib->send_destroy(filter->ndi_sender);
+	filter->ndi_sender = nullptr;
+
+	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
+	if (!filter->is_audioonly) {
+		pthread_mutex_unlock(&filter->ndi_sender_video_mutex);
+	}
+}
+
+void destroy_and_create_ndi_sender(ndi_filter_t *filter, obs_data_t *settings)
+{
+	if (!filter || !filter->obs_source) {
+		return;
+	}
+
+	auto obs_source = filter->obs_source;
+	if (!settings) {
+		settings = obs_source_get_settings(obs_source);
+	}
 
 	NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
@@ -225,15 +257,32 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
-	if (!f->is_audioonly) {
-		pthread_mutex_lock(&f->ndi_sender_video_mutex);
+	if (!filter->is_audioonly) {
+		pthread_mutex_lock(&filter->ndi_sender_video_mutex);
 	}
-	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-	ndiLib->send_destroy(f->ndi_sender);
-	f->ndi_sender = ndiLib->send_create(&send_desc);
-	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
+	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
+	ndiLib->send_destroy(filter->ndi_sender);
+	filter->ndi_sender = ndiLib->send_create(&send_desc);
+	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
+	if (!filter->is_audioonly) {
+		pthread_mutex_unlock(&filter->ndi_sender_video_mutex);
+	}
+}
+
+void ndi_filter_update(void *data, obs_data_t *settings)
+{
+	auto f = (ndi_filter_t *)data;
+	auto obs_source = f->obs_source;
+	auto name = obs_source_get_name(obs_source);
+	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
+
+	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
+
+	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
+
+	destroy_and_create_ndi_sender(f, settings);
+
 	if (!f->is_audioonly) {
-		pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
 	}
 
