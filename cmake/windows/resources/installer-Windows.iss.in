@@ -46,7 +46,7 @@ Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 // CAREFUL : this target the old AppID.
 const UninstallRegistryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
 const UninstallRegistryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
-const UninstallRegistryKey600up = ExpandConstant('Software\Microsoft\Windows\CurrentVersion\Uninstall\{FF773A8D-7648-4630-8155-3D5190CDF785}_is1');
+const UninstallRegistryKey600up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{FF773A8D-7648-4630-8155-3D5190CDF785}_is1';
 // Windows Installer on 6.1.0 was broken and installed in an empty AppID registry field.
 const UninstallRegistryKey610 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{}_is1';
 
