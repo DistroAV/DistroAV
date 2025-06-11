@@ -44,7 +44,7 @@ Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 // CAREFUL : this target the old AppID.
 const UninstallRegistryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
 const UninstallRegistryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
-const UninstallRegistryKey600 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{FF773A8D-7648-4630-8155-3D5190CDF785}_is1';
+const UninstallRegistryKey600up = ExpandConstant('Software\Microsoft\Windows\CurrentVersion\Uninstall\{#emit SetupSetting("AppId")}_is1';
 
 function GetOldAppUninstallerPath(Param: String): String;
 var
@@ -67,18 +67,33 @@ begin
       Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
-function Get600AppUninstallerPath(Param: String): String;
+function GetDistroavAppVersionInstalled(Param: String): String;
+var
+  DistroavVersionInstalled: String;
+// At least one Param string is required to use this function with {code:}, can be empty.
+begin
+  Result := '';
+
+// Check primary registry location DistroAV version 6.0.0 and up
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey600up, 'DisplayVersion', DistroavVersionInstalled) ) then
+      Result := RemoveQuotes(DistroavVersionInstalled)
+// Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey600up, 'DisplayVersion', DistroavVersionInstalled) ) then
+      Result := RemoveQuotes(DistroavVersionInstalled);
+end;
+
+function GetDistroavAppUninstallerPath(Param: String): String;
 var
   UninstallerPathRegistry: String;
 // At least one Param string is required to use this function with {code:}, can be empty.
 begin
   Result := '';
 
-// Check primary registry location version 6.0.0
-  if ( RegQueryStringValue(HKLM, UninstallRegistryKey600, 'UninstallString', UninstallerPathRegistry) ) then
+// Check primary registry location DistroAV version 6.0.0 and up
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey600up, 'UninstallString', UninstallerPathRegistry) ) then
       Result := RemoveQuotes(UninstallerPathRegistry)
 // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey600, 'UninstallString', UninstallerPathRegistry) ) then
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey600up, 'UninstallString', UninstallerPathRegistry) ) then
       Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
@@ -125,13 +140,30 @@ begin
     Result := InstallPath;
 end;
 
-// Post-Install actions
+// Pre-Post-Install actions
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
 begin
   ResultCode := 0;
-  if CurStep = ssPostInstall then
+  // pre-install Steps
+  if (CurStep=ssInstall) then
+  begin
+    if ( GetDistroavAppVersionInstalled() = '6.0.0' ) then
+    begin
+      Log('DistroAV plugin version already installed detected : ' + GetDistroavAppVersionInstalled() + '...');
+      if (Get600AppUninstallerPath('') <> '') then
+        begin
+          Log('Uninstalling previous DistroAV plugin version...');
+          // This triggers the uninstall process of the previous DistroAV plugin installed
+          Exec(ExpandConstant('{code:Get600AppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+          Log('Uninstall previous DistroAV return code: ' + IntToStr(ResultCode));
+        end;
+    end
+  end;
+
+  // Post-install Steps
+  if ( CurStep = ssPostInstall ) then
   begin
     // Clean-up old OBS-NDI plugin
     if ( IsTaskSelected('RemoveOBSNDI') ) then
@@ -164,17 +196,7 @@ begin
       end;
     
     // DistroAV 6.0.0 was installed in Program Files, since 6.1.0 installs in ProgramData,
-    // the old plugin is not uninstalled, so we have to uninstall it directly.
-    if (Get600AppUninstallerPath('') <> '') then
-        begin
-          Log('Uninstalling old DistroAV plugin from Program Files...');
-          // This triggers the uninstall process of the old DistroAV plugin installed in Program Files
-          // after installation of DistroAV but before the final dialog
-          Exec(ExpandConstant('{code:Get600AppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-          Log('Uninstall old DistroAV return code: ' + IntToStr(ResultCode));
-        end;
-
-    // Remove previous distroav plugin folders & files (the hard-way)
+    // Remove previous DistroAV plugin folders & files in the OBS folder (the hard-way)
     if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\distroav'), True, True, True) ) then
       Log('Removed old distroav plugin folder: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\distroav'));
     if ( DelTree(ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\distroav*'), False, True, True) ) then
