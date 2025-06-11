@@ -20,6 +20,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/help
 AppUpdatesURL={#MyAppURL}/download
 DefaultDirName={commonappdata}\obs-studio\plugins\{#MyProjectName}
+UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Windows-Installer
 Compression=lzma
