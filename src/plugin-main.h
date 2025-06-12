@@ -27,11 +27,11 @@
 
 #define PLUGIN_MIN_QT_VERSION "6.0.0"
 #define PLUGIN_MIN_OBS_VERSION "31.0.0"
-#define PLUGIN_MIN_NDI_VERSION "6.0.0"
+#define PLUGIN_MIN_NDI_VERSION "6.2.0"
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
-extern const NDIlib_v5 *ndiLib;
+extern const 6 *ndiLib;
 
 /*
 The following accomplishes two goals:
