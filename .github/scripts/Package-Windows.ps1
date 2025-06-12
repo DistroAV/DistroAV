@@ -53,6 +53,7 @@ function Package {
         ErrorAction = 'SilentlyContinue'
         Path = @(
             "${ProjectRoot}/release/${ProductName}-*-windows-*.zip"
+            "${ProjectRoot}/release/${ProductName}-*-windows-*.exe"
         )
     }
 
@@ -68,6 +69,23 @@ function Package {
     Compress-Archive -Force @CompressArgs
     Log-Group
 
+    # Windows Portable Package
+    Log-Group "Archiving Portable ${ProductName}..."
+    tree /F "${ProjectRoot}/release/${Configuration}/${ProductName}"
+    Copy-Item -Path "${ProjectRoot}/release/${Configuration}/${ProductName}/data/locale" -Destination "${ProjectRoot}/release-portable/${Configuration}/data/obs-plugins/${ProductName}/locale" -Recurse
+    Copy-Item -Path "${ProjectRoot}/release/${Configuration}/${ProductName}/bin" -Destination "${ProjectRoot}/release-portable/${Configuration}/obs-plugins" -Recurse
+    tree /F "${ProjectRoot}/release-portable/${Configuration}"
+
+    $CompressArgs = @{
+        Path = (Get-ChildItem -Path "${ProjectRoot}/release-portable/${Configuration}" -Exclude "${OutputName}*.*")
+        CompressionLevel = 'Optimal'
+        DestinationPath = "${ProjectRoot}/release-portable/${OutputName}-Portable.zip"
+        Verbose = ($Env:CI -ne $null)
+    }
+    Compress-Archive -Force @CompressArgs
+    Log-Group
+
+    # Windows Installer
     # Declare the location of the InnoSetup setup file
     $IsccFile = "${ProjectRoot}/build_${Target}/installer-Windows.generated.iss"
     if ( ! ( Test-Path -Path $IsccFile ) ) {
