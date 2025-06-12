@@ -183,16 +183,40 @@ void OutputSettings::onFormAccepted()
 
 	config->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
 
+	auto mainSupported = ui->mainOutputGroupBox->isEnabled();
+
+	obs_log(LOG_INFO, "Main output supported='%d'", mainSupported);
+
+	// Output settings for debugging & diagnosis
+	obs_log(LOG_INFO,
+		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
+		config->OutputEnabled, config->OutputName.toUtf8().constData(),
+		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
+
 	config->Save();
 
-	if ((last_config.OutputEnabled != config->OutputEnabled) || (last_config.OutputName != config->OutputName) ||
-	    (last_config.OutputGroups != config->OutputGroups)) {
-		main_output_init();
+	if (mainSupported && config->OutputEnabled && !config->OutputName.isEmpty()) {
+		if ((last_config.OutputEnabled != config->OutputEnabled) ||
+		    (last_config.OutputName != config->OutputName) ||
+		    (last_config.OutputGroups != config->OutputGroups)) {
+			// The Output is supported and enabled, OutputName exists and a Name or GroupName has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Main output");
+			main_output_init();
+		}
+	} else {
+		main_output_deinit();
 	}
-	if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
-	    (last_config.PreviewOutputName != config->PreviewOutputName) ||
-	    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
-		preview_output_init();
+	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
+		if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
+		    (last_config.PreviewOutputName != config->PreviewOutputName) ||
+		    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+			// The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Preview output");
+			preview_output_init();
+		}
+	} else {
+		preview_output_deinit();
 	}
 }
 
@@ -200,9 +224,20 @@ void OutputSettings::showEvent(QShowEvent *)
 {
 	auto config = Config::Current();
 
+	// Set mainOutputGroupBox to enabled if main_output_is_supported()
+	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
+
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
 	ui->mainOutputGroups->setText(config->OutputGroups);
+
+	auto lastError = main_output_last_error();
+	ui->mainOutputLastError->setText(lastError);
+	if (lastError.isEmpty()) {
+		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space is error is no longer valid.
+	} else {
+		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());
+	}
 
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
 	ui->previewOutputName->setText(config->PreviewOutputName);
