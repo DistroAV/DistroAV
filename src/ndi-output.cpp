@@ -274,7 +274,7 @@ void ndi_output_stop(void *data, uint64_t)
 		}
 
 		if (o->conv_buffer) {
-			delete o->conv_buffer;
+			delete[] o->conv_buffer;
 			o->conv_buffer = nullptr;
 			o->conv_function = nullptr;
 		}
