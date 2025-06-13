@@ -54,6 +54,8 @@ target_sources(
     src/main-output.cpp
     src/main-output.h
     src/ndi-filter.cpp
+    src/ndi-finder.h
+    src/ndi-finder.cpp
     src/ndi-output.cpp
     src/ndi-source.cpp
     src/plugin-main.cpp
@@ -63,5 +65,15 @@ target_sources(
     src/preview-output.h
 )
 
+set(valid_uuid FALSE)
+check_uuid(${WINDOWS_APP_UUID} valid_uuid)
+if(NOT valid_uuid)
+  message(FATAL_ERROR "Specified Windows package UUID is not a valid UUID value: ${WINDOWS_APP_UUID}")
+endif()
+
+configure_file(
+  cmake/windows/resources/installer-Windows.iss.in
+  "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
+)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

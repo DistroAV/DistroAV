@@ -33,7 +33,7 @@
  * ```
  * [NDIPlugin]
  * MainOutputEnabled=true
- * MainOutputName=OBS
+ * MainOutputName=OBS PGM
  * PreviewOutputEnabled=false
  * PreviewOutputName=OBS Preview
  * TallyProgramEnabled=false
@@ -83,8 +83,8 @@ public:
 	void AutoCheckForUpdates(bool value);
 	void SkipUpdateVersion(const QVersionNumber &version);
 	QVersionNumber SkipUpdateVersion();
-	QDateTime LastUpdateCheck();
 	void LastUpdateCheck(const QDateTime &dateTime);
+	QDateTime LastUpdateCheck();
 	int MinAutoUpdateCheckIntervalSeconds();
 	void MinAutoUpdateCheckIntervalSeconds(int seconds);
 
@@ -92,7 +92,8 @@ public:
 
 private:
 	void Load();
-	void SetDefaultsToGlobalStore();
+	void GlobalToUserMigration();
+	void SetDefaultsToUserStore();
 	Config();
 	static Config *_instance;
 };

@@ -69,7 +69,6 @@ const NDIlib_v5 *load_ndilib();
 typedef const NDIlib_v5 *(*NDIlib_v5_load_)(void);
 QLibrary *loaded_lib = nullptr;
 
-NDIlib_find_instance_t ndi_finder = nullptr;
 OutputSettings *output_settings = nullptr;
 
 //
@@ -184,14 +183,14 @@ bool is_module_found(const char *module_name)
 				QString home_path = QDir::homePath();
 				bin_path.replace(home_path, "[Redacted User Home Path]");
 
-				obs_log(LOG_INFO, "is_module_found: `%s` found at `%s`", module_info->name,
+				obs_log(LOG_INFO, "is_module_found: '%s' found at '%s'", module_info->name,
 					bin_path.toUtf8().constData());
 
 				// DEBUG logging will output the absolute path.
-				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path=`%s`",
+				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path='%s'",
 					module_info->bin_path);
 				data_->found = true;
-				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path=`%s`",
+				obs_log(LOG_DEBUG, "is_module_found: module_info->data_path='%s'",
 					module_info->data_path);
 				data_->found = true;
 			}
@@ -209,9 +208,27 @@ bool is_obsndi_installed()
 	return is_module_found("obs-ndi");
 }
 
-//
-//
-//
+bool is_version_supported(const char *version, const char *min_version)
+{
+	if (version == nullptr || min_version == nullptr) {
+		return false;
+	}
+
+	auto version_parts = QString::fromUtf8(version).split(".");
+	auto min_version_parts = QString::fromUtf8(min_version).split(".");
+
+	for (int i = 0; i < qMax(version_parts.size(), min_version_parts.size()); ++i) {
+		auto version_part = i < version_parts.size() ? version_parts[i].toInt() : 0;
+		auto min_version_part = i < min_version_parts.size() ? min_version_parts[i].toInt() : 0;
+
+		if (version_part > min_version_part) {
+			return true;
+		} else if (version_part < min_version_part) {
+			return false;
+		}
+	}
+	return true;
+}
 
 bool obs_module_load(void)
 {
@@ -220,8 +237,11 @@ bool obs_module_load(void)
 
 	Config::Initialize();
 
+	// Check if the old version of the plugin is installed
 	if (is_obsndi_installed()) {
-		obs_log(LOG_INFO,
+		obs_log(LOG_ERROR, "ERR-403 - OBS-NDI is detected and needs to be uninstalled before %s can work.",
+			PLUGIN_DISPLAY_NAME);
+		obs_log(LOG_DEBUG,
 			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
 			PLUGIN_DISPLAY_NAME);
 		showCriticalUnloadingMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
@@ -229,6 +249,25 @@ bool obs_module_load(void)
 							       .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
 		return false;
 	}
+	obs_log(LOG_DEBUG, "obs_module_load: No OBS-NDI leftover detected. Continuing...");
+
+	// Check if this is using the minimum OBS version required by this plugin
+	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
+		obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
+			PLUGIN_MIN_OBS_VERSION);
+		obs_log(LOG_DEBUG,
+			"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
+			obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
+
+		auto title = "OBS version not supported";
+		auto message = "Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
+		showCriticalUnloadingMessageBoxDelayed(title, message);
+
+		return false;
+	}
+	obs_log(LOG_DEBUG, "obs_module_load: Minimum OBS version met. Continuing...");
+
+	// Check if the NDI SDK is installed & compatible
 
 	auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
 
@@ -240,13 +279,14 @@ bool obs_module_load(void)
 #endif
 	if (!ndiLib) {
 		auto title = Str("NDIPlugin.LibError.Title");
-		auto message = QTStr("NDIPlugin.LibError.Message") + "<br>";
+		auto message = "Error-401: " + QTStr("NDIPlugin.LibError.Message") + "<br>";
 #ifdef NDI_OFFICIAL_REDIST_URL
 		message += makeLink(NDI_OFFICIAL_REDIST_URL);
 #else
 		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 #endif
-		obs_log(LOG_ERROR, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
+		obs_log(LOG_ERROR, "ERR-401 - NDI library failed to load with message: '%s'", QT_TO_UTF8(message));
+		obs_log(LOG_DEBUG, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
 		showCriticalUnloadingMessageBoxDelayed(title, message);
 		return false;
 	}
@@ -258,17 +298,36 @@ bool obs_module_load(void)
 	auto initialized = ndiLib->initialize();
 #endif
 	if (!initialized) {
-		obs_log(LOG_ERROR,
+		obs_log(LOG_ERROR, "ERR-406 - NDI library could not initialize due to unsupported CPU.");
+		obs_log(LOG_DEBUG,
 			"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
 		return false;
 	}
 
-	obs_log(LOG_INFO, "obs_module_load: NDI library initialized successfully ('%s')", ndiLib->version());
+	obs_log(LOG_INFO, "obs_module_load: NDI library detected ('%s')", ndiLib->version());
 
-	NDIlib_find_create_t find_desc = {0};
-	find_desc.show_local_sources = true;
-	find_desc.p_groups = NULL;
-	ndi_finder = ndiLib->find_create_v2(&find_desc);
+	// Check if the minimum NDI Runtime/SDK required by this plugin is used
+	QString ndi_version_short =
+		QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
+	obs_log(LOG_INFO, "NDI Version detected: %s", QT_TO_UTF8(ndi_version_short));
+
+	if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION)) {
+		obs_log(LOG_ERROR,
+			"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s. Plugin will unload.",
+			PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
+		obs_log(LOG_DEBUG, "obs_module_load: NDI minimum version not met (%s). NDI version detected: %s.",
+			PLUGIN_MIN_NDI_VERSION, ndiLib->version());
+
+		auto title = "NDI Library version not supported";
+		auto message = "Error-425: Plugin requires NDI " + QTStr(PLUGIN_MIN_NDI_VERSION) +
+			       " or higher <br> <br> Version detected: " + QT_TO_UTF8(ndi_version_short) +
+			       "<br> Get the latest NDI library at: <br>";
+		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
+		showCriticalUnloadingMessageBoxDelayed(title, message);
+		return false;
+	}
+
+	obs_log(LOG_INFO, "obs_module_load: NDI library initialized successfully");
 
 	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
@@ -321,24 +380,20 @@ bool obs_module_load(void)
 
 void obs_module_post_load(void)
 {
-	obs_log(LOG_INFO, "+obs_module_post_load()");
+	obs_log(LOG_DEBUG, "+obs_module_post_load()");
 
 	updateCheckStart();
 
-	obs_log(LOG_INFO, "-obs_module_post_load()");
+	obs_log(LOG_DEBUG, "-obs_module_post_load()");
 }
 
 void obs_module_unload(void)
 {
-	obs_log(LOG_INFO, "+obs_module_unload()");
+	obs_log(LOG_DEBUG, "+obs_module_unload()");
 
 	updateCheckStop();
 
 	if (ndiLib) {
-		if (ndi_finder) {
-			ndiLib->find_destroy(ndi_finder);
-			ndi_finder = nullptr;
-		}
 		ndiLib->destroy();
 		ndiLib = nullptr;
 	}
@@ -347,7 +402,7 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
-	obs_log(LOG_INFO, "-obs_module_unload(): goodbye!");
+	obs_log(LOG_DEBUG, "-obs_module_unload(): goodbye!");
 }
 
 const NDIlib_v5 *load_ndilib()
@@ -391,7 +446,7 @@ const NDIlib_v5 *load_ndilib()
 #else
 		// MacOS, Windows
 		temp_path = QDir::cleanPath(dir.absoluteFilePath(NDILIB_LIBRARY_NAME));
-		obs_log(LOG_INFO, "load_ndilib: Trying '%s'", QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
+		obs_log(LOG_DEBUG, "load_ndilib: Trying '%s'", QT_TO_UTF8(QDir::toNativeSeparators(temp_path)));
 		auto file_info = QFileInfo(temp_path);
 		if (file_info.exists() && file_info.isFile()) {
 			lib_path = temp_path;
@@ -400,27 +455,33 @@ const NDIlib_v5 *load_ndilib()
 #endif
 	}
 	if (!lib_path.isEmpty()) {
-		obs_log(LOG_INFO, "load_ndilib: Found '%s'; attempting to load NDI library...",
+		obs_log(LOG_DEBUG, "load_ndilib: Found '%s'; attempting to load NDI library...",
 			QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
 		loaded_lib = new QLibrary(lib_path, nullptr);
 		if (loaded_lib->load()) {
-			obs_log(LOG_INFO, "load_ndilib: NDI library loaded successfully");
+			obs_log(LOG_DEBUG, "load_ndilib: NDI library loaded successfully");
 			NDIlib_v5_load_ lib_load =
 				reinterpret_cast<NDIlib_v5_load_>(loaded_lib->resolve("NDIlib_v5_load"));
 			if (lib_load != nullptr) {
-				obs_log(LOG_INFO, "load_ndilib: NDIlib_v5_load found");
+				obs_log(LOG_DEBUG, "load_ndilib: NDIlib_v5_load found");
 				return lib_load();
 			} else {
-				obs_log(LOG_ERROR, "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+				obs_log(LOG_ERROR, "ERR-405 - Error loading the NDI Library from path: '%s'",
+					QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
+				obs_log(LOG_DEBUG, "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
 			}
 		} else {
-			obs_log(LOG_ERROR, "load_ndilib: ERROR: QLibrary returned the following error: '%s'",
+			obs_log(LOG_ERROR, "ERR-402 - Error loading QLibrary with error: '%s'",
+				QT_TO_UTF8(loaded_lib->errorString()));
+			obs_log(LOG_DEBUG, "load_ndilib: ERROR: QLibrary returned the following error: '%s'",
 				QT_TO_UTF8(loaded_lib->errorString()));
 			delete loaded_lib;
 			loaded_lib = nullptr;
 		}
 	}
 
-	obs_log(LOG_ERROR, "load_ndilib: ERROR: Can't find the NDI library");
+	obs_log(LOG_ERROR,
+		"ERR-404 - NDI library not found, DistroAV cannot continue. Read the wiki and install the NDI Libraries.");
+	obs_log(LOG_DEBUG, "load_ndilib: ERROR: Can't find the NDI library");
 	return nullptr;
 }
