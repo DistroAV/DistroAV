@@ -49,14 +49,11 @@ private:
 	void run() override;
 
 signals:
-	void Result(int httpStatusCode, const QString &responseData,
-		    const QString &errorData);
+	void Result(int httpStatusCode, const QString &responseData, const QString &errorData);
 
 public:
-	inline RemoteTextThread(std::string url_,
-				std::string contentType_ = std::string(),
-				std::string postData_ = std::string(),
-				int timeoutSec_ = 0)
+	inline RemoteTextThread(std::string url_, std::string contentType_ = std::string(),
+				std::string postData_ = std::string(), int timeoutSec_ = 0)
 		: url(url_),
 		  contentType(contentType_),
 		  postData(postData_),
@@ -64,10 +61,8 @@ public:
 	{
 	}
 
-	inline RemoteTextThread(std::string url_,
-				std::vector<std::string> &&headers_,
-				std::string contentType_ = std::string(),
-				std::string postData_ = std::string(),
+	inline RemoteTextThread(std::string url_, std::vector<std::string> &&headers_,
+				std::string contentType_ = std::string(), std::string postData_ = std::string(),
 				int timeoutSec_ = 0)
 		: url(url_),
 		  headers(std::move(headers_)),
@@ -80,11 +75,8 @@ public:
 
 //#define USE_GET_REMOTE_FILE
 #ifdef USE_GET_REMOTE_FILE
-bool GetRemoteFile(
-	const char *url, std::string &str, std::string &error,
-	long *responseCode = nullptr, const char *contentType = nullptr,
-	std::string request_type = "", const char *postData = nullptr,
-	std::vector<std::string> extraHeaders = std::vector<std::string>(),
-	std::string *signature = nullptr, int timeoutSec = 0,
-	bool fail_on_error = true, int postDataSize = 0);
+bool GetRemoteFile(const char *url, std::string &str, std::string &error, long *responseCode = nullptr,
+		   const char *contentType = nullptr, std::string request_type = "", const char *postData = nullptr,
+		   std::vector<std::string> extraHeaders = std::vector<std::string>(), std::string *signature = nullptr,
+		   int timeoutSec = 0, bool fail_on_error = true, int postDataSize = 0);
 #endif

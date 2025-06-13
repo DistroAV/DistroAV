@@ -26,7 +26,8 @@
 #include <Processing.NDI.Lib.h>
 
 #define PLUGIN_MIN_QT_VERSION "6.0.0"
-#define PLUGIN_MIN_OBS_VERSION "30.0.0"
+#define PLUGIN_MIN_OBS_VERSION "31.0.0"
+#define PLUGIN_MIN_NDI_VERSION "6.0.0"
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
@@ -63,11 +64,9 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define PLUGIN_REDIRECT_DISCORD_URL "https://distroav.org/discord"
 #define PLUGIN_REDIRECT_DONATE_URL "https://distroav.org/donate"
 #define PLUGIN_REDIRECT_REPORT_BUG_URL "https://distroav.org/report-bug"
-#define PLUGIN_REDIRECT_TROUBLESHOOTING_URL \
-	"https://distroav.org/kb/troubleshooting"
+#define PLUGIN_REDIRECT_TROUBLESHOOTING_URL "https://distroav.org/kb/troubleshooting"
 #define PLUGIN_REDIRECT_UNINSTALL_URL "https://distroav.org/kb/uninstall"
-#define PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL \
-	"https://distroav.org/kb/uninstall-obs-ndi"
+#define PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL "https://distroav.org/kb/uninstall-obs-ndi"
 #if defined(Q_OS_WIN)
 // Windows
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-windows"
@@ -78,8 +77,7 @@ QString makeLink(const char *url, const char *text = nullptr);
 // Linux
 #define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-linux"
 #endif
-#define PLUGIN_REDIRECT_NDI_SDK_CPU_REQUIREMENTS_URL \
-	"https://distroav.org/ndi/sdk-cpu-requirements"
+#define PLUGIN_REDIRECT_NDI_SDK_CPU_REQUIREMENTS_URL "https://distroav.org/ndi/sdk-cpu-requirements"
 #define PLUGIN_REDIRECT_NDI_TOOLS_URL "https://distroav.org/ndi/tools"
 #define PLUGIN_REDIRECT_NDI_WEB_URL "https://distroav.org/ndi/web"
 
@@ -97,8 +95,7 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define NDI_OFFICIAL_REDIST_URL NDILIB_REDIST_URL
 #define NDI_OFFICIAL_TOOLS_URL "https://ndi.video/tools/download"
 #endif
-#define NDI_OFFICIAL_CPU_REQUIREMENTS_URL \
-	"https://docs.ndi.video/docs/sdk/cpu-requirements"
+#define NDI_OFFICIAL_CPU_REQUIREMENTS_URL "https://docs.ndi.video/docs/sdk/cpu-requirements"
 // Required by NDI license:
 // Per https://github.com/DistroAV/DistroAV/blob/master/lib/ndi/NDI%20SDK%20Documentation.pdf
 // "3 Licensing"
@@ -107,5 +104,4 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define NDI_OFFICIAL_WEB_URL "https://ndi.video"
 // "Your application’s About Box and any other locations where trademark attribution is provided
 // should also specifically indicate that “NDI® is a registered trademark of Vizrt NDI AB”."
-#define NDI_IS_A_REGISTERED_TRADEMARK_TEXT \
-	"NDI® is a registered trademark of Vizrt NDI AB"
+#define NDI_IS_A_REGISTERED_TRADEMARK_TEXT "NDI® is a registered trademark of Vizrt NDI AB"

@@ -1,109 +1,235 @@
+; IMPORTANT : This file is ONLY used when building with Inno Setup
+
+#define MyProjectName "@CMAKE_PROJECT_NAME@"
 #define MyAppName "@PLUGIN_DISPLAY_NAME@"
 #define MyAppVersion "@CMAKE_PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
 #define MyAppURL "@PLUGIN_WEBSITE@"
+#define MyAppId "@WINDOWS_APP_UUID@"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{@UUID_APP@}
+AppId={{{#MyAppId}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-AppSupportURL={#MyAppURL}
-AppUpdatesURL={#MyAppURL}
-DefaultDirName={code:GetDirName}
+AppSupportURL={#MyAppURL}/help
+AppUpdatesURL={#MyAppURL}/download
+DefaultDirName={commonappdata}\obs-studio\plugins\{#MyProjectName}
+UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Windows-Installer
 Compression=lzma
 SolidCompression=yes
 DirExistsWarning=no
+RestartIfNeededByRun=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Tasks]
+Name: RemoveOBSNDI; Description: "Remove OBS-NDI plugin"; GroupDescription: "Clean-up";
+Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall (requires admin privileges)"; GroupDescription: "Post-Install Actions";
+
 [Files]
-Source: "..\release\Package\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\LICENSE"; Flags: dontcopy
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+Source: "..\release\Package\{#MyProjectName}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; NOTE: Do not use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
-Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-
-[InstallDelete]
-; Remove previous obs-ndi plugin files (the hard-way)
-Type: filesandordirs; Name: "{app}\data\obs-plugins\obs-ndi\"
-Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.dll"
-Type: files; Name: "{app}\obs-plugins\64bit\obs-ndi.pdb"
-
-[Run]
-; This uninstall the old obs-ndi after installation but before the final dialog when installing DistroAV
-Filename: "{code:GetOldAppUninstallerPath}"; Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"; Check: UninstallOldAppAvailable ;  Description: "Silently Uninstall OBS-NDI"
-; Dev-note: Cannot use : Flags: skipifdoesntexist >> it only takes absolute filename.
-; Unblock OBS from the firewall so DistroAV will work out-of-the-box
-Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=in action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
-Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""OBS Studio"" dir=out action=allow program=""{app}\bin\64bit\obs64.exe"" enable=yes"; Flags: runhidden
 
 [Code]
-procedure InitializeWizard();
+// Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
+// CAREFUL : this target the old AppID.
+const UninstallRegistryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
+const UninstallRegistryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
+const UninstallRegistryKey600up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{FF773A8D-7648-4630-8155-3D5190CDF785}_is1';
+// Windows Installer on 6.1.0 was broken and installed in an empty AppID registry field.
+const UninstallRegistryKey610 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{}_is1';
+
+
+function GetOldAppUninstallerPath(Param: String): String;
 var
-  GPLText: AnsiString;
-  Page: TOutputMsgMemoWizardPage;
+  UninstallerPathRegistry: String;
+// At least one Param string is required to use this function with {code:}, can be empty.
 begin
-  ExtractTemporaryFile('LICENSE');
-  LoadStringFromFile(ExpandConstant('{tmp}\LICENSE'), GPLText);
-  Page := CreateOutputMsgMemoPage(wpWelcome,
-    'License Information', 'Please review the license terms before installing {#MyAppName}',
-    'Press Page Down to see the rest of the agreement. Once you are aware of your rights, click Next to continue.',
-    String(GPLText)
-  );
+  Result := '';
+// Check primary registry location version 4.11+
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+// Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+
+// Check primary registry location version 4.10
+  else if ( RegQueryStringValue(HKLM, UninstallRegistryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+// Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey410, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
-// credit where it's due :
-// following function come from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
-function GetDirName(Value: string): string;
+function GetDistroavAppVersionInstalled(Param: String): String;
 var
-  InstallPath: string;
+  DistroavVersionInstalled: String;
+// At least one Param string is required to use this function with {code:}, can be empty.
+begin
+  Result := '';
+// Check primary registry location DistroAV version 6.0.0 and up
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey600up, 'DisplayVersion', DistroavVersionInstalled) ) then
+      Result := RemoveQuotes(DistroavVersionInstalled)
+// Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey600up, 'DisplayVersion', DistroavVersionInstalled) ) then
+      Result := RemoveQuotes(DistroavVersionInstalled);
+end;
+
+function GetDistroavAppUninstallerPath(Param: String): String;
+var
+  UninstallerPathRegistry: String;
+// At least one Param string is required to use this function with {code:}, can be empty.
+begin
+  Result := '';
+// Check primary registry location DistroAV version 6.0.0 and up
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey600up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+// Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey600up, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry);
+end;
+
+// DistroAV 6.1.0 used an empty AppID installer and needs to be removed
+function Get610AppUninstallerPath(Param: String): String;
+var
+  UninstallerPathRegistry: String;
+// At least one Param string is required to use this function with {code:}, can be empty.
+begin
+  Result := '';
+// Check primary registry location DistroAV version 6.0.0 and up
+  if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry)
+// Check alternative Registry location
+  else if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'UninstallString', UninstallerPathRegistry) ) then
+      Result := RemoveQuotes(UninstallerPathRegistry);
+end;
+
+// Firewall Rules
+// Add or Update the firewall rules to allow DistroAV & OBS
+// Log entries are visible only when using /LOG
+const FirewallRuleName = 'OBS - DistroAV';
+const FirewallRulesDescription = 'Rules added by DistroAV installer for ease of use.';
+
+function SetFirewallRules(Direction: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  ResultCode := 0;
+  // Delete rule if it exists
+  Exec('netsh', 'advfirewall firewall delete rule name="' + FirewallRuleName + '" dir=' + Direction, '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  // Add firewall rule
+  Exec('netsh', 'advfirewall firewall add rule name="' + FirewallRuleName + '" dir=' + Direction + ' action=allow program="' + ExpandConstant('{code:GetOBSDirName}\bin\64bit\obs64.exe') + '" description="' + FirewallRulesDescription + '" enable=yes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  if ( ResultCode = 0 ) then
+    begin
+      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Successful.');
+      Result := True;
+    end
+  else
+    begin
+      Log('Add Firewall ' + Direction + ' Rule ' + FirewallRuleName + ': Failed. Code returned: ' + IntToStr(ResultCode) + ' - ' + SysErrorMessage(ResultCode) + '');
+      Result := False;
+    end;
+end;
+
+// Helper script to find the OBS installation path
+// credit where it's due :
+// following function comes from https://github.com/Xaymar/obs-studio_amf-encoder-plugin/blob/master/%23Resources/Installer.in.iss#L45
+// This is deprecated as it is not super reliable if portable installs are used. Replace with a more reliable method in the future.
+function GetOBSDirName(Value: String): String;
+var
+  InstallPath: String;
 begin
   // initialize default path, which will be returned when the following registry
   // key queries fail due to missing keys or for some different reason
   Result := '{autopf}\obs-studio';
   // query the first registry value; if this succeeds, return the obtained value
   if RegQueryStringValue(HKLM32, 'SOFTWARE\OBS Studio', '', InstallPath) then
-    Result := InstallPath
+    Result := InstallPath;
 end;
 
-
-// Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
-// CAREFUL : this target the old AppID.
-const UninstallRegisteryKey411up = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A9039243-4FE7-45E7-8B11-7DC1ACB67B9D}_is1';
-const UninstallRegisteryKey410 = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{CD703FE5-1F2C-4837-BD3D-DD840D83C3E3}_is1';
-
-function GetOldAppUninstallerPath(Param: String): String;
+// Pre-Post-Install actions
+procedure CurStepChanged(CurStep: TSetupStep);
 var
-  UninstallerPathRegistry: String;
-// At least one Param string is required to use this fucntion with {code:}, can be empty.
+  ResultCode: Integer;
 begin
-  Result := '';
-  // Check primary registry location version 4.11+
-  if ( RegQueryStringValue(HKLM, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
-      Result := RemoveQuotes(UninstallerPathRegistry)
-  // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey411up, 'UninstallString', UninstallerPathRegistry) ) then
-      Result := RemoveQuotes(UninstallerPathRegistry)
+  ResultCode := 0;
+  // Pre-install Steps
+  if (CurStep=ssInstall) then
+  begin
+    // Always uninstall 6.0.0 as files are in different locations starting 6.1.0
+    if ( GetDistroavAppVersionInstalled('') = '6.0.0' ) then
+    begin
+      Log('DistroAV plugin version already installed detected : ' + GetDistroavAppVersionInstalled('') + '...');
+      if (GetDistroavAppUninstallerPath('') <> '') then
+        begin
+          Log('Uninstalling previous DistroAV plugin version...');
+          // This triggers the uninstall process of the previous DistroAV plugin installed
+          Exec(ExpandConstant('{code:GetDistroavAppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+          Log('Uninstall previous DistroAV return code: ' + IntToStr(ResultCode));
+        end;
+    end;
 
-  // Check primary registry location version 4.10
-  else if ( RegQueryStringValue(HKLM, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
-      Result := RemoveQuotes(UninstallerPathRegistry)
-  // Check alternative Registry location
-  else if ( RegQueryStringValue(HKCU, UninstallRegisteryKey410, 'UninstallString', UninstallerPathRegistry) ) then
-      Result := RemoveQuotes(UninstallerPathRegistry);
-end;
+    // Always uninstall 6.1.0 as it used a buggy installer AppID
+    if (Get610AppUninstallerPath('') <> '') then
+    begin
+      Log('Uninstalling previous DistroAV plugin version 6.1.0...');
+      // This triggers the uninstall process of the previous DistroAV plugin installed
+      Exec(ExpandConstant('{code:Get610AppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      Log('Uninstall previous DistroAV return code: ' + IntToStr(ResultCode));
+    end;
+  end;
 
-function UninstallOldAppAvailable(): Boolean;
-begin
-  if (GetOldAppUninstallerPath('') <> '') then Result := True else Result := False;
+
+  // Post-install Steps
+  if ( CurStep = ssPostInstall ) then
+  begin
+    // Clean-up old OBS-NDI plugin
+    if ( WizardIsTaskSelected('RemoveOBSNDI') ) then
+    begin
+      if (GetOldAppUninstallerPath('') <> '') then
+        begin
+          Log('Uninstalling old OBS-NDI plugin...');
+          // Uninstall OBS-NDI (former plugin name)
+          // This triggers the uninstall process of the old obs-ndi after installation of DistroAV but before the final dialog
+          Exec(ExpandConstant('{code:GetOldAppUninstallerPath}'), '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+          Log('Uninstall OBS-NDI return code: ' + IntToStr(ResultCode));
+        end
+      else
+        begin
+          Log('No old OBS-NDI uninstaller found, skipping uninstallation.');
+        end;
+
+      // Remove previous obs-ndi plugin folders & files (the hard-way)
+      if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'), True, True, True) ) then
+        Log('Removed old obs-ndi plugin folder: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\obs-ndi'));
+      if ( DelTree(ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'), False, True, True) ) then
+        Log('Removed old obs-ndi plugin files (if found): ' + ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\obs-ndi*'));
+    end;
+
+    // Allow DistroAV & OBS in Windows Firewall
+    if ( WizardIsTaskSelected('AddFirewallEntry') ) then
+      begin
+        SetFirewallRules('out');
+        SetFirewallRules('in');
+      end;
+    
+    // DistroAV 6.0.0 was installed in Program Files, since 6.1.0 installs in ProgramData,
+    // Remove previous DistroAV plugin folders & files in the OBS folder (the hard-way)
+    if ( DelTree(ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\distroav'), True, True, True) ) then
+      Log('Removed old distroav plugin folder: ' + ExpandConstant('{code:GetOBSDirName}\data\obs-plugins\distroav'));
+    if ( DelTree(ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\distroav*'), False, True, True) ) then
+      Log('Removed old distroav plugin files (if found): ' + ExpandConstant('{code:GetOBSDirName}\obs-plugins\64bit\distroav*'));
+  end;
 end;
