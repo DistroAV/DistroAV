@@ -16,7 +16,9 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "obs-support/sync-debug.h"
 // #include "plugin-support.h"
+
 
 static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
 {
@@ -312,7 +314,8 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	auto o = (ndi_output_t *)data;
 	if (!o->started || !o->frame_width || !o->frame_height)
 		return;
-
+	obs_sync_debug_log("OBS -> ndi_output_rawvideo", o->ndi_name,
+			   (uint64_t)0, frame->timestamp);
 	uint32_t width = o->frame_width;
 	uint32_t height = o->frame_height;
 
@@ -336,6 +339,11 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
 
+	obs_sync_debug_log("NDI <- ndi_output_rawvideo", o->ndi_name,
+			   video_frame.timecode, video_frame.timestamp);
+	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name,
+				      frame->timestamp,
+				      (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
@@ -346,6 +354,9 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	auto o = (ndi_output_t *)data;
 	if (!o->started || !o->audio_samplerate || !o->audio_channels)
 		return;
+
+	obs_sync_debug_log("OBS -> ndi_output_rawaudio", o->ndi_name,
+			   (uint64_t)0, frame->timestamp);
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
@@ -376,7 +387,13 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	}
 
 	audio_frame.p_data = o->audio_conv_buffer;
-
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name,
+				      frame->timestamp,
+				      (float *)audio_frame.p_data,
+				      audio_frame.no_samples,
+				      audio_frame.sample_rate);
+	obs_sync_debug_log("NDI <- ndi_output_rawaudio", o->ndi_name,
+			   audio_frame.timecode, audio_frame.timestamp);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
 
