@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2024 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -41,10 +41,14 @@ typedef enum NDIlib_frame_type_e {
 	NDIlib_frame_type_metadata = 3,
 	NDIlib_frame_type_error = 4,
 
-	// This indicates that the settings on this input have changed. For instance, this value will be returned
-	// from NDIlib_recv_capture_v2 and NDIlib_recv_capture when the device is known to have new settings, for
-	// instance the web URL has changed or the device is now known to be a PTZ camera.
+	// This indicates that the settings on this input have changed. This value will be returned from one of
+	// the NDIlib_recv_capture functions when the device is known to have new settings, for instance the web
+	// URL has changed or the device is now known to be a PTZ camera.
 	NDIlib_frame_type_status_change = 100,
+
+	// This indicates that the source has changed. This value will be returned from one of the
+	// NDIlib_recv_capture functions when the source that the receiver is connected to has changed.
+	NDIlib_frame_type_source_change = 101,
 
 	// Make sure this is a 32-bit enumeration.
 	NDIlib_frame_type_max = 0x7fffffff
