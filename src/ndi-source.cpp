@@ -16,7 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
-// #include "plugin-support.h"
+#include "ndi-finder.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -66,8 +66,6 @@
 #define PROP_LATENCY_NORMAL 0
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
-
-extern NDIlib_find_instance_t ndi_finder;
 
 typedef struct ptz_t {
 	bool enabled;
@@ -200,8 +198,9 @@ const char *ndi_source_getname(void *)
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
-obs_properties_t *ndi_source_getproperties(void *)
+obs_properties_t *ndi_source_getproperties(void *data)
 {
+	auto s = (ndi_source_t *)data;
 	obs_log(LOG_DEBUG, "+ndi_source_getproperties(…)");
 
 	obs_properties_t *props = obs_properties_create();
@@ -209,10 +208,18 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_property_t *source_list = obs_properties_add_list(props, PROP_SOURCE,
 							      obs_module_text("NDIPlugin.SourceProps.SourceName"),
 							      OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
-	uint32_t nbSources = 0;
-	const NDIlib_source_t *sources = ndiLib->find_get_current_sources(ndi_finder, &nbSources);
-	for (uint32_t i = 0; i < nbSources; ++i) {
-		obs_property_list_add_string(source_list, sources[i].p_ndi_name, sources[i].p_ndi_name);
+	NDIFinder finder;
+	// Create a callback that is called when the NDI source list is complete
+	auto finder_callback = [source_list, s](void *ndi_names) {
+		auto ndi_sources = (std::vector<std::string> *)ndi_names;
+		for (auto &source : *ndi_sources) {
+			obs_property_list_add_string(source_list, source.c_str(), source.c_str());
+		}
+		obs_source_update_properties(s->obs_source);
+	};
+	auto ndi_sources = finder.getNDISourceList(finder_callback);
+	for (auto &source : ndi_sources) {
+		obs_property_list_add_string(source_list, source.c_str(), source.c_str());
 	}
 
 	obs_property_t *behavior_list = obs_properties_add_list(props, PROP_BEHAVIOR,
@@ -755,7 +762,8 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		break;
 
 	default:
-		obs_log(LOG_WARNING, "NDI Source uses an unsupported video pixel format: %d.", ndi_video_frame->FourCC);
+		obs_log(LOG_ERROR, "ERR-430 - NDI Source uses an unsupported video pixel format: %d.",
+			ndi_video_frame->FourCC);
 		obs_log(LOG_DEBUG, "ndi_source_thread_process_video2: warning: unsupported video pixel format: %d",
 			ndi_video_frame->FourCC);
 		break;
@@ -920,8 +928,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	} else {
 		// Fallback option. If the behavior is invalid, force it to "Keep Active" as it most likely came from the 4.14.x version.
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_log(LOG_WARNING,
-			"'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%s' forced to '%d'",
 			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_data_set_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_KEEP_ACTIVE);
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;

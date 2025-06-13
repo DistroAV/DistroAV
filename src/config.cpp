@@ -24,6 +24,8 @@
 #include <QCoreApplication>
 
 #define SECTION_NAME "NDIPlugin"
+
+// User Settings
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
 #define PARAM_MAIN_OUTPUT_NAME "MainOutputName"
 #define PARAM_MAIN_OUTPUT_GROUPS "MainOutputGroups"
@@ -32,17 +34,34 @@
 #define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
-#define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
+
+// App Settings
+#define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
 #define PARAM_LAST_UPDATE_CHECK "LastUpdateCheck"
 #define PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS "MinAutoUpdateCheckIntervalSeconds"
 
 Config *Config::_instance = nullptr;
 
+// Execution parameters (not stored in any config file)
 int Config::UpdateForce = 0;
 int Config::UpdateLocalPort = 0;
 bool Config::UpdateLastCheckIgnore = false;
 int Config::DetectObsNdiForce = 0;
+
+enum ObsConfigType { OBS_CONFIG_STRING, OBS_CONFIG_BOOL };
+
+std::map<std::string, enum ObsConfigType> ConfigTypeMap {
+	{PARAM_MAIN_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_MAIN_OUTPUT_NAME, OBS_CONFIG_STRING},
+	{PARAM_MAIN_OUTPUT_GROUPS, OBS_CONFIG_STRING},
+	{PARAM_PREVIEW_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_PREVIEW_OUTPUT_NAME, OBS_CONFIG_STRING},
+	{PARAM_PREVIEW_OUTPUT_GROUPS, OBS_CONFIG_STRING},
+	{PARAM_TALLY_PROGRAM_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_TALLY_PREVIEW_ENABLED, OBS_CONFIG_BOOL},
+	{PARAM_SKIP_UPDATE_VERSION, OBS_CONFIG_STRING}
+};
 
 void ProcessCommandLine()
 {
@@ -141,9 +160,32 @@ void ProcessCommandLine()
 	}
 }
 
+void MigrateSetting(config_t *from, config_t *to, const char *section, const char *name)
+{
+	if (!config_has_user_value(from, section, name))
+		return;
+
+	if (ConfigTypeMap.count(name) == 0)
+		return;
+
+	const enum ObsConfigType type = ConfigTypeMap[name];
+
+	switch (type) {
+	case OBS_CONFIG_STRING:
+		config_set_string(to, section, name, config_get_string(from, section, name));
+
+		break;
+	case OBS_CONFIG_BOOL:
+		config_set_bool(to, section, name, config_get_bool(from, section, name));
+		break;
+	}
+	config_remove_value(from, section, name);
+	obs_log(LOG_INFO, "config: migrated configuration setting %s", name);
+}
+
 Config::Config()
 	: OutputEnabled(false),
-	  OutputName("OBS"),
+	  OutputName("OBS PGM"),
 	  OutputGroups(""),
 	  PreviewOutputEnabled(false),
 	  PreviewOutputName("OBS Preview"),
@@ -152,12 +194,14 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
-	SetDefaultsToGlobalStore();
+	SetDefaultsToUserStore();
+	if (obs_get_version() >= MAKE_SEMANTIC_VERSION(31, 0, 0))
+		GlobalToUserMigration();
 }
 
-void Config::SetDefaultsToGlobalStore()
+void Config::SetDefaultsToUserStore()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
 		config_set_default_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, QT_TO_UTF8(OutputName));
@@ -171,14 +215,36 @@ void Config::SetDefaultsToGlobalStore()
 
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
+	}
+}
 
-		config_set_default_bool(obs_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
+void Config::GlobalToUserMigration()
+{
+	auto app_config = GetAppConfig();
+	auto user_config = GetUserConfig();
+
+	if (app_config && user_config) {
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS);
+
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS);
+
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED);
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
+
+		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_SKIP_UPDATE_VERSION);
+
+		config_save(app_config);
+		config_save(user_config);
 	}
 }
 
 void Config::Load()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		OutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
 		OutputName = config_get_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
@@ -195,7 +261,7 @@ void Config::Load()
 
 void Config::Save()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
 		config_set_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, QT_TO_UTF8(OutputName));
@@ -215,7 +281,7 @@ void Config::Save()
 
 bool Config::AutoCheckForUpdates()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		return config_get_bool(obs_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES);
 	}
@@ -224,7 +290,7 @@ bool Config::AutoCheckForUpdates()
 
 void Config::AutoCheckForUpdates(bool value)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, value);
 		config_save(obs_config);
@@ -233,7 +299,7 @@ void Config::AutoCheckForUpdates(bool value)
 
 void Config::SkipUpdateVersion(const QVersionNumber &version)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_string(obs_config, SECTION_NAME, PARAM_SKIP_UPDATE_VERSION, QT_TO_UTF8(version.toString()));
 		config_save(obs_config);
@@ -242,7 +308,7 @@ void Config::SkipUpdateVersion(const QVersionNumber &version)
 
 QVersionNumber Config::SkipUpdateVersion()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		auto version = config_get_string(obs_config, SECTION_NAME, PARAM_SKIP_UPDATE_VERSION);
 		if (version) {
@@ -254,7 +320,7 @@ QVersionNumber Config::SkipUpdateVersion()
 
 QDateTime Config::LastUpdateCheck()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		auto lastCheck = config_get_int(obs_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK);
 		return QDateTime::fromSecsSinceEpoch(lastCheck);
@@ -264,7 +330,7 @@ QDateTime Config::LastUpdateCheck()
 
 void Config::LastUpdateCheck(const QDateTime &dateTime)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_int(obs_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK, dateTime.toSecsSinceEpoch());
 		config_save(obs_config);
@@ -273,7 +339,7 @@ void Config::LastUpdateCheck(const QDateTime &dateTime)
 
 int Config::MinAutoUpdateCheckIntervalSeconds()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS);
 	}
@@ -282,7 +348,7 @@ int Config::MinAutoUpdateCheckIntervalSeconds()
 
 void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_int(obs_config, SECTION_NAME, PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS, seconds);
 		config_save(obs_config);

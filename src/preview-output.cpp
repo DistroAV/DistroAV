@@ -224,6 +224,7 @@ void preview_output_init()
 
 		obs_data_set_bool(output_settings, "uses_audio",
 				  false); // Preview has no audio
+
 		context.output = obs_output_create("ndi_output", "NDI Preview Output", output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
@@ -238,7 +239,9 @@ void preview_output_init()
 			context.ndi_name = output_name;
 			context.ndi_groups = output_groups;
 		} else {
-			obs_log(LOG_WARNING, "preview_output_init: failed to create NDI Preview Output '%s'",
+			obs_log(LOG_WARNING, "WARN-423 - Failed to create NDI Preview Output '%s'",
+				QT_TO_UTF8(output_name));
+			obs_log(LOG_DEBUG, "preview_output_init: failed to create NDI Preview Output '%s'",
 				QT_TO_UTF8(output_name));
 		}
 		preview_output_start();

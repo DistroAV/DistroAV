@@ -126,6 +126,11 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 	return o;
 }
 
+static const std::map<video_format, std::string> video_to_color_format_map = {{VIDEO_FORMAT_P010, "P010"},
+									      {VIDEO_FORMAT_I010, "I010"},
+									      {VIDEO_FORMAT_P216, "P216"},
+									      {VIDEO_FORMAT_P416, "P416"}};
+
 bool ndi_output_start(void *data)
 {
 	auto o = (ndi_output_t *)data;
@@ -141,9 +146,11 @@ bool ndi_output_start(void *data)
 	uint32_t flags = 0;
 	video_t *video = obs_output_video(o->output);
 	audio_t *audio = obs_output_audio(o->output);
+	obs_output_set_last_error(o->output, "");
 
 	if (!video && !audio) {
-		obs_log(LOG_WARNING, "NDI Output could not start. No Audio/Video data available. ('%s')", name);
+		obs_log(LOG_WARNING, "WARN-413 - NDI Output could not start. No Audio/Video data available. ('%s')",
+			name);
 		obs_log(LOG_DEBUG, "'%s'('%s') ndi_output_start: no video nor audio available", name, groups);
 		return false;
 	}
@@ -182,8 +189,12 @@ bool ndi_output_start(void *data)
 			break;
 
 		default:
-			obs_log(LOG_WARNING, "Unsupported pixel format %d. ('%s')", format, name);
+			obs_log(LOG_ERROR, "ERR-410 - NDI Output cannot start : Unsupported pixel format %d. ('%s')",
+				format, name);
 			obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s', ...)", name, groups);
+			auto error_string = obs_module_text("NDIPlugin.OutputSettings.LastError") +
+					    video_to_color_format_map.at(format);
+			obs_output_set_last_error(o->output, error_string.c_str());
 			return false;
 		}
 
@@ -214,11 +225,11 @@ bool ndi_output_start(void *data)
 		if (o->started) {
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi output started", name);
 		} else {
-			obs_log(LOG_WARNING, "NDI Sender data capture failed. '%s'", name);
+			obs_log(LOG_WARNING, "WARN-415 - NDI Sender data capture failed. '%s'", name);
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: data capture start failed", name);
 		}
 	} else {
-		obs_log(LOG_WARNING, "NDI Sender initialisation failed. '%s'", name);
+		obs_log(LOG_WARNING, "WARN-416 - NDI Sender initialisation failed. '%s'", name);
 		obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi sender init failed", name);
 	}
 
@@ -263,7 +274,7 @@ void ndi_output_stop(void *data, uint64_t)
 		}
 
 		if (o->conv_buffer) {
-			delete o->conv_buffer;
+			delete[] o->conv_buffer;
 			o->conv_buffer = nullptr;
 			o->conv_function = nullptr;
 		}
