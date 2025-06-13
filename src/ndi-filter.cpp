@@ -69,54 +69,43 @@ void ndi_filter_update(void *data, obs_data_t *settings);
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
-	obs_log(LOG_INFO, "+ndi_filter_getproperties(...)");
+	obs_log(LOG_DEBUG, "+ndi_filter_getproperties(...)");
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_properties_add_text(
-		props, FLT_PROP_NAME,
-		obs_module_text("NDIPlugin.FilterProps.NDIName"),
-		OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, FLT_PROP_NAME, obs_module_text("NDIPlugin.FilterProps.NDIName"),
+				OBS_TEXT_DEFAULT);
 
-	obs_properties_add_text(
-		props, FLT_PROP_GROUPS,
-		obs_module_text("NDIPlugin.FilterProps.NDIGroups"),
-		OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, FLT_PROP_GROUPS, obs_module_text("NDIPlugin.FilterProps.NDIGroups"),
+				OBS_TEXT_DEFAULT);
 
-	obs_properties_add_button(
-		props, "ndi_apply",
-		obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
-		[](obs_properties_t *, obs_property_t *, void *private_data) {
-			auto s = (ndi_filter_t *)private_data;
-			auto settings = obs_source_get_settings(s->obs_source);
-			ndi_filter_update(s, settings);
-			obs_data_release(settings);
-			return true;
-		});
+	obs_properties_add_button(props, "ndi_apply", obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
+				  [](obs_properties_t *, obs_property_t *, void *private_data) {
+					  auto s = (ndi_filter_t *)private_data;
+					  auto settings = obs_source_get_settings(s->obs_source);
+					  ndi_filter_update(s, settings);
+					  obs_data_release(settings);
+					  return true;
+				  });
 
 	auto group_ndi = obs_properties_create();
-	obs_properties_add_button(
-		group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
-		[](obs_properties_t *, obs_property_t *, void *) {
-			QDesktopServices::openUrl(
-				QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
-			return false;
-		});
-	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL,
-				 group_ndi);
+	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
+				  [](obs_properties_t *, obs_property_t *, void *) {
+					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+					  return false;
+				  });
+	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL, group_ndi);
 
-	obs_log(LOG_INFO, "-ndi_filter_getproperties(...)");
+	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
 }
 
 void ndi_filter_getdefaults(obs_data_t *defaults)
 {
-	obs_log(LOG_INFO, "+ndi_filter_getdefaults(...)");
-	obs_data_set_default_string(
-		defaults, FLT_PROP_NAME,
-		obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
+	obs_log(LOG_DEBUG, "+ndi_filter_getdefaults(...)");
+	obs_data_set_default_string(defaults, FLT_PROP_NAME, obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
 	obs_data_set_default_string(defaults, FLT_PROP_GROUPS, "");
-	obs_log(LOG_INFO, "-ndi_filter_getdefaults(...)");
+	obs_log(LOG_DEBUG, "-ndi_filter_getdefaults(...)");
 }
 
 void ndi_filter_raw_video(void *data, video_data *frame)
@@ -138,8 +127,11 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	video_frame.frame_rate_D = f->ovi.fps_den;
 	video_frame.picture_aspect_ratio = 0; // square pixels
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+
+  // video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.timecode = (frame->timestamp / 100);
 	video_frame.timestamp = frame->timestamp;
+  
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 
@@ -175,8 +167,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		vec4_zero(&background);
 
 		gs_clear(GS_CLEAR_COLOR, &background, 0.0f, 0);
-		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f,
-			 100.0f);
+		gs_ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
 
 		gs_blend_state_push();
 		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
@@ -189,8 +180,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		if (f->known_width != width || f->known_height != height) {
 
 			gs_stagesurface_destroy(f->stagesurface);
-			f->stagesurface = gs_stagesurface_create(width, height,
-								 TEXFORMAT);
+			f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
 
 			video_output_info vi = {0};
 			vi.format = VIDEO_FORMAT_BGRA;
@@ -205,16 +195,15 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 
 			video_output_close(f->video_output);
 			video_output_open(&f->video_output, &vi);
-			video_output_connect(f->video_output, nullptr,
-					     ndi_filter_raw_video, f);
+			video_output_connect(f->video_output, nullptr, ndi_filter_raw_video, f);
 
 			f->known_width = width;
 			f->known_height = height;
 		}
 
 		video_frame output_frame;
-		if (video_output_lock_frame(f->video_output, &output_frame, 1,
-					    os_gettime_ns())) {
+
+		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
 			obs_sync_debug_log("OBS -> ndi_filter_offscreen_render",
 					   obs_source_get_name(f->obs_source),
 					   0, os_gettime_ns());
@@ -224,18 +213,14 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 				f->video_data = nullptr;
 			}
 
-			gs_stage_texture(
-				f->stagesurface,
-				gs_texrender_get_texture(f->texrender));
-			gs_stagesurface_map(f->stagesurface, &f->video_data,
-					    &f->video_linesize);
+			gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
+			gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize);
 
 			uint32_t linesize = output_frame.linesize[0];
 			for (uint32_t i = 0; i < f->known_height; ++i) {
 				uint32_t dst_offset = linesize * i;
 				uint32_t src_offset = f->video_linesize * i;
-				memcpy(output_frame.data[0] + dst_offset,
-				       f->video_data + src_offset, linesize);
+				memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset, linesize);
 			}
 
 			video_output_unlock_frame(f->video_output);
@@ -248,7 +233,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	auto f = (ndi_filter_t *)data;
 	auto obs_source = f->obs_source;
 	auto name = obs_source_get_name(obs_source);
-	obs_log(LOG_INFO, "+ndi_filter_update(name=`%s`)", name);
+	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 
@@ -274,15 +259,15 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
 	}
 
-	obs_log(LOG_INFO, "-ndi_filter_update(name=`%s`)", name);
+	obs_log(LOG_INFO, "NDI Filter Updated: '%s'", name);
+	obs_log(LOG_DEBUG, "-ndi_filter_update(name='%s', groups='%s')", name, groups);
 }
 
 void *ndi_filter_create(obs_data_t *settings, obs_source_t *obs_source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
-	obs_log(LOG_INFO, "+ndi_filter_create(name=`%s`, groups=`%s`)", name,
-		groups);
+	obs_log(LOG_DEBUG, "+ndi_filter_create(name='%s', groups='%s')", name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->obs_source = obs_source;
@@ -294,19 +279,17 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	ndi_filter_update(f, settings);
 
-	obs_log(LOG_INFO, "-ndi_filter_create(...)");
+	obs_log(LOG_INFO, "NDI Filter Created: '%s'", name);
+	obs_log(LOG_DEBUG, "-ndi_filter_create(...)");
 
 	return f;
 }
 
-void *ndi_filter_create_audioonly(obs_data_t *settings,
-				  obs_source_t *obs_source)
+void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source)
 {
 	auto name = obs_data_get_string(settings, FLT_PROP_NAME);
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
-	obs_log(LOG_INFO,
-		"+ndi_filter_create_audioonly(name=`%s`, groups=`%s`)", name,
-		groups);
+	obs_log(LOG_DEBUG, "+ndi_filter_create_audioonly(name='%s', groups='%s')", name, groups);
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->is_audioonly = true;
@@ -316,7 +299,8 @@ void *ndi_filter_create_audioonly(obs_data_t *settings,
 
 	ndi_filter_update(f, settings);
 
-	obs_log(LOG_INFO, "-ndi_filter_create_audioonly(...)");
+	obs_log(LOG_INFO, "NDI Audio-Only Filter Created: '%s'", name);
+	obs_log(LOG_DEBUG, "-ndi_filter_create_audioonly(...)");
 
 	return f;
 }
@@ -325,7 +309,7 @@ void ndi_filter_destroy(void *data)
 {
 	auto f = (ndi_filter_t *)data;
 	auto name = obs_source_get_name(f->obs_source);
-	obs_log(LOG_INFO, "+ndi_filter_destroy('%s'...)", name);
+	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
@@ -341,22 +325,22 @@ void ndi_filter_destroy(void *data)
 	gs_texrender_destroy(f->texrender);
 
 	if (f->audio_conv_buffer) {
-		obs_log(LOG_INFO, "ndi_filter_destroy: freeing %zu bytes",
-			f->audio_conv_buffer_size);
+		obs_log(LOG_DEBUG, "ndi_filter_destroy: freeing %zu bytes", f->audio_conv_buffer_size);
 		bfree(f->audio_conv_buffer);
 		f->audio_conv_buffer = nullptr;
 	}
 
 	bfree(f);
 
-	obs_log(LOG_INFO, "-ndi_filter_destroy('%s'...)", name);
+	obs_log(LOG_INFO, "NDI Filter Destroyed: '%s'", name);
+	obs_log(LOG_DEBUG, "-ndi_filter_destroy('%s'...)", name);
 }
 
 void ndi_filter_destroy_audioonly(void *data)
 {
 	auto f = (ndi_filter_t *)data;
 	auto name = obs_source_get_name(f->obs_source);
-	obs_log(LOG_INFO, "+ndi_filter_destroy_audioonly('%s'...)", name);
+	obs_log(LOG_DEBUG, "+ndi_filter_destroy_audioonly('%s'...)", name);
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(f->ndi_sender);
@@ -369,7 +353,8 @@ void ndi_filter_destroy_audioonly(void *data)
 
 	bfree(f);
 
-	obs_log(LOG_INFO, "-ndi_filter_destroy_audioonly('%s'...)", name);
+	obs_log(LOG_INFO, "NDI Audio-Only Filter Destroyed: '%s'", name);
+	obs_log(LOG_DEBUG, "-ndi_filter_destroy_audioonly('%s'...)", name);
 }
 
 void ndi_filter_tick(void *data, float)
@@ -396,41 +381,42 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 
 	obs_get_audio_info(&f->oai);
 
-	NDIlib_audio_frame_v2_t audio_frame = {0};
+	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
+  
+  // audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.timecode = audio_data->timestamp / 100;
 	audio_frame.timestamp = audio_data->timestamp;
+  
 	audio_frame.no_samples = audio_data->frames;
-	audio_frame.channel_stride_in_bytes = audio_frame.no_samples * 4;
+	audio_frame.channel_stride_in_bytes =
+		audio_frame.no_samples *
+		4; // TODO: Check if this correct or should 4 be replaced by number of channels.
+	// audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
+	// audio_frame.p_data = p_frame;
+	audio_frame.p_metadata = NULL; // No metadata support yet!
 
-	const size_t data_size =
-		audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
+	const size_t data_size = audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
 
 	if (data_size > f->audio_conv_buffer_size) {
-		obs_log(LOG_INFO,
-			"ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
+		obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
 			f->audio_conv_buffer_size, data_size);
 		if (f->audio_conv_buffer) {
-			obs_log(LOG_INFO,
-				"ndi_filter_asyncaudio: freeing %zu bytes",
-				f->audio_conv_buffer_size);
+			obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: freeing %zu bytes", f->audio_conv_buffer_size);
 			bfree(f->audio_conv_buffer);
 		}
-		obs_log(LOG_INFO, "ndi_filter_asyncaudio: allocating %zu bytes",
-			data_size);
+		obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: allocating %zu bytes", data_size);
 		f->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
 		f->audio_conv_buffer_size = data_size;
 	}
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(f->audio_conv_buffer +
-			       (i * audio_frame.channel_stride_in_bytes),
-		       audio_data->data[i],
+		memcpy(f->audio_conv_buffer + (i * audio_frame.channel_stride_in_bytes), audio_data->data[i],
 		       audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = (float *)f->audio_conv_buffer;
+	audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 
@@ -442,7 +428,8 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 				      audio_frame.timestamp, audio_frame.p_data,
 				      audio_frame.no_samples,
 				      audio_frame.sample_rate);
-	ndiLib->send_send_audio_v2(f->ndi_sender, &audio_frame);
+	ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
+
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	return audio_data;
