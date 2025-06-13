@@ -577,7 +577,6 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	update_request->start();
 #endif
 
-	obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
-	return true;
-
+	 obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
+	 return true;
 }
