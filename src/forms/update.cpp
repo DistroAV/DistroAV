@@ -157,7 +157,7 @@ public:
 		ui->labelReleaseNotes->setText(textTemp);
 
 		auto utcDateTime = QDateTime::fromString(pluginUpdateInfo.releaseDate, Qt::ISODate);
-		utcDateTime.setTimeZone(QTimeZone::UTC);
+		utcDateTime.setTimeZone(QTimeZone::utc());
 		auto formattedUtcDateTime = utcDateTime.toString("yyyy-MM-dd hh:mm:ss 'UTC'");
 		textTemp = QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseDate"));
 		ui->labelReleaseDate->setText(textTemp);
