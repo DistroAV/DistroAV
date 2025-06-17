@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# This script downloads and installs the NDI SDK for Linux.
+# By default it downloads the NDI SDK v6 for Linux and extracts it to a temporary directory.
+#
+# Add argument "install" to install the library files to your system.
+# Usage: ./libndi-get.sh install
+
+
 LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v6_Linux"
 LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
 LIBNDI_INSTALLER_URL="https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER"
@@ -64,11 +71,7 @@ echo
 
 popd
 
-if [ "$1" == "noinstall" ]; then
-    echo "No installation requested. The library files are in $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/"
-    echo "You can copy them manually to your system if needed."
-    ls -la $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/libndi*
-else
+if [ "$1" == "install" ]; then
     echo "Copying the library files to the long-term location. You might be prompted for authentication."
     sudo cp -P $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
     sudo ldconfig
@@ -78,12 +81,7 @@ else
 
     echo "Adding backward compatibility tweaks for older plugins version to work with NDI v6"
     sudo ln -s /usr/local/lib/libndi.so.6 /usr/local/lib/libndi.so.5
-fi
 
-# Allow to keep the temporary files (to use with libndi-package.sh)
-if [ "$1" == "nocleanup" ]; then
-    echo "No Clean-up requested."
-else
     echo "Clean-up : Removing temporary folder"
     rm -rf $LIBNDI_TMP
     if [[ ! -d "$LIBNDI_TMP" ]]; then
@@ -93,4 +91,13 @@ else
         echo "Please clean this up manually - All should be in $LIBNDI_TMP"
         exit 1
     fi
+    echo "Installation complete."
+else
+    # Allow to keep the temporary files (to use with libndi-package.sh)
+    echo "No installation requested. The library files are in $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/"
+    echo "You can copy them manually to your system if needed."
+    ls -la $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/libndi*
 fi
+
+echo "Script execution Complete."
+exit 0
