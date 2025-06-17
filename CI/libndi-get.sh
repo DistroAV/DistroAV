@@ -3,7 +3,7 @@ set -e
 
 LIBNDI_INSTALLER_NAME="Install_NDI_SDK_v6_Linux"
 LIBNDI_INSTALLER="$LIBNDI_INSTALLER_NAME.tar.gz"
-LIBNDI_INSTALLER_URL=https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER
+LIBNDI_INSTALLER_URL="https://downloads.ndi.tv/SDK/NDI_SDK_Linux/$LIBNDI_INSTALLER"
 
 # Use temporary directory
 LIBNDI_TMP=$(mktemp --tmpdir -d ndidisk.XXXXXXX)
@@ -64,7 +64,11 @@ echo
 
 popd
 
-if [ "$1" == "install" ]; then
+if [ "$1" == "noinstall" ]; then
+    echo "No installation requested. The library files are in $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/"
+    echo "You can copy them manually to your system if needed."
+    ls -la $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/libndi*
+else
     echo "Copying the library files to the long-term location. You might be prompted for authentication."
     sudo cp -P $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
     sudo ldconfig
