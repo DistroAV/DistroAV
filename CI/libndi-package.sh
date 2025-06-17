@@ -12,7 +12,7 @@ SCRIPT_DIR=$(dirname "$0")
 
 pushd $SCRIPT_DIR
 
-./libndi-get.sh --noinstall
+./libndi-get.sh
 
 GIT_HASH=$(git rev-parse --short HEAD)
 PKG_VERSION="1-$GIT_HASH-$BRANCH_SHORT_NAME-git"
