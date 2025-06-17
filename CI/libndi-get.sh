@@ -83,7 +83,7 @@ if [ "$1" == "install" ]; then
     sudo ln -s /usr/local/lib/libndi.so.6 /usr/local/lib/libndi.so.5
 
     echo "Clean-up : Removing temporary folder"
-    rm -rf $LIBNDI_TMP
+    rm -rf "$LIBNDI_TMP"
     if [[ ! -d "$LIBNDI_TMP" ]]; then
         echo "Temporary directory $LIBNDI_TMP does not exist anymore (good!)"
     else
