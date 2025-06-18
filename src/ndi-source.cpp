@@ -339,6 +339,7 @@ void deactivate_source_output_video_texture(ndi_source_t *source)
 	// ```
 	source->width = 0;
 	source->height = 0;
+	obs_log(LOG_DEBUG, "'%s' deactivate_source_output_video_texture(…)", obs_source_get_name(source->obs_source));
 	obs_source_output_video(source->obs_source, NULL);
 }
 
@@ -557,6 +558,7 @@ void *ndi_source_thread(void *data)
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
 				obs_source_name);
 #endif
+			// If the ndi_receiver is not connected to any NDI source yet/anymore, this will actively disable the OBS texture
 			deactivate_source_output_video_texture(s);
 
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
