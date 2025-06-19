@@ -337,6 +337,9 @@ void deactivate_source_output_video_texture(ndi_source_t *source)
 	// void obs_source_output_video(obs_source_t *source, const struct obs_source_frame *frame)
 	// Outputs asynchronous video data. Set to NULL to deactivate the texture.
 	// ```
+	if (source->width == 0 && source->height == 0)
+		return;
+
 	source->width = 0;
 	source->height = 0;
 	obs_log(LOG_DEBUG, "'%s' deactivate_source_output_video_texture(…)", obs_source_get_name(source->obs_source));
