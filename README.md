@@ -28,8 +28,14 @@ DistroAV (Formerly OBS-NDI)
 * [Remove old OBS-NDI plugin](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Installation
+Windows via [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/#use-winget) : `winget install --exact --id DistroAV.DistroAV`
+MacOS via [homebrew](https://brew.sh/) : `brew install --cask distroav`
+Linux ([Flatpak](https://flatpak.org/)) : `flatpak install com.obsproject.Studio com.obsproject.Studio.Plugin.DistroAV
+obs --system-talk-name=org.freedesktop.Avahi`
 
-See [Installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
+Manually from the latest [release page](https://distroav.org/download).
+
+Any other options, or errors: See [Installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
 
 # Troubleshooting
 
