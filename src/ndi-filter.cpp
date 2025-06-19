@@ -130,9 +130,41 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
+bool is_filter_invalid(ndi_filter_t *filter)
+{
+	obs_source_t *target = obs_filter_get_target(filter->obs_source);
+	obs_source_t *parent = obs_filter_get_parent(filter->obs_source);
+	if (!target || !parent) {
+		return true;
+	}
+
+	uint32_t width = obs_source_get_width(target);
+	uint32_t height = obs_source_get_height(target);
+
+	uint32_t parent_width = obs_source_get_base_width(parent);
+	uint32_t parent_height = obs_source_get_base_height(parent);
+
+	if (target == parent) {
+		width = parent_width;
+		height = parent_height;
+	}
+
+	// If the parent width or height is 0 (for example when a window capture is closed), consider this filter invalid
+	// Additionally, if the filter or source are not enabled / active, consider the filter invalid, too
+	bool is_invalid = (parent_width == 0) || (parent_height == 0) || !obs_source_enabled(filter->obs_source) ||
+			  !obs_source_active(parent);
+
+	return is_invalid;
+}
+
 void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 {
 	auto f = (ndi_filter_t *)data;
+
+	if (is_filter_invalid(f)) {
+		destroy_ndi_sender(f);
+		return;
+	}
 
 	obs_source_t *target = obs_filter_get_parent(f->obs_source);
 	if (!target) {
@@ -143,19 +175,6 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 	uint32_t height = obs_source_get_base_height(target);
 
 	gs_texrender_reset(f->texrender);
-
-	// If width or height is 0 (when a capture window is closed), then send empty frame
-	// Additionally, check if the filter is enabled - if it's not, treat it as an empty frame, too
-	bool is_empty_frame = (width == 0) || (height == 0) || !obs_source_enabled(f->obs_source);
-
-	if (is_empty_frame) {
-		// If this frame is empty and the sender is not null
-		destroy_ndi_sender(f);
-		return;
-	} else if (!f->ndi_sender) {
-		// If the sender is null then recreate it
-		destroy_and_create_ndi_sender(f, nullptr);
-	}
 
 	if (gs_texrender_begin(f->texrender, width, height)) {
 		vec4 background;
@@ -388,6 +407,13 @@ void ndi_filter_tick(void *data, float)
 {
 	auto f = (ndi_filter_t *)data;
 	obs_get_video_info(&f->ovi);
+
+	if (is_filter_invalid(f)) {
+		return;
+	} else if (!f->ndi_sender) {
+		// If the sender is null then recreate it
+		destroy_and_create_ndi_sender(f, nullptr);
+	}
 }
 
 void ndi_filter_videorender(void *data, gs_effect_t *)
