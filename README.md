@@ -29,7 +29,9 @@ DistroAV (Formerly OBS-NDI)
 
 # Installation
 Windows via [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/#use-winget) : `winget install --exact --id DistroAV.DistroAV`
+
 MacOS via [homebrew](https://brew.sh/) : `brew install --cask distroav`
+
 Linux ([Flatpak](https://flatpak.org/)) : `flatpak install com.obsproject.Studio com.obsproject.Studio.Plugin.DistroAV
 obs --system-talk-name=org.freedesktop.Avahi`
 
