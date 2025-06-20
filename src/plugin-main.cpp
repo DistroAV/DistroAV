@@ -420,7 +420,9 @@ const NDIlib_v5 *load_ndilib()
 	// Flatpak install will look for the NDI lib in /app/plugins/DistroAV/extra/lib
 	locations << "/usr/lib";
 	locations << "/usr/local/lib";
+#if defined(Q_OS_LINUX)
 	locations << "/app/plugins/DistroAV/extra/lib";
+#endif
 #endif
 	auto lib_path = QString();
 #if defined(Q_OS_LINUX)
