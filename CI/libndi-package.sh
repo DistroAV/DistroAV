@@ -39,11 +39,11 @@ PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
 
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
     --backup=no --deldoc=yes --install=no \
-    --pkgname=libndi6-dev
+    --pkgname=libndi6-dev \
     --pkgversion="$LIBNDI_VERSION" \
     --replaces="libndi5-dev, libndi4-dev, libndi3-dev" \
-    --requires="libndi5=6 \(\>= ${LIBNDI_VERSION}\)" \
-    --pkglicense="Proprietary"
+    --requires="libndi6 \(\>= ${LIBNDI_VERSION}\)" \
+    --pkglicense="Proprietary" \
     --maintainer="contact@distroav.org" \
     --pkggroup="video" \
     --pkgsource="https://downloads.ndi.tv" \
