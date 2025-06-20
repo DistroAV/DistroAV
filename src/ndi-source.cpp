@@ -21,6 +21,7 @@
 #include <util/platform.h>
 #include <util/threading.h>
 
+#include "obs-support/sync-debug.h"
 #include <QDesktopServices>
 #include <QUrl>
 
@@ -706,6 +707,14 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 		return;
 	}
 
+	obs_sync_debug_log("NDI -> ndi_source_thread_process_audio2",
+			   obs_source_get_name(obs_source),
+			   ndi_audio_frame->timecode,
+			   ndi_audio_frame->timestamp);
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME(
+		"NDI -> ndi_source_thread", obs_source_get_name(obs_source),
+		ndi_audio_frame->timestamp, ndi_audio_frame2->p_data,
+		ndi_audio_frame->no_samples, ndi_audio_frame2->sample_rate);
 	const int channelCount = ndi_audio_frame->no_channels > 8 ? 8 : ndi_audio_frame->no_channels;
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
@@ -728,12 +737,84 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 			(uint8_t *)ndi_audio_frame->p_data + (i * ndi_audio_frame->channel_stride_in_bytes);
 	}
 
+	obs_sync_debug_log("OBS <- ndi_source_thread_process_audio2",
+			   obs_source_get_name(obs_source), (int64_t)0,
+			   obs_audio_frame->timestamp);
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME(
+		"OBS <- ndi_source_thread", obs_source_get_name(obs_source),
+		obs_audio_frame->timestamp, (float *)obs_audio_frame->data[0],
+		obs_audio_frame->frames, obs_audio_frame->samples_per_sec);
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
-				      obs_source *obs_source, obs_source_frame *obs_video_frame)
+void ndi_source_thread_process_audio3(ndi_source_config_t *config,
+				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
+				      obs_source_t *obs_source,
+				      obs_source_audio *obs_audio_frame)
 {
+	if (!config->audio_enabled) {
+		return;
+	}
+
+	obs_sync_debug_log("NDI -> ndi_source_thread_process_audio3",
+			   obs_source_get_name(obs_source),
+			   ndi_audio_frame3->timecode,
+			   ndi_audio_frame3->timestamp);
+
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME(
+		"NDI -> ndi_source_thread", obs_source_get_name(obs_source),
+		ndi_audio_frame3->timestamp, (float *)ndi_audio_frame3->p_data,
+		ndi_audio_frame3->no_samples, ndi_audio_frame3->sample_rate);
+
+	const int channelCount = ndi_audio_frame3->no_channels > 8
+					 ? 8
+					 : ndi_audio_frame3->no_channels;
+
+	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
+
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame3->timestamp * 100);
+		break;
+
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame3->timecode * 100);
+		break;
+	}
+
+	obs_audio_frame->samples_per_sec = ndi_audio_frame3->sample_rate;
+	obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
+	obs_audio_frame->frames = ndi_audio_frame3->no_samples;
+	for (int i = 0; i < channelCount; ++i) {
+		obs_audio_frame->data[i] =
+			(uint8_t *)ndi_audio_frame3->p_data +
+			(i * ndi_audio_frame3->channel_stride_in_bytes);
+	}
+
+	obs_sync_debug_log("OBS <- ndi_source_thread_process_audio3",
+			   obs_source_get_name(obs_source), (int64_t)0,
+			   obs_audio_frame->timestamp);
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME(
+		"OBS <- ndi_source_thread", obs_source_get_name(obs_source),
+		obs_audio_frame->timestamp, (float *)obs_audio_frame->data[0],
+		obs_audio_frame->frames, obs_audio_frame->samples_per_sec);
+	obs_source_output_audio(obs_source, obs_audio_frame);
+}
+
+void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame, 
+              obs_source *obs_source, obs_source_frame *obs_video_frame)
+
+{
+	obs_sync_debug_log("NDI -> ndi_source_thread_process_video2",
+			   obs_source_get_name(obs_source),
+			   ndi_video_frame->timecode,
+			   ndi_video_frame->timestamp);
+	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI -> ndi_source_thread",
+				      obs_source_get_name(obs_source),
+				      ndi_video_frame->timestamp,
+				      (uint8_t *)ndi_video_frame->p_data);
 	switch (ndi_video_frame->FourCC) {
 	case NDIlib_FourCC_type_BGRA:
 		obs_video_frame->format = VIDEO_FORMAT_BGRA;
@@ -787,6 +868,13 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 	video_format_get_parameters(config->yuv_colorspace, config->yuv_range, obs_video_frame->color_matrix,
 				    obs_video_frame->color_range_min, obs_video_frame->color_range_max);
 
+	obs_sync_debug_log("OBS <- ndi_source_thread_process_video2",
+			   obs_source_get_name(obs_source), (int64_t)0,
+			   obs_video_frame->timestamp);
+	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("OBS <- ndi_source_thread",
+				      obs_source_get_name(obs_source),
+				      (int64_t)obs_video_frame->timestamp,
+				      obs_video_frame->data[0]);
 	obs_source_output_video(obs_source, obs_video_frame);
 }
 
