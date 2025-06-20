@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2024 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -134,6 +134,12 @@ bool NDIlib_is_supported_CPU(void);
 
 // Extensions to support PTZ control, etc...
 #include "Processing.NDI.Recv.ex.h"
+
+// The receiver advertiser API.
+#include "Processing.NDI.RecvAdvertiser.h"
+
+// The receiver listener API.
+#include "Processing.NDI.RecvListener.h"
 
 // The sending video API.
 #include "Processing.NDI.Send.h"
