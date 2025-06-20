@@ -417,8 +417,12 @@ const NDIlib_v6 *load_ndilib()
 	// https://github.com/DistroAV/DistroAV/blob/master/lib/ndi/NDI%20SDK%20Documentation.pdf
 	// "6.1 LOCATING THE LIBRARY
 	// ... the redistributable on MacOS is installed within `/usr/local/lib` ..."
+	// Flatpak install will look for the NDI lib in /app/plugins/DistroAV/extra/lib
 	locations << "/usr/lib";
 	locations << "/usr/local/lib";
+#if defined(Q_OS_LINUX)
+	locations << "/app/plugins/DistroAV/extra/lib";
+#endif
 #endif
 	auto lib_path = QString();
 #if defined(Q_OS_LINUX)
