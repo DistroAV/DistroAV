@@ -24,14 +24,14 @@ else
 fi
 
 # While most of the command are with the folder path, this is needed for the libndi install script to run properly
-pushd $LIBNDI_TMP
+pushd "$LIBNDI_TMP"
 
 # Download LIBNDI
 # The follwoing should work with tmp folder in the user home directory - but not always... So we do not use it.
 # curl -o "$LIBNDI_TMP/$LIBNDI_INSTALLER" $LIBNDI_INSTALLER_URL -f --retry 5
 
 # The following is required if the temp directory is not in the user home directory.
-curl -L $LIBNDI_INSTALLER_URL -f --retry 5 > "$LIBNDI_TMP/$LIBNDI_INSTALLER"
+curl -L "$LIBNDI_INSTALLER_URL" -f --retry 5 > "$LIBNDI_TMP/$LIBNDI_INSTALLER"
 
 
 # Check if download was successful
@@ -55,29 +55,29 @@ fi
 echo "Uncompression complete."
 
 
-yes | PAGER="cat" sh $LIBNDI_INSTALLER_NAME.sh
+yes | PAGER="cat" sh "$LIBNDI_INSTALLER_NAME.sh"
 
 
-rm -rf $LIBNDI_TMP/ndisdk
+rm -rf "$LIBNDI_TMP/ndisdk"
 echo "Moving things to a folder with no space"
-mv "$LIBNDI_TMP/NDI SDK for Linux" $LIBNDI_TMP/ndisdk
+mv "$LIBNDI_TMP/NDI SDK for Linux" "$LIBNDI_TMP/ndisdk"
 echo
 echo "Contents of $LIBNDI_TMP/ndisdk/lib:"
-ls -la $LIBNDI_TMP/ndisdk/lib
+ls -la "$LIBNDI_TMP/ndisdk/lib"
 echo
 echo "Contents of $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu:"
-ls -la $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu
+ls -la "$LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu"
 echo
 
 popd
 
 if [ "$1" == "install" ]; then
     echo "Copying the library files to the long-term location. You might be prompted for authentication."
-    sudo cp -P $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/* /usr/local/lib/
+    sudo cp -P "$LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/"* /usr/local/lib/
     sudo ldconfig
 
     echo "libndi installed to /usr/local/lib"
-    ls -la /usr/local/lib/libndi*
+    ls -la "/usr/local/lib/"libndi*
 
     echo "Adding backward compatibility tweaks for older plugins version to work with NDI v6"
     sudo ln -s /usr/local/lib/libndi.so.6 /usr/local/lib/libndi.so.5
@@ -96,7 +96,7 @@ else
     # Allow to keep the temporary files (to use with libndi-package.sh)
     echo "No installation requested. The library files are in $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/"
     echo "You can copy them manually to your system if needed."
-    ls -la $LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/libndi*
+    ls -la "$LIBNDI_TMP/ndisdk/lib/x86_64-linux-gnu/libndi"*
 fi
 
 echo "Script execution Complete."

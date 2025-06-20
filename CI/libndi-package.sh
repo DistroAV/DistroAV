@@ -10,7 +10,7 @@ LIBNDI_VERSION="6.2.0"
 
 SCRIPT_DIR=$(dirname "$0")
 
-pushd $SCRIPT_DIR
+pushd "$SCRIPT_DIR"
 
 ./libndi-get.sh
 
