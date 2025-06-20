@@ -12,7 +12,6 @@ DistroAV (Formerly OBS-NDI)
 (English Speaking)  
 
 [![Total downloads](https://img.shields.io/github/downloads/DistroAV/DistroAV/total)](https://github.com/DistroAV/DistroAV/releases)
-![Flathub](https://img.shields.io/flathub/downloads/com.obsproject.Studio.Plugin.NDI?label=Flathub%20Installs)  
 [![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/distroav)](https://opencollective.com/distroav/donate)  
 [(Please consider making a donation)](https://opencollective.com/distroav)
 </div>
@@ -28,12 +27,21 @@ DistroAV (Formerly OBS-NDI)
 * [Remove old OBS-NDI plugin](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Installation
-Windows via [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/#use-winget) : `winget install --exact --id DistroAV.DistroAV`
+Windows via [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/#use-winget) ![WinGet Package Version](https://img.shields.io/winget/v/DistroAV.DistroAV)
+```
+winget install --exact --id DistroAV.DistroAV
+```
 
-MacOS via [homebrew](https://brew.sh/) : `brew install --cask distroav`
+MacOS via [homebrew](https://brew.sh/) ![Homebrew Cask Version](https://img.shields.io/homebrew/cask/v/distroav)
+```
+brew install --cask distroav
+```
 
-Linux ([Flatpak](https://flatpak.org/)) : `flatpak install com.obsproject.Studio com.obsproject.Studio.Plugin.DistroAV
-obs --system-talk-name=org.freedesktop.Avahi`
+Linux ([Flatpak](https://flatpak.org/)) ![Flathub Version](https://img.shields.io/flathub/v/com.obsproject.Studio.Plugin.DistroAV)
+```
+flatpak install com.obsproject.Studio com.obsproject.Studio.Plugin.DistroAV
+obs --system-talk-name=org.freedesktop.Avahi
+```
 
 Manually from the latest [release page](https://distroav.org/download).
 
