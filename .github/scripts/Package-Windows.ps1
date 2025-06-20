@@ -79,7 +79,7 @@ function Package {
     $CompressArgs = @{
         Path = (Get-ChildItem -Path "${ProjectRoot}/release-portable/${Configuration}" -Exclude "${OutputName}*.*")
         CompressionLevel = 'Optimal'
-        DestinationPath = "${ProjectRoot}/release-portable/${OutputName}-Portable.zip"
+        DestinationPath = "${ProjectRoot}/release-portable/${OutputName}-portable.zip"
         Verbose = ($Env:CI -ne $null)
     }
     Compress-Archive -Force @CompressArgs
