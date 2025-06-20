@@ -7,7 +7,7 @@ DistroAV (Formerly OBS-NDI)
 
 [![GitHub](https://img.shields.io/github/license/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/blob/master/LICENSE)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DistroAV/DistroAV/push.yaml?label=master)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/releases/latest)  
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/releases/latest) ![GitHub Release Date](https://img.shields.io/github/release-date/distroav/distroav?display_date=published_at) 
 [![Discord](https://discordapp.com/api/guilds/1082173788101279746/widget.png?style=banner3)](https://discord.gg/ZuTxbUK3ug)  
 (English Speaking)  
 
