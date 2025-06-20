@@ -6,11 +6,11 @@
 
 set -e
 
-LIBNDI_VERSION="5.6.0"
+LIBNDI_VERSION="6.2.0"
 
 SCRIPT_DIR=$(dirname "$0")
 
-pushd $SCRIPT_DIR
+pushd "$SCRIPT_DIR"
 
 ./libndi-get.sh
 
@@ -28,20 +28,23 @@ pushd ../build_x86_64
 
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
     --backup=no --deldoc=yes --install=no \
-    --pkgname=libndi5 --pkgversion="$LIBNDI_VERSION" \
-    --replaces="libndi4, libndi3" \
+    --pkgname=libndi6 \
+    --pkgversion="$LIBNDI_VERSION" \
+    --replaces="libndi5, libndi4, libndi3" \
     --pkglicense="Proprietary" \
-    --maintainer="stephane.lepin@gmail.com" \
+    --maintainer="contact@distroav.org" \
     --pkggroup="video" \
     --pkgsource="https://downloads.ndi.tv" \
     --pakdir="../package" ../CI/libndi-create-deb.sh
 
 PAGER="cat" sudo checkinstall -y --type=debian --fstrans=no --nodoc \
     --backup=no --deldoc=yes --install=no \
-    --pkgname=libndi5-dev --pkgversion="$LIBNDI_VERSION" \
-    --replaces="libndi4-dev, libndi3-dev" \
-    --requires="libndi5 \(\>= ${LIBNDI_VERSION}\)" \
-    --pkglicense="Proprietary" --maintainer="stephane.lepin@gmail.com" \
+    --pkgname=libndi6-dev \
+    --pkgversion="$LIBNDI_VERSION" \
+    --replaces="libndi5-dev, libndi4-dev, libndi3-dev" \
+    --requires="libndi6 \(\>= ${LIBNDI_VERSION}\)" \
+    --pkglicense="Proprietary" \
+    --maintainer="contact@distroav.org" \
     --pkggroup="video" \
     --pkgsource="https://downloads.ndi.tv" \
     --pakdir="../package" ../CI/libndi-create-dev-deb.sh
