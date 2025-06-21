@@ -165,13 +165,18 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title, const QString 
 //
 
 struct find_module_data {
-	const char *target_name;
-	bool found;
+        const char *target_name;
+        bool found;
+};
+
+struct count_module_data {
+       const char *target_name;
+       int count;
 };
 
 bool is_module_found(const char *module_name)
 {
-	struct find_module_data data = {0};
+        struct find_module_data data = {0};
 	data.target_name = module_name;
 	obs_find_modules2(
 		[](void *param, const struct obs_module_info2 *module_info) {
@@ -196,7 +201,21 @@ bool is_module_found(const char *module_name)
 			}
 		},
 		&data);
-	return data.found;
+        return data.found;
+}
+
+int count_modules(const char *module_name)
+{
+       struct count_module_data data = {module_name, 0};
+       obs_find_modules2(
+               [](void *param, const struct obs_module_info2 *module_info) {
+                       auto *data_ = static_cast<count_module_data *>(param);
+                       if (strcmp(data_->target_name, module_info->name) == 0) {
+                               data_->count++;
+                       }
+               },
+               &data);
+       return data.count;
 }
 
 bool is_obsndi_installed()
@@ -238,18 +257,30 @@ bool obs_module_load(void)
 	Config::Initialize();
 
 	// Check if the old version of the plugin is installed
-	if (is_obsndi_installed()) {
-		obs_log(LOG_ERROR, "ERR-403 - OBS-NDI is detected and needs to be uninstalled before %s can work.",
-			PLUGIN_DISPLAY_NAME);
-		obs_log(LOG_DEBUG,
-			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
-			PLUGIN_DISPLAY_NAME);
-		showCriticalUnloadingMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
-						       QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
-							       .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
-		return false;
-	}
-	obs_log(LOG_DEBUG, "obs_module_load: No OBS-NDI leftover detected. Continuing...");
+        if (is_obsndi_installed()) {
+                obs_log(LOG_ERROR, "ERR-403 - OBS-NDI is detected and needs to be uninstalled before %s can work.",
+                        PLUGIN_DISPLAY_NAME);
+                obs_log(LOG_DEBUG,
+                        "obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
+                        PLUGIN_DISPLAY_NAME);
+                showCriticalUnloadingMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
+                                                       QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
+                                                               .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
+                return false;
+        }
+        obs_log(LOG_DEBUG, "obs_module_load: No OBS-NDI leftover detected. Continuing...");
+
+        // Check if multiple versions of this plugin are installed
+        if (count_modules(PLUGIN_NAME) > 1) {
+                obs_log(LOG_ERROR, "ERR-426 - Another version of %s is detected and needs to be removed.",
+                        PLUGIN_DISPLAY_NAME);
+                obs_log(LOG_DEBUG,
+                        "obs_module_load: Another copy of this plugin was found. Aborting load.");
+                showCriticalUnloadingMessageBoxDelayed(QTStr("NDIPlugin.ErrorAnotherDistroAVDetected.Title"),
+                                                       QTStr("NDIPlugin.ErrorAnotherDistroAVDetected.Message")
+                                                               .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_URL)));
+                return false;
+        }
 
 	// Check if this is using the minimum OBS version required by this plugin
 	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
