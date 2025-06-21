@@ -38,7 +38,7 @@ brew install --cask distroav
 Linux ([Flatpak](https://flatpak.org/)) ![Flathub Version](https://img.shields.io/flathub/v/com.obsproject.Studio.Plugin.DistroAV?link=https%3A%2F%2Fflathub.org%2Fapps%2Fcom.obsproject.Studio.Plugin.DistroAV)
 ```
 flatpak install com.obsproject.Studio com.obsproject.Studio.Plugin.DistroAV
-obs --system-talk-name=org.freedesktop.Avahi`
+obs --system-talk-name=org.freedesktop.Avahi
 ```
 
 Any other options, or errors: See [release page](https://distroav.org/download) and [installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
