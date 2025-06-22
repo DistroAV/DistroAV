@@ -31,7 +31,7 @@
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
-extern const NDIlib_v5 *ndiLib;
+extern const NDIlib_v6 *ndiLib;
 
 /*
 The following accomplishes two goals:
