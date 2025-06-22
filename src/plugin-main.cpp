@@ -49,7 +49,7 @@ const char *obs_module_description()
 	return Str("NDIPlugin.Description");
 }
 
-const NDIlib_v5 *ndiLib = nullptr;
+const NDIlib_v6 *ndiLib = nullptr;
 
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
@@ -66,9 +66,9 @@ struct obs_source_info ndi_audiofilter_info;
 extern struct obs_source_info create_alpha_filter_info();
 struct obs_source_info alpha_filter_info;
 
-const NDIlib_v5 *load_ndilib();
+const NDIlib_v6 *load_ndilib();
 
-typedef const NDIlib_v5 *(*NDIlib_v5_load_)(void);
+typedef const NDIlib_v6 *(*NDIlib_v6_load_)(void);
 QLibrary *loaded_lib = nullptr;
 
 OutputSettings *output_settings = nullptr;
@@ -409,7 +409,7 @@ void obs_module_unload(void)
 
 }
 
-const NDIlib_v5 *load_ndilib()
+const NDIlib_v6 *load_ndilib()
 {
 	auto locations = QStringList();
 	auto temp_path = QString(qgetenv(NDILIB_REDIST_FOLDER));
@@ -468,15 +468,15 @@ const NDIlib_v5 *load_ndilib()
 		loaded_lib = new QLibrary(lib_path, nullptr);
 		if (loaded_lib->load()) {
 			obs_log(LOG_DEBUG, "load_ndilib: NDI library loaded successfully");
-			NDIlib_v5_load_ lib_load =
-				reinterpret_cast<NDIlib_v5_load_>(loaded_lib->resolve("NDIlib_v5_load"));
+			NDIlib_v6_load_ lib_load =
+				reinterpret_cast<NDIlib_v6_load_>(loaded_lib->resolve("NDIlib_v6_load"));
 			if (lib_load != nullptr) {
-				obs_log(LOG_DEBUG, "load_ndilib: NDIlib_v5_load found");
+				obs_log(LOG_DEBUG, "load_ndilib: NDIlib_v6_load found");
 				return lib_load();
 			} else {
 				obs_log(LOG_ERROR, "ERR-405 - Error loading the NDI Library from path: '%s'",
 					QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
-				obs_log(LOG_DEBUG, "load_ndilib: ERROR: NDIlib_v5_load not found in loaded library");
+				obs_log(LOG_DEBUG, "load_ndilib: ERROR: NDIlib_v6_load not found in loaded library");
 			}
 		} else {
 			obs_log(LOG_ERROR, "ERR-402 - Error loading QLibrary with error: '%s'",
