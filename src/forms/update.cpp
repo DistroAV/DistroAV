@@ -173,8 +173,7 @@ public:
 #else
             &QCheckBox::checkStateChanged
 #endif
-			this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+			this, [](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
