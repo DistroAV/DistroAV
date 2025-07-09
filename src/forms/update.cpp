@@ -148,7 +148,7 @@ public:
 						.arg(pluginUpdateInfo.versionLatest.toString()));
 		ui->labelVersionNew->setText(textTemp);
 
-		QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
+		auto yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
 		textTemp = QString("<font size='+1'>%1</font>")
 				   .arg(QTStr("NDIPlugin.Update.YourVersion").arg(yourVersion.toString()));
 		ui->labelVersionYours->setText(textTemp);
@@ -166,12 +166,11 @@ public:
 		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes);
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
-
 		connect(ui->checkBoxAutoCheckForUpdates,
 #if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
 			&QCheckBox::stateChanged,
 #else
-            &QCheckBox::checkStateChanged
+            &QCheckBox::checkStateChanged,
 #endif
 			this, [](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 
