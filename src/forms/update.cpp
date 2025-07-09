@@ -167,13 +167,14 @@ public:
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
 
+		connect(ui->checkBoxAutoCheckForUpdates,
 #if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+			&QCheckBox::stateChanged,
 #else
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::checkStateChanged, this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+            &QCheckBox::checkStateChanged
 #endif
+			this,
+			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
