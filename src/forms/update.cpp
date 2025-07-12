@@ -149,7 +149,7 @@ public:
 						.arg(pluginUpdateInfo.versionLatest.toString()));
 		ui->labelVersionNew->setText(textTemp);
 
-		QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
+		auto yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
 		textTemp = QString("<font size='+1'>%1</font>")
 				   .arg(QTStr("NDIPlugin.Update.YourVersion").arg(yourVersion.toString()));
 		ui->labelVersionYours->setText(textTemp);

@@ -16,6 +16,14 @@ inputs:
     description: Developer ID for application codesigning (macOS only)
     required: false
     default: '-'
+  codesignTeam:
+    description: Team ID for application codesigning (macOS only)
+    required: false
+    default: ''
+  provisioningProfileUUID:
+    description: UUID of provisioning profile (macOS only)
+    required: false
+    default: ''
   workingDirectory:
     description: Working directory for packaging
     required: false
@@ -31,14 +39,20 @@ runs:
         CCACHE_DIR: ${{ inputs.workingDirectory }}/.ccache
         CODESIGN_IDENT: ${{ inputs.codesignIdent }}
         CODESIGN_TEAM: ${{ inputs.codesignTeam }}
+        PROVISIONING_PROFILE: ${{ inputs.provisioningProfileUUID }}
       run: |
         : Run macOS Build
 
-        local -a build_args=(--config ${{ inputs.config }})
+        local -a build_args=(
+          --config ${{ inputs.config }}
+          --target macos-${{ inputs.target }}
+        )
+
         if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
 
         if [[ '${{ inputs.codesign }}' == 'true' ]] build_args+=(--codesign)
 
+        git fetch origin --no-tags --no-recurse-submodules -q
         .github/scripts/build-macos ${build_args}
 
     - name: Install Dependencies 🛍️
@@ -62,16 +76,18 @@ runs:
         : Run Ubuntu Build
 
         local -a build_args=(
-          --target ubuntu-${{ inputs.target }}
           --config ${{ inputs.config }}
+          --target ubuntu-${{ inputs.target }}
         )
         if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
 
+        git fetch origin --no-tags --no-recurse-submodules -q
         .github/scripts/build-ubuntu ${build_args}
 
     - name: Run Windows Build
       if: runner.os == 'Windows'
       shell: pwsh
+      working-directory: ${{ inputs.workingDirectory }}
       run: |
         # Run Windows Build
         if ( $Env:RUNNER_DEBUG -ne $null ) {
@@ -83,10 +99,14 @@ runs:
           Configuration = '${{ inputs.config }}'
         }
 
+        if ( $Env:RUNNER_DEBUG -ne $null ) {
+          $BuildArgs += @{ Debug = $true }
+        }
+        git fetch origin --no-tags --no-recurse-submodules -q
         .github/scripts/Build-Windows.ps1 @BuildArgs
 
     - name: Create Summary 📊
-      if: contains(fromJSON('["Linux", "macOS"]'),runner.os)
+      if: contains(fromJSON('["Linux", "macOS"]'), runner.os)
       shell: zsh --no-rcs --errexit --pipefail {0}
       env:
         CCACHE_DIR: ${{ inputs.workingDirectory }}/.ccache
