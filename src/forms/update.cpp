@@ -41,6 +41,8 @@ Inspiration(s):
 #include <QMetaEnum>
 #include <QPointer>
 #include <QSslSocket>
+#include <QDateTime>
+#include <QTimeZone>
 #include <QTimer>
 #include <QUrlQuery>
 
@@ -147,7 +149,7 @@ public:
 						.arg(pluginUpdateInfo.versionLatest.toString()));
 		ui->labelVersionNew->setText(textTemp);
 
-		QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
+		auto yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
 		textTemp = QString("<font size='+1'>%1</font>")
 				   .arg(QTStr("NDIPlugin.Update.YourVersion").arg(yourVersion.toString()));
 		ui->labelVersionYours->setText(textTemp);
@@ -156,7 +158,7 @@ public:
 		ui->labelReleaseNotes->setText(textTemp);
 
 		auto utcDateTime = QDateTime::fromString(pluginUpdateInfo.releaseDate, Qt::ISODate);
-		utcDateTime.setTimeSpec(Qt::UTC);
+		utcDateTime.setTimeZone(QTimeZone::utc());
 		auto formattedUtcDateTime = utcDateTime.toString("yyyy-MM-dd hh:mm:ss 'UTC'");
 		textTemp = QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseDate"));
 		ui->labelReleaseDate->setText(textTemp);
@@ -165,8 +167,13 @@ public:
 		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes);
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+		connect(ui->checkBoxAutoCheckForUpdates,
+#if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
+			&QCheckBox::stateChanged,
+#else
+            &QCheckBox::checkStateChanged,
+#endif
+			this, [](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
