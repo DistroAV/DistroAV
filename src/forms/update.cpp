@@ -167,8 +167,13 @@ public:
 		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes);
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::StateChanged, this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+		connect(ui->checkBoxAutoCheckForUpdates,
+#if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
+			&QCheckBox::stateChanged,
+#else
+            &QCheckBox::checkStateChanged,
+#endif
+			this, [](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
