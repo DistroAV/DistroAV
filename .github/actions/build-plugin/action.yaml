@@ -89,9 +89,6 @@ runs:
       working-directory: ${{ inputs.workingDirectory }}
       run: |
         # Run Windows Build
-        if ( $Env:RUNNER_DEBUG -ne $null ) {
-          Set-PSDebug -Trace 1
-        }
 
         $BuildArgs = @{
           Target = '${{ inputs.target }}'
