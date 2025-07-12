@@ -59,7 +59,7 @@ function(_setup_obs_studio)
   elseif(OS_MACOS)
     set(_cmake_generator "Xcode")
     set(_cmake_arch "-DCMAKE_OSX_ARCHITECTURES:STRING='arm64;x86_64'")
-    set(_cmake_extra "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET} -DCMAKE_ENABLE_SCRIPTING=OFF")
+    set(_cmake_extra "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
   endif()
 
   message(STATUS "Configure ${label} (${arch})")
