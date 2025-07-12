@@ -41,6 +41,8 @@ Inspiration(s):
 #include <QMetaEnum>
 #include <QPointer>
 #include <QSslSocket>
+#include <QDateTime>
+#include <QTimeZone>
 #include <QTimer>
 #include <QUrlQuery>
 
@@ -156,7 +158,7 @@ public:
 		ui->labelReleaseNotes->setText(textTemp);
 
 		auto utcDateTime = QDateTime::fromString(pluginUpdateInfo.releaseDate, Qt::ISODate);
-		utcDateTime.setTimeSpec(Qt::UTC);
+		utcDateTime.setTimeZone(QTimeZone::utc());
 		auto formattedUtcDateTime = utcDateTime.toString("yyyy-MM-dd hh:mm:ss 'UTC'");
 		textTemp = QString("<h3>%1</h3>").arg(Str("NDIPlugin.Update.ReleaseDate"));
 		ui->labelReleaseDate->setText(textTemp);
@@ -165,7 +167,7 @@ public:
 		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes);
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
+		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::checkStateChanged, this,
 			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
