@@ -45,6 +45,7 @@ runs:
 
         local -a build_args=(
           --config ${{ inputs.config }}
+          --target macos-${{ inputs.target }}
         )
         if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
 
