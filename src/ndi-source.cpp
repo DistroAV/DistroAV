@@ -37,6 +37,7 @@
 #define PROP_YUV_COLORSPACE "yuv_colorspace"
 #define PROP_LATENCY "latency"
 #define PROP_AUDIO "ndi_audio"
+#define PROP_AUTO_DEACTIVATE "ndi_auto_deactivate"
 #define PROP_PTZ "ndi_ptz"
 #define PROP_PAN "ndi_pan"
 #define PROP_TILT "ndi_tilt"
@@ -104,6 +105,7 @@ typedef struct ndi_source_config_t {
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
 	bool audio_enabled;
+	bool auto_deactivate;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
@@ -231,6 +233,8 @@ obs_properties_t *ndi_source_getproperties(void *data)
 				  PROP_BEHAVIOR_STOP_RESUME_BLANK);
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
 				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+	obs_properties_add_bool(props, PROP_AUTO_DEACTIVATE,
+				obs_module_text("NDIPlugin.SourceProps.AutoDeactivateScene"));
 
 	obs_property_t *bw_modes = obs_properties_add_list(props, PROP_BANDWIDTH,
 							   obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
@@ -324,6 +328,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
+	obs_data_set_default_bool(settings, PROP_AUTO_DEACTIVATE, false);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -369,6 +374,9 @@ void *ndi_source_thread(void *data)
 
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
+
+	int number_of_connections;
+	bool source_enabled;
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -546,13 +554,33 @@ void *ndi_source_thread(void *data)
 		// check if there are any connections.
 		// If not then micro-pause and restart the loop.
 		//
-		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
+		number_of_connections = ndiLib->recv_get_no_connections(ndi_receiver);
+		if (s->config.auto_deactivate) {
+			// obs_source_enabled is a lightweight null check and boolean field dereference
+			source_enabled = obs_source_enabled(s->obs_source);
+			if (number_of_connections == 0) {
+				if (source_enabled) {
+					obs_log(LOG_INFO,
+						"'%s' ndi_source_thread: No connection; Disabling enabled source",
+						obs_source_name);
+					obs_source_set_enabled(s->obs_source, false);
+				}
+			} else {
+				if (!source_enabled) {
+					obs_log(LOG_INFO,
+						"'%s' ndi_source_thread: Connection(s) available; Enabling disabled source",
+						obs_source_name);
+					obs_source_set_enabled(s->obs_source, true);
+				}
+			}
+		}
+		if (number_of_connections == 0) {
 #if 0
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
 				obs_source_name);
 #endif
-			// This will also slow down the shutdown of OBS when no NDI feed is received.
+			// NOTE: This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
@@ -983,6 +1011,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	s->config.audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 	obs_source_set_audio_active(obs_source, s->config.audio_enabled);
+
+	s->config.auto_deactivate = obs_data_get_bool(settings, PROP_AUTO_DEACTIVATE);
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
