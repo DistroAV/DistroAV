@@ -1,11 +1,11 @@
-name: Set up macOS codesigning
+name: Set up macOS Code Signing
 description: Sets up code signing certificates, provisioning profiles, and notarization information
 inputs:
   codesignIdentity:
-    description: Codesigning identity
+    description: Code signing identity
     required: true
   installerIdentity:
-    description: Codesigning identity for package installer
+    description: Code signing identity for package installer
     required: false
   codesignCertificate:
     description: PKCS12 certificate in base64 format
@@ -26,7 +26,7 @@ inputs:
     required: false
 outputs:
   haveCodesignIdent:
-    description: True if necessary codesigning credentials were found
+    description: True if necessary code signing credentials were found
     value: ${{ steps.codesign.outputs.haveCodesignIdent }}
   haveProvisioningProfile:
     description: True if necessary provisioning profile credentials were found
@@ -38,13 +38,13 @@ outputs:
     description: True if necessary notarization credentials were found
     value: ${{ steps.notarization.outputs.haveNotarizationUser || steps.codesign.outputs.haveNotarizationUser }}
   codesignIdent:
-    description: Codesigning identity
+    description: Code signing identity
     value: ${{ steps.codesign.outputs.codesignIdent }}
   installerIdent:
-    description: Codesigning identity for package installer
+    description: Code signing identity for package installer
     value: ${{ steps.codesign.outputs.installerIdent }}
   codesignTeam:
-    description: Codesigning team
+    description: Code signing team
     value: ${{ steps.codesign.outputs.codesignTeam }}
 runs:
   using: composite
@@ -57,7 +57,7 @@ runs:
         echo "setup-macos-codesigning action requires a macOS-based runner."
         exit 2
 
-    - name: macOS Codesigning ✍️
+    - name: macOS Code Signing ✍️
       shell: zsh --no-rcs --errexit --pipefail {0}
       id: codesign
       env:
