@@ -220,7 +220,7 @@ bool ndi_output_start(void *data)
 	send_desc.clock_audio = false;
 
 	o->ndi_sender = ndiLib->send_create(&send_desc);
-	if (o->ndi_sender) {
+	if (o->ndi_sender != nullptr) {
 		o->started = obs_output_begin_data_capture(o->output, flags);
 		if (o->started) {
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi output started", name);
