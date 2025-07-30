@@ -117,10 +117,9 @@ bool main_output_is_supported()
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> dis(10000, 99999);
 
-	int randomNum = dis(gen);
-	std::string testString = "NDI Output Support Test " + std::to_string(randomNum);
+	QString testString = "NDI Output Support Test " + QString::number(dis(gen));
 
-	obs_data_set_string(output_settings, "ndi_name", testString.c_str());
+	obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(testString));
 	obs_data_set_string(output_settings, "ndi_groups", "DistroAV Config");
 
 	bool is_supported = true;
