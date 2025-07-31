@@ -39,6 +39,7 @@ endif()
 
 target_sources(
   ${CMAKE_PROJECT_NAME}
+
   PRIVATE
     src/forms/output-settings.cpp
     src/forms/output-settings.h
@@ -49,6 +50,8 @@ target_sources(
     src/obs-support/remote-text.hpp
     src/obs-support/shared-update.cpp
     src/obs-support/shared-update.hpp
+    src/obs-support/sync-debug.cpp
+    src/obs-support/sync-debug.h
     src/config.cpp
     src/config.h
     src/main-output.cpp
