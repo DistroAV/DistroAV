@@ -109,12 +109,12 @@ void ndi_filter_getdefaults(obs_data_t *defaults)
 	obs_log(LOG_DEBUG, "-ndi_filter_getdefaults(...)");
 }
 
-bool is_filter_invalid(ndi_filter_t *filter)
+bool is_filter_valid(ndi_filter_t *filter)
 {
 	obs_source_t *target = obs_filter_get_target(filter->obs_source);
 	obs_source_t *parent = obs_filter_get_parent(filter->obs_source);
 	if (!target || !parent) {
-		return true;
+		return false;
 	}
 
 	uint32_t width = obs_source_get_width(target);
@@ -128,12 +128,11 @@ bool is_filter_invalid(ndi_filter_t *filter)
 		height = parent_height;
 	}
 
-	// If the parent width or height is 0 (for example when a window capture is closed), consider this filter invalid
-	// Additionally, if the filter or source are not enabled / active, consider the filter invalid, too
-	bool is_invalid = (parent_width == 0) || (parent_height == 0) || !obs_source_enabled(filter->obs_source) ||
-			  !obs_source_active(parent);
+	// Valid if parent width/height are nonzero, source is enabled, and parent is active
+	bool is_valid = (parent_width != 0) && (parent_height != 0) && obs_source_enabled(filter->obs_source) &&
+			obs_source_active(parent);
 
-	return is_invalid;
+	return is_valid;
 }
 
 void ndi_filter_raw_video(void *data, video_data *frame)
@@ -170,7 +169,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		return;
 	}
 
-	if (is_filter_invalid(f)) {
+	if (!is_filter_valid(f)) {
 		// Send over an empty frame to indicate that the filter is invalid
 		ndi_filter_raw_video(data, nullptr);
 		return;
@@ -414,7 +413,7 @@ void ndi_filter_tick(void *data, float)
 	auto f = (ndi_filter_t *)data;
 	obs_get_video_info(&f->ovi);
 
-	if (is_filter_invalid(f)) {
+	if (!is_filter_valid(f)) {
 		return;
 	} else if (!f->ndi_sender) {
 		// If the sender is null then recreate it
