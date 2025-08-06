@@ -65,8 +65,8 @@ const char *ndi_audiofilter_getname(void *)
 }
 
 void ndi_filter_update(void *data, obs_data_t *settings);
-void destroy_ndi_sender(ndi_filter_t *filter);
-void destroy_and_create_ndi_sender(ndi_filter_t *filter, obs_data_t *settings);
+void ndi_sender_destroy(ndi_filter_t *filter);
+void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings);
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
@@ -241,7 +241,7 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 	}
 }
 
-void destroy_ndi_sender(ndi_filter_t *filter)
+void ndi_sender_destroy(ndi_filter_t *filter)
 {
 	if (!filter || !filter->ndi_sender) {
 		return;
@@ -250,17 +250,18 @@ void destroy_ndi_sender(ndi_filter_t *filter)
 	if (!filter->is_audioonly) {
 		pthread_mutex_lock(&filter->ndi_sender_video_mutex);
 	}
+
 	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(filter->ndi_sender);
 	filter->ndi_sender = nullptr;
-
 	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
+
 	if (!filter->is_audioonly) {
 		pthread_mutex_unlock(&filter->ndi_sender_video_mutex);
 	}
 }
 
-void destroy_and_create_ndi_sender(ndi_filter_t *filter, obs_data_t *settings)
+void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 {
 	if (!filter || !filter->obs_source) {
 		return;
@@ -284,10 +285,12 @@ void destroy_and_create_ndi_sender(ndi_filter_t *filter, obs_data_t *settings)
 	if (!filter->is_audioonly) {
 		pthread_mutex_lock(&filter->ndi_sender_video_mutex);
 	}
+
 	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(filter->ndi_sender);
 	filter->ndi_sender = ndiLib->send_create(&send_desc);
 	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
+
 	if (!filter->is_audioonly) {
 		pthread_mutex_unlock(&filter->ndi_sender_video_mutex);
 	}
@@ -302,7 +305,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 
 	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 
-	destroy_and_create_ndi_sender(f, settings);
+	ndi_sender_create(f, settings);
 
 	if (!f->is_audioonly) {
 		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
@@ -417,7 +420,7 @@ void ndi_filter_tick(void *data, float)
 		return;
 	} else if (!f->ndi_sender) {
 		// If the sender is null then recreate it
-		destroy_and_create_ndi_sender(f, nullptr);
+		ndi_sender_create(f, nullptr);
 	}
 }
 
