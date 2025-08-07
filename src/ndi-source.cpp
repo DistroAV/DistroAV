@@ -16,7 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
-// #include "plugin-support.h"
+#include "ndi-finder.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -61,14 +61,11 @@
 
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
-#define PROP_YUV_SPACE_BT2100 3
 
 #define PROP_LATENCY_UNDEFINED -1
 #define PROP_LATENCY_NORMAL 0
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
-
-extern NDIlib_find_instance_t ndi_finder;
 
 typedef struct ptz_t {
 	bool enabled;
@@ -179,8 +176,6 @@ static video_colorspace prop_to_colorspace(int index)
 	switch (index) {
 	case PROP_YUV_SPACE_BT601:
 		return VIDEO_CS_601;
-	case PROP_YUV_SPACE_BT2100:
-		return VIDEO_CS_2100_HLG;
 	default:
 	case PROP_YUV_SPACE_BT709:
 		return VIDEO_CS_709;
@@ -203,8 +198,9 @@ const char *ndi_source_getname(void *)
 	return obs_module_text("NDIPlugin.NDISourceName");
 }
 
-obs_properties_t *ndi_source_getproperties(void *)
+obs_properties_t *ndi_source_getproperties(void *data)
 {
+	auto s = (ndi_source_t *)data;
 	obs_log(LOG_DEBUG, "+ndi_source_getproperties(…)");
 
 	obs_properties_t *props = obs_properties_create();
@@ -212,10 +208,18 @@ obs_properties_t *ndi_source_getproperties(void *)
 	obs_property_t *source_list = obs_properties_add_list(props, PROP_SOURCE,
 							      obs_module_text("NDIPlugin.SourceProps.SourceName"),
 							      OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
-	uint32_t nbSources = 0;
-	const NDIlib_source_t *sources = ndiLib->find_get_current_sources(ndi_finder, &nbSources);
-	for (uint32_t i = 0; i < nbSources; ++i) {
-		obs_property_list_add_string(source_list, sources[i].p_ndi_name, sources[i].p_ndi_name);
+	NDIFinder finder;
+	// Create a callback that is called when the NDI source list is complete
+	auto finder_callback = [source_list, s](void *ndi_names) {
+		auto ndi_sources = (std::vector<std::string> *)ndi_names;
+		for (auto &source : *ndi_sources) {
+			obs_property_list_add_string(source_list, source.c_str(), source.c_str());
+		}
+		obs_source_update_properties(s->obs_source);
+	};
+	auto ndi_sources = finder.getNDISourceList(finder_callback);
+	for (auto &source : ndi_sources) {
+		obs_property_list_add_string(source_list, source.c_str(), source.c_str());
 	}
 
 	obs_property_t *behavior_list = obs_properties_add_list(props, PROP_BEHAVIOR,
@@ -274,7 +278,7 @@ obs_properties_t *ndi_source_getproperties(void *)
 							     OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
-	obs_property_list_add_int(yuv_spaces, "BT.2100", PROP_YUV_SPACE_BT2100);
+
 	obs_property_t *latency_modes = obs_properties_add_list(props, PROP_LATENCY,
 								obs_module_text("NDIPlugin.SourceProps.Latency"),
 								OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
@@ -783,47 +787,6 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 	video_format_get_parameters(config->yuv_colorspace, config->yuv_range, obs_video_frame->color_matrix,
 				    obs_video_frame->color_range_min, obs_video_frame->color_range_max);
 
-	static video_colorspace last_colorspace = VIDEO_CS_DEFAULT;
-	static video_range_type last_range = VIDEO_RANGE_DEFAULT; 
-	static const char *last_metadata = nullptr;
-	bool metadata_changed = false;
-
-	if (ndi_video_frame->p_metadata != nullptr && last_metadata != nullptr) {
-		metadata_changed = strcmp(ndi_video_frame->p_metadata, last_metadata) != 0;
-	} else if (ndi_video_frame->p_metadata != last_metadata) {
-		// One is null, the other is not
-		metadata_changed = true;
-	}
-
-	if (metadata_changed || config->yuv_colorspace != last_colorspace || config->yuv_range != last_range) {
-		obs_log(LOG_DEBUG,
-			"NDI video params: yuv_colorspace=%d, yuv_range=%d, meta=%s, color_matrix=[%f %f %f %f %f %f %f %f %f], color_range_min=[%f %f %f], color_range_max=[%f %f %f]",
-			(int)config->yuv_colorspace, (int)config->yuv_range, ndi_video_frame->p_metadata,
-			obs_video_frame->color_matrix[0], obs_video_frame->color_matrix[1],
-			obs_video_frame->color_matrix[2], obs_video_frame->color_matrix[3],
-			obs_video_frame->color_matrix[4], obs_video_frame->color_matrix[5],
-			obs_video_frame->color_matrix[6], obs_video_frame->color_matrix[7],
-			obs_video_frame->color_matrix[8], obs_video_frame->color_range_min[0],
-			obs_video_frame->color_range_min[1], obs_video_frame->color_range_min[2],
-			obs_video_frame->color_range_max[0], obs_video_frame->color_range_max[1],
-			obs_video_frame->color_range_max[2]);
-		last_colorspace = config->yuv_colorspace;
-		last_range = config->yuv_range;
-	}
-
-	// Update last_metadata (make a copy if not null, else set to null)
-	if (last_metadata) {
-		free((void *)last_metadata);
-		last_metadata = nullptr;
-	}
-	if (ndi_video_frame->p_metadata) {
-		last_metadata = strdup(ndi_video_frame->p_metadata);
-	}
-	if (config->yuv_colorspace != last_colorspace || config->yuv_range != last_range) {
-		
-		last_colorspace = config->yuv_colorspace;
-		last_range = config->yuv_range;
-	}
 	obs_source_output_video(obs_source, obs_video_frame);
 }
 
