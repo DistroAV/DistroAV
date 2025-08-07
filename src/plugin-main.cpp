@@ -69,6 +69,7 @@ const NDIlib_v6 *load_ndilib();
 typedef const NDIlib_v6 *(*NDIlib_v6_load_)(void);
 QLibrary *loaded_lib = nullptr;
 
+NDIlib_find_instance_t ndi_finder = nullptr;
 OutputSettings *output_settings = nullptr;
 
 //
@@ -329,6 +330,11 @@ bool obs_module_load(void)
 
 	obs_log(LOG_INFO, "obs_module_load: NDI library initialized successfully");
 
+	NDIlib_find_create_t find_desc = {0};
+	find_desc.show_local_sources = true;
+	find_desc.p_groups = NULL;
+	ndi_finder = ndiLib->find_create_v2(&find_desc);
+
 	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
 
@@ -394,6 +400,10 @@ void obs_module_unload(void)
 	updateCheckStop();
 
 	if (ndiLib) {
+		if (ndi_finder) {
+			ndiLib->find_destroy(ndi_finder);
+			ndi_finder = nullptr;
+		}
 		ndiLib->destroy();
 		ndiLib = nullptr;
 	}

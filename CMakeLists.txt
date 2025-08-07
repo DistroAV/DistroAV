@@ -54,8 +54,6 @@ target_sources(
     src/main-output.cpp
     src/main-output.h
     src/ndi-filter.cpp
-    src/ndi-finder.h
-    src/ndi-finder.cpp
     src/ndi-output.cpp
     src/ndi-source.cpp
     src/plugin-main.cpp
