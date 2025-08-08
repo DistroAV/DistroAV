@@ -61,6 +61,7 @@
 
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
+#define PROP_YUV_SPACE_BT2100 3
 
 #define PROP_LATENCY_UNDEFINED -1
 #define PROP_LATENCY_NORMAL 0
@@ -176,6 +177,8 @@ static video_colorspace prop_to_colorspace(int index)
 	switch (index) {
 	case PROP_YUV_SPACE_BT601:
 		return VIDEO_CS_601;
+	case PROP_YUV_SPACE_BT2100:
+		return VIDEO_CS_2100_HLG;
 	default:
 	case PROP_YUV_SPACE_BT709:
 		return VIDEO_CS_709;
@@ -278,6 +281,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 							     OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
+	obs_property_list_add_int(yuv_spaces, "BT.2100", PROP_YUV_SPACE_BT2100);
 
 	obs_property_t *latency_modes = obs_properties_add_list(props, PROP_LATENCY,
 								obs_module_text("NDIPlugin.SourceProps.Latency"),
