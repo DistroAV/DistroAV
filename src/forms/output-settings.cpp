@@ -26,6 +26,7 @@
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QPointer>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
@@ -44,7 +45,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		// Whew! QProgressDialog is ugly on Windows!
 		// TODO: Write our own.
-		auto progressDialog =
+		QPointer<QProgressDialog> progressDialog =
 			new QProgressDialog(QTStr("NDIPlugin.Update.CheckingForUpdate.Text").arg(PLUGIN_DISPLAY_NAME),
 					    Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0, this);
 		progressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -55,7 +56,9 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		});
 		auto checking = updateCheckStart([this,
 						  progressDialog](const PluginUpdateInfo &pluginUpdateInfo) -> bool {
-			progressDialog->close();
+			if (progressDialog != nullptr) {
+				progressDialog->close();
+			}
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
 				QString errorData = pluginUpdateInfo.errorData;
