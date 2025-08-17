@@ -1080,7 +1080,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		"NDI Source Updated: '%s', 'Bandwidth'='%d', Latency='%d', Framesync='%s', HardwareAcceleration='%s', behavior='%d', timeoutmode='%d', sync_mode='%d', yuv_range='%d', yuv_colorspace='%d'",
 		s->config.ndi_source_name, s->config.bandwidth, s->config.latency,
 		s->config.framesync_enabled ? "enabled" : "disabled",
-		s->config.hw_accel_enabled ? "enabled" : "disabled", s->config.behavior, s->config.timeout_mode,
+		s->config.hw_accel_enabled ? "enabled" : "disabled", s->config.behavior, s->config.timeout_action,
 		s->config.sync_mode, s->config.yuv_range, s->config.yuv_colorspace);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_update(…)", obs_source_name);
