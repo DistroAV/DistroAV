@@ -28,7 +28,7 @@
 
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BEHAVIOR "ndi_behavior"
-#define PROP_KEEP_LAST_RECEIVED_FRAME "ndi_keep_last_received_frame"
+#define PROP_TIMEOUT "ndi_behavior_timeout"
 #define PROP_BANDWIDTH "ndi_bw_mode"
 #define PROP_SYNC "ndi_sync"
 #define PROP_FRAMESYNC "ndi_framesync"
@@ -51,6 +51,9 @@
 #define PROP_BEHAVIOR_KEEP_ACTIVE 0
 #define PROP_BEHAVIOR_STOP_RESUME_BLANK 1
 #define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME 2
+
+#define PROP_TIMEOUT_CLEAR_CONTENT 0
+#define PROP_TIMEOUT_KEEP_CONTENT 1
 
 // sync mode "Internal" got removed 2020/04/28 ccbdf30f4929969fe58ede691b3030d1fc5ef590
 #define PROP_SYNC_INTERNAL 0
@@ -101,7 +104,7 @@ typedef struct ndi_source_config_t {
 	// Changes that do NOT require the NDI receiver to be reset:
 	//
 	int behavior;
-	bool keep_last_received_frame;
+	int timeout_action;
 	int sync_mode;
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
@@ -239,8 +242,14 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
 				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 
-	obs_properties_add_bool(props, PROP_KEEP_LAST_RECEIVED_FRAME,
-				obs_module_text("NDIPlugin.SourceProps.KeepLastReceivedFrame"));
+	
+	obs_property_t *timeout_list = obs_properties_add_list(props, PROP_TIMEOUT,
+								obs_module_text("NDIPlugin.SourceProps.Timeout"),
+								OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(timeout_list, obs_module_text("NDIPlugin.SourceProps.Timeout.KeepContent"),
+				  PROP_TIMEOUT_KEEP_CONTENT);
+	obs_property_list_add_int(timeout_list, obs_module_text("NDIPlugin.SourceProps.Timeout.ClearContent"),
+				  PROP_TIMEOUT_CLEAR_CONTENT);
 
 	obs_property_t *bw_modes = obs_properties_add_list(props, PROP_BANDWIDTH,
 							   obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
@@ -329,12 +338,12 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_log(LOG_DEBUG, "+ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+	obs_data_set_default_int(settings, PROP_TIMEOUT, PROP_TIMEOUT_KEEP_CONTENT);
 	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
-	obs_data_set_default_bool(settings, PROP_KEEP_LAST_RECEIVED_FRAME, true);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -356,7 +365,7 @@ void deactivate_source_output_video_texture(ndi_source_t *source)
 
 void process_empty_frame(ndi_source_t *source)
 {
-	if (source->config.keep_last_received_frame)
+	if (source->config.timeout_action == PROP_TIMEOUT_KEEP_CONTENT)
 		return;
 
 	uint64_t now = os_gettime_ns();
@@ -981,7 +990,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
 	}
 
-	s->config.keep_last_received_frame = obs_data_get_bool(settings, PROP_KEEP_LAST_RECEIVED_FRAME);
+	s->config.timeout_action = obs_data_get_int(settings, PROP_TIMEOUT);
 
 	// Clean the source content when settings change unless requested otherwise.
 	// Always clean if the source is set to Audio Only.
