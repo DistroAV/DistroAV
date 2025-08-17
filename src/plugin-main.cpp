@@ -19,6 +19,8 @@
 #include "obs-module.h"
 #include "plugin-support.h"
 
+#include "obs-support/sync-debug.h"
+
 #include "forms/output-settings.h"
 #include "forms/update.h"
 #include "main-output.h"
@@ -402,7 +404,9 @@ void obs_module_unload(void)
 		delete loaded_lib;
 	}
 
+	obs_clear_last_log_time();
 	obs_log(LOG_DEBUG, "-obs_module_unload(): goodbye!");
+
 }
 
 const NDIlib_v6 *load_ndilib()

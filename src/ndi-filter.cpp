@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "obs-support/sync-debug.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -114,6 +115,10 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	if (!frame || !frame->data[0])
 		return;
 
+	obs_sync_debug_log("OBS -> ndi_filter_raw_video",
+			   obs_source_get_name(f->obs_source), (uint64_t)0,
+			   frame->timestamp);
+
 	NDIlib_video_frame_v2_t video_frame = {0};
 	video_frame.xres = f->known_width;
 	video_frame.yres = f->known_height;
@@ -122,11 +127,23 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	video_frame.frame_rate_D = f->ovi.fps_den;
 	video_frame.picture_aspect_ratio = 0; // square pixels
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = NDIlib_send_timecode_synthesize;
+
+  // video_frame.timecode = NDIlib_send_timecode_synthesize;
+	video_frame.timecode = (frame->timestamp / 100);
+	video_frame.timestamp = frame->timestamp;
+  
 	video_frame.p_data = frame->data[0];
 	video_frame.line_stride_in_bytes = frame->linesize[0];
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
+
+	obs_sync_debug_log("NDI <- ndi_filter_raw_video",
+			   obs_source_get_name(f->obs_source),
+			   video_frame.timecode, video_frame.timestamp);
+	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_filter",
+				      obs_source_get_name(f->obs_source),
+				      video_frame.timestamp,
+				      (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
@@ -185,7 +202,12 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		}
 
 		video_frame output_frame;
+
 		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
+			obs_sync_debug_log("OBS -> ndi_filter_offscreen_render",
+					   obs_source_get_name(f->obs_source),
+					   0, os_gettime_ns());
+
 			if (f->video_data) {
 				gs_stagesurface_unmap(f->stagesurface);
 				f->video_data = nullptr;
@@ -353,12 +375,20 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	// ndi-output.cpp/ndi_output_raw_audio(...)
 	auto f = (ndi_filter_t *)data;
 
+	obs_sync_debug_log("OBS -> ndi_filter_asyncaudio",
+			   obs_source_get_name(f->obs_source), 0,
+			   audio_data->timestamp);
+
 	obs_get_audio_info(&f->oai);
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
-	audio_frame.timecode = NDIlib_send_timecode_synthesize;
+  
+  // audio_frame.timecode = NDIlib_send_timecode_synthesize;
+	audio_frame.timecode = audio_data->timestamp / 100;
+	audio_frame.timestamp = audio_data->timestamp;
+  
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.channel_stride_in_bytes =
 		audio_frame.no_samples *
@@ -389,7 +419,17 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
+
+	obs_sync_debug_log("NDI <- ndi_filter_asyncaudio",
+			   obs_source_get_name(f->obs_source),
+			   audio_frame.timecode, audio_frame.timestamp);
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter",
+				      obs_source_get_name(f->obs_source),
+				      audio_frame.timestamp, audio_frame.p_data,
+				      audio_frame.no_samples,
+				      audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
+
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	return audio_data;
