@@ -51,7 +51,7 @@ int Config::DetectObsNdiForce = 0;
 
 enum ObsConfigType { OBS_CONFIG_STRING, OBS_CONFIG_BOOL };
 
-std::map<std::string, enum ObsConfigType> ConfigTypeMap {
+std::map<std::string, enum ObsConfigType> ConfigTypeMap{
 	{PARAM_MAIN_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
 	{PARAM_MAIN_OUTPUT_NAME, OBS_CONFIG_STRING},
 	{PARAM_MAIN_OUTPUT_GROUPS, OBS_CONFIG_STRING},
@@ -60,8 +60,7 @@ std::map<std::string, enum ObsConfigType> ConfigTypeMap {
 	{PARAM_PREVIEW_OUTPUT_GROUPS, OBS_CONFIG_STRING},
 	{PARAM_TALLY_PROGRAM_ENABLED, OBS_CONFIG_BOOL},
 	{PARAM_TALLY_PREVIEW_ENABLED, OBS_CONFIG_BOOL},
-	{PARAM_SKIP_UPDATE_VERSION, OBS_CONFIG_STRING}
-};
+	{PARAM_SKIP_UPDATE_VERSION, OBS_CONFIG_STRING}};
 
 void ProcessCommandLine()
 {
