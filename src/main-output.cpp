@@ -18,6 +18,7 @@
 #include "main-output.h"
 
 #include "plugin-main.h"
+#include <random>
 
 struct main_output {
 	bool is_running;
@@ -109,7 +110,16 @@ bool main_output_is_supported()
 	auto output_groups = config->OutputGroups;
 
 	obs_data_t *output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", "NDI Output Support Test");
+
+	// Append a random number to the test NDI name to avoid
+	// conflicts with existing outputs
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dis(10000, 99999);
+
+	QString output_support_test_name = "NDI Output Support Test " + QString::number(dis(gen));
+
+	obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_support_test_name));
 	obs_data_set_string(output_settings, "ndi_groups", "DistroAV Config");
 
 	bool is_supported = true;
@@ -172,8 +182,6 @@ void main_output_init()
 	auto is_enabled = config->OutputEnabled;
 
 	if (is_enabled && !main_output_is_supported()) {
-		config->OutputEnabled = false;
-		config->Save();
 		is_enabled = false;
 		obs_log(LOG_WARNING, "WARN-426 - NDI Main Output disabled, format not supported");
 	}
