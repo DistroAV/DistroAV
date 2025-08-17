@@ -242,10 +242,9 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
 				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 
-	
 	obs_property_t *timeout_list = obs_properties_add_list(props, PROP_TIMEOUT,
-								obs_module_text("NDIPlugin.SourceProps.Timeout"),
-								OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+							       obs_module_text("NDIPlugin.SourceProps.Timeout"),
+							       OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(timeout_list, obs_module_text("NDIPlugin.SourceProps.Timeout.KeepContent"),
 				  PROP_TIMEOUT_KEEP_CONTENT);
 	obs_property_list_add_int(timeout_list, obs_module_text("NDIPlugin.SourceProps.Timeout.ClearContent"),
