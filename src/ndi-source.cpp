@@ -361,10 +361,10 @@ void process_empty_frame(ndi_source_t *source)
 
 	uint64_t now = os_gettime_ns();
 
-	// 3 second timeout
-	uint64_t timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(3)).count();
+	// 3 second timeout on no new data received for the source
+	uint64_t source_timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(3)).count();
 
-	uint64_t target_timestamp = source->last_frame_timestamp + timeout;
+	uint64_t target_timestamp = source->last_frame_timestamp + source_timeout;
 
 	if (now > target_timestamp) {
 		deactivate_source_output_video_texture(source);
