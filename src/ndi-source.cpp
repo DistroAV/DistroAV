@@ -61,7 +61,7 @@
 
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
-#define PROP_YUV_SPACE_BT2100 3
+#define PROP_YUV_SPACE_BT2100 5
 
 #define PROP_LATENCY_UNDEFINED -1
 #define PROP_LATENCY_NORMAL 0
@@ -178,7 +178,7 @@ static video_colorspace prop_to_colorspace(int index)
 	case PROP_YUV_SPACE_BT601:
 		return VIDEO_CS_601;
 	case PROP_YUV_SPACE_BT2100:
-		return VIDEO_CS_2100_HLG;
+		return VIDEO_CS_DEFAULT;
 	default:
 	case PROP_YUV_SPACE_BT709:
 		return VIDEO_CS_709;
