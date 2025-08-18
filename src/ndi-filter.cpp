@@ -164,8 +164,10 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 {
 	auto f = (ndi_filter_t *)data;
 
-	obs_source_t *target = obs_filter_get_parent(f->obs_source);
-	if (!target) {
+	obs_source_t *target = obs_filter_get_target(f->obs_source);
+	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+
+	if (!target || !parent) {
 		return;
 	}
 
@@ -175,8 +177,31 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		return;
 	}
 
-	uint32_t width = obs_source_get_base_width(target);
-	uint32_t height = obs_source_get_base_height(target);
+	uint32_t width = obs_source_get_width(f->obs_source);
+	uint32_t height = obs_source_get_height(f->obs_source);
+
+	if (f->known_width != width || f->known_height != height) {
+		gs_stagesurface_destroy(f->stagesurface);
+		f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
+
+		video_output_info vi = {0};
+		vi.format = VIDEO_FORMAT_BGRA;
+		vi.width = width;
+		vi.height = height;
+		vi.fps_den = f->ovi.fps_den;
+		vi.fps_num = f->ovi.fps_num;
+		vi.cache_size = 16;
+		vi.colorspace = VIDEO_CS_DEFAULT;
+		vi.range = VIDEO_RANGE_DEFAULT;
+		vi.name = obs_source_get_name(f->obs_source);
+
+		video_output_close(f->video_output);
+		video_output_open(&f->video_output, &vi);
+		video_output_connect(f->video_output, nullptr, ndi_filter_raw_video, f);
+
+		f->known_width = width;
+		f->known_height = height;
+	}
 
 	gs_texrender_reset(f->texrender);
 
@@ -190,34 +215,14 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		gs_blend_state_push();
 		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-		obs_source_video_render(target);
+		if (target == parent) {
+			obs_source_skip_video_filter(f->obs_source);
+		} else {
+			obs_source_video_render(target);
+		}
 
 		gs_blend_state_pop();
 		gs_texrender_end(f->texrender);
-
-		if (f->known_width != width || f->known_height != height) {
-
-			gs_stagesurface_destroy(f->stagesurface);
-			f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
-
-			video_output_info vi = {0};
-			vi.format = VIDEO_FORMAT_BGRA;
-			vi.width = width;
-			vi.height = height;
-			vi.fps_den = f->ovi.fps_den;
-			vi.fps_num = f->ovi.fps_num;
-			vi.cache_size = 16;
-			vi.colorspace = VIDEO_CS_DEFAULT;
-			vi.range = VIDEO_RANGE_DEFAULT;
-			vi.name = obs_source_get_name(f->obs_source);
-
-			video_output_close(f->video_output);
-			video_output_open(&f->video_output, &vi);
-			video_output_connect(f->video_output, nullptr, ndi_filter_raw_video, f);
-
-			f->known_width = width;
-			f->known_height = height;
-		}
 
 		video_frame output_frame;
 		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
