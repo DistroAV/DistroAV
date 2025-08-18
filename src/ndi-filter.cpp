@@ -160,7 +160,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
-void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
+void ndi_filter_render_video(void *data)
 {
 	auto f = (ndi_filter_t *)data;
 
@@ -224,24 +224,21 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		gs_blend_state_pop();
 		gs_texrender_end(f->texrender);
 
-		video_frame output_frame;
-		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
-			if (f->video_data) {
-				gs_stagesurface_unmap(f->stagesurface);
-				f->video_data = nullptr;
+		gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
+		if (gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize)) {
+			video_frame output_frame;
+			if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
+				uint32_t linesize = output_frame.linesize[0];
+				for (uint32_t i = 0; i < f->known_height; ++i) {
+					uint32_t dst_offset = linesize * i;
+					uint32_t src_offset = f->video_linesize * i;
+					memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset, linesize);
+				}
+
+				video_output_unlock_frame(f->video_output);
 			}
 
-			gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
-			gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize);
-
-			uint32_t linesize = output_frame.linesize[0];
-			for (uint32_t i = 0; i < f->known_height; ++i) {
-				uint32_t dst_offset = linesize * i;
-				uint32_t src_offset = f->video_linesize * i;
-				memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset, linesize);
-			}
-
-			video_output_unlock_frame(f->video_output);
+			gs_stagesurface_unmap(f->stagesurface);
 		}
 	}
 }
@@ -308,13 +305,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	auto name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
-
 	ndi_sender_create(f, settings);
-
-	if (!f->is_audioonly) {
-		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
-	}
 
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 
@@ -370,7 +361,6 @@ void ndi_filter_destroy(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
@@ -433,6 +423,8 @@ void ndi_filter_videorender(void *data, gs_effect_t *)
 {
 	auto f = (ndi_filter_t *)data;
 	obs_source_skip_video_filter(f->obs_source);
+
+	ndi_filter_render_video(f);
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
