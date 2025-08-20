@@ -11,6 +11,7 @@
 !.clang-format
 !.gersemirc
 !.gitignore
+!AGENTS.md
 !buildspec.json
 !CMakeLists.txt
 !CMakePresets.json
