@@ -117,19 +117,11 @@ bool is_filter_valid(ndi_filter_t *filter)
 		return false;
 	}
 
-	uint32_t width = obs_source_get_width(target);
-	uint32_t height = obs_source_get_height(target);
-
-	uint32_t parent_width = obs_source_get_base_width(parent);
-	uint32_t parent_height = obs_source_get_base_height(parent);
-
-	if (target == parent) {
-		width = parent_width;
-		height = parent_height;
-	}
+	uint32_t width = obs_source_get_width(filter->obs_source);
+	uint32_t height = obs_source_get_height(filter->obs_source);
 
 	// Valid if parent width/height are nonzero, source is enabled, and parent is active
-	bool is_valid = (parent_width != 0) && (parent_height != 0) && obs_source_enabled(filter->obs_source) &&
+	bool is_valid = (width != 0) && (height != 0) && obs_source_enabled(filter->obs_source) &&
 			obs_source_active(parent);
 
 	return is_valid;
