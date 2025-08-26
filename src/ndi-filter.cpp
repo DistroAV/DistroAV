@@ -155,6 +155,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 void ndi_filter_render_video(void *data)
 {
 	auto f = (ndi_filter_t *)data;
+	obs_source_skip_video_filter(f->obs_source);
 
 	obs_source_t *target = obs_filter_get_target(f->obs_source);
 	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
@@ -411,14 +412,6 @@ void ndi_filter_tick(void *data, float)
 	}
 }
 
-void ndi_filter_videorender(void *data, gs_effect_t *)
-{
-	auto f = (ndi_filter_t *)data;
-	obs_source_skip_video_filter(f->obs_source);
-
-	ndi_filter_render_video(f);
-}
-
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 {
 	// NOTE: The logic in this function should be similar to
@@ -483,7 +476,7 @@ obs_source_info create_ndi_filter_info()
 	ndi_filter_info.update = ndi_filter_update;
 
 	ndi_filter_info.video_tick = ndi_filter_tick;
-	ndi_filter_info.video_render = ndi_filter_videorender;
+	ndi_filter_info.video_render = ndi_filter_render_video;
 
 	// Audio is available only with async sources
 	ndi_filter_info.filter_audio = ndi_filter_asyncaudio;
