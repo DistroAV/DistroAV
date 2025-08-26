@@ -28,6 +28,7 @@
 
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BEHAVIOR "ndi_behavior"
+#define PROP_TIMEOUT "ndi_behavior_timeout"
 #define PROP_BANDWIDTH "ndi_bw_mode"
 #define PROP_SYNC "ndi_sync"
 #define PROP_FRAMESYNC "ndi_framesync"
@@ -50,6 +51,9 @@
 #define PROP_BEHAVIOR_KEEP_ACTIVE 0
 #define PROP_BEHAVIOR_STOP_RESUME_BLANK 1
 #define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME 2
+
+#define PROP_TIMEOUT_CLEAR_CONTENT 0
+#define PROP_TIMEOUT_KEEP_CONTENT 1
 
 // sync mode "Internal" got removed 2020/04/28 ccbdf30f4929969fe58ede691b3030d1fc5ef590
 #define PROP_SYNC_INTERNAL 0
@@ -100,6 +104,7 @@ typedef struct ndi_source_config_t {
 	// Changes that do NOT require the NDI receiver to be reset:
 	//
 	int behavior;
+	int timeout_action;
 	int sync_mode;
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
@@ -114,6 +119,11 @@ typedef struct ndi_source_t {
 
 	bool running;
 	pthread_t av_thread;
+
+	uint32_t width;
+	uint32_t height;
+
+	uint64_t last_frame_timestamp;
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -232,6 +242,14 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
 				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 
+	obs_property_t *timeout_list = obs_properties_add_list(props, PROP_TIMEOUT,
+							       obs_module_text("NDIPlugin.SourceProps.Timeout"),
+							       OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(timeout_list, obs_module_text("NDIPlugin.SourceProps.Timeout.KeepContent"),
+				  PROP_TIMEOUT_KEEP_CONTENT);
+	obs_property_list_add_int(timeout_list, obs_module_text("NDIPlugin.SourceProps.Timeout.ClearContent"),
+				  PROP_TIMEOUT_CLEAR_CONTENT);
+
 	obs_property_t *bw_modes = obs_properties_add_list(props, PROP_BANDWIDTH,
 							   obs_module_text("NDIPlugin.SourceProps.Bandwidth"),
 							   OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
@@ -319,6 +337,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_log(LOG_DEBUG, "+ndi_source_getdefaults(…)");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+	obs_data_set_default_int(settings, PROP_TIMEOUT, PROP_TIMEOUT_KEEP_CONTENT);
 	obs_data_set_default_int(settings, PROP_SYNC, PROP_SYNC_NDI_SOURCE_TIMECODE);
 	obs_data_set_default_int(settings, PROP_YUV_RANGE, PROP_YUV_RANGE_PARTIAL);
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
@@ -327,20 +346,43 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
-void deactivate_source_output_video_texture(obs_source_t *obs_source)
+void deactivate_source_output_video_texture(ndi_source_t *source)
 {
 	// Per https://docs.obsproject.com/reference-sources#c.obs_source_output_video
 	// ```
 	// void obs_source_output_video(obs_source_t *source, const struct obs_source_frame *frame)
 	// Outputs asynchronous video data. Set to NULL to deactivate the texture.
 	// ```
-	obs_source_output_video(obs_source, NULL);
+	if (source->width == 0 && source->height == 0)
+		return;
+
+	source->width = 0;
+	source->height = 0;
+	obs_log(LOG_DEBUG, "'%s' deactivate_source_output_video_texture(…)", obs_source_get_name(source->obs_source));
+	obs_source_output_video(source->obs_source, NULL);
+}
+
+void process_empty_frame(ndi_source_t *source)
+{
+	if (source->config.timeout_action == PROP_TIMEOUT_KEEP_CONTENT)
+		return;
+
+	uint64_t now = os_gettime_ns();
+
+	// 3 second timeout on no new data received for the source
+	uint64_t source_timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(3)).count();
+
+	uint64_t target_timestamp = source->last_frame_timestamp + source_timeout;
+
+	if (now > target_timestamp) {
+		deactivate_source_output_video_texture(source);
+	}
 }
 
 void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_frame_v3_t *ndi_audio_frame,
 				      obs_source_t *obs_source, obs_source_audio *obs_audio_frame);
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
+void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame);
 
 void *ndi_source_thread(void *data)
@@ -552,6 +594,8 @@ void *ndi_source_thread(void *data)
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
 				obs_source_name);
 #endif
+			process_empty_frame(s);
+
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
@@ -630,8 +674,7 @@ void *ndi_source_thread(void *data)
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
-								 &obs_video_frame);
+				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
 
@@ -661,11 +704,14 @@ void *ndi_source_thread(void *data)
 				// VIDEO
 				//
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(&s->config, &video_frame, s->obs_source,
-								 &obs_video_frame);
+				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
 				continue;
+			}
+
+			if (frame_received == NDIlib_frame_type_none) {
+				process_empty_frame(s);
 			}
 		}
 	}
@@ -731,7 +777,7 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
-void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_frame_v2_t *ndi_video_frame,
+void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame)
 {
 	switch (ndi_video_frame->FourCC) {
@@ -772,6 +818,8 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		break;
 	}
 
+	auto config = &source->config;
+
 	switch (config->sync_mode) {
 	case PROP_SYNC_NDI_TIMESTAMP:
 		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timestamp * 100);
@@ -781,6 +829,10 @@ void ndi_source_thread_process_video2(ndi_source_config_t *config, NDIlib_video_
 		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
 		break;
 	}
+
+	source->width = ndi_video_frame->xres;
+	source->height = ndi_video_frame->yres;
+	source->last_frame_timestamp = obs_get_video_frame_time();
 
 	obs_video_frame->width = ndi_video_frame->xres;
 	obs_video_frame->height = ndi_video_frame->yres;
@@ -945,6 +997,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
 	}
 
+	s->config.timeout_action = obs_data_get_int(settings, PROP_TIMEOUT);
+
 	// Clean the source content when settings change unless requested otherwise.
 	// Always clean if the source is set to Audio Only.
 	// Always clean if the receiver is reset as well.
@@ -953,7 +1007,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_log(LOG_DEBUG,
 			"'%s' ndi_source_update: Deactivate source output video (Actively reset the frame content)",
 			obs_source_name);
-		deactivate_source_output_video_texture(obs_source);
+		deactivate_source_output_video_texture(s);
 	}
 
 	//
@@ -1031,11 +1085,11 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	}
 	// Provide all the source config when updated
 	obs_log(LOG_INFO,
-		"NDI Source Updated: '%s', 'Bandwidth'='%d', Latency='%d', Framesync='%s', HardwareAcceleration='%s', behavior='%d', sync_mode='%d', yuv_range='%d', yuv_colorspace='%d'",
+		"NDI Source Updated: '%s', 'Bandwidth'='%d', Latency='%d', Framesync='%s', HardwareAcceleration='%s', behavior='%d', timeoutmode='%d', sync_mode='%d', yuv_range='%d', yuv_colorspace='%d'",
 		s->config.ndi_source_name, s->config.bandwidth, s->config.latency,
 		s->config.framesync_enabled ? "enabled" : "disabled",
-		s->config.hw_accel_enabled ? "enabled" : "disabled", s->config.behavior, s->config.sync_mode,
-		s->config.yuv_range, s->config.yuv_colorspace);
+		s->config.hw_accel_enabled ? "enabled" : "disabled", s->config.behavior, s->config.timeout_action,
+		s->config.sync_mode, s->config.yuv_range, s->config.yuv_colorspace);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_update(…)", obs_source_name);
 }
@@ -1154,6 +1208,18 @@ void ndi_source_destroy(void *data)
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
 }
 
+uint32_t ndi_source_get_width(void *data)
+{
+	auto s = (ndi_source_t *)data;
+	return s->width;
+}
+
+uint32_t ndi_source_get_height(void *data)
+{
+	auto s = (ndi_source_t *)data;
+	return s->height;
+}
+
 obs_source_info create_ndi_source_info()
 {
 	// https://docs.obsproject.com/reference-sources#source-definition-structure-obs-source-info
@@ -1173,6 +1239,9 @@ obs_source_info create_ndi_source_info()
 	ndi_source_info.hide = ndi_source_hidden;
 	ndi_source_info.deactivate = ndi_source_deactivated;
 	ndi_source_info.destroy = ndi_source_destroy;
+
+	ndi_source_info.get_width = ndi_source_get_width;
+	ndi_source_info.get_height = ndi_source_get_height;
 
 	return ndi_source_info;
 }
