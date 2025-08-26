@@ -34,6 +34,8 @@ signal_handler_t *_sh = nullptr;
 typedef std::map<const obs_source_t *, source_tally_info_t *> source_tally_map_t;
 static source_tally_map_t _source_tally_map = {};
 
+void source_tally_map_refresh();
+
 // Increment or decrement the preview count based on the visibility of the scene items for
 // that source. Only invoke the preview or depreview callback if changing visibility of the source.
 void update_preview_count(source_tally_info_t *source_tally_info, bool visible)
@@ -50,10 +52,44 @@ void update_preview_count(source_tally_info_t *source_tally_info, bool visible)
 		_preview(source_tally_info->data);
 }
 
+bool set_preview_for_item(obs_scene_t * /* scene */, obs_sceneitem_t *item, void *param)
+{
+	if (obs_sceneitem_is_group(item)) {
+		obs_sceneitem_t *this_group = item;
+		obs_sceneitem_group_enum_items(item, set_preview_for_item, this_group);
+		return true;
+	}
+
+	obs_sceneitem_t *group = (obs_sceneitem_t *)param;
+	const obs_source_t *source = obs_sceneitem_get_source(item);
+	if (source) {
+		std::string id = obs_source_get_id(source);
+		if (id == "ndi_source") {
+			bool visible = group == nullptr ? obs_sceneitem_visible(item)
+							: obs_sceneitem_visible(group) && obs_sceneitem_visible(item);
+			auto it = _source_tally_map.find(source);
+			if (it != _source_tally_map.end()) {
+				obs_log(LOG_DEBUG, "'%s' set_preview_for_item (%d)", obs_source_get_name(source),
+					visible);
+				update_preview_count(it->second, visible);
+			} else {
+				obs_log(LOG_ERROR, "Unbounded ndi_source '%s' ", obs_source_get_name(source));
+			}
+		}
+	}
+	return true;
+}
+
 // Called when a scene item is toggled on/off in the current preview scene.
 void on_sceneitem_visible(void *param, calldata_t *data)
 {
 	obs_sceneitem_t *scene_item = (obs_sceneitem_t *)calldata_ptr(data, "item");
+
+	if (obs_sceneitem_is_group(scene_item)) {
+		obs_sceneitem_t *group = scene_item;
+		obs_sceneitem_group_enum_items(scene_item, set_preview_for_item, group);
+		return;
+	}
 	bool scene_item_visible = calldata_bool(data, "visible");
 	const obs_source_t *source = obs_sceneitem_get_source(scene_item);
 	auto it = _source_tally_map.find(source);
@@ -61,6 +97,20 @@ void on_sceneitem_visible(void *param, calldata_t *data)
 		obs_log(LOG_DEBUG, "'%s' on_sceneitem_visible(%d)", obs_source_get_name(source), scene_item_visible);
 		update_preview_count(it->second, scene_item_visible);
 	}
+}
+
+bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *item, void *param)
+{
+	if (obs_sceneitem_is_group(item)) {
+		auto group_scene = obs_sceneitem_group_get_scene(item);
+
+		auto sh = obs_source_get_signal_handler(obs_scene_get_source(group_scene));
+
+		// Connect to the scene item visibility and add signals so we can track changes
+		signal_handler_disconnect(sh, "item_visible", nullptr, nullptr);
+		signal_handler_connect(sh, "item_visible", on_sceneitem_visible, nullptr);
+	}
+	return true;
 }
 
 // Called when a scene item is added in the current preview scene.
@@ -76,34 +126,10 @@ void on_sceneitem_add(void *param, calldata_t *data)
 	}
 }
 
-// Set the preview count for each ndi_source in the scene to the
-// number of times that source is visible in the current preview scene.
-void set_preview_in_scene_sources(obs_scene_t *scene)
+// Called when a scene is reorder, specifically when a ndi_source item moves to a group.
+void on_scene_reorder(void *param, calldata_t *data)
 {
-	// Enumerate the items in the scene
-	obs_scene_enum_items(
-		scene,
-		[](obs_scene_t *scene, obs_sceneitem_t *item, void *param) -> bool {
-			// Get the source from the scene item
-			const obs_source_t *source = obs_sceneitem_get_source(item);
-			if (source) {
-				std::string id = obs_source_get_id(source);
-				if (id == "ndi_source") {
-					bool visible = obs_sceneitem_visible(item);
-					auto it = _source_tally_map.find(source);
-					if (it != _source_tally_map.end()) {
-						obs_log(LOG_DEBUG, "'%s' set_preview_in_scene_source(%d)",
-							obs_source_get_name(source), visible);
-						update_preview_count(it->second, visible);
-					} else {
-						obs_log(LOG_ERROR, "Unbounded ndi_source '%s' ",
-							obs_source_get_name(source));
-					}
-				}
-			}
-			return true; // Continue enumeration
-		},
-		&_source_tally_map);
+	source_tally_map_refresh();
 }
 
 // Create the source_tally_map entry for this ndi_source and bind the ndi_source context (data)
@@ -127,6 +153,7 @@ void source_tally_map_refresh()
 	if (_sh) {
 		signal_handler_disconnect(_sh, "item_visible", nullptr, nullptr);
 		signal_handler_disconnect(_sh, "item_add", nullptr, nullptr);
+		signal_handler_disconnect(_sh, "item_reorder", nullptr, nullptr);
 		_sh = nullptr;
 	}
 
@@ -142,13 +169,17 @@ void source_tally_map_refresh()
 	obs_source_t *preview_source = obs_frontend_get_current_preview_scene();
 
 	auto preview_scene = obs_scene_from_source(preview_source);
+	_sh = obs_source_get_signal_handler(preview_source);
 	obs_source_release(preview_source);
-	auto sh = obs_source_get_signal_handler(preview_source);
 
 	// Connect to the scene item visibility and add signals so we can track changes
-	signal_handler_connect(sh, "item_visible", on_sceneitem_visible, nullptr);
-	signal_handler_connect(sh, "item_add", on_sceneitem_add, nullptr);
-	set_preview_in_scene_sources(preview_scene);
+	signal_handler_connect(_sh, "item_visible", on_sceneitem_visible, nullptr);
+	obs_scene_enum_items(preview_scene, set_visible_signal_for_group,
+			     nullptr); // needed because sources in groups don't emit visible signals
+	signal_handler_connect(_sh, "item_add", on_sceneitem_add, nullptr);
+	signal_handler_connect(_sh, "reorder", on_scene_reorder, nullptr);
+
+	obs_scene_enum_items(preview_scene, set_preview_for_item, nullptr);
 
 	obs_log(LOG_DEBUG, "source_tally_map_refresh: Currently %zu ndi_sources in scene collection",
 		_source_tally_map.size());
@@ -193,6 +224,7 @@ void obs_source_tally_destroy()
 	if (_sh) {
 		signal_handler_disconnect(_sh, "item_visible", nullptr, nullptr);
 		signal_handler_disconnect(_sh, "item_add", nullptr, nullptr);
+		signal_handler_disconnect(_sh, "reorder", nullptr, nullptr);
 		_sh = nullptr;
 	}
 	obs_frontend_remove_event_callback(on_frontend_event, nullptr);

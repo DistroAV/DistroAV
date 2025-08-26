@@ -28,6 +28,13 @@
 * for on_program).
 * If OBS does implement this functionality in the future, this library can be removed and should only need
 * changes to ndi-source.cpp to use the OBS provided functionality.
+* 
+* In addition to OBS not providing this functionality, there are some other issues with OBS 
+* which require workarounds in this library:
+* 1. When a source is in a group, the item_visible doesn't get fired when it is toggled by the user
+* 2. Items moved to a new group need to connect to the new group's item_visible signal
+* 3. When a group is toggled, the item_visible doesn't get fired for the items in the group
+* 
 */
 
 /**
