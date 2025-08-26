@@ -152,7 +152,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
-void ndi_filter_render_video(void *data)
+void ndi_filter_render_video(void *data, gs_effect_t *)
 {
 	auto f = (ndi_filter_t *)data;
 	obs_source_skip_video_filter(f->obs_source);
