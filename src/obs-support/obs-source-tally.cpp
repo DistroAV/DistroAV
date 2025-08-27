@@ -31,13 +31,19 @@ typedef struct source_tally_info_s {
 
 signal_handler_t *_sh = nullptr;
 
+// Map of all ndi_source sources in OBS
+// Key is the obs_source_t pointer, value is the preview tally count for that source
+// and a pointer to the source data
 typedef std::map<const obs_source_t *, source_tally_info_t *> source_tally_map_t;
 static source_tally_map_t _source_tally_map = {};
 
+// Forward declaration for use in on_scene_reorder.
+// This is so a scene reorder signal can refresh the _source_tally_map
 void source_tally_map_refresh();
 
 // Increment or decrement the preview count based on the visibility of the scene items for
-// that source. Only invoke the preview or depreview callback if changing visibility of the source.
+// that source. Only invoke the preview or depreview callback if changing preview
+// visibility of the source.
 void update_preview_count(source_tally_info_t *source_tally_info, bool visible)
 {
 	uint old_preview = source_tally_info->preview;
@@ -52,6 +58,8 @@ void update_preview_count(source_tally_info_t *source_tally_info, bool visible)
 		_preview(source_tally_info->data);
 }
 
+// Enumeration callback for obs_scene_enum_items and obs_sceneitem_group_enum_items
+// to set the initial preview count from a full scene or group.
 bool set_preview_for_item(obs_scene_t * /* scene */, obs_sceneitem_t *item, void *param)
 {
 	if (obs_sceneitem_is_group(item)) {
@@ -64,9 +72,10 @@ bool set_preview_for_item(obs_scene_t * /* scene */, obs_sceneitem_t *item, void
 	const obs_source_t *source = obs_sceneitem_get_source(item);
 	if (source) {
 		std::string id = obs_source_get_id(source);
+		// Only ndi_source types are tracked
 		if (id == "ndi_source") {
-			bool visible = group == nullptr ? obs_sceneitem_visible(item)
-							: obs_sceneitem_visible(group) && obs_sceneitem_visible(item);
+			bool visible = (group == nullptr) ? obs_sceneitem_visible(item)
+							  : obs_sceneitem_visible(group) && obs_sceneitem_visible(item);
 			auto it = _source_tally_map.find(source);
 			if (it != _source_tally_map.end()) {
 				obs_log(LOG_DEBUG, "'%s' set_preview_for_item (%d)", obs_source_get_name(source),
@@ -90,6 +99,7 @@ void on_sceneitem_visible(void *param, calldata_t *data)
 		obs_sceneitem_group_enum_items(scene_item, set_preview_for_item, group);
 		return;
 	}
+
 	bool scene_item_visible = calldata_bool(data, "visible");
 	const obs_source_t *source = obs_sceneitem_get_source(scene_item);
 	auto it = _source_tally_map.find(source);
@@ -98,7 +108,8 @@ void on_sceneitem_visible(void *param, calldata_t *data)
 		update_preview_count(it->second, scene_item_visible);
 	}
 }
-
+// Enumeration callback for obs_scene_enum_items to set the item_visible signal for groups.
+// Needed because sources in groups don't emit visible signals
 bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *item, void *param)
 {
 	if (obs_sceneitem_is_group(item)) {
@@ -109,6 +120,8 @@ bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *it
 		// Connect to the scene item visibility and add signals so we can track changes
 		signal_handler_disconnect(sh, "item_visible", nullptr, nullptr);
 		signal_handler_connect(sh, "item_visible", on_sceneitem_visible, nullptr);
+		// TODO: Does the signal for the group need to be disconnected when group deleted? 
+		// Not sure how OBS handles that.
 	}
 	return true;
 }
@@ -126,34 +139,19 @@ void on_sceneitem_add(void *param, calldata_t *data)
 	}
 }
 
-// Called when a scene is reorder, specifically when a ndi_source item moves to a group.
+// Called when the preview scene is reordered, specifically when a ndi_source item moves to a group.
 void on_scene_reorder(void *param, calldata_t *data)
 {
 	source_tally_map_refresh();
 }
 
-// Create the source_tally_map entry for this ndi_source and bind the ndi_source context (data)
-// to it. Only one map entry for each unique ndi_source.
-void obs_source_tally_bind_data(const obs_source_t *source, void *data)
-{
-	auto it = _source_tally_map.find(source);
-	if (it != _source_tally_map.end()) {
-		it->second->data = data;
-	} else {
-		source_tally_info_t *info = (source_tally_info_t *)bzalloc(sizeof(source_tally_info_t));
-		info->data = data;
-		info->preview = 0;
-		_source_tally_map[source] = info;
-		obs_log(LOG_DEBUG, "'%s' obs_source_tally_bind_data New ndi_source", obs_source_get_name(source));
-	}
-}
-
+// Refresh the source_tally_map to represent the current state of the current preview scene.
 void source_tally_map_refresh()
 {
 	if (_sh) {
 		signal_handler_disconnect(_sh, "item_visible", nullptr, nullptr);
 		signal_handler_disconnect(_sh, "item_add", nullptr, nullptr);
-		signal_handler_disconnect(_sh, "item_reorder", nullptr, nullptr);
+		signal_handler_disconnect(_sh, "reorder", nullptr, nullptr);
 		_sh = nullptr;
 	}
 
@@ -172,7 +170,7 @@ void source_tally_map_refresh()
 	_sh = obs_source_get_signal_handler(preview_source);
 	obs_source_release(preview_source);
 
-	// Connect to the scene item visibility and add signals so we can track changes
+	// Connect to the scene item visibility/add and reorder signals so we can track changes
 	signal_handler_connect(_sh, "item_visible", on_sceneitem_visible, nullptr);
 	obs_scene_enum_items(preview_scene, set_visible_signal_for_group,
 			     nullptr); // needed because sources in groups don't emit visible signals
@@ -185,6 +183,24 @@ void source_tally_map_refresh()
 		_source_tally_map.size());
 }
 
+void on_frontend_event(enum obs_frontend_event event, void *param)
+{
+	switch (event) {
+	case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
+		source_tally_map_refresh();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGING:
+		if (_sh) {
+			signal_handler_disconnect(_sh, "item_visible", nullptr, nullptr);
+			signal_handler_disconnect(_sh, "item_add", nullptr, nullptr);
+			signal_handler_disconnect(_sh, "reorder", nullptr, nullptr);
+			_sh = nullptr;
+		}
+		break;
+	}
+}
+
+// Called by the source to determine if it is in the preview scene.
 bool obs_source_tally_preview(const obs_source_t *source)
 {
 	auto it = _source_tally_map.find(source);
@@ -194,15 +210,8 @@ bool obs_source_tally_preview(const obs_source_t *source)
 	return false;
 }
 
-void on_frontend_event(enum obs_frontend_event event, void *param)
-{
-	switch (event) {
-	case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
-		source_tally_map_refresh();
-		break;
-	}
-}
-
+// Called by the sourc to register the preview and depreview callbacks for the source.
+// This is implemented similar to how the activated/deactivated callbacks on sources are registered.
 void obs_source_tally_register_source(struct obs_source_tally_info *info)
 {
 	_preview = info->preview;
@@ -210,6 +219,24 @@ void obs_source_tally_register_source(struct obs_source_tally_info *info)
 	obs_frontend_add_event_callback(on_frontend_event, nullptr);
 }
 
+// Create the source_tally_map entry for this ndi_source and bind the ndi_source context (data)
+// to it. Only one map entry for each unique ndi_source.
+void obs_source_tally_bind_data(const obs_source_t *source, void *data)
+{
+	auto it = _source_tally_map.find(source);
+	if (it != _source_tally_map.end()) {
+		it->second->data = data;
+	} else {
+		source_tally_info_t *info = (source_tally_info_t *)bzalloc(sizeof(source_tally_info_t));
+		info->data = data;
+		info->preview = 0;
+		_source_tally_map[source] = info;
+		obs_log(LOG_DEBUG, "'%s' obs_source_tally_bind_data New ndi_source", obs_source_get_name(source));
+	}
+	// TODO: If a source is changed to another NDI source, the tally is not changed, so it is not sent to the camera.
+}
+
+// Called when the source is being destroyed to remove it from the source_tally_map.
 void obs_source_tally_source_destroy(const obs_source_t *source)
 {
 	auto it = _source_tally_map.find(source);
@@ -219,6 +246,7 @@ void obs_source_tally_source_destroy(const obs_source_t *source)
 	}
 }
 
+// Cleanup the tally system, disconnecting any signals and clearing the source_tally_map.
 void obs_source_tally_destroy()
 {
 	if (_sh) {

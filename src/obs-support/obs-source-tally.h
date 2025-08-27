@@ -22,14 +22,14 @@
 * 
 * Provides a way for sources to be notified when they are in the preview scene so that the
 * on_preview tally can be set on the NDI source.
-* The latest version of OBS (31.1.2) does not provide this functionality in sources, so this
+* The latest version of OBS (31.1.2) does not provide this functionality in sources (never did), so this
 * libary implements it. It is only intended for use by the ndi-source and mirrors 
 * how OBS implements the activated/deactivated callbacks for sources (which ndi-source also uses
-* for on_program).
+* for on_program). It replaces the shown/hidden callbacks which do not work for this purpose.
 * If OBS does implement this functionality in the future, this library can be removed and should only need
 * changes to ndi-source.cpp to use the OBS provided functionality.
 * 
-* In addition to OBS not providing this functionality, there are some other issues with OBS 
+* In addition to OBS not providing this preview detection functionality, there are some other issues with OBS 
 * which require workarounds in this library:
 * 1. When a source is in a group, the item_visible doesn't get fired when it is toggled by the user
 * 2. Items moved to a new group need to connect to the new group's item_visible signal
