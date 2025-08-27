@@ -233,7 +233,6 @@ void obs_source_tally_bind_data(const obs_source_t *source, void *data)
 		_source_tally_map[source] = info;
 		obs_log(LOG_DEBUG, "'%s' obs_source_tally_bind_data New ndi_source", obs_source_get_name(source));
 	}
-	// TODO: If a source is changed to another NDI source, the tally is not changed, so it is not sent to the camera.
 }
 
 // Called when the source is being destroyed to remove it from the source_tally_map.
