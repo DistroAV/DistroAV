@@ -411,6 +411,7 @@ void *ndi_source_thread(void *data)
 
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
+	bool send_tally = false;
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -517,6 +518,9 @@ void *ndi_source_thread(void *data)
 					obs_source_name, recv_desc.source_to_connect_to.p_ndi_name);
 				break;
 			}
+
+			// Resend tally on new receiver
+			send_tally = true;
 
 			if (s->config.hw_accel_enabled) {
 				//
@@ -630,7 +634,8 @@ void *ndi_source_thread(void *data)
 			s->config.tally2.on_preview,
 			s->config.tally2.on_program);
 #endif
-		if ((config->TallyPreviewEnabled && s->config.tally.on_preview != tally.on_preview) ||
+		if (send_tally ||
+			(config->TallyPreviewEnabled && s->config.tally.on_preview != tally.on_preview) ||
 		    (config->TallyProgramEnabled && s->config.tally.on_program != tally.on_program)) {
 			tally.on_preview = s->config.tally.on_preview;
 			tally.on_program = s->config.tally.on_program;
@@ -640,6 +645,7 @@ void *ndi_source_thread(void *data)
 				"'%s' ndi_source_thread: tally changed; Sending tally on_preview=%d, on_program=%d",
 				obs_source_name, tally.on_preview, tally.on_program);
 			ndiLib->recv_set_tally(ndi_receiver, &tally);
+			send_tally = false;
 		}
 
 		if (ndi_frame_sync) {
@@ -1185,7 +1191,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	ndi_source_update(s, settings);
 
 	// Bind the source to the tally system, which will call our tally callbacks.
-	// This is not needed if preview is implemented preview state maintained by OBS.
+	// This is not needed if preview state is implemented by OBS.
 	obs_source_tally_bind_data(obs_source, s);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
