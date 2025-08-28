@@ -634,8 +634,7 @@ void *ndi_source_thread(void *data)
 			s->config.tally2.on_preview,
 			s->config.tally2.on_program);
 #endif
-		if (send_tally ||
-			(config->TallyPreviewEnabled && s->config.tally.on_preview != tally.on_preview) ||
+		if (send_tally || (config->TallyPreviewEnabled && s->config.tally.on_preview != tally.on_preview) ||
 		    (config->TallyProgramEnabled && s->config.tally.on_program != tally.on_program)) {
 			tally.on_preview = s->config.tally.on_preview;
 			tally.on_program = s->config.tally.on_program;

@@ -120,7 +120,7 @@ bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *it
 		// Connect to the scene item visibility and add signals so we can track changes
 		signal_handler_disconnect(sh, "item_visible", nullptr, nullptr);
 		signal_handler_connect(sh, "item_visible", on_sceneitem_visible, nullptr);
-		// TODO: Does the signal for the group need to be disconnected when group deleted? 
+		// TODO: Does the signal for the group need to be disconnected when group deleted?
 		// Not sure how OBS handles that.
 	}
 	return true;
