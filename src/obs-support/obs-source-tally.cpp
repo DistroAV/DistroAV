@@ -183,7 +183,7 @@ void source_tally_map_refresh()
 		_source_tally_map.size());
 }
 
-void on_frontend_event(enum obs_frontend_event event, void *param)
+void on_frontend_event(enum obs_frontend_event event, void * /* param */)
 {
 	switch (event) {
 	case OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED:
