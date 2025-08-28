@@ -90,7 +90,7 @@ bool set_preview_for_item(obs_scene_t * /* scene */, obs_sceneitem_t *item, void
 }
 
 // Called when a scene item is toggled on/off in the current preview scene.
-void on_sceneitem_visible(void *param, calldata_t *data)
+void on_sceneitem_visible(void * /* param */, calldata_t *data)
 {
 	obs_sceneitem_t *scene_item = (obs_sceneitem_t *)calldata_ptr(data, "item");
 
@@ -110,7 +110,7 @@ void on_sceneitem_visible(void *param, calldata_t *data)
 }
 // Enumeration callback for obs_scene_enum_items to set the item_visible signal for groups.
 // Needed because sources in groups don't emit visible signals
-bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *item, void *param)
+bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *item, void * /* param */)
 {
 	if (obs_sceneitem_is_group(item)) {
 		auto group_scene = obs_sceneitem_group_get_scene(item);
@@ -127,7 +127,7 @@ bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *it
 }
 
 // Called when a scene item is added in the current preview scene.
-void on_sceneitem_add(void *param, calldata_t *data)
+void on_sceneitem_add(void * /* param */, calldata_t *data)
 {
 	obs_sceneitem_t *scene_item = (obs_sceneitem_t *)calldata_ptr(data, "item");
 	const obs_source_t *source = obs_sceneitem_get_source(scene_item);
@@ -140,7 +140,7 @@ void on_sceneitem_add(void *param, calldata_t *data)
 }
 
 // Called when the preview scene is reordered, specifically when a ndi_source item moves to a group.
-void on_scene_reorder(void *param, calldata_t *data)
+void on_scene_reorder(void * /* param */, calldata_t * /* data */)
 {
 	source_tally_map_refresh();
 }
@@ -196,6 +196,8 @@ void on_frontend_event(enum obs_frontend_event event, void *param)
 			signal_handler_disconnect(_sh, "reorder", nullptr, nullptr);
 			_sh = nullptr;
 		}
+		break;
+	default:
 		break;
 	}
 }
