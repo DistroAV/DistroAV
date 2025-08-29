@@ -21,9 +21,9 @@
 extern "C" {
 #endif
 
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 
 #define LOG_VERBOSE 500
@@ -35,6 +35,8 @@ extern const char *PLUGIN_DISPLAY_NAME;
 extern const char *PLUGIN_VERSION;
 
 void obs_log(int log_level, const char *format, ...);
+// The following is from the obs-plugingtemplate, but when added here it create linkage error at build on windows. This is set in plugin-support.c.in instead.
+// extern void blogva(int log_level, const char *format, va_list args);
 
 #ifdef __cplusplus
 }

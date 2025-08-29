@@ -26,80 +26,59 @@
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QPointer>
 
-OutputSettings::OutputSettings(QWidget *parent)
-	: QDialog(parent),
-	  ui(new Ui::OutputSettings)
+OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
 
-	connect(ui->buttonBox, SIGNAL(accepted()), this,
-		SLOT(onFormAccepted()));
+	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
 
-	auto pluginVersionText =
-		QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
-	ui->labelDistroAvVersion->setText(
-		makeLink("#", QT_TO_UTF8(pluginVersionText)));
-	connect(ui->labelDistroAvVersion, &QLabel::linkActivated,
-		[this, pluginVersionText](const QString &) {
-			QApplication::clipboard()->setText(pluginVersionText);
-			QMessageBox::information(
-				this,
-				Str("NDIPlugin.OutputSettings.TextCopied"),
-				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
-		});
+	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
+	ui->labelDistroAvVersion->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	connect(ui->labelDistroAvVersion, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
+		QApplication::clipboard()->setText(pluginVersionText);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	});
 
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		// Whew! QProgressDialog is ugly on Windows!
 		// TODO: Write our own.
-		auto progressDialog = new QProgressDialog(
-			QTStr("NDIPlugin.Update.CheckingForUpdate.Text")
-				.arg(PLUGIN_DISPLAY_NAME),
-			Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0,
-			this);
+		QPointer<QProgressDialog> progressDialog =
+			new QProgressDialog(QTStr("NDIPlugin.Update.CheckingForUpdate.Text").arg(PLUGIN_DISPLAY_NAME),
+					    Str("NDIPlugin.Update.CheckingForUpdate.Cancel"), 0, 0, this);
 		progressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
 		progressDialog->setWindowModality(Qt::WindowModal);
-		connect(progressDialog, &QProgressDialog::canceled,
-			[progressDialog]() {
-				updateCheckStop();
-				progressDialog->close();
-			});
-		auto checking = updateCheckStart([this, progressDialog](
-							 const PluginUpdateInfo &
-								 pluginUpdateInfo)
-							 -> bool {
+		connect(progressDialog, &QProgressDialog::canceled, [progressDialog]() {
+			updateCheckStop();
 			progressDialog->close();
+		});
+		auto checking = updateCheckStart([this,
+						  progressDialog](const PluginUpdateInfo &pluginUpdateInfo) -> bool {
+			if (progressDialog != nullptr) {
+				progressDialog->close();
+			}
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
 				QString errorData = pluginUpdateInfo.errorData;
 				if (LOG_LEVEL >= LOG_DEBUG) {
 					QJsonParseError parseError;
 					QJsonDocument jsonDoc =
-						QJsonDocument::fromJson(
-							errorData.toUtf8(),
-							&parseError);
-					if (parseError.error ==
-					    QJsonParseError::NoError) {
-						QJsonObject jsonObject =
-							jsonDoc.object();
-						if (jsonObject.contains(
-							    "error")) {
-							errorData =
-								jsonObject["error"]
-									.toString();
+						QJsonDocument::fromJson(errorData.toUtf8(), &parseError);
+					if (parseError.error == QJsonParseError::NoError) {
+						QJsonObject jsonObject = jsonDoc.object();
+						if (jsonObject.contains("error")) {
+							errorData = jsonObject["error"].toString();
 						}
 					}
 				}
 
-				auto errorText = QTStr(
-					"NDIPlugin.Update.CheckingForUpdate.Error.Text");
-				errorText +=
-					QString("<pre>%1</pre>").arg(errorData);
+				auto errorText = QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text");
+				errorText += QString("<pre>%1</pre>").arg(errorData);
 
-				if (pluginUpdateInfo.httpStatusCode ==
-					    404 // Not Found
-				    || pluginUpdateInfo.httpStatusCode ==
-					       412 // Precondition Failed
+				if (pluginUpdateInfo.httpStatusCode == 404    // Not Found
+				    || pluginUpdateInfo.httpStatusCode == 412 // Precondition Failed
 				) {
 					// Only someone building and loading their own plugin should see this.
 					// This is effectively just a code comment to them/me in the UI.
@@ -117,25 +96,17 @@ If you are running a local build, don't forget to add your build info to the upd
 					}
 				}
 
-				QMessageBox::warning(
-					this,
-					Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
-					errorText);
+				QMessageBox::warning(this, Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
+						     errorText);
 				return false;
 			}
 
-			if (pluginUpdateInfo.versionLatest <=
-				    pluginUpdateInfo.versionCurrent &&
+			if (pluginUpdateInfo.versionLatest <= pluginUpdateInfo.versionCurrent &&
 			    Config::UpdateForce < 1) {
 				QMessageBox::information(
-					this,
-					QTStr("NDIPlugin.Update.NoUpdateAvailable")
-						.arg(PLUGIN_DISPLAY_NAME),
+					this, QTStr("NDIPlugin.Update.NoUpdateAvailable").arg(PLUGIN_DISPLAY_NAME),
 					QTStr("NDIPlugin.Update.YouAreUpToDate")
-						.arg(PLUGIN_DISPLAY_NAME,
-						     pluginUpdateInfo
-							     .versionCurrent
-							     .toString()));
+						.arg(PLUGIN_DISPLAY_NAME, pluginUpdateInfo.versionCurrent.toString()));
 				return false;
 			}
 
@@ -150,21 +121,15 @@ If you are running a local build, don't forget to add your build info to the upd
 
 	auto ndiVersionText = QString(ndiLib->version());
 	ui->labelNdiVersion->setText(makeLink("#", QT_TO_UTF8(ndiVersionText)));
-	connect(ui->labelNdiVersion, &QLabel::linkActivated,
-		[this, ndiVersionText](const QString &) {
-			QApplication::clipboard()->setText(ndiVersionText);
-			QMessageBox::information(
-				this,
-				Str("NDIPlugin.OutputSettings.TextCopied"),
-				Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
-		});
-
-	ui->pushButtonNdi->setText(QString("%1 %2").arg(
-		ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
-	connect(ui->pushButtonNdi, &QPushButton::clicked, []() {
-		QDesktopServices::openUrl(
-			QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
+	connect(ui->labelNdiVersion, &QLabel::linkActivated, [this, ndiVersionText](const QString &) {
+		QApplication::clipboard()->setText(ndiVersionText);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
+
+	ui->pushButtonNdi->setText(QString("%1 %2").arg(ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
+	connect(ui->pushButtonNdi, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL))); });
 
 #if 1
 	ui->pushButtonNdiTools->setVisible(false);
@@ -177,10 +142,8 @@ If you are running a local build, don't forget to add your build info to the upd
 	//
 #ifdef NDI_OFFICIAL_TOOLS_URL
 	ui->pushButtonNdiTools->setText(NDI_OFFICIAL_TOOLS_URL);
-	connect(ui->pushButtonNdiTools, &QPushButton::clicked, []() {
-		QDesktopServices::openUrl(
-			QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_TOOLS_URL)));
-	});
+	connect(ui->pushButtonNdiTools, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_TOOLS_URL))); });
 #else
 	ui->pushButtonNdiTools->setVisible(false);
 #endif
@@ -190,31 +153,25 @@ If you are running a local build, don't forget to add your build info to the upd
 #else
 	ui->pushButtonNdiRedist->setText(PLUGIN_REDIRECT_NDI_REDIST_URL);
 #endif
-	connect(ui->pushButtonNdiRedist, &QPushButton::clicked, []() {
-		QDesktopServices::openUrl(
-			QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL)));
-	});
+	connect(ui->pushButtonNdiRedist, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
 #endif
 
-	ui->labelNdiRegisteredTrademark->setText(
-		NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+	ui->labelNdiRegisteredTrademark->setText(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
 
 	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
 	connect(ui->labelDonateUrl, &QLabel::linkActivated,
-		[this](const QString &url) {
-			QDesktopServices::openUrl(QUrl(url));
-		});
+		[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
 
 	ui->labelDiscordUrl->setText(makeLink(PLUGIN_REDIRECT_DISCORD_URL));
 	connect(ui->labelDiscordUrl, &QLabel::linkActivated,
-		[this](const QString &url) {
-			QDesktopServices::openUrl(QUrl(url));
-		});
+		[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
 }
 
 void OutputSettings::onFormAccepted()
 {
 	auto config = Config::Current();
+	auto last_config = *config;
 
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
@@ -227,22 +184,63 @@ void OutputSettings::onFormAccepted()
 	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	config->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
-	config->AutoCheckForUpdates(
-		ui->checkBoxAutoCheckForUpdates->isChecked());
+	config->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
+
+	auto mainSupported = ui->mainOutputGroupBox->isEnabled();
+
+	obs_log(LOG_INFO, "Main output supported='%d'", mainSupported);
+
+	// Output settings for debugging & diagnosis
+	obs_log(LOG_INFO,
+		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
+		config->OutputEnabled, config->OutputName.toUtf8().constData(),
+		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
 
 	config->Save();
 
-	main_output_init();
-	preview_output_init();
+	if (mainSupported && config->OutputEnabled && !config->OutputName.isEmpty()) {
+		if ((last_config.OutputEnabled != config->OutputEnabled) ||
+		    (last_config.OutputName != config->OutputName) ||
+		    (last_config.OutputGroups != config->OutputGroups)) {
+			// The Output is supported and enabled, OutputName exists and a Name or GroupName has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Main output");
+			main_output_init();
+		}
+	} else {
+		main_output_deinit();
+	}
+	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
+		if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
+		    (last_config.PreviewOutputName != config->PreviewOutputName) ||
+		    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+			// The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Preview output");
+			preview_output_init();
+		}
+	} else {
+		preview_output_deinit();
+	}
 }
 
 void OutputSettings::showEvent(QShowEvent *)
 {
 	auto config = Config::Current();
 
+	// Set mainOutputGroupBox to enabled if main_output_is_supported()
+	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
+
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
 	ui->mainOutputGroups->setText(config->OutputGroups);
+
+	auto lastError = main_output_last_error();
+	ui->mainOutputLastError->setText(lastError);
+	if (lastError.isEmpty()) {
+		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space is error is no longer valid.
+	} else {
+		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());
+	}
 
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
 	ui->previewOutputName->setText(config->PreviewOutputName);
@@ -251,8 +249,7 @@ void OutputSettings::showEvent(QShowEvent *)
 	ui->tallyProgramCheckBox->setChecked(config->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(config->TallyPreviewEnabled);
 
-	ui->checkBoxAutoCheckForUpdates->setChecked(
-		config->AutoCheckForUpdates());
+	ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
 }
 
 void OutputSettings::toggleShowHide()
