@@ -95,7 +95,7 @@ obs_properties_t *ndi_filter_getproperties(void *)
 					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
 					  return false;
 				  });
-	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL, group_ndi);
+	obs_properties_add_group(props, "ndi", "NDI", OBS_GROUP_NORMAL, group_ndi);
 
 	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
