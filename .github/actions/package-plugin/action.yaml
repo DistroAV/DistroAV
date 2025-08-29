@@ -37,7 +37,7 @@ inputs:
     required: false
     default: ''
   package:
-    description: Create Windows or macOS installation package
+    description: Create platform-specific packages instead of archives
     required: false
     default: 'false'
   workingDirectory:
@@ -47,7 +47,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Run macOS Packaging
+    - name: Run macOS packaging
       if: runner.os == 'macOS'
       shell: zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ inputs.workingDirectory }}
@@ -60,7 +60,10 @@ runs:
       run: |
         : Run macOS Packaging
 
-        local -a package_args=(--config ${{ inputs.config }})
+        local -a package_args=(
+          --target macos-${{ inputs.target }}
+          --config ${{ inputs.config }}
+        )
         if (( ${+RUNNER_DEBUG} )) package_args+=(--debug)
 
         if [[ '${{ inputs.codesign }}' == 'true' ]] package_args+=(--codesign)
@@ -80,23 +83,24 @@ runs:
         brew install --quiet zsh
         echo ::endgroup::
 
-    - name: Run Ubuntu Packaging
+    - name: Run Ubuntu packaging
       if: runner.os == 'Linux'
       shell: zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ inputs.workingDirectory }}
       run: |
         : Run Ubuntu Packaging
-        package_args=(
+
+        local -a package_args=(
           --target ubuntu-${{ inputs.target }}
           --config ${{ inputs.config }}
         )
-        if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
+        if (( ${+RUNNER_DEBUG} )) package_args+=(--debug)
 
         if [[ '${{ inputs.package }}' == 'true' ]] package_args+=(--package)
 
-        .github/scripts/package-ubuntu ${package_args}
+        ${{ inputs.workingDirectory }}/.github/scripts/package-ubuntu ${package_args}
 
-    - name: Run Windows Packaging
+    - name: Run Windows packaging
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
@@ -110,4 +114,14 @@ runs:
           Configuration = '${{ inputs.config }}'
         }
 
-        .github/scripts/Package-Windows.ps1 @PackageArgs
+        if ( $Env:RUNNER_DEBUG -ne $null ) {
+          $PackageArgs += @{ Debug = $true }
+        }
+
+        if ( ( Test-Path env:CI ) -and ( Test-Path env:RUNNER_DEBUG ) ) {
+          $PackageArgs += @{
+            Debug = $true
+          }
+        }
+
+        .github/scripts/Package-windows.ps1 @PackageArgs
