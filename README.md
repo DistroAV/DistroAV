@@ -21,7 +21,7 @@
 
 ## Requirements
 * OBS >= 31.0.0 (Qt6, x64/ARM64/AppleSilicon)
-* [NDI Runtime >= 6](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)  
+* [NDI Runtime >= 6]([https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required-components---ndi-runtime))  
 * [Remove old OBS-NDI plugin](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Installation
