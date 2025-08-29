@@ -36,6 +36,11 @@ class RemoteTextThread : public QThread {
 	Q_OBJECT
 
 	std::string url;
+
+public:
+	std::vector<std::string> headers;
+
+private:
 	std::string contentType;
 	std::string postData;
 
@@ -47,8 +52,6 @@ signals:
 	void Result(int httpStatusCode, const QString &responseData, const QString &errorData);
 
 public:
-	std::vector<std::string> headers;
-
 	inline RemoteTextThread(std::string url_, std::string contentType_ = std::string(),
 				std::string postData_ = std::string(), int timeoutSec_ = 0)
 		: url(url_),
@@ -62,9 +65,9 @@ public:
 				std::string contentType_ = std::string(), std::string postData_ = std::string(),
 				int timeoutSec_ = 0)
 		: url(url_),
+		  headers(std::move(headers_)),
 		  contentType(contentType_),
 		  postData(postData_),
-		  headers(std::move(headers_)),
 		  timeoutSec(timeoutSec_)
 	{
 	}
