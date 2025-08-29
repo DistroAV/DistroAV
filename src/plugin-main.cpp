@@ -52,6 +52,9 @@ const NDIlib_v6 *ndiLib = nullptr;
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
 
+extern struct obs_source_tally_info create_ndi_source_tally_info();
+struct obs_source_tally_info ndi_source_tally_info;
+
 extern struct obs_output_info create_ndi_output_info();
 struct obs_output_info ndi_output_info;
 
@@ -331,6 +334,9 @@ bool obs_module_load(void)
 
 	ndi_source_info = create_ndi_source_info();
 	obs_register_source(&ndi_source_info);
+
+	ndi_source_tally_info = create_ndi_source_tally_info();
+	obs_source_tally_register_source(&ndi_source_tally_info);
 
 	ndi_output_info = create_ndi_output_info();
 	obs_register_output(&ndi_output_info);
