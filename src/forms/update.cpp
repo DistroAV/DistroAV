@@ -449,7 +449,14 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
 	auto obsGuid = config->GetInstallGUID();
-	obs_log(LOG_VERBOSE, "GUID detected : '%s' ", QT_TO_UTF8(obsGuid));
+
+	if (!obsGuid.isEmpty()) {
+		obs_log(LOG_VERBOSE, "OBS GUID detected : '%s' ", QT_TO_UTF8(obsGuid));
+	} else {
+		obs_log(LOG_VERBOSE, "No OBS GUID detected - Assuming this is a new installation");
+		obsGuid = "noguiddetectednewfreshinstalldistroavobs";
+	}
+
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
 	auto userAgent = QString("DistroAV/%1 (OBS/%2 %3; %4; %5; %6) %7")
 				 .arg(pluginVersion)

@@ -281,10 +281,9 @@ void Config::Save()
 
 QString Config::GetInstallGUID()
 {
-	auto obs_config = GetGlobalConfig();
+	auto obs_config = GetAppConfig();
 	if (obs_config) {
-		return config_get_string(obs_config, "General",
-						"InstallGUID");
+		return config_get_string(obs_config, "General", "InstallGUID");
 	}
 	return 0;
 }
