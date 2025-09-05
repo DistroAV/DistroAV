@@ -188,16 +188,23 @@ void main_output_init()
 
 	main_output_deinit();
 
-	if (is_enabled && !output_name.isEmpty()) {
-		obs_log(LOG_DEBUG, "main_output_init: creating NDI Main Output '%s'", QT_TO_UTF8(output_name));
-		obs_data_t *output_settings = obs_data_create();
-		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
-		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
+        if (is_enabled && !output_name.isEmpty()) {
+                obs_log(LOG_DEBUG, "main_output_init: creating NDI Main Output '%s'", QT_TO_UTF8(output_name));
+                obs_data_t *output_settings = obs_data_create();
+                obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
+                obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
+                obs_data_set_bool(output_settings, "track1", config->OutputTrackMask & (1 << 0));
+                obs_data_set_bool(output_settings, "track2", config->OutputTrackMask & (1 << 1));
+                obs_data_set_bool(output_settings, "track3", config->OutputTrackMask & (1 << 2));
+                obs_data_set_bool(output_settings, "track4", config->OutputTrackMask & (1 << 3));
+                obs_data_set_bool(output_settings, "track5", config->OutputTrackMask & (1 << 4));
+                obs_data_set_bool(output_settings, "track6", config->OutputTrackMask & (1 << 5));
 
-		context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
-		obs_data_release(output_settings);
-		if (context.output) {
-			obs_log(LOG_DEBUG, "main_output_init: created NDI Main Output '%s'", QT_TO_UTF8(output_name));
+                context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+                obs_data_release(output_settings);
+                if (context.output) {
+                        obs_log(LOG_DEBUG, "main_output_init: created NDI Main Output '%s'", QT_TO_UTF8(output_name));
+                        obs_output_set_audio_mix(context.output, config->OutputTrackMask);
 
 			// Start handling "remote" start/stop events (ex: from obs-websocket)
 			auto sh = obs_output_get_signal_handler(context.output);

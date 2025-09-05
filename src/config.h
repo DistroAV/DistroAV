@@ -20,6 +20,7 @@
 #include <QDateTime>
 #include <QString>
 #include <QVersionNumber>
+#include <cstdint>
 
 #define DEFAULT_UPDATE_LOCAL_PORT 5002
 
@@ -41,6 +42,7 @@
  * CheckForUpdates=true
  * AutoCheckForUpdates=true
  * MainOutputGroups=
+ * MainOutputTracks=1
  * PreviewOutputGroups=
  * ```
  */
@@ -70,12 +72,13 @@ public:
 	 */
 	static int DetectObsNdiForce;
 
-	bool OutputEnabled;
-	QString OutputName;
-	QString OutputGroups;
-	bool PreviewOutputEnabled;
-	QString PreviewOutputName;
-	QString PreviewOutputGroups;
+        bool OutputEnabled;
+        QString OutputName;
+        QString OutputGroups;
+        uint32_t OutputTrackMask;
+        bool PreviewOutputEnabled;
+        QString PreviewOutputName;
+        QString PreviewOutputGroups;
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 
