@@ -204,7 +204,7 @@ void main_output_init()
                 obs_data_release(output_settings);
                 if (context.output) {
                         obs_log(LOG_DEBUG, "main_output_init: created NDI Main Output '%s'", QT_TO_UTF8(output_name));
-                        obs_output_set_audio_mixers(context.output, config->OutputTrackMask);
+                        obs_output_set_mixers(context.output, config->OutputTrackMask);
 
 			// Start handling "remote" start/stop events (ex: from obs-websocket)
 			auto sh = obs_output_get_signal_handler(context.output);
