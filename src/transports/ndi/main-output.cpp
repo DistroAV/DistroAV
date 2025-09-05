@@ -17,7 +17,8 @@
 
 #include "main-output.h"
 
-#include "plugin-main.h"
+#include "../plugin-main.h"
+#include "ndi-common.h"
 #include <random>
 
 struct main_output {

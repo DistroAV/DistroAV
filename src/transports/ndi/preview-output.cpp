@@ -17,7 +17,8 @@
 
 #include "preview-output.h"
 
-#include "plugin-main.h"
+#include "../plugin-main.h"
+#include "ndi-common.h"
 
 #include <util/platform.h>
 #include <media-io/video-frame.h>
