@@ -127,45 +127,28 @@ If you are running a local build, don't forget to add your build info to the upd
 					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
 
-	ui->pushButtonNdi->setText(QString("%1 %2").arg(ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
+	// ui->pushButtonNdi->setText(QString("%1 %2").arg(ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
 	connect(ui->pushButtonNdi, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL))); });
 
-#if 1
-	ui->pushButtonNdiTools->setVisible(false);
-	ui->pushButtonNdiRedist->setVisible(false);
-#else
-	//
-	// These are not useful to users that can see this Dialog because
-	// they have already installed and successfully loaded the NDI SDK.
-	// Keeping the code around for a little while longer...
-	//
-#ifdef NDI_OFFICIAL_TOOLS_URL
-	ui->pushButtonNdiTools->setText(NDI_OFFICIAL_TOOLS_URL);
-	connect(ui->pushButtonNdiTools, &QPushButton::clicked,
-		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_TOOLS_URL))); });
-#else
-	ui->pushButtonNdiTools->setVisible(false);
-#endif
+	connect(ui->pushButtonDiscord, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DISCORD_URL))); });
 
-#ifdef NDI_OFFICIAL_REDIST_URL
-	ui->pushButtonNdiRedist->setText(NDI_OFFICIAL_REDIST_URL);
-#else
-	ui->pushButtonNdiRedist->setText(PLUGIN_REDIRECT_NDI_REDIST_URL);
-#endif
-	connect(ui->pushButtonNdiRedist, &QPushButton::clicked,
-		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
-#endif
+	connect(ui->pushButtonDonate, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DONATE_URL))); });
+
+	connect(ui->pushButtonWiki, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_TROUBLESHOOTING_URL))); });
 
 	ui->labelNdiRegisteredTrademark->setText(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
 
-	ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
-	connect(ui->labelDonateUrl, &QLabel::linkActivated,
-		[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
+	// ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
+	// connect(ui->labelDonateUrl, &QLabel::linkActivated,
+	//	[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
 
-	ui->labelDiscordUrl->setText(makeLink(PLUGIN_REDIRECT_DISCORD_URL));
-	connect(ui->labelDiscordUrl, &QLabel::linkActivated,
-		[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
+	// ui->labelDiscordUrl->setText(makeLink(PLUGIN_REDIRECT_DISCORD_URL));
+	// connect(ui->labelDiscordUrl, &QLabel::linkActivated,
+	//	[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
 }
 
 void OutputSettings::onFormAccepted()
