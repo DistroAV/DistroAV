@@ -89,8 +89,7 @@ obs_properties_t *ndi_filter_getproperties(void *)
 					  return true;
 				  });
 
-	obs_properties_add_text(props, "ndi_trademark", NDI_IS_A_REGISTERED_TRADEMARK_TEXT,
-				OBS_TEXT_INFO);
+	obs_properties_add_text(props, "ndi_trademark", NDI_IS_A_REGISTERED_TRADEMARK_TEXT, OBS_TEXT_INFO);
 	/* 
 	auto group_ndi = obs_properties_create();
 	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
