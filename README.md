@@ -84,7 +84,7 @@ See [Development Wiki](https://github.com/DistroAV/DistroAV/wiki/3.-Development)
   </picture>
 </a>
 
-Project Management & Partners Relations & Apple/Microsoft Codesigning & Code contribution & Lab-testing for Release provided by [EPEAK Studio](https://distroav.org/sponsors/epeakstudio)
+Project Management & Partners Relations & Apple/Microsoft Codesigning & Code contribution & Lab-testing for Release provided by [EPEAK Studio](https://distroav.org/sponsors/epeakstudio) for the official [DistroAV](https://distroav.org/) upstream project.
 
 # Backers (Financial Contributiors)
 This project can continue to exists thanks to all the people who help us cover regular expenses. [[Contribute](https://distroav.org/donate)].
