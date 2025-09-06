@@ -1,8 +1,12 @@
 <div align="center">
-<h1>DistroAV (Formerly OBS-NDI)</h1>
+<h1>DistroAV</h1>
 <h3>Network Audio/Video in OBS-Studio using NDI technology</h3>  
 
-<img src="https://github.com/DistroAV/DistroAV/blob/master/assets/distroav-logo-512x512.png?raw=true" width="256px" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/distroav-full-clean-white.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/distroav-full-clean.svg">
+  <img width="650" alt="Fallback DistroAV logo when no light or dark theme is detected" src="./assets/distroav-full-clean.svg">
+</picture>
 
 [![GitHub](https://img.shields.io/github/license/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/blob/master/LICENSE)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DistroAV/DistroAV/push.yaml?label=master)
@@ -10,21 +14,32 @@
 
 [![Total downloads](https://img.shields.io/github/downloads/DistroAV/DistroAV/total)](https://github.com/DistroAV/DistroAV/releases)
 ![Discord](https://img.shields.io/discord/1082173788101279746?style=social&logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.gg%2FZuTxbUK3ug)
-[![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/distroav)](https://opencollective.com/distroav/donate)  
-[(Please consider making a donation)](https://opencollective.com/distroav)
+[![Open Collective backers and sponsors](https://opencollective.com/distroav/all/badge.svg?label=Backers&color=brightgreen)](https://opencollective.com/distroav/donate)  
 </div>
 
-## Features
-- **NDI Source** : Receive NDI video and audio in OBS
-- **NDI Output** : Transmit OBS video and audio to NDI
-- **NDI Filter** (a.k.a. **NDI Dedicated Output**) : Transmit a single OBS source or scene audio to NDI
+## DistroAV Features
 
-## Requirements
-* OBS >= 31.0.0 (Qt6, x64/ARM64/AppleSilicon)
-* [NDI Runtime >= 6]([https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required-components---ndi-runtime))  
-* [Remove old OBS-NDI plugin](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
+### NDI Source
+
+Receive NDI video and audio in OBS
+
+<img width="400" alt="DistroAV-NDI-Source-Feature-Window" src="https://github.com/user-attachments/assets/fe8a3942-b4bf-42b5-84e6-e9971be95216" />
+
+### NDI Output
+
+Transmit OBS video and audio to NDI
+
+<img width="400" alt="DistroAV-NDI-Output-Feature-Window" src="https://github.com/user-attachments/assets/4ee4dd5c-ff95-4b65-a32d-2064eaacc4c2" />
+
+### NDI Filter
+
+(a.k.a. **NDI Dedicated Output**)
+Transmit a single OBS source or scene audio to NDI.
+
+<img width="400" alt="DistroAV-NDI-Filters-Feature-Window" src="https://github.com/user-attachments/assets/6952da7a-a621-4b42-b737-857de83f5615" />
 
 # Installation
+
 Windows ![WinGet Package Version](https://img.shields.io/winget/v/DistroAV.DistroAV)
 ```
 winget install --exact --id DistroAV.DistroAV
@@ -43,17 +58,48 @@ obs --system-talk-name=org.freedesktop.Avahi
 
 Any other options, or errors: See [release page](https://distroav.org/download) and [installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
 
+## Requirements
+
+* [OBS v31.0 or higher](https://github.com/obsproject/obs-studio/releases) (Qt6, x64/ARM64/AppleSilicon)
+* [NDI Runtime v6.0 or higher](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)
+
 # Troubleshooting
 
-See [Troubleshooting Wiki](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting)
+Got a DistroAV Error Code in your OBS log? [See the list of Error Code on the Wiki](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting#error--warning-code---obs-log)
 
-Conflict with OBS-NDI plugin : [Follow the instructions](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
+Having trouble with DistroAV? See [Troubleshooting Wiki](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting)
+
+Conflict with OBS-NDI plugin? [Follow the instructions](https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV)
 
 # Development
 
 See [Development Wiki](https://github.com/DistroAV/DistroAV/wiki/3.-Development)
 
 **NOTE:** `OBS-NDI` was renamed to `DistroAV` ~2024/06 per [obsproject.com](https://obsproject.com)'s request to drop `OBS` from our name.
+
+# Project Sponsors
+
+<a href="https://distroav.org/sponsors/epeakstudio" target="_blank" rel="noopener">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://epeakstudio.com/wp-content/uploads/2020/04/LogoEpeak_BlackBG-thin.png"  width="400" />
+    <source media="(prefers-color-scheme: light)" srcset="https://epeakstudio.com/wp-content/uploads/2024/01/LogoEpeak_WhiteBG-e1756350774910.png"  width="400" />
+    <img alt="EPEAK Studio Logo - DistroAV Sponsor" src="https://epeakstudio.com/wp-content/uploads/2020/04/LogoEpeak_BlackBG-thin.png"  width="400" />
+  </picture>
+</a>
+
+Project Management & Partners Relations & Apple/Microsoft Codesigning & Code contribution & Lab-testing for Release provided by [EPEAK Studio](https://distroav.org/sponsors/epeakstudio) for the official [DistroAV](https://distroav.org/) upstream project.
+
+# Backers (Financial Contributiors)
+
+This project can continue to exists thanks to all the people who help us cover regular expenses. [[Contribute](https://distroav.org/donate)].
+
+[![DistroAV Backers](https://opencollective.com/DistroAV/backers.svg?avatarHeight=36&width=830&button=false)](https://distroav.org/donate)
+
+# Lifetime Code Contributors
+
+This project exists thanks to all the people who contributed code & reviews over the years. [[Contribute as a developer](https://github.com/DistroAV/DistroAV/wiki/3.-Development)].
+
+[![DistroAV code contributors](https://opencollective.com/DistroAV/contributors.svg?button=false&limit=93&width=830)](https://github.com/DistroAV/DistroAV/graphs/contributors)
 
 ---
 
