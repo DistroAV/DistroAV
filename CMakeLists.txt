@@ -49,8 +49,8 @@ target_sources(
     src/obs-support/remote-text.hpp
     src/obs-support/shared-update.cpp
     src/obs-support/shared-update.hpp
-    src/obs-support/obs-source-tally.h
-    src/obs-support/obs-source-tally.cpp
+    src/obs-support/obs-source-preview.h
+    src/obs-support/obs-source-preview.cpp
     src/config.cpp
     src/config.h
     src/main-output.cpp

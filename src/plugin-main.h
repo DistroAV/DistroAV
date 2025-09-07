@@ -22,7 +22,7 @@
 #include "plugin-support.h"
 
 #include "obs-support/obs-app.hpp"
-#include "obs-support/obs-source-tally.h"
+#include "obs-support/obs-source-preview.h"
 
 #include <Processing.NDI.Lib.h>
 

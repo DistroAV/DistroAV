@@ -40,7 +40,7 @@
 /**
  * Callback information for source preview tally
  */
-struct obs_source_tally_info {
+struct obs_source_preview_info {
 	/** Called when the source has been previewed */
 	void (*preview)(void *data);
 
@@ -48,8 +48,8 @@ struct obs_source_tally_info {
 	void (*depreview)(void *data);
 };
 
-EXPORT void obs_source_tally_register_source(struct obs_source_tally_info *info);
-EXPORT void obs_source_tally_bind_data(const obs_source_t *source, void *data);
-EXPORT bool obs_source_tally_preview(const obs_source_t *source);
-EXPORT void obs_source_tally_source_destroy(const obs_source_t *source);
-EXPORT void obs_source_tally_destroy();
+EXPORT void obs_source_preview_register_source(struct obs_source_preview_info *info);
+EXPORT void obs_source_preview_bind_data(const obs_source_t *source, void *data);
+EXPORT bool obs_source_preview(const obs_source_t *source);
+EXPORT void obs_source_preview_source_destroy(const obs_source_t *source);
+EXPORT void obs_source_preview_destroy();

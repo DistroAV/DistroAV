@@ -1067,7 +1067,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	// Update tally status
 	auto config = Config::Current();
-	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_tally_preview(obs_source);
+	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_preview(obs_source);
 	s->config.tally.on_program = config->TallyProgramEnabled && obs_source_active(obs_source);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
@@ -1207,7 +1207,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	// Bind the source to the tally system, which will call our tally callbacks.
 	// This is not needed if preview state is implemented by OBS.
-	obs_source_tally_bind_data(obs_source, s);
+	obs_source_preview_bind_data(obs_source, s);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
 
@@ -1234,7 +1234,7 @@ void ndi_source_destroy(void *data)
 		bfree(s->config.ndi_source_name);
 		s->config.ndi_source_name = nullptr;
 	}
-	obs_source_tally_source_destroy(s->obs_source);
+	obs_source_preview_source_destroy(s->obs_source);
 	bfree(s);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
@@ -1278,10 +1278,10 @@ obs_source_info create_ndi_source_info()
 	return ndi_source_info;
 }
 
-obs_source_tally_info create_ndi_source_tally_info()
+obs_source_preview_info create_ndi_source_preview_info()
 {
-	obs_source_tally_info ndi_source_tally_info = {};
-	ndi_source_tally_info.preview = ndi_source_preview;
-	ndi_source_tally_info.depreview = ndi_source_depreview;
-	return ndi_source_tally_info;
+	obs_source_preview_info ndi_source_preview_info = {};
+	ndi_source_preview_info.preview = ndi_source_preview;
+	ndi_source_preview_info.depreview = ndi_source_depreview;
+	return ndi_source_preview_info;
 }
