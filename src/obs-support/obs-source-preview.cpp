@@ -76,11 +76,10 @@ bool set_preview_for_item(obs_scene_t * /* scene */, obs_sceneitem_t *item, void
 		std::string id = obs_source_get_id(source);
 
 		bool visible = (group == nullptr) ? obs_sceneitem_visible(item)
-							: obs_sceneitem_visible(group) && obs_sceneitem_visible(item);
+						  : obs_sceneitem_visible(group) && obs_sceneitem_visible(item);
 		auto it = _source_preview_map.find(source);
 		if (it != _source_preview_map.end()) {
-			obs_log(LOG_DEBUG, "'%s' set_preview_for_item (%d)", obs_source_get_name(source),
-				visible);
+			obs_log(LOG_DEBUG, "'%s' set_preview_for_item (%d)", obs_source_get_name(source), visible);
 			update_preview_count(it->second, visible);
 		}
 	}
@@ -231,7 +230,7 @@ void obs_source_preview_bind_data(const obs_source_t *source, void *data)
 		info->data = data;
 		info->preview = 0;
 		_source_preview_map[source] = info;
-		
+
 		obs_log(LOG_DEBUG, "'%s' obs_source_preview_bind_data New source", obs_source_get_name(source));
 	}
 }
