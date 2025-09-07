@@ -1,5 +1,6 @@
 #pragma once
-#include "plugin-main.h"
+#include "../plugin-main.h"
+#include "ndi-common.h"
 #include <vector>
 #include <string>
 #include <thread>
