@@ -39,6 +39,9 @@ signal_handler_t *_sh = nullptr;
 typedef std::map<const obs_source_t *, source_preview_info_t *> source_preview_map_t;
 static source_preview_map_t _source_preview_map = {};
 
+// Keep track of group signal handlers in the current preview scene we have connected to
+std::vector<signal_handler_t *> _group_signal_handlers = {};
+
 // Forward declaration for use in on_scene_reorder.
 // This is so a scene reorder signal can refresh the _source_preview_map
 void source_preview_map_refresh();
@@ -105,6 +108,7 @@ void on_sceneitem_visible(void * /* param */, calldata_t *data)
 		update_preview_count(it->second, scene_item_visible);
 	}
 }
+
 // Enumeration callback for obs_scene_enum_items to set the item_visible signal for groups.
 // Needed because sources in groups don't emit visible signals
 bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *item, void * /* param */)
@@ -114,11 +118,10 @@ bool set_visible_signal_for_group(obs_scene_t * /* scene */, obs_sceneitem_t *it
 
 		auto sh = obs_source_get_signal_handler(obs_scene_get_source(group_scene));
 
-		// Connect to the scene item visibility and add signals so we can track changes
+		// Connect to the scene item visibility for the group so we can track visibility changes
 		signal_handler_disconnect(sh, "item_visible", on_sceneitem_visible, nullptr);
 		signal_handler_connect(sh, "item_visible", on_sceneitem_visible, nullptr);
-		// TODO: Does the signal for the group need to be disconnected when group deleted?
-		// Not sure how OBS handles that.
+		_group_signal_handlers.push_back(sh);
 	}
 	return true;
 }
@@ -142,8 +145,8 @@ void on_scene_reorder(void * /* param */, calldata_t * /* data */)
 	source_preview_map_refresh();
 }
 
-// Refresh the source_preview_map to represent the current state of the current preview scene.
-void source_preview_map_refresh()
+// Disconnect all signals we created
+void disconnect_signals()
 {
 	if (_sh) {
 		signal_handler_disconnect(_sh, "item_visible", on_sceneitem_visible, nullptr);
@@ -151,6 +154,16 @@ void source_preview_map_refresh()
 		signal_handler_disconnect(_sh, "reorder", on_scene_reorder, nullptr);
 		_sh = nullptr;
 	}
+	for (auto sh : _group_signal_handlers) {
+		signal_handler_disconnect(sh, "item_visible", on_sceneitem_visible, nullptr);
+	}
+	_group_signal_handlers.clear();
+}
+
+// Refresh the source_preview_map to represent the current state of the current preview scene.
+void source_preview_map_refresh()
+{
+	disconnect_signals();
 
 	// Reset all preview counts to zero
 	for (auto &pair : _source_preview_map) {
@@ -164,6 +177,7 @@ void source_preview_map_refresh()
 	obs_source_t *preview_source = obs_frontend_get_current_preview_scene();
 
 	auto preview_scene = obs_scene_from_source(preview_source);
+
 	_sh = obs_source_get_signal_handler(preview_source);
 	obs_source_release(preview_source);
 
@@ -187,12 +201,7 @@ void on_frontend_event(enum obs_frontend_event event, void * /* param */)
 		source_preview_map_refresh();
 		break;
 	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGING:
-		if (_sh) {
-			signal_handler_disconnect(_sh, "item_visible", on_sceneitem_visible, nullptr);
-			signal_handler_disconnect(_sh, "item_add", on_sceneitem_add, nullptr);
-			signal_handler_disconnect(_sh, "reorder", on_scene_reorder, nullptr);
-			_sh = nullptr;
-		}
+		disconnect_signals();
 		break;
 	default:
 		break;
@@ -245,15 +254,10 @@ void obs_source_preview_source_destroy(const obs_source_t *source)
 	}
 }
 
-// Cleanup the tally system, disconnecting any signals and clearing the source_preview_map.
+// Cleanup the preview tally system, disconnecting any signals and clearing the source_preview_map.
 void obs_source_preview_destroy()
 {
-	if (_sh) {
-		signal_handler_disconnect(_sh, "item_visible", on_sceneitem_visible, nullptr);
-		signal_handler_disconnect(_sh, "item_add", on_sceneitem_add, nullptr);
-		signal_handler_disconnect(_sh, "reorder", on_scene_reorder, nullptr);
-		_sh = nullptr;
-	}
+	disconnect_signals();
 	obs_frontend_remove_event_callback(on_frontend_event, nullptr);
 	_source_preview_map.clear();
 }
