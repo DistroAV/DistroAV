@@ -58,6 +58,7 @@ target_sources(
     src/ndi-finder.cpp
     src/ndi-output.cpp
     src/ndi-source.cpp
+    src/whip-source.cpp
     src/plugin-main.cpp
     src/plugin-main.h
     src/premultiplied-alpha-filter.cpp
