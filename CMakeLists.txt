@@ -19,6 +19,15 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 find_package(CURL REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE CURL::libcurl)
 
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
+  ${CMAKE_SOURCE_DIR}/.deps/obs-deps-2024-09-12-x64/lib/datachannel.lib
+  ${CMAKE_SOURCE_DIR}/.deps/obs-deps-2024-09-12-x64/lib/avcodec.lib
+  ${CMAKE_SOURCE_DIR}/.deps/obs-deps-2024-09-12-x64/lib/avformat.lib
+  ${CMAKE_SOURCE_DIR}/.deps/obs-deps-2024-09-12-x64/lib/avutil.lib
+  ${CMAKE_SOURCE_DIR}/.deps/obs-deps-2024-09-12-x64/lib/swscale.lib
+  ${CMAKE_SOURCE_DIR}/.deps/obs-deps-2024-09-12-x64/lib/swresample.lib
+)
+
 if(ENABLE_FRONTEND_API)
   find_package(obs-frontend-api REQUIRED)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
