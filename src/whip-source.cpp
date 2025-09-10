@@ -370,194 +370,293 @@ public:
 // Opus Audio Decoder
 class OpusDecoder : public MediaDecoder {
 private:
-    const AVCodec* codec;
-    AVCodecContext* codecCtx;
-    AVFrame* frame;
-    AVPacket* packet;
-    SwrContext* swrCtx;
-    FILE* outputFile;
-    
-    std::queue<std::vector<uint8_t>> audioQueue;
-    std::mutex audioMutex;
-    
+	const AVCodec *codec;
+	AVCodecContext *codecCtx;
+	AVFrame *frame;
+	AVPacket *packet;
+	SwrContext *swrCtx;
+	FILE *outputFile;
+	FILE *wavFile; // Add WAV file output
+
+	std::queue<std::vector<uint8_t>> audioQueue;
+	std::mutex audioMutex;
+
+	// WAV header structure
+	struct WAVHeader {
+		char riff[4] = {'R', 'I', 'F', 'F'};
+		uint32_t fileSize;
+		char wave[4] = {'W', 'A', 'V', 'E'};
+		char fmt[4] = {'f', 'm', 't', ' '};
+		uint32_t fmtSize = 16;
+		uint16_t audioFormat = 1; // PCM
+		uint16_t numChannels;
+		uint32_t sampleRate;
+		uint32_t byteRate;
+		uint16_t blockAlign;
+		uint16_t bitsPerSample = 16;
+		char data[4] = {'d', 'a', 't', 'a'};
+		uint32_t dataSize;
+	};
+
+	WAVHeader wavHeader;
+	long wavDataStart;
+	uint32_t totalSamples;
+
 public:
-    OpusDecoder() : codec(nullptr), codecCtx(nullptr), frame(nullptr),
-                   packet(nullptr), swrCtx(nullptr), outputFile(nullptr) {}
-    
-    ~OpusDecoder() {
-        cleanup();
-    }
-    
-    bool initialize() override {
-        // Find Opus decoder
-        codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
-        if (!codec) {
-            obs_log(LOG_ERROR, "Opus decoder not found");
-            return false;
-        }
-        
-        codecCtx = avcodec_alloc_context3(codec);
-        if (!codecCtx) {
-            obs_log(LOG_ERROR, "Failed to allocate Opus decoder context");
-            return false;
-        }
-        
-        // Set Opus parameters
-        codecCtx->sample_rate = 48000; // Opus native sample rate
-	    codecCtx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
-        
-        if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-            obs_log(LOG_ERROR, "Failed to open Opus decoder");
-            return false;
-        }
-        
-        frame = av_frame_alloc();
-        packet = av_packet_alloc();
-        
-        if (!frame || !packet) {
-            obs_log(LOG_ERROR, "Failed to allocate audio frame/packet");
-            return false;
-        }
-        
-        // Open output file for decoded audio (PCM format)
-		outputFile = nullptr; // fopen("decoded_audio.pcm", "wb");
-        obs_log(LOG_DEBUG, "Opus decoder initialized");
-        return true;
-    }
-    
-void processRTPPacket(const uint8_t *data, int size) override
-    {
-	    // Check if this is an RTP packet
-	    if (size < 12)
-		    return;
+	OpusDecoder()
+		: codec(nullptr),
+		  codecCtx(nullptr),
+		  frame(nullptr),
+		  packet(nullptr),
+		  swrCtx(nullptr),
+		  outputFile(nullptr),
+		  wavFile(nullptr),
+		  wavDataStart(0),
+		  totalSamples(0)
+	{
+	}
 
-	    uint8_t version = (data[0] >> 6) & 0x03;
-	    if (version != 2) {
-		    // Not RTP, might be raw Opus data
-		    obs_log(LOG_DEBUG, "Received non-RTP data, attempting direct Opus decode");
+	~OpusDecoder() { cleanup(); }
 
-		    std::vector<uint8_t> opusPacket(data, data + size);
-		    std::lock_guard<std::mutex> lock(audioMutex);
-		    audioQueue.push(std::move(opusPacket));
-		    processAudioQueue();
-		    return;
-	    }
+	bool initialize() override
+	{
+		// Find Opus decoder
+		codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
+		if (!codec) {
+			obs_log(LOG_ERROR, "Opus decoder not found");
+			return false;
+		}
 
-	    RTPHeader rtpHeader;
-	    rtpHeader.parseFromBuffer(data);
+		codecCtx = avcodec_alloc_context3(codec);
+		if (!codecCtx) {
+			obs_log(LOG_ERROR, "Failed to allocate Opus decoder context");
+			return false;
+		}
 
-	    int headerSize = RTPHeader::getHeaderSize(data);
-	    if (size <= headerSize)
-		    return;
+		// Set Opus parameters
+		codecCtx->sample_rate = 48000; // Opus native sample rate
+		codecCtx->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
 
-	    const uint8_t *payload = data + headerSize;
-	    int payloadSize = size - headerSize;
+		if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
+			obs_log(LOG_ERROR, "Failed to open Opus decoder");
+			return false;
+		}
 
-	    // Log the actual payload being processed
-	    std::ostringstream payloadHex;
-	    payloadHex << std::hex << std::setfill('0');
-	    int dumpLen = std::min(16, payloadSize);
-	    for (int i = 0; i < dumpLen; ++i) {
-		    payloadHex << std::setw(2) << (int)payload[i] << " ";
-	    }
-	    obs_log(LOG_DEBUG, "Opus RTP payload size: %d, PT: %d, first %d bytes: %s", payloadSize, rtpHeader.pt,
-		    dumpLen, payloadHex.str().c_str());
+		frame = av_frame_alloc();
+		packet = av_packet_alloc();
 
-	    // Opus RTP payload is the raw Opus packet
-	    std::vector<uint8_t> opusPacket(payload, payload + payloadSize);
+		if (!frame || !packet) {
+			obs_log(LOG_ERROR, "Failed to allocate audio frame/packet");
+			return false;
+		}
 
-	    std::lock_guard<std::mutex> lock(audioMutex);
-	    audioQueue.push(std::move(opusPacket));
-	    processAudioQueue();
-    }
-    
+		// Initialize resampler for format conversion
+		swrCtx = swr_alloc();
+		if (!swrCtx) {
+			obs_log(LOG_ERROR, "Failed to allocate resampler");
+			return false;
+		}
+
+		// Set up resampler to convert to 16-bit PCM
+		av_opt_set_chlayout(swrCtx, "in_chlayout", &codecCtx->ch_layout, 0);
+		av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
+		av_opt_set_sample_fmt(swrCtx, "in_sample_fmt", codecCtx->sample_fmt, 0);
+
+		AVChannelLayout out_ch_layout = AV_CHANNEL_LAYOUT_STEREO;
+		av_opt_set_chlayout(swrCtx, "out_chlayout", &out_ch_layout, 0);
+		av_opt_set_int(swrCtx, "out_sample_rate", 48000, 0);
+		av_opt_set_sample_fmt(swrCtx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+
+		if (swr_init(swrCtx) < 0) {
+			obs_log(LOG_ERROR, "Failed to initialize resampler");
+			return false;
+		}
+
+		// Open output files
+		outputFile = fopen("decoded_audio.pcm", "wb");
+		wavFile = fopen("decoded_audio.wav", "wb");
+
+		if (wavFile) {
+			// Write WAV header (will update later with correct sizes)
+			wavHeader.numChannels = 2;
+			wavHeader.sampleRate = 48000;
+			wavHeader.byteRate = 48000 * 2 * 2; // sample_rate * channels * bytes_per_sample
+			wavHeader.blockAlign = 2 * 2;       // channels * bytes_per_sample
+			wavHeader.fileSize = 0;             // Will update later
+			wavHeader.dataSize = 0;             // Will update later
+
+			fwrite(&wavHeader, sizeof(WAVHeader), 1, wavFile);
+			wavDataStart = ftell(wavFile) - 4; // Position of data size field
+		}
+
+		obs_log(LOG_DEBUG, "Opus decoder initialized with 16-bit PCM output");
+		return true;
+	}
+
+	void processRTPPacket(const uint8_t *data, int size) override
+	{
+		// Check if this is an RTP packet
+		if (size < 12)
+			return;
+
+		uint8_t version = (data[0] >> 6) & 0x03;
+		if (version != 2) {
+			// Not RTP, might be raw Opus data
+			obs_log(LOG_DEBUG, "Received non-RTP data, attempting direct Opus decode");
+
+			std::vector<uint8_t> opusPacket(data, data + size);
+			std::lock_guard<std::mutex> lock(audioMutex);
+			audioQueue.push(std::move(opusPacket));
+			processAudioQueue();
+			return;
+		}
+
+		RTPHeader rtpHeader;
+		rtpHeader.parseFromBuffer(data);
+
+		int headerSize = RTPHeader::getHeaderSize(data);
+		if (size <= headerSize)
+			return;
+
+		const uint8_t *payload = data + headerSize;
+		int payloadSize = size - headerSize;
+
+		// Log the actual payload being processed
+		std::ostringstream payloadHex;
+		payloadHex << std::hex << std::setfill('0');
+		int dumpLen = std::min(16, payloadSize);
+		for (int i = 0; i < dumpLen; ++i) {
+			payloadHex << std::setw(2) << (int)payload[i] << " ";
+		}
+		obs_log(LOG_DEBUG, "Opus RTP payload size: %d, PT: %d, first %d bytes: %s", payloadSize, rtpHeader.pt,
+			dumpLen, payloadHex.str().c_str());
+
+		// Opus RTP payload is the raw Opus packet
+		std::vector<uint8_t> opusPacket(payload, payload + payloadSize);
+
+		std::lock_guard<std::mutex> lock(audioMutex);
+		audioQueue.push(std::move(opusPacket));
+		processAudioQueue();
+	}
+
 private:
-    void processAudioQueue() {
-        while (!audioQueue.empty()) {
-            auto opusPacket = std::move(audioQueue.front());
-            audioQueue.pop();
-            
-            // Send packet to decoder
-            packet->data = opusPacket.data();
-            packet->size = (int)opusPacket.size();
+	void processAudioQueue()
+	{
+		while (!audioQueue.empty()) {
+			auto opusPacket = std::move(audioQueue.front());
+			audioQueue.pop();
 
-            // Detailed logging of packet contents
-            std::ostringstream opusHex;
-            opusHex << std::hex << std::setfill('0');
-            int dumpLen = std::min(32, packet->size);
-            for (int i = 0; i < dumpLen; ++i) {
-                opusHex << std::setw(2) << (int)packet->data[i] << " ";
-            }
-            obs_log(LOG_DEBUG, "Opus packet size: %d, first %d bytes: %s", packet->size, dumpLen, opusHex.str().c_str());
+			// Send packet to decoder
+			packet->data = opusPacket.data();
+			packet->size = (int)opusPacket.size();
 
-            int ret = avcodec_send_packet(codecCtx, packet);
-            if (ret < 0) {
+			int ret = avcodec_send_packet(codecCtx, packet);
+			if (ret < 0) {
 				char errbuf[256];
 				av_strerror(ret, errbuf, sizeof(errbuf));
-                obs_log(LOG_ERROR, "Error sending packet to Opus decoder (%d): %s", ret, errbuf);
-                continue;
-            }
-            
-            // Receive decoded frames
-            while (ret >= 0) {
-                ret = avcodec_receive_frame(codecCtx, frame);
-                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-                    break;
-                } else if (ret < 0) {
+				obs_log(LOG_ERROR, "Error sending packet to Opus decoder (%d): %s", ret, errbuf);
+				continue;
+			}
+
+			// Receive decoded frames
+			while (ret >= 0) {
+				ret = avcodec_receive_frame(codecCtx, frame);
+				if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+					break;
+				} else if (ret < 0) {
 					char errbuf[256];
 					av_strerror(ret, errbuf, sizeof(errbuf));
 					obs_log(LOG_ERROR, "Error during Opus decoding (%d): %s", ret, errbuf);
-                    break;
-                }
-                
-                // Process decoded audio frame
-                processDecodedAudioFrame();
-            }
-        }
-    }
-    
-    void processDecodedAudioFrame() {
-        obs_log(LOG_DEBUG, "Decoded Opus frame: %d samples, %d channels, %d Hz", frame->nb_samples, frame->ch_layout.nb_channels, frame->sample_rate);
-        
-        // Write PCM data to file
-        if (outputFile) {
-            int data_size = av_get_bytes_per_sample((AVSampleFormat)frame->format);
-            for (int i = 0; i < frame->nb_samples; i++) {
-		    for (int ch = 0; ch < frame->ch_layout.nb_channels; ch++) {
-                    fwrite(frame->data[ch] + data_size * i, 1, data_size, outputFile);
-                }
-            }
-            fflush(outputFile);
-        }
-        
-        // Here you could also:
-        // 1. Resample to different sample rate
-        // 2. Play through audio device
-        // 3. Apply audio effects
-        // 4. Stream to another destination
-    }
-    
+					break;
+				}
+
+				// Process decoded audio frame
+				processDecodedAudioFrame();
+			}
+		}
+	}
+
+	void processDecodedAudioFrame()
+	{
+		obs_log(LOG_DEBUG, "Decoded Opus frame: %d samples, %d channels, %d Hz, format: %d", frame->nb_samples,
+			frame->ch_layout.nb_channels, frame->sample_rate, frame->format);
+
+		// Convert to 16-bit PCM using swresample
+		uint8_t *output_buffer[2] = {nullptr};
+		int output_samples = av_rescale_rnd(swr_get_delay(swrCtx, frame->sample_rate) + frame->nb_samples,
+						    48000, frame->sample_rate, AV_ROUND_UP);
+
+		av_samples_alloc(output_buffer, nullptr, 2, output_samples, AV_SAMPLE_FMT_S16, 0);
+
+		int converted_samples = swr_convert(swrCtx, output_buffer, output_samples,
+						    (const uint8_t **)frame->data, frame->nb_samples);
+
+		if (converted_samples > 0) {
+			int output_size = converted_samples * 2 * sizeof(int16_t); // 2 channels, 16-bit samples
+
+			// Write raw PCM data
+			if (outputFile) {
+				fwrite(output_buffer[0], 1, output_size, outputFile);
+				fflush(outputFile);
+			}
+
+			// Write to WAV file
+			if (wavFile) {
+				fwrite(output_buffer[0], 1, output_size, wavFile);
+				fflush(wavFile);
+				totalSamples += converted_samples;
+			}
+
+			obs_log(LOG_DEBUG, "Converted %d samples to 16-bit PCM (%d bytes)", converted_samples,
+				output_size);
+		}
+
+		av_freep(&output_buffer[0]);
+	}
+
 public:
-    void cleanup() override {
-        if (codecCtx) {
-            avcodec_free_context(&codecCtx);
-        }
-        if (frame) {
-            av_frame_free(&frame);
-        }
-        if (packet) {
-            av_packet_free(&packet);
-        }
-        if (swrCtx) {
-            swr_free(&swrCtx);
-        }
-        if (outputFile) {
-            fclose(outputFile);
-            outputFile = nullptr;
-        }
-        obs_log(LOG_DEBUG, "Opus decoder cleaned up");
-    }
+	void cleanup() override
+	{
+		if (codecCtx) {
+			avcodec_free_context(&codecCtx);
+		}
+		if (frame) {
+			av_frame_free(&frame);
+		}
+		if (packet) {
+			av_packet_free(&packet);
+		}
+		if (swrCtx) {
+			swr_free(&swrCtx);
+		}
+
+		// Update WAV file header with correct sizes
+		if (wavFile && totalSamples > 0) {
+			long currentPos = ftell(wavFile);
+
+			// Update data size
+			uint32_t dataSize = totalSamples * 2 * sizeof(int16_t);
+			fseek(wavFile, wavDataStart, SEEK_SET);
+			fwrite(&dataSize, sizeof(uint32_t), 1, wavFile);
+
+			// Update file size
+			uint32_t fileSize = currentPos - 8;
+			fseek(wavFile, 4, SEEK_SET);
+			fwrite(&fileSize, sizeof(uint32_t), 1, wavFile);
+
+			fclose(wavFile);
+			wavFile = nullptr;
+		}
+
+		if (outputFile) {
+			fclose(outputFile);
+			outputFile = nullptr;
+		}
+
+		obs_log(LOG_DEBUG, "Opus decoder cleaned up - total samples: %d", totalSamples);
+	}
 };
+
 class WhipReceiver {
 private:
 	std::map<std::string, int> sessions;                   // sessionId -> peerConnection
