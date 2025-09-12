@@ -63,308 +63,325 @@ extern "C" {
 #include <unistd.h>
 #endif
 
+// WHIP source structure
+typedef struct {
+	obs_source_t *obs_source;
+} whip_source_t;
+
 // RTP header structure
 struct RTPHeader {
-    uint8_t version:2;
-    uint8_t padding:1;
-    uint8_t extension:1;
-    uint8_t cc:4;
-    uint8_t marker:1;
-    uint8_t pt:7;
-    uint16_t seq;
-    uint32_t ts;
-    uint32_t ssrc;
-    
-    void parseFromBuffer(const uint8_t* buffer) {
-        uint8_t byte0 = buffer[0];
-        version = (byte0 >> 6) & 0x03;
-        padding = (byte0 >> 5) & 0x01;
-        extension = (byte0 >> 4) & 0x01;
-        cc = byte0 & 0x0F;
-        
-        uint8_t byte1 = buffer[1];
-        marker = (byte1 >> 7) & 0x01;
-        pt = byte1 & 0x7F;
-        
-        seq = (buffer[2] << 8) | buffer[3];
-        ts = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
-        ssrc = (buffer[8] << 24) | (buffer[9] << 16) | (buffer[10] << 8) | buffer[11];
-    }
-    
-    static int getHeaderSize(const uint8_t* buffer) {
-        uint8_t cc = buffer[0] & 0x0F;
-        return 12 + (cc * 4); // Basic header + CSRC list
-    }
+	uint8_t version : 2;
+	uint8_t padding : 1;
+	uint8_t extension : 1;
+	uint8_t cc : 4;
+	uint8_t marker : 1;
+	uint8_t pt : 7;
+	uint16_t seq;
+	uint32_t ts;
+	uint32_t ssrc;
+
+	void parseFromBuffer(const uint8_t *buffer)
+	{
+		uint8_t byte0 = buffer[0];
+		version = (byte0 >> 6) & 0x03;
+		padding = (byte0 >> 5) & 0x01;
+		extension = (byte0 >> 4) & 0x01;
+		cc = byte0 & 0x0F;
+
+		uint8_t byte1 = buffer[1];
+		marker = (byte1 >> 7) & 0x01;
+		pt = byte1 & 0x7F;
+
+		seq = (buffer[2] << 8) | buffer[3];
+		ts = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
+		ssrc = (buffer[8] << 24) | (buffer[9] << 16) | (buffer[10] << 8) | buffer[11];
+	}
+
+	static int getHeaderSize(const uint8_t *buffer)
+	{
+		uint8_t cc = buffer[0] & 0x0F;
+		return 12 + (cc * 4); // Basic header + CSRC list
+	}
 };
 
 // Media decoder base class
 class MediaDecoder {
 public:
-    virtual ~MediaDecoder() = default;
-    virtual bool initialize() = 0;
-    virtual void processRTPPacket(const uint8_t* data, int size) = 0;
-    virtual void cleanup() = 0;
+	virtual ~MediaDecoder() = default;
+	virtual bool initialize() = 0;
+	virtual void processRTPPacket(const uint8_t *data, int size) = 0;
+	virtual void cleanup() = 0;
 };
 
 // H.264 Video Decoder
 class H264Decoder : public MediaDecoder {
 private:
-    const AVCodec* codec;
-    AVCodecContext* codecCtx;
-    AVFrame* frame;
-    AVPacket* packet;
-    SwsContext* swsCtx;
-    FILE* outputFile;
-    
-    std::queue<std::vector<uint8_t>> nalQueue;
-    std::mutex nalMutex;
-    std::vector<uint8_t> fragmentBuffer;
-    uint16_t lastSeq;
-    bool firstPacket;
-    
+	const AVCodec *codec;
+	AVCodecContext *codecCtx;
+	AVFrame *frame;
+	AVPacket *packet;
+	SwsContext *swsCtx;
+	FILE *outputFile;
+
+	std::queue<std::vector<uint8_t>> nalQueue;
+	std::mutex nalMutex;
+	std::vector<uint8_t> fragmentBuffer;
+	uint16_t lastSeq;
+	bool firstPacket;
+
 public:
-    H264Decoder() : codec(nullptr), codecCtx(nullptr), frame(nullptr), 
-                   packet(nullptr), swsCtx(nullptr), outputFile(nullptr),
-                   lastSeq(0), firstPacket(true) {}
-    
-    ~H264Decoder() {
-        cleanup();
-    }
-    
-    bool initialize() override {
-        // Find H.264 decoder
-        codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-        if (!codec) {
-            obs_log(LOG_ERROR, "H.264 decoder not found");
-            return false;
-        }
-        
-        codecCtx = avcodec_alloc_context3(codec);
-        if (!codecCtx) {
-            obs_log(LOG_ERROR, "Failed to allocate H.264 decoder context");
-            return false;
-        }
-        
-        // Open codec
-        if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-            obs_log(LOG_ERROR, "Failed to open H.264 decoder");
-            return false;
-        }
-        
-        frame = av_frame_alloc();
-        packet = av_packet_alloc();
-        
-        if (!frame || !packet) {
-            obs_log(LOG_ERROR, "Failed to allocate frame/packet");
-            return false;
-        }
-        
-        // Open output file for decoded frames (YUV format)
+	H264Decoder()
+		: codec(nullptr),
+		  codecCtx(nullptr),
+		  frame(nullptr),
+		  packet(nullptr),
+		  swsCtx(nullptr),
+		  outputFile(nullptr),
+		  lastSeq(0),
+		  firstPacket(true)
+	{
+	}
+
+	~H264Decoder() { cleanup(); }
+
+	bool initialize() override
+	{
+		// Find H.264 decoder
+		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+		if (!codec) {
+			obs_log(LOG_ERROR, "H.264 decoder not found");
+			return false;
+		}
+
+		codecCtx = avcodec_alloc_context3(codec);
+		if (!codecCtx) {
+			obs_log(LOG_ERROR, "Failed to allocate H.264 decoder context");
+			return false;
+		}
+
+		// Open codec
+		if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
+			obs_log(LOG_ERROR, "Failed to open H.264 decoder");
+			return false;
+		}
+
+		frame = av_frame_alloc();
+		packet = av_packet_alloc();
+
+		if (!frame || !packet) {
+			obs_log(LOG_ERROR, "Failed to allocate frame/packet");
+			return false;
+		}
+
+		// Open output file for decoded frames (YUV format)
 		outputFile = nullptr; // fopen("decoded_video.yuv", "wb");
-        obs_log(LOG_DEBUG, "H.264 decoder initialized");
-        return true;
-    }
-    
-    void processRTPPacket(const uint8_t *data, int size) override
-    {
-	    // Check if this is an RTP packet
-	    if (size < 12)
-		    return;
+		obs_log(LOG_DEBUG, "H.264 decoder initialized");
+		return true;
+	}
 
-	    uint8_t version = (data[0] >> 6) & 0x03;
-	    if (version != 2) {
-		    // Not RTP, might be raw H.264 data
-		    obs_log(LOG_DEBUG, "Received non-RTP data, attempting direct H.264 decode");
+	void processRTPPacket(const uint8_t *data, int size) override
+	{
+		// Check if this is an RTP packet
+		if (size < 12)
+			return;
 
-		    // Check if it looks like H.264 (starts with 0x00 0x00 0x00 0x01)
-		    if (size >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01) {
+		uint8_t version = (data[0] >> 6) & 0x03;
+		if (version != 2) {
+			// Not RTP, might be raw H.264 data
+			obs_log(LOG_DEBUG, "Received non-RTP data, attempting direct H.264 decode");
 
-			    std::vector<uint8_t> nalUnit(data, data + size);
-			    std::lock_guard<std::mutex> lock(nalMutex);
-			    nalQueue.push(std::move(nalUnit));
-			    processNALQueue();
-		    }
-		    return;
-	    }
+			// Check if it looks like H.264 (starts with 0x00 0x00 0x00 0x01)
+			if (size >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01) {
 
-	    RTPHeader rtpHeader;
-	    rtpHeader.parseFromBuffer(data);
+				std::vector<uint8_t> nalUnit(data, data + size);
+				std::lock_guard<std::mutex> lock(nalMutex);
+				nalQueue.push(std::move(nalUnit));
+				processNALQueue();
+			}
+			return;
+		}
 
-	    int headerSize = RTPHeader::getHeaderSize(data);
-	    if (size <= headerSize)
-		    return;
+		RTPHeader rtpHeader;
+		rtpHeader.parseFromBuffer(data);
 
-	    const uint8_t *payload = data + headerSize;
-	    int payloadSize = size - headerSize;
+		int headerSize = RTPHeader::getHeaderSize(data);
+		if (size <= headerSize)
+			return;
 
-	    // Log the actual payload being processed
-	    std::ostringstream payloadHex;
-	    payloadHex << std::hex << std::setfill('0');
-	    int dumpLen = std::min(16, payloadSize);
-	    for (int i = 0; i < dumpLen; ++i) {
-		    payloadHex << std::setw(2) << (int)payload[i] << " ";
-	    }
-	    obs_log(LOG_DEBUG, "H.264 RTP payload size: %d, PT: %d, first %d bytes: %s", payloadSize, rtpHeader.pt,
-		    dumpLen, payloadHex.str().c_str());
+		const uint8_t *payload = data + headerSize;
+		int payloadSize = size - headerSize;
 
-	    // Check for sequence number gaps
-	    if (!firstPacket) {
-		    uint16_t expectedSeq = lastSeq + 1;
-		    if (rtpHeader.seq != expectedSeq) {
-			    obs_log(LOG_DEBUG, "Sequence gap detected: expected %u, got %u", expectedSeq,
-				    rtpHeader.seq);
-			    fragmentBuffer.clear(); // Reset fragmentation buffer
-		    }
-	    }
-	    lastSeq = rtpHeader.seq;
-	    firstPacket = false;
+		// Log the actual payload being processed
+		std::ostringstream payloadHex;
+		payloadHex << std::hex << std::setfill('0');
+		int dumpLen = std::min(16, payloadSize);
+		for (int i = 0; i < dumpLen; ++i) {
+			payloadHex << std::setw(2) << (int)payload[i] << " ";
+		}
+		obs_log(LOG_DEBUG, "H.264 RTP payload size: %d, PT: %d, first %d bytes: %s", payloadSize, rtpHeader.pt,
+			dumpLen, payloadHex.str().c_str());
 
-	    // Parse H.264 RTP payload (RFC 6184)
-	    if (payloadSize < 1)
-		    return;
+		// Check for sequence number gaps
+		if (!firstPacket) {
+			uint16_t expectedSeq = lastSeq + 1;
+			if (rtpHeader.seq != expectedSeq) {
+				obs_log(LOG_DEBUG, "Sequence gap detected: expected %u, got %u", expectedSeq,
+					rtpHeader.seq);
+				fragmentBuffer.clear(); // Reset fragmentation buffer
+			}
+		}
+		lastSeq = rtpHeader.seq;
+		firstPacket = false;
 
-	    uint8_t nalHeader = payload[0];
-	    uint8_t nalType = nalHeader & 0x1F;
+		// Parse H.264 RTP payload (RFC 6184)
+		if (payloadSize < 1)
+			return;
 
-	    obs_log(LOG_DEBUG, "H.264 NAL type: %d", nalType);
+		uint8_t nalHeader = payload[0];
+		uint8_t nalType = nalHeader & 0x1F;
 
-	    if (nalType <= 23) {
-		    // Single NAL unit packet
-		    std::vector<uint8_t> nalUnit;
-		    nalUnit.insert(nalUnit.end(), {0x00, 0x00, 0x00, 0x01}); // Start code
-		    nalUnit.insert(nalUnit.end(), payload, payload + payloadSize);
+		obs_log(LOG_DEBUG, "H.264 NAL type: %d", nalType);
 
-		    std::lock_guard<std::mutex> lock(nalMutex);
-		    nalQueue.push(std::move(nalUnit));
-		    processNALQueue();
+		if (nalType <= 23) {
+			// Single NAL unit packet
+			std::vector<uint8_t> nalUnit;
+			nalUnit.insert(nalUnit.end(), {0x00, 0x00, 0x00, 0x01}); // Start code
+			nalUnit.insert(nalUnit.end(), payload, payload + payloadSize);
 
-	    } else if (nalType == 28) {
-		    // FU-A (Fragmentation Unit Type A)
-		    if (payloadSize < 2)
-			    return;
+			std::lock_guard<std::mutex> lock(nalMutex);
+			nalQueue.push(std::move(nalUnit));
+			processNALQueue();
 
-		    uint8_t fuHeader = payload[1];
-		    bool startBit = (fuHeader & 0x80) != 0;
-		    bool endBit = (fuHeader & 0x40) != 0;
-		    uint8_t nalTypeInFU = fuHeader & 0x1F;
+		} else if (nalType == 28) {
+			// FU-A (Fragmentation Unit Type A)
+			if (payloadSize < 2)
+				return;
 
-		    obs_log(LOG_DEBUG, "FU-A packet: start=%d, end=%d, nal_type=%d", startBit, endBit, nalTypeInFU);
+			uint8_t fuHeader = payload[1];
+			bool startBit = (fuHeader & 0x80) != 0;
+			bool endBit = (fuHeader & 0x40) != 0;
+			uint8_t nalTypeInFU = fuHeader & 0x1F;
 
-		    if (startBit) {
-			    fragmentBuffer.clear();
-			    fragmentBuffer.insert(fragmentBuffer.end(), {0x00, 0x00, 0x00, 0x01}); // Start code
-			    // Reconstruct NAL header
-			    uint8_t reconstructedNalHeader = (nalHeader & 0xE0) | nalTypeInFU;
-			    fragmentBuffer.push_back(reconstructedNalHeader);
-			    fragmentBuffer.insert(fragmentBuffer.end(), payload + 2, payload + payloadSize);
-		    } else if (!fragmentBuffer.empty()) {
-			    fragmentBuffer.insert(fragmentBuffer.end(), payload + 2, payload + payloadSize);
-		    }
+			obs_log(LOG_DEBUG, "FU-A packet: start=%d, end=%d, nal_type=%d", startBit, endBit, nalTypeInFU);
 
-		    if (endBit && !fragmentBuffer.empty()) {
-			    std::lock_guard<std::mutex> lock(nalMutex);
-			    nalQueue.push(fragmentBuffer);
-			    fragmentBuffer.clear();
-			    processNALQueue();
-		    }
-	    } else {
-		    obs_log(LOG_DEBUG, "Unknown H.264 NAL type: %d", nalType);
-	    }
-    }
+			if (startBit) {
+				fragmentBuffer.clear();
+				fragmentBuffer.insert(fragmentBuffer.end(), {0x00, 0x00, 0x00, 0x01}); // Start code
+				// Reconstruct NAL header
+				uint8_t reconstructedNalHeader = (nalHeader & 0xE0) | nalTypeInFU;
+				fragmentBuffer.push_back(reconstructedNalHeader);
+				fragmentBuffer.insert(fragmentBuffer.end(), payload + 2, payload + payloadSize);
+			} else if (!fragmentBuffer.empty()) {
+				fragmentBuffer.insert(fragmentBuffer.end(), payload + 2, payload + payloadSize);
+			}
 
-    
+			if (endBit && !fragmentBuffer.empty()) {
+				std::lock_guard<std::mutex> lock(nalMutex);
+				nalQueue.push(fragmentBuffer);
+				fragmentBuffer.clear();
+				processNALQueue();
+			}
+		} else {
+			obs_log(LOG_DEBUG, "Unknown H.264 NAL type: %d", nalType);
+		}
+	}
+
 private:
-    void processNALQueue() {
-        while (!nalQueue.empty()) {
-            auto nalUnit = std::move(nalQueue.front());
-            nalQueue.pop();
-            
-            // Send NAL unit to decoder
-            packet->data = nalUnit.data();
-            packet->size = (int)nalUnit.size();
+	void processNALQueue()
+	{
+		while (!nalQueue.empty()) {
+			auto nalUnit = std::move(nalQueue.front());
+			nalQueue.pop();
 
-            // Detailed logging of packet contents
-            std::ostringstream nalHex;
-            nalHex << std::hex << std::setfill('0');
-            int dumpLen = std::min(32, packet->size);
-            for (int i = 0; i < dumpLen; ++i) {
-                nalHex << std::setw(2) << (int)packet->data[i] << " ";
-            }
-            obs_log(LOG_DEBUG, "H.264 NAL packet size: %d, first %d bytes: %s", packet->size, dumpLen, nalHex.str().c_str());
+			// Send NAL unit to decoder
+			packet->data = nalUnit.data();
+			packet->size = (int)nalUnit.size();
 
-            int ret = avcodec_send_packet(codecCtx, packet);
-            if (ret < 0) {
-                char errbuf[256];
-                av_strerror(ret, errbuf, sizeof(errbuf));
-                obs_log(LOG_ERROR, "Error sending packet to H.264 decoder (%d): %s", ret, errbuf);
-                continue;
-            }
-            
-            // Receive decoded frames
-            while (ret >= 0) {
-                ret = avcodec_receive_frame(codecCtx, frame);
-                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-                    break;
-                } else if (ret < 0) {
+			// Detailed logging of packet contents
+			std::ostringstream nalHex;
+			nalHex << std::hex << std::setfill('0');
+			int dumpLen = std::min(32, packet->size);
+			for (int i = 0; i < dumpLen; ++i) {
+				nalHex << std::setw(2) << (int)packet->data[i] << " ";
+			}
+			obs_log(LOG_DEBUG, "H.264 NAL packet size: %d, first %d bytes: %s", packet->size, dumpLen,
+				nalHex.str().c_str());
+
+			int ret = avcodec_send_packet(codecCtx, packet);
+			if (ret < 0) {
+				char errbuf[256];
+				av_strerror(ret, errbuf, sizeof(errbuf));
+				obs_log(LOG_ERROR, "Error sending packet to H.264 decoder (%d): %s", ret, errbuf);
+				continue;
+			}
+
+			// Receive decoded frames
+			while (ret >= 0) {
+				ret = avcodec_receive_frame(codecCtx, frame);
+				if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+					break;
+				} else if (ret < 0) {
 					char errbuf[256];
 					av_strerror(ret, errbuf, sizeof(errbuf));
 					obs_log(LOG_ERROR, "Error during H.264 decoding (%d): %s", ret, errbuf);
-                    break;
-                }
-                
-                // Process decoded frame
-                processDecodedFrame();
-            }
-        }
-    }
-    
-    void processDecodedFrame() {
-        obs_log(LOG_DEBUG, "Decoded H.264 frame: %dx%d format: %d", frame->width, frame->height, frame->format);
-        
-        // Write YUV data to file
-        if (outputFile) {
-            // Write Y plane
-            for (int y = 0; y < frame->height; y++) {
-                fwrite(frame->data[0] + y * frame->linesize[0], 1, frame->width, outputFile);
-            }
-            // Write U plane
-            for (int y = 0; y < frame->height / 2; y++) {
-                fwrite(frame->data[1] + y * frame->linesize[1], 1, frame->width / 2, outputFile);
-            }
-            // Write V plane
-            for (int y = 0; y < frame->height / 2; y++) {
-                fwrite(frame->data[2] + y * frame->linesize[2], 1, frame->width / 2, outputFile);
-            }
-            fflush(outputFile);
-        }
-        
-        // Here you could also:
-        // 1. Convert to RGB using swscale
-        // 2. Display using OpenCV/SDL
-        // 3. Save as PNG/JPEG
-        // 4. Stream to another destination
-    }
-    
+					break;
+				}
+
+				// Process decoded frame
+				processDecodedFrame();
+			}
+		}
+	}
+
+	void processDecodedFrame()
+	{
+		obs_log(LOG_DEBUG, "Decoded H.264 frame: %dx%d format: %d", frame->width, frame->height, frame->format);
+
+		// Write YUV data to file
+		if (outputFile) {
+			// Write Y plane
+			for (int y = 0; y < frame->height; y++) {
+				fwrite(frame->data[0] + y * frame->linesize[0], 1, frame->width, outputFile);
+			}
+			// Write U plane
+			for (int y = 0; y < frame->height / 2; y++) {
+				fwrite(frame->data[1] + y * frame->linesize[1], 1, frame->width / 2, outputFile);
+			}
+			// Write V plane
+			for (int y = 0; y < frame->height / 2; y++) {
+				fwrite(frame->data[2] + y * frame->linesize[2], 1, frame->width / 2, outputFile);
+			}
+			fflush(outputFile);
+		}
+
+		// Here you could also:
+		// 1. Convert to RGB using swscale
+		// 2. Display using OpenCV/SDL
+		// 3. Save as PNG/JPEG
+		// 4. Stream to another destination
+	}
+
 public:
-    void cleanup() override {
-        if (codecCtx) {
-            avcodec_free_context(&codecCtx);
-        }
-        if (frame) {
-            av_frame_free(&frame);
-        }
-        if (packet) {
-            av_packet_free(&packet);
-        }
-        if (swsCtx) {
-            sws_freeContext(swsCtx);
-        }
-        if (outputFile) {
-            fclose(outputFile);
-            outputFile = nullptr;
-        }
-        obs_log(LOG_DEBUG, "H.264 decoder cleaned up");
-    }
+	void cleanup() override
+	{
+		if (codecCtx) {
+			avcodec_free_context(&codecCtx);
+		}
+		if (frame) {
+			av_frame_free(&frame);
+		}
+		if (packet) {
+			av_packet_free(&packet);
+		}
+		if (swsCtx) {
+			sws_freeContext(swsCtx);
+		}
+		if (outputFile) {
+			fclose(outputFile);
+			outputFile = nullptr;
+		}
+		obs_log(LOG_DEBUG, "H.264 decoder cleaned up");
+	}
 };
 
 // Opus Audio Decoder
@@ -659,18 +676,20 @@ public:
 
 class WhipReceiver {
 private:
-	std::map<std::string, int> sessions;                   // sessionId -> peerConnection
-	std::map<int, std::unique_ptr<MediaDecoder>> decoders; // track -> decoder
-	std::mutex sessionsMutex;                              // Add this mutex for thread safety
-	std::mutex decodersMutex;                              // Add this mutex for decoder access
+	std::map<std::string, int> sessions;
+	std::map<int, std::unique_ptr<MediaDecoder>> decoders;
+	std::mutex sessionsMutex;
+	std::mutex decodersMutex;
+	std::mutex userDataMutex; // Add mutex for userDataMap
 	int serverSocket;
 	bool running;
 	std::thread serverThread;
+	std::map<std::string, void *> userDataMap; // endpoint -> user data
 
 public:
 	WhipReceiver() : serverSocket(-1), running(false)
 	{
-	// Initialize FFmpeg
+		// Initialize FFmpeg
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
 		av_register_all();
 #endif
@@ -760,7 +779,7 @@ public:
 		const char *stateStr = (state == RTC_GATHERING_COMPLETE) ? "COMPLETE" : "IN_PROGRESS";
 		obs_log(LOG_DEBUG, "ICE gathering state: %s", stateStr);
 	}
-	
+
 	static void onTrackOpen(int tr, void *user_ptr)
 	{
 		obs_log(LOG_DEBUG, "Track %d opened, ready to receive media!", tr);
@@ -851,7 +870,7 @@ public:
 		return sdpAnswer;
 	}
 
-      // Simple HTTP server implementation
+	// Simple HTTP server implementation
 	void startHttpServer(int port = 8080)
 	{
 #ifdef _WIN32
@@ -912,6 +931,12 @@ public:
 		}
 	}
 
+	void bindEndpoint(const char *endpoint, void *data)
+	{
+		std::lock_guard<std::mutex> lock(userDataMutex);
+		userDataMap[std::string(endpoint)] = data;
+	}
+
 	void handleClient(int clientSocket)
 	{
 		char buffer[8192];
@@ -936,10 +961,25 @@ public:
 		std::istringstream iss(request);
 		iss >> method >> path;
 
-		if (method == "POST" && path == "/whip") {
-			handleWhipPost(clientSocket, request);
-		} else if (method == "OPTIONS" && path == "/whip") {
-			handleOptions(clientSocket);
+		if (method == "POST") {
+			{
+				std::lock_guard<std::mutex> lock(userDataMutex);
+				if (userDataMap.find(path) != userDataMap.end()) {
+					obs_log(LOG_DEBUG, "Custom endpoint %s accessed", path.c_str());
+					handleWhipPost(clientSocket, request, path);
+				} else {
+					sendHttpResponse(clientSocket, 404, "text/plain", "Not Found");
+				}
+			}
+		} else if (method == "OPTIONS") {
+			{
+				std::lock_guard<std::mutex> lock(userDataMutex);
+				if (userDataMap.find(path) != userDataMap.end()) {
+					handleOptions(clientSocket);
+				} else {
+					sendHttpResponse(clientSocket, 404, "text/plain", "Not Found");
+				}
+			}
 		} else {
 			sendHttpResponse(clientSocket, 404, "text/plain", "Not Found");
 		}
@@ -951,7 +991,7 @@ public:
 #endif
 	}
 
-	void handleWhipPost(int clientSocket, const std::string &request)
+	void handleWhipPost(int clientSocket, const std::string &request, const std::string &path)
 	{
 		// Extract Content-Type
 		if (request.find("Content-Type: application/sdp") == std::string::npos) {
@@ -980,7 +1020,7 @@ public:
 		}
 
 		// Send response with Location header
-		std::string locationHeader = "Location: /whip/sessions/" + sessionId + "\r\n";
+		std::string locationHeader = "Location: " + path + "/sessions/" + sessionId + "\r\n";
 		sendHttpResponse(clientSocket, 201, "application/sdp", sdpAnswer, locationHeader);
 	}
 
@@ -1185,18 +1225,18 @@ public:
 			sessions.clear();
 		}
 
+		// Thread-safe cleanup of userDataMap
+		{
+			std::lock_guard<std::mutex> lock(userDataMutex);
+			userDataMap.clear();
+		}
 		obs_log(LOG_DEBUG, "WHIP Receiver stopped");
 	}
 };
 
 #define PROP_SOURCE "source_name"
 #define PROP_URL "url"
-
-typedef struct {
-	obs_source_t *obs_source;
-	WhipReceiver *receiver;
-} whip_source_t;
-
+WhipReceiver *receiver = nullptr;
 const char *whip_source_getname(void *)
 {
 	return "WHIP";
@@ -1209,18 +1249,17 @@ obs_properties_t *whip_source_getproperties(void *data)
 
 	obs_properties_t *props = obs_properties_create();
 
-	obs_properties_add_text(props, PROP_URL, "WHIP Endpoint", OBS_TEXT_DEFAULT );
-	
+	obs_properties_add_text(props, PROP_URL, "WHIP Endpoint", OBS_TEXT_DEFAULT);
+
 	return props;
 }
 
 void whip_source_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+whip_source_getdefaults(…)");
-	obs_data_set_default_string(settings, PROP_URL, "https://127.0.0.1:8080/whip");
+	obs_data_set_default_string(settings, PROP_URL, "/whip");
 
 	obs_log(LOG_DEBUG, "-whip_source_getdefaults(…");
-
 }
 
 void whip_source_update(void *data, obs_data_t *settings)
@@ -1229,32 +1268,20 @@ void whip_source_update(void *data, obs_data_t *settings)
 	auto obs_source = s->obs_source;
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "'%s' +whip_source_update(…)", obs_source_name);
-    
-    // Start HTTP server on port 8080
-    s->receiver->startHttpServer(8080);
-    
+
+	auto url = obs_data_get_string(settings, PROP_URL);
+	receiver->bindEndpoint(url, s);
+
 	obs_log(LOG_DEBUG, "'%s' -whip_source_update(…)", obs_source_name);
 }
 
-void whip_source_shown(void *data)
-{
+void whip_source_shown(void *data) {}
 
-}
+void whip_source_hidden(void *data) {}
 
-void whip_source_hidden(void *data)
-{
+void whip_source_activated(void *data) {}
 
-}
-
-void whip_source_activated(void *data)
-{
-	
-}
-
-void whip_source_deactivated(void *data)
-{
-
-}
+void whip_source_deactivated(void *data) {}
 
 void *whip_source_create(obs_data_t *settings, obs_source_t *obs_source)
 {
@@ -1263,8 +1290,11 @@ void *whip_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto s = (whip_source_t *)bzalloc(sizeof(whip_source_t));
 	s->obs_source = obs_source;
-	s->receiver = new WhipReceiver();
 
+	if (receiver == nullptr) {
+		receiver = new WhipReceiver();
+		receiver->startHttpServer(8080); // Start server on port 8080
+	}
 	whip_source_update(s, settings);
 
 	obs_log(LOG_DEBUG, "'%s' -whip_source_create(…)", obs_source_name);
@@ -1277,8 +1307,8 @@ void whip_source_destroy(void *data)
 	auto s = (whip_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' +whip_source_destroy(…)", obs_source_name);
-    s->receiver->stop();
-	delete s->receiver;
+	receiver->stop();
+	delete receiver;
 	bfree(s);
 
 	obs_log(LOG_DEBUG, "'%s' -whip_source_destroy(…)", obs_source_name);
