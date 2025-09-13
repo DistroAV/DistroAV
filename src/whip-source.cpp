@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "obs.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -63,9 +64,15 @@ extern "C" {
 #include <unistd.h>
 #endif
 
+// Forward declarations
+class WhipReceiver;
+class WhipHttpServer;
+
 // WHIP source structure
 typedef struct {
 	obs_source_t *obs_source;
+	std::string endpoint;
+	std::unique_ptr<WhipReceiver> receiver;
 } whip_source_t;
 
 // RTP header structure
@@ -108,7 +115,7 @@ struct RTPHeader {
 class MediaDecoder {
 public:
 	virtual ~MediaDecoder() = default;
-	virtual bool initialize() = 0;
+	virtual bool initialize(obs_source_t *obs_source = nullptr) = 0;
 	virtual void processRTPPacket(const uint8_t *data, int size) = 0;
 	virtual void cleanup() = 0;
 };
@@ -121,7 +128,7 @@ private:
 	AVFrame *frame;
 	AVPacket *packet;
 	SwsContext *swsCtx;
-	FILE *outputFile;
+	obs_source_t *obs_source;
 
 	std::queue<std::vector<uint8_t>> nalQueue;
 	std::mutex nalMutex;
@@ -136,7 +143,7 @@ public:
 		  frame(nullptr),
 		  packet(nullptr),
 		  swsCtx(nullptr),
-		  outputFile(nullptr),
+		  obs_source(nullptr),
 		  lastSeq(0),
 		  firstPacket(true)
 	{
@@ -144,8 +151,10 @@ public:
 
 	~H264Decoder() { cleanup(); }
 
-	bool initialize() override
+	bool initialize(obs_source_t *source = nullptr) override
 	{
+		obs_source = source;
+
 		// Find H.264 decoder
 		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!codec) {
@@ -173,8 +182,6 @@ public:
 			return false;
 		}
 
-		// Open output file for decoded frames (YUV format)
-		outputFile = nullptr; // fopen("decoded_video.yuv", "wb");
 		obs_log(LOG_DEBUG, "H.264 decoder initialized");
 		return true;
 	}
@@ -192,7 +199,6 @@ public:
 
 			// Check if it looks like H.264 (starts with 0x00 0x00 0x00 0x01)
 			if (size >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01) {
-
 				std::vector<uint8_t> nalUnit(data, data + size);
 				std::lock_guard<std::mutex> lock(nalMutex);
 				nalQueue.push(std::move(nalUnit));
@@ -337,28 +343,34 @@ private:
 	{
 		obs_log(LOG_DEBUG, "Decoded H.264 frame: %dx%d format: %d", frame->width, frame->height, frame->format);
 
-		// Write YUV data to file
-		if (outputFile) {
-			// Write Y plane
-			for (int y = 0; y < frame->height; y++) {
-				fwrite(frame->data[0] + y * frame->linesize[0], 1, frame->width, outputFile);
-			}
-			// Write U plane
-			for (int y = 0; y < frame->height / 2; y++) {
-				fwrite(frame->data[1] + y * frame->linesize[1], 1, frame->width / 2, outputFile);
-			}
-			// Write V plane
-			for (int y = 0; y < frame->height / 2; y++) {
-				fwrite(frame->data[2] + y * frame->linesize[2], 1, frame->width / 2, outputFile);
-			}
-			fflush(outputFile);
+		if (!obs_source)
+			return;
+
+		// Convert to OBS video frame format
+		obs_source_frame obs_frame = {};
+		obs_frame.width = frame->width;
+		obs_frame.height = frame->height;
+		obs_frame.timestamp = (uint64_t)(frame->best_effort_timestamp);
+
+		// Convert YUV420P to NV12 (or appropriate format for OBS)
+		switch (frame->format) {
+		case AV_PIX_FMT_YUV420P:
+			obs_frame.format = VIDEO_FORMAT_I420;
+			break;
+		case AV_PIX_FMT_NV12:
+			obs_frame.format = VIDEO_FORMAT_NV12;
+			break;
+		default:
+			obs_frame.format = VIDEO_FORMAT_I420; // Default fallback
+			break;
 		}
 
-		// Here you could also:
-		// 1. Convert to RGB using swscale
-		// 2. Display using OpenCV/SDL
-		// 3. Save as PNG/JPEG
-		// 4. Stream to another destination
+		for (int i = 0; i < MAX_AV_PLANES && i < 3; i++) {
+			obs_frame.data[i] = frame->data[i];
+			obs_frame.linesize[i] = frame->linesize[i];
+		}
+
+		obs_source_output_video(obs_source, &obs_frame);
 	}
 
 public:
@@ -376,10 +388,6 @@ public:
 		if (swsCtx) {
 			sws_freeContext(swsCtx);
 		}
-		if (outputFile) {
-			fclose(outputFile);
-			outputFile = nullptr;
-		}
 		obs_log(LOG_DEBUG, "H.264 decoder cleaned up");
 	}
 };
@@ -392,32 +400,10 @@ private:
 	AVFrame *frame;
 	AVPacket *packet;
 	SwrContext *swrCtx;
-	FILE *outputFile;
-	FILE *wavFile; // Add WAV file output
+	obs_source_t *obs_source;
 
 	std::queue<std::vector<uint8_t>> audioQueue;
 	std::mutex audioMutex;
-
-	// WAV header structure
-	struct WAVHeader {
-		char riff[4] = {'R', 'I', 'F', 'F'};
-		uint32_t fileSize;
-		char wave[4] = {'W', 'A', 'V', 'E'};
-		char fmt[4] = {'f', 'm', 't', ' '};
-		uint32_t fmtSize = 16;
-		uint16_t audioFormat = 1; // PCM
-		uint16_t numChannels;
-		uint32_t sampleRate;
-		uint32_t byteRate;
-		uint16_t blockAlign;
-		uint16_t bitsPerSample = 16;
-		char data[4] = {'d', 'a', 't', 'a'};
-		uint32_t dataSize;
-	};
-
-	WAVHeader wavHeader;
-	long wavDataStart;
-	uint32_t totalSamples;
 
 public:
 	OpusDecoder()
@@ -426,17 +412,16 @@ public:
 		  frame(nullptr),
 		  packet(nullptr),
 		  swrCtx(nullptr),
-		  outputFile(nullptr),
-		  wavFile(nullptr),
-		  wavDataStart(0),
-		  totalSamples(0)
+		  obs_source(nullptr)
 	{
 	}
 
 	~OpusDecoder() { cleanup(); }
 
-	bool initialize() override
+	bool initialize(obs_source_t *source = nullptr) override
 	{
+		obs_source = source;
+
 		// Find Opus decoder
 		codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
 		if (!codec) {
@@ -474,7 +459,7 @@ public:
 			return false;
 		}
 
-		// Set up resampler to convert to 16-bit PCM
+		// Set up resampler to convert to float planar
 		av_opt_set_chlayout(swrCtx, "in_chlayout", &codecCtx->ch_layout, 0);
 		av_opt_set_int(swrCtx, "in_sample_rate", codecCtx->sample_rate, 0);
 		av_opt_set_sample_fmt(swrCtx, "in_sample_fmt", codecCtx->sample_fmt, 0);
@@ -482,31 +467,14 @@ public:
 		AVChannelLayout out_ch_layout = AV_CHANNEL_LAYOUT_STEREO;
 		av_opt_set_chlayout(swrCtx, "out_chlayout", &out_ch_layout, 0);
 		av_opt_set_int(swrCtx, "out_sample_rate", 48000, 0);
-		av_opt_set_sample_fmt(swrCtx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+		av_opt_set_sample_fmt(swrCtx, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
 
 		if (swr_init(swrCtx) < 0) {
 			obs_log(LOG_ERROR, "Failed to initialize resampler");
 			return false;
 		}
 
-		// Open output files
-		outputFile = fopen("decoded_audio.pcm", "wb");
-		wavFile = fopen("decoded_audio.wav", "wb");
-
-		if (wavFile) {
-			// Write WAV header (will update later with correct sizes)
-			wavHeader.numChannels = 2;
-			wavHeader.sampleRate = 48000;
-			wavHeader.byteRate = 48000 * 2 * 2; // sample_rate * channels * bytes_per_sample
-			wavHeader.blockAlign = 2 * 2;       // channels * bytes_per_sample
-			wavHeader.fileSize = 0;             // Will update later
-			wavHeader.dataSize = 0;             // Will update later
-
-			fwrite(&wavHeader, sizeof(WAVHeader), 1, wavFile);
-			wavDataStart = ftell(wavFile) - 4; // Position of data size field
-		}
-
-		obs_log(LOG_DEBUG, "Opus decoder initialized with 16-bit PCM output");
+		obs_log(LOG_DEBUG, "Opus decoder initialized");
 		return true;
 	}
 
@@ -598,34 +566,36 @@ private:
 		obs_log(LOG_DEBUG, "Decoded Opus frame: %d samples, %d channels, %d Hz, format: %d", frame->nb_samples,
 			frame->ch_layout.nb_channels, frame->sample_rate, frame->format);
 
-		// Convert to 16-bit PCM using swresample
-		uint8_t *output_buffer[2] = {nullptr};
+		if (!obs_source)
+			return;
+
+		// Convert to float planar format for OBS
+		uint8_t *output_buffer[8] = {nullptr};
 		int output_samples = av_rescale_rnd(swr_get_delay(swrCtx, frame->sample_rate) + frame->nb_samples,
 						    48000, frame->sample_rate, AV_ROUND_UP);
 
-		av_samples_alloc(output_buffer, nullptr, 2, output_samples, AV_SAMPLE_FMT_S16, 0);
+		av_samples_alloc(output_buffer, nullptr, 2, output_samples, AV_SAMPLE_FMT_FLTP, 0);
 
 		int converted_samples = swr_convert(swrCtx, output_buffer, output_samples,
 						    (const uint8_t **)frame->data, frame->nb_samples);
 
 		if (converted_samples > 0) {
-			int output_size = converted_samples * 2 * sizeof(int16_t); // 2 channels, 16-bit samples
+			const int channelCount = 2;
 
-			// Write raw PCM data
-			if (outputFile) {
-				fwrite(output_buffer[0], 1, output_size, outputFile);
-				fflush(outputFile);
+			obs_source_audio obs_audio_frame = {};
+
+			obs_audio_frame.speakers = SPEAKERS_STEREO;
+
+			obs_audio_frame.timestamp = (uint64_t)(frame->best_effort_timestamp);
+
+			obs_audio_frame.samples_per_sec = frame->sample_rate;
+			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
+			obs_audio_frame.frames = frame->nb_samples;
+			for (int i = 0; i < channelCount; ++i) {
+				obs_audio_frame.data[i] = output_buffer[i];
 			}
 
-			// Write to WAV file
-			if (wavFile) {
-				fwrite(output_buffer[0], 1, output_size, wavFile);
-				fflush(wavFile);
-				totalSamples += converted_samples;
-			}
-
-			obs_log(LOG_DEBUG, "Converted %d samples to 16-bit PCM (%d bytes)", converted_samples,
-				output_size);
+			obs_source_output_audio(obs_source, &obs_audio_frame);
 		}
 
 		av_freep(&output_buffer[0]);
@@ -646,67 +616,48 @@ public:
 		if (swrCtx) {
 			swr_free(&swrCtx);
 		}
-
-		// Update WAV file header with correct sizes
-		if (wavFile && totalSamples > 0) {
-			long currentPos = ftell(wavFile);
-
-			// Update data size
-			uint32_t dataSize = totalSamples * 2 * sizeof(int16_t);
-			fseek(wavFile, wavDataStart, SEEK_SET);
-			fwrite(&dataSize, sizeof(uint32_t), 1, wavFile);
-
-			// Update file size
-			uint32_t fileSize = currentPos - 8;
-			fseek(wavFile, 4, SEEK_SET);
-			fwrite(&fileSize, sizeof(uint32_t), 1, wavFile);
-
-			fclose(wavFile);
-			wavFile = nullptr;
-		}
-
-		if (outputFile) {
-			fclose(outputFile);
-			outputFile = nullptr;
-		}
-
-		obs_log(LOG_DEBUG, "Opus decoder cleaned up - total samples: %d", totalSamples);
+		obs_log(LOG_DEBUG, "Opus decoder cleaned up");
 	}
 };
 
+// Individual WHIP Receiver per endpoint
 class WhipReceiver {
 private:
 	std::map<std::string, int> sessions;
 	std::map<int, std::unique_ptr<MediaDecoder>> decoders;
 	std::mutex sessionsMutex;
 	std::mutex decodersMutex;
-	std::mutex userDataMutex; // Add mutex for userDataMap
-	int serverSocket;
-	bool running;
-	std::thread serverThread;
-	std::map<std::string, void *> userDataMap; // endpoint -> user data
+	obs_source_t *obs_source;
+	std::string endpoint;
 
 public:
-	WhipReceiver() : serverSocket(-1), running(false)
+	WhipReceiver(obs_source_t *source, const std::string &ep) : obs_source(source), endpoint(ep)
 	{
-		// Initialize FFmpeg
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
-		av_register_all();
-#endif
-
-		// Initialize libdatachannel logging
-		rtcInitLogger(RTC_LOG_DEBUG, logCallback);
-
-		// Preload resources
-		rtcPreload();
-
-		obs_log(LOG_DEBUG, "WHIP Receiver with H.264/Opus decoding initialized");
+		obs_log(LOG_DEBUG, "WHIP Receiver created for endpoint: %s", endpoint.c_str());
 	}
 
-	~WhipReceiver()
+	~WhipReceiver() { cleanup(); }
+
+	void cleanup()
 	{
-		stop();
-		rtcCleanup();
+		// Thread-safe cleanup of all decoders
+		{
+			std::lock_guard<std::mutex> lock(decodersMutex);
+			for (auto &[trackId, decoder] : decoders) {
+				decoder->cleanup();
+			}
+			decoders.clear();
+		}
+
+		// Thread-safe cleanup of all sessions
+		{
+			std::lock_guard<std::mutex> lock(sessionsMutex);
+			for (auto &[sessionId, pc] : sessions) {
+				rtcDeletePeerConnection(pc);
+			}
+			sessions.clear();
+		}
+		obs_log(LOG_DEBUG, "WHIP Receiver cleaned up for endpoint: %s", endpoint.c_str());
 	}
 
 	// Static callback functions
@@ -739,14 +690,16 @@ public:
 	static void onLocalDescription(int pc, const char *sdp, const char *type, void *user_ptr)
 	{
 		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
-		obs_log(LOG_DEBUG, "Local description generated (%s):", type);
+		obs_log(LOG_DEBUG, "Local description generated (%s) for endpoint %s:", type,
+			receiver->endpoint.c_str());
 		obs_log(LOG_DEBUG, "%s", sdp);
 	}
 
 	static void onLocalCandidate(int pc, const char *cand, const char *mid, void *user_ptr)
 	{
 		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
-		obs_log(LOG_DEBUG, "Local candidate: %s (mid: %s)", cand, mid ? mid : "null");
+		obs_log(LOG_DEBUG, "Local candidate for %s: %s (mid: %s)", receiver->endpoint.c_str(), cand,
+			mid ? mid : "null");
 	}
 
 	static void onStateChange(int pc, rtcState state, void *user_ptr)
@@ -770,19 +723,21 @@ public:
 			stateStr = "CLOSED";
 			break;
 		}
-		obs_log(LOG_DEBUG, "PeerConnection state changed: %s", stateStr);
+		obs_log(LOG_DEBUG, "PeerConnection state changed for %s: %s", receiver->endpoint.c_str(), stateStr);
 	}
 
 	static void onGatheringStateChange(int pc, rtcGatheringState state, void *user_ptr)
 	{
 		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
 		const char *stateStr = (state == RTC_GATHERING_COMPLETE) ? "COMPLETE" : "IN_PROGRESS";
-		obs_log(LOG_DEBUG, "ICE gathering state: %s", stateStr);
+		obs_log(LOG_DEBUG, "ICE gathering state for %s: %s", receiver->endpoint.c_str(), stateStr);
 	}
 
 	static void onTrackOpen(int tr, void *user_ptr)
 	{
-		obs_log(LOG_DEBUG, "Track %d opened, ready to receive media!", tr);
+		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
+		obs_log(LOG_DEBUG, "Track %d opened for endpoint %s, ready to receive media!", tr,
+			receiver->endpoint.c_str());
 	}
 
 	// Create a new PeerConnection for WHIP session - THREAD SAFE VERSION
@@ -818,7 +773,8 @@ public:
 			sessions[sessionId] = pc;
 		}
 
-		obs_log(LOG_DEBUG, "Created PeerConnection for session: %s", sessionId.c_str());
+		obs_log(LOG_DEBUG, "Created PeerConnection for session: %s on endpoint: %s", sessionId.c_str(),
+			endpoint.c_str());
 		return pc;
 	}
 
@@ -830,7 +786,7 @@ public:
 			return "";
 		}
 
-		obs_log(LOG_DEBUG, "Processing SDP offer:");
+		obs_log(LOG_DEBUG, "Processing SDP offer for endpoint %s:", endpoint.c_str());
 		obs_log(LOG_DEBUG, "%s", sdpOffer.c_str());
 
 		// Set remote description (the offer)
@@ -864,27 +820,197 @@ public:
 		}
 
 		std::string sdpAnswer(answerBuffer);
-		obs_log(LOG_DEBUG, "Generated SDP answer:");
+		obs_log(LOG_DEBUG, "Generated SDP answer for endpoint %s:", endpoint.c_str());
 		obs_log(LOG_DEBUG, "%s", sdpAnswer.c_str());
 
 		return sdpAnswer;
 	}
 
-	// Simple HTTP server implementation
-	void startHttpServer(int port = 8080)
+	// Thread-safe track callback
+	static void onTrack(int pc, int tr, void *user_ptr)
 	{
+		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
+		obs_log(LOG_DEBUG, "New track received on endpoint %s!", receiver->endpoint.c_str());
+
+		// Get track information
+		char buffer[1024];
+		std::string mediaType;
+		std::string codecName;
+
+		if (rtcGetTrackDescription(tr, buffer, sizeof(buffer)) >= 0) {
+			obs_log(LOG_DEBUG, "Track description for %s: %s", receiver->endpoint.c_str(), buffer);
+			std::string desc(buffer);
+
+			// Parse media type and codec from SDP
+			if (desc.find("m=video") != std::string::npos) {
+				mediaType = "video";
+				if (desc.find("H264") != std::string::npos || desc.find("h264") != std::string::npos) {
+					codecName = "h264";
+				}
+			} else if (desc.find("m=audio") != std::string::npos) {
+				mediaType = "audio";
+				if (desc.find("opus") != std::string::npos || desc.find("OPUS") != std::string::npos) {
+					codecName = "opus";
+				}
+			}
+		}
+
+		// Create appropriate decoder
+		std::unique_ptr<MediaDecoder> decoder;
+		if (mediaType == "video" && codecName == "h264") {
+			decoder = std::make_unique<H264Decoder>();
+			obs_log(LOG_DEBUG, "Created H.264 decoder for track on endpoint %s",
+				receiver->endpoint.c_str());
+		} else if (mediaType == "audio" && codecName == "opus") {
+			decoder = std::make_unique<OpusDecoder>();
+			obs_log(LOG_DEBUG, "Created Opus decoder for track on endpoint %s", receiver->endpoint.c_str());
+		}
+
+		if (decoder && decoder->initialize(receiver->obs_source)) {
+			std::lock_guard<std::mutex> lock(receiver->decodersMutex);
+			receiver->decoders[tr] = std::move(decoder);
+		}
+
+		// Set up track callbacks
+		rtcSetUserPointer(tr, user_ptr);
+		rtcSetOpenCallback(tr, onTrackOpen);
+		rtcSetMessageCallback(tr, onTrackMessage);
+		rtcSetClosedCallback(tr, onTrackClosed);
+	}
+
+	static void onTrackMessage(int tr, const char *message, int size, void *user_ptr)
+	{
+		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
+
+		// Check if this is actually an RTP packet (should start with version 2)
+		if (size < 12) {
+			obs_log(LOG_DEBUG, "Packet too small to be RTP: %d bytes", size);
+			return;
+		}
+
+		const uint8_t *data = reinterpret_cast<const uint8_t *>(message);
+
+		// Check RTP version (should be 2)
+		uint8_t version = (data[0] >> 6) & 0x03;
+		if (version != 2) {
+			obs_log(LOG_DEBUG, "Not an RTP packet (version %d), passing directly to decoder", version);
+
+			// This might be raw codec data, try to process it directly
+			std::lock_guard<std::mutex> lock(receiver->decodersMutex);
+			auto it = receiver->decoders.find(tr);
+			if (it != receiver->decoders.end()) {
+				// For non-RTP data, we might need different processing
+				// This is a fallback - ideally we should receive RTP
+				it->second->processRTPPacket(data, size);
+			}
+			return;
+		}
+
+		// Parse RTP header to get payload type
+		RTPHeader rtpHeader;
+		rtpHeader.parseFromBuffer(data);
+
+		obs_log(LOG_DEBUG, "RTP packet on %s: PT=%d, seq=%d, ts=%d, size=%d", receiver->endpoint.c_str(),
+			rtpHeader.pt, rtpHeader.seq, rtpHeader.ts, size);
+
+		std::lock_guard<std::mutex> lock(receiver->decodersMutex);
+		auto it = receiver->decoders.find(tr);
+		if (it != receiver->decoders.end()) {
+			// Process RTP packet through appropriate decoder
+			it->second->processRTPPacket(data, size);
+		} else {
+			obs_log(LOG_DEBUG, "Received RTP packet of size: %d bytes (no decoder) on %s", size,
+				receiver->endpoint.c_str());
+		}
+	}
+
+	static void onTrackClosed(int tr, void *user_ptr)
+	{
+		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
+		obs_log(LOG_DEBUG, "Track %d closed on endpoint %s", tr, receiver->endpoint.c_str());
+
+		// Thread-safe cleanup of decoder
+		std::lock_guard<std::mutex> lock(receiver->decodersMutex);
+		auto it = receiver->decoders.find(tr);
+		if (it != receiver->decoders.end()) {
+			it->second->cleanup();
+			receiver->decoders.erase(it);
+		}
+	}
+
+	std::string generateSessionId()
+	{
+		static int counter = 0;
+		return "session_" + std::to_string(++counter) + "_" + std::to_string(time(nullptr));
+	}
+};
+
+// Global HTTP Server that handles all endpoints
+class WhipHttpServer {
+private:
+	int serverSocket;
+	bool running;
+	std::thread serverThread;
+	std::map<std::string, WhipReceiver *> endpointMap;
+	std::mutex endpointMapMutex;
+	static WhipHttpServer *instance;
+
+public:
+	WhipHttpServer() : serverSocket(-1), running(false) {}
+
+	~WhipHttpServer() { stop(); }
+
+	static WhipHttpServer *getInstance()
+	{
+		if (!instance) {
+			instance = new WhipHttpServer();
+		}
+		return instance;
+	}
+
+	static void destroyInstance()
+	{
+		if (instance) {
+			delete instance;
+			instance = nullptr;
+		}
+	}
+
+	void registerEndpoint(const std::string &endpoint, WhipReceiver *receiver)
+	{
+		std::lock_guard<std::mutex> lock(endpointMapMutex);
+		endpointMap[endpoint] = receiver;
+		obs_log(LOG_DEBUG, "Registered endpoint: %s", endpoint.c_str());
+	}
+
+	void unregisterEndpoint(const std::string &endpoint)
+	{
+		std::lock_guard<std::mutex> lock(endpointMapMutex);
+		auto it = endpointMap.find(endpoint);
+		if (it != endpointMap.end()) {
+			endpointMap.erase(it);
+			obs_log(LOG_DEBUG, "Unregistered endpoint: %s", endpoint.c_str());
+		}
+	}
+
+	bool start(int port = 8080)
+	{
+		if (running) {
+			return true; // Already running
+		}
+
 #ifdef _WIN32
 		WSADATA wsaData;
 		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 			obs_log(LOG_ERROR, "WSAStartup failed");
-			return;
+			return false;
 		}
 #endif
 
 		serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 		if (serverSocket < 0) {
 			obs_log(LOG_ERROR, "Failed to create socket");
-			return;
+			return false;
 		}
 
 		int opt = 1;
@@ -897,20 +1023,49 @@ public:
 
 		if (bind(serverSocket, (struct sockaddr *)&address, sizeof(address)) < 0) {
 			obs_log(LOG_ERROR, "Bind failed");
-			return;
+			return false;
 		}
 
-		if (listen(serverSocket, 3) < 0) {
+		if (listen(serverSocket, 10) < 0) {
 			obs_log(LOG_ERROR, "Listen failed");
-			return;
+			return false;
 		}
 
 		running = true;
-		obs_log(LOG_DEBUG, "WHIP server listening on port %d", port);
+		obs_log(LOG_DEBUG, "WHIP HTTP server listening on port %d", port);
 
-		serverThread = std::thread(&WhipReceiver::serverLoop, this);
+		serverThread = std::thread(&WhipHttpServer::serverLoop, this);
+		return true;
 	}
 
+	void stop()
+	{
+		running = false;
+
+		if (serverSocket >= 0) {
+#ifdef _WIN32
+			closesocket(serverSocket);
+			WSACleanup();
+#else
+			close(serverSocket);
+#endif
+			serverSocket = -1;
+		}
+
+		if (serverThread.joinable()) {
+			serverThread.join();
+		}
+
+		// Clear endpoint map
+		{
+			std::lock_guard<std::mutex> lock(endpointMapMutex);
+			endpointMap.clear();
+		}
+
+		obs_log(LOG_DEBUG, "WHIP HTTP server stopped");
+	}
+
+private:
 	void serverLoop()
 	{
 		while (running) {
@@ -926,15 +1081,9 @@ public:
 			}
 
 			// Handle client in separate thread
-			std::thread clientThread(&WhipReceiver::handleClient, this, clientSocket);
+			std::thread clientThread(&WhipHttpServer::handleClient, this, clientSocket);
 			clientThread.detach();
 		}
-	}
-
-	void bindEndpoint(const char *endpoint, void *data)
-	{
-		std::lock_guard<std::mutex> lock(userDataMutex);
-		userDataMap[std::string(endpoint)] = data;
 	}
 
 	void handleClient(int clientSocket)
@@ -961,25 +1110,20 @@ public:
 		std::istringstream iss(request);
 		iss >> method >> path;
 
-		if (method == "POST") {
-			{
-				std::lock_guard<std::mutex> lock(userDataMutex);
-				if (userDataMap.find(path) != userDataMap.end()) {
-					obs_log(LOG_DEBUG, "Custom endpoint %s accessed", path.c_str());
-					handleWhipPost(clientSocket, request, path);
-				} else {
-					sendHttpResponse(clientSocket, 404, "text/plain", "Not Found");
-				}
+		// Find the receiver for this endpoint
+		WhipReceiver *receiver = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(endpointMapMutex);
+			auto it = endpointMap.find(path);
+			if (it != endpointMap.end()) {
+				receiver = it->second;
 			}
-		} else if (method == "OPTIONS") {
-			{
-				std::lock_guard<std::mutex> lock(userDataMutex);
-				if (userDataMap.find(path) != userDataMap.end()) {
-					handleOptions(clientSocket);
-				} else {
-					sendHttpResponse(clientSocket, 404, "text/plain", "Not Found");
-				}
-			}
+		}
+
+		if (method == "POST" && receiver) {
+			handleWhipPost(clientSocket, request, path, receiver);
+		} else if (method == "OPTIONS" && receiver) {
+			handleOptions(clientSocket);
 		} else {
 			sendHttpResponse(clientSocket, 404, "text/plain", "Not Found");
 		}
@@ -991,7 +1135,8 @@ public:
 #endif
 	}
 
-	void handleWhipPost(int clientSocket, const std::string &request, const std::string &path)
+	void handleWhipPost(int clientSocket, const std::string &request, const std::string &path,
+			    WhipReceiver *receiver)
 	{
 		// Extract Content-Type
 		if (request.find("Content-Type: application/sdp") == std::string::npos) {
@@ -1010,10 +1155,10 @@ public:
 		std::string sdpOffer = request.substr(bodyStart);
 
 		// Generate session ID
-		std::string sessionId = generateSessionId();
+		std::string sessionId = receiver->generateSessionId();
 
 		// Process the offer
-		std::string sdpAnswer = processWhipOffer(sessionId, sdpOffer);
+		std::string sdpAnswer = receiver->processWhipOffer(sessionId, sdpOffer);
 		if (sdpAnswer.empty()) {
 			sendHttpResponse(clientSocket, 500, "text/plain", "Failed to process offer");
 			return;
@@ -1072,171 +1217,14 @@ public:
 
 		send(clientSocket, response.c_str(), (int)response.length(), 0);
 	}
-
-	std::string generateSessionId()
-	{
-		static int counter = 0;
-		return "session_" + std::to_string(++counter) + "_" + std::to_string(time(nullptr));
-	}
-
-	// Thread-safe track callback
-	static void onTrack(int pc, int tr, void *user_ptr)
-	{
-		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
-		obs_log(LOG_DEBUG, "New track received!");
-
-		// Get track information
-		char buffer[1024];
-		std::string mediaType;
-		std::string codecName;
-
-		if (rtcGetTrackDescription(tr, buffer, sizeof(buffer)) >= 0) {
-			obs_log(LOG_DEBUG, "Track description: %s", buffer);
-			std::string desc(buffer);
-
-			// Parse media type and codec from SDP
-			if (desc.find("m=video") != std::string::npos) {
-				mediaType = "video";
-				if (desc.find("H264") != std::string::npos || desc.find("h264") != std::string::npos) {
-					codecName = "h264";
-				}
-			} else if (desc.find("m=audio") != std::string::npos) {
-				mediaType = "audio";
-				if (desc.find("opus") != std::string::npos || desc.find("OPUS") != std::string::npos) {
-					codecName = "opus";
-				}
-			}
-		}
-
-		// Create appropriate decoder
-		std::unique_ptr<MediaDecoder> decoder;
-		if (mediaType == "video" && codecName == "h264") {
-			decoder = std::make_unique<H264Decoder>();
-			obs_log(LOG_DEBUG, "Created H.264 decoder for track");
-		} else if (mediaType == "audio" && codecName == "opus") {
-			decoder = std::make_unique<OpusDecoder>();
-			obs_log(LOG_DEBUG, "Created Opus decoder for track");
-		}
-
-		if (decoder && decoder->initialize()) {
-			std::lock_guard<std::mutex> lock(receiver->decodersMutex);
-			receiver->decoders[tr] = std::move(decoder);
-		}
-
-		// Set up track callbacks
-		rtcSetUserPointer(tr, user_ptr);
-		rtcSetOpenCallback(tr, onTrackOpen);
-		rtcSetMessageCallback(tr, onTrackMessage);
-		rtcSetClosedCallback(tr, onTrackClosed);
-	}
-
-	static void onTrackMessage(int tr, const char *message, int size, void *user_ptr)
-	{
-		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
-
-		// Check if this is actually an RTP packet (should start with version 2)
-		if (size < 12) {
-			obs_log(LOG_DEBUG, "Packet too small to be RTP: %d bytes", size);
-			return;
-		}
-
-		const uint8_t *data = reinterpret_cast<const uint8_t *>(message);
-
-		// Check RTP version (should be 2)
-		uint8_t version = (data[0] >> 6) & 0x03;
-		if (version != 2) {
-			obs_log(LOG_DEBUG, "Not an RTP packet (version %d), passing directly to decoder", version);
-
-			// This might be raw codec data, try to process it directly
-			std::lock_guard<std::mutex> lock(receiver->decodersMutex);
-			auto it = receiver->decoders.find(tr);
-			if (it != receiver->decoders.end()) {
-				// For non-RTP data, we might need different processing
-				// This is a fallback - ideally we should receive RTP
-				it->second->processRTPPacket(data, size);
-			}
-			return;
-		}
-
-		// Parse RTP header to get payload type
-		RTPHeader rtpHeader;
-		rtpHeader.parseFromBuffer(data);
-
-		obs_log(LOG_DEBUG, "RTP packet: PT=%d, seq=%d, ts=%d, size=%d", rtpHeader.pt, rtpHeader.seq,
-			rtpHeader.ts, size);
-
-		std::lock_guard<std::mutex> lock(receiver->decodersMutex);
-		auto it = receiver->decoders.find(tr);
-		if (it != receiver->decoders.end()) {
-			// Process RTP packet through appropriate decoder
-			it->second->processRTPPacket(data, size);
-		} else {
-			obs_log(LOG_DEBUG, "Received RTP packet of size: %d bytes (no decoder)", size);
-		}
-	}
-
-	static void onTrackClosed(int tr, void *user_ptr)
-	{
-		WhipReceiver *receiver = static_cast<WhipReceiver *>(user_ptr);
-		obs_log(LOG_DEBUG, "Track %d closed", tr);
-
-		// Thread-safe cleanup of decoder
-		std::lock_guard<std::mutex> lock(receiver->decodersMutex);
-		auto it = receiver->decoders.find(tr);
-		if (it != receiver->decoders.end()) {
-			it->second->cleanup();
-			receiver->decoders.erase(it);
-		}
-	}
-
-	void stop()
-	{
-		running = false;
-
-		if (serverSocket >= 0) {
-#ifdef _WIN32
-			closesocket(serverSocket);
-			WSACleanup();
-#else
-			close(serverSocket);
-#endif
-			serverSocket = -1;
-		}
-
-		if (serverThread.joinable()) {
-			serverThread.join();
-		}
-
-		// Thread-safe cleanup of all decoders
-		{
-			std::lock_guard<std::mutex> lock(decodersMutex);
-			for (auto &[trackId, decoder] : decoders) {
-				decoder->cleanup();
-			}
-			decoders.clear();
-		}
-
-		// Thread-safe cleanup of all sessions
-		{
-			std::lock_guard<std::mutex> lock(sessionsMutex);
-			for (auto &[sessionId, pc] : sessions) {
-				rtcDeletePeerConnection(pc);
-			}
-			sessions.clear();
-		}
-
-		// Thread-safe cleanup of userDataMap
-		{
-			std::lock_guard<std::mutex> lock(userDataMutex);
-			userDataMap.clear();
-		}
-		obs_log(LOG_DEBUG, "WHIP Receiver stopped");
-	}
 };
+
+// Initialize static member
+WhipHttpServer *WhipHttpServer::instance = nullptr;
 
 #define PROP_SOURCE "source_name"
 #define PROP_URL "url"
-WhipReceiver *receiver = nullptr;
+
 const char *whip_source_getname(void *)
 {
 	return "WHIP";
@@ -1258,8 +1246,7 @@ void whip_source_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+whip_source_getdefaults(…)");
 	obs_data_set_default_string(settings, PROP_URL, "/whip");
-
-	obs_log(LOG_DEBUG, "-whip_source_getdefaults(…");
+	obs_log(LOG_DEBUG, "-whip_source_getdefaults(…)");
 }
 
 void whip_source_update(void *data, obs_data_t *settings)
@@ -1269,8 +1256,22 @@ void whip_source_update(void *data, obs_data_t *settings)
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "'%s' +whip_source_update(…)", obs_source_name);
 
-	auto url = obs_data_get_string(settings, PROP_URL);
-	receiver->bindEndpoint(url, s);
+	auto url = std::string(obs_data_get_string(settings, PROP_URL));
+
+	// If endpoint changed, unregister old, destroy receiver, and create new
+	if (s->endpoint != url) {
+		if (!s->endpoint.empty()) {
+			WhipHttpServer::getInstance()->unregisterEndpoint(s->endpoint);
+		}
+		// Destroy old receiver
+		if (s->receiver) {
+			s->receiver.reset();
+		}
+
+		s->endpoint = url;
+		s->receiver = std::make_unique<WhipReceiver>(obs_source, s->endpoint);
+		WhipHttpServer::getInstance()->registerEndpoint(s->endpoint, s->receiver.get());
+	}
 
 	obs_log(LOG_DEBUG, "'%s' -whip_source_update(…)", obs_source_name);
 }
@@ -1288,13 +1289,26 @@ void *whip_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "'%s' +whip_source_create(…)", obs_source_name);
 
+	// Initialize FFmpeg (only once globally)
+	static std::once_flag ffmpeg_init_flag;
+	std::call_once(ffmpeg_init_flag, []() {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
+		av_register_all();
+#endif
+		// Initialize libdatachannel logging
+		rtcInitLogger(RTC_LOG_DEBUG, WhipReceiver::logCallback);
+		// Preload resources
+		rtcPreload();
+		obs_log(LOG_DEBUG, "FFmpeg and libdatachannel initialized");
+	});
+
 	auto s = (whip_source_t *)bzalloc(sizeof(whip_source_t));
+	s->endpoint = "";
 	s->obs_source = obs_source;
 
-	if (receiver == nullptr) {
-		receiver = new WhipReceiver();
-		receiver->startHttpServer(8080); // Start server on port 8080
-	}
+	// Start HTTP server if not already running
+	WhipHttpServer::getInstance()->start(8080);
+
 	whip_source_update(s, settings);
 
 	obs_log(LOG_DEBUG, "'%s' -whip_source_create(…)", obs_source_name);
@@ -1307,8 +1321,15 @@ void whip_source_destroy(void *data)
 	auto s = (whip_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' +whip_source_destroy(…)", obs_source_name);
-	receiver->stop();
-	delete receiver;
+
+	// Unregister endpoint
+	if (!s->endpoint.empty()) {
+		WhipHttpServer::getInstance()->unregisterEndpoint(s->endpoint);
+	}
+
+	// Reset receiver (will call destructor)
+	s->receiver.reset();
+
 	bfree(s);
 
 	obs_log(LOG_DEBUG, "'%s' -whip_source_destroy(…)", obs_source_name);
