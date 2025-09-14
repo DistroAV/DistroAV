@@ -120,7 +120,7 @@ public:
 	virtual void cleanup() = 0;
 };
 
-// H.264 Video Decoder
+// H.264 Video Decoder with proper parameter set handling
 class H264Decoder : public MediaDecoder {
 private:
 	const AVCodec *codec;
@@ -136,6 +136,12 @@ private:
 	uint16_t lastSeq;
 	bool firstPacket;
 
+	// Parameter set storage
+	std::vector<uint8_t> sps;
+	std::vector<uint8_t> pps;
+	bool hasParameterSets;
+	bool codecInitialized;
+
 public:
 	H264Decoder()
 		: codec(nullptr),
@@ -145,7 +151,9 @@ public:
 		  swsCtx(nullptr),
 		  obs_source(nullptr),
 		  lastSeq(0),
-		  firstPacket(true)
+		  firstPacket(true),
+		  hasParameterSets(false),
+		  codecInitialized(false)
 	{
 	}
 
@@ -168,12 +176,6 @@ public:
 			return false;
 		}
 
-		// Open codec
-		if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-			obs_log(LOG_ERROR, "Failed to open H.264 decoder");
-			return false;
-		}
-
 		frame = av_frame_alloc();
 		packet = av_packet_alloc();
 
@@ -182,7 +184,49 @@ public:
 			return false;
 		}
 
-		obs_log(LOG_DEBUG, "H.264 decoder initialized");
+		obs_log(LOG_DEBUG, "H.264 decoder initialized (codec context not opened yet)");
+		return true;
+	}
+
+	bool initializeCodecContext()
+	{
+		if (codecInitialized) {
+			return true;
+		}
+
+		if (!hasParameterSets) {
+			obs_log(LOG_DEBUG, "Cannot initialize codec context without parameter sets");
+			return false;
+		}
+
+		// Create extradata from SPS and PPS
+		size_t extradata_size = sps.size() + pps.size() + 8; // 4 bytes start code each
+		codecCtx->extradata = (uint8_t *)av_malloc(extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+		codecCtx->extradata_size = (int)extradata_size;
+
+		uint8_t *ptr = codecCtx->extradata;
+		// Add SPS
+		memcpy(ptr, "\x00\x00\x00\x01", 4);
+		ptr += 4;
+		memcpy(ptr, sps.data() + 4, sps.size() - 4); // Skip the start code we already added
+		ptr += sps.size() - 4;
+
+		// Add PPS
+		memcpy(ptr, "\x00\x00\x00\x01", 4);
+		ptr += 4;
+		memcpy(ptr, pps.data() + 4, pps.size() - 4); // Skip the start code we already added
+
+		// Zero padding
+		memset(codecCtx->extradata + extradata_size, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+
+		// Open codec
+		if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
+			obs_log(LOG_ERROR, "Failed to open H.264 decoder");
+			return false;
+		}
+
+		codecInitialized = true;
+		obs_log(LOG_DEBUG, "H.264 codec context initialized successfully");
 		return true;
 	}
 
@@ -201,8 +245,7 @@ public:
 			if (size >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01) {
 				std::vector<uint8_t> nalUnit(data, data + size);
 				std::lock_guard<std::mutex> lock(nalMutex);
-				nalQueue.push(std::move(nalUnit));
-				processNALQueue();
+				processNALUnit(nalUnit);
 			}
 			return;
 		}
@@ -216,16 +259,6 @@ public:
 
 		const uint8_t *payload = data + headerSize;
 		int payloadSize = size - headerSize;
-
-		// Log the actual payload being processed
-		std::ostringstream payloadHex;
-		payloadHex << std::hex << std::setfill('0');
-		int dumpLen = std::min(16, payloadSize);
-		for (int i = 0; i < dumpLen; ++i) {
-			payloadHex << std::setw(2) << (int)payload[i] << " ";
-		}
-		obs_log(LOG_DEBUG, "H.264 RTP payload size: %d, PT: %d, first %d bytes: %s", payloadSize, rtpHeader.pt,
-			dumpLen, payloadHex.str().c_str());
 
 		// Check for sequence number gaps
 		if (!firstPacket) {
@@ -255,8 +288,7 @@ public:
 			nalUnit.insert(nalUnit.end(), payload, payload + payloadSize);
 
 			std::lock_guard<std::mutex> lock(nalMutex);
-			nalQueue.push(std::move(nalUnit));
-			processNALQueue();
+			processNALUnit(nalUnit);
 
 		} else if (nalType == 28) {
 			// FU-A (Fragmentation Unit Type A)
@@ -283,9 +315,8 @@ public:
 
 			if (endBit && !fragmentBuffer.empty()) {
 				std::lock_guard<std::mutex> lock(nalMutex);
-				nalQueue.push(fragmentBuffer);
+				processNALUnit(fragmentBuffer);
 				fragmentBuffer.clear();
-				processNALQueue();
 			}
 		} else {
 			obs_log(LOG_DEBUG, "Unknown H.264 NAL type: %d", nalType);
@@ -293,52 +324,100 @@ public:
 	}
 
 private:
-	void processNALQueue()
+	void processNALUnit(const std::vector<uint8_t> &nalUnit)
 	{
-		while (!nalQueue.empty()) {
-			auto nalUnit = std::move(nalQueue.front());
-			nalQueue.pop();
+		if (nalUnit.size() < 5)
+			return; // Must have start code + NAL header
 
-			// Send NAL unit to decoder
-			packet->data = nalUnit.data();
-			packet->size = (int)nalUnit.size();
+		uint8_t nalType = nalUnit[4] & 0x1F; // NAL type after start code
 
-			// Detailed logging of packet contents
-			std::ostringstream nalHex;
-			nalHex << std::hex << std::setfill('0');
-			int dumpLen = std::min(32, packet->size);
-			for (int i = 0; i < dumpLen; ++i) {
-				nalHex << std::setw(2) << (int)packet->data[i] << " ";
-			}
-			obs_log(LOG_DEBUG, "H.264 NAL packet size: %d, first %d bytes: %s", packet->size, dumpLen,
-				nalHex.str().c_str());
+		// Handle parameter sets specially
+		if (nalType == 7) { // SPS
+			sps = nalUnit;
+			obs_log(LOG_DEBUG, "Stored SPS, size: %zu", sps.size());
+			checkParameterSets();
+			return;
+		} else if (nalType == 8) { // PPS
+			pps = nalUnit;
+			obs_log(LOG_DEBUG, "Stored PPS, size: %zu", pps.size());
+			checkParameterSets();
+			return;
+		}
 
-			int ret = avcodec_send_packet(codecCtx, packet);
-			if (ret < 0) {
+		// For other NAL units, only process if codec is initialized
+		if (!codecInitialized) {
+			obs_log(LOG_DEBUG, "Skipping NAL type %d - codec not initialized", nalType);
+			return;
+		}
+
+		// Skip non-frame NAL units
+		if (nalType == 6 || nalType == 9) { // SEI, AUD
+			obs_log(LOG_DEBUG, "Skipping non-frame NAL type: %d", nalType);
+			return;
+		}
+
+		// Send to decoder
+		packet->data = (uint8_t *)nalUnit.data();
+		packet->size = (int)nalUnit.size();
+
+		obs_log(LOG_DEBUG, "Sending NAL type %d to decoder, size: %d", nalType, packet->size);
+
+		int ret = avcodec_send_packet(codecCtx, packet);
+		if (ret < 0) {
+			char errbuf[256];
+			av_strerror(ret, errbuf, sizeof(errbuf));
+			obs_log(LOG_ERROR, "Error sending packet to H.264 decoder (%d): %s", ret, errbuf);
+			return;
+		}
+
+		// Receive decoded frames
+		while (ret >= 0) {
+			ret = avcodec_receive_frame(codecCtx, frame);
+			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+				break;
+			} else if (ret < 0) {
 				char errbuf[256];
 				av_strerror(ret, errbuf, sizeof(errbuf));
-				obs_log(LOG_ERROR, "Error sending packet to H.264 decoder (%d): %s", ret, errbuf);
-				continue;
+				obs_log(LOG_ERROR, "Error during H.264 decoding (%d): %s", ret, errbuf);
+				break;
 			}
 
-			// Receive decoded frames
-			while (ret >= 0) {
-				ret = avcodec_receive_frame(codecCtx, frame);
-				if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-					break;
-				} else if (ret < 0) {
-					char errbuf[256];
-					av_strerror(ret, errbuf, sizeof(errbuf));
-					obs_log(LOG_ERROR, "Error during H.264 decoding (%d): %s", ret, errbuf);
-					break;
-				}
-
-				// Process decoded frame
-				processDecodedFrame();
-			}
+			// Process decoded frame
+			processDecodedFrame();
 		}
 	}
 
+	void checkParameterSets()
+	{
+		if (!sps.empty() && !pps.empty() && !hasParameterSets) {
+			hasParameterSets = true;
+			obs_log(LOG_DEBUG, "Got both SPS and PPS, initializing codec context");
+			initializeCodecContext();
+		}
+	}
+	static video_colorspace prop_to_colorspace(int index)
+	{
+		switch (index) {
+		case 0:
+			return VIDEO_CS_601;
+		case 1:
+			return VIDEO_CS_2100_HLG;
+		default:
+		case 2:
+			return VIDEO_CS_709;
+		}
+	}
+
+	static video_range_type prop_to_range_type(int index)
+	{
+		switch (index) {
+		case 0:
+			return VIDEO_RANGE_FULL;
+		default:
+		case 1:
+			return VIDEO_RANGE_PARTIAL;
+		}
+	}
 	void processDecodedFrame()
 	{
 		obs_log(LOG_DEBUG, "Decoded H.264 frame: %dx%d format: %d", frame->width, frame->height, frame->format);
@@ -350,9 +429,11 @@ private:
 		obs_source_frame obs_frame = {};
 		obs_frame.width = frame->width;
 		obs_frame.height = frame->height;
-		obs_frame.timestamp = (uint64_t)(frame->best_effort_timestamp);
 
-		// Convert YUV420P to NV12 (or appropriate format for OBS)
+		// Use current time if timestamp is not available
+		obs_frame.timestamp = os_gettime_ns();
+
+		// Convert YUV420P to appropriate format for OBS
 		switch (frame->format) {
 		case AV_PIX_FMT_YUV420P:
 			obs_frame.format = VIDEO_FORMAT_I420;
@@ -369,8 +450,11 @@ private:
 			obs_frame.data[i] = frame->data[i];
 			obs_frame.linesize[i] = frame->linesize[i];
 		}
-
+		
+		video_format_get_parameters(prop_to_colorspace(2), prop_to_range_type(0), obs_frame.color_matrix,
+					    obs_frame.color_range_min, obs_frame.color_range_max);
 		obs_source_output_video(obs_source, &obs_frame);
+		obs_log(LOG_DEBUG, "Output video frame to OBS: %dx%d color: %d,%d", frame->width, frame->height, frame->colorspace, frame->color_range);
 	}
 
 public:
@@ -388,10 +472,15 @@ public:
 		if (swsCtx) {
 			sws_freeContext(swsCtx);
 		}
+
+		sps.clear();
+		pps.clear();
+		hasParameterSets = false;
+		codecInitialized = false;
+
 		obs_log(LOG_DEBUG, "H.264 decoder cleaned up");
 	}
 };
-
 // Opus Audio Decoder
 class OpusDecoder : public MediaDecoder {
 private:
@@ -1268,7 +1357,7 @@ void whip_source_update(void *data, obs_data_t *settings)
 			s->receiver.reset();
 		}
 
-		s->endpoint = url;
+		s->endpoint = std::move(url);
 		s->receiver = std::make_unique<WhipReceiver>(obs_source, s->endpoint);
 		WhipHttpServer::getInstance()->registerEndpoint(s->endpoint, s->receiver.get());
 	}
@@ -1338,13 +1427,13 @@ void whip_source_destroy(void *data)
 uint32_t whip_source_get_width(void *data)
 {
 	auto s = (whip_source_t *)data;
-	return 1920;
+	return 1280;
 }
 
 uint32_t whip_source_get_height(void *data)
 {
 	auto s = (whip_source_t *)data;
-	return 1080;
+	return 720;
 }
 
 obs_source_info create_whip_source_info()
