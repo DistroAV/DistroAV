@@ -255,7 +255,8 @@ public:
 
 		// Check for RTCP packet (pt == 72)
 		if (rtpHeader.pt == 72) {
-			obs_log(LOG_DEBUG, "Received RTCP packet: seq=%u, ts=%u, ssrc=%u, size=%d", rtpHeader.seq, rtpHeader.ts, rtpHeader.ssrc, size);
+			obs_log(LOG_DEBUG, "Received RTCP packet: seq=%u, ts=%u, ssrc=%u, size=%d", rtpHeader.seq,
+				rtpHeader.ts, rtpHeader.ssrc, size);
 			// Optionally, dump more RTCP statistics here
 			return;
 		}
