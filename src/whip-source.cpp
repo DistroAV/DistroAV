@@ -253,6 +253,13 @@ public:
 		RTPHeader rtpHeader;
 		rtpHeader.parseFromBuffer(data);
 
+		// Check for RTCP packet (pt == 72)
+		if (rtpHeader.pt == 72) {
+			obs_log(LOG_DEBUG, "Received RTCP packet: seq=%u, ts=%u, ssrc=%u, size=%d", rtpHeader.seq, rtpHeader.ts, rtpHeader.ssrc, size);
+			// Optionally, dump more RTCP statistics here
+			return;
+		}
+
 		int headerSize = RTPHeader::getHeaderSize(data);
 		if (size <= headerSize)
 			return;
@@ -331,6 +338,9 @@ private:
 
 		uint8_t nalType = nalUnit[4] & 0x1F; // NAL type after start code
 
+		if ((nalType >= 11) && (nalType <= 23))
+			return; // Ignore these NAL types
+
 		// Handle parameter sets specially
 		if (nalType == 7) { // SPS
 			sps = nalUnit;
@@ -366,7 +376,7 @@ private:
 		if (ret < 0) {
 			char errbuf[256];
 			av_strerror(ret, errbuf, sizeof(errbuf));
-			obs_log(LOG_ERROR, "Error sending packet to H.264 decoder (%d): %s", ret, errbuf);
+			obs_log(LOG_ERROR, "Error sending packet [%d] to H.264 decoder (%d): %s", nalType, ret, errbuf);
 			return;
 		}
 
@@ -395,26 +405,26 @@ private:
 			initializeCodecContext();
 		}
 	}
-	static video_colorspace prop_to_colorspace(int index)
+	static video_colorspace prop_to_colorspace(AVColorSpace av)
 	{
-		switch (index) {
-		case 0:
+		switch (av) {
+		case AVCOL_SPC_BT470BG:
 			return VIDEO_CS_601;
-		case 1:
+		case AVCOL_SPC_ICTCP:
 			return VIDEO_CS_2100_HLG;
 		default:
-		case 2:
+		case AVCOL_SPC_BT709:
 			return VIDEO_CS_709;
 		}
 	}
 
-	static video_range_type prop_to_range_type(int index)
+	static video_range_type prop_to_range_type(AVColorRange av)
 	{
-		switch (index) {
-		case 0:
+		switch (av) {
+		case AVCOL_RANGE_JPEG:
 			return VIDEO_RANGE_FULL;
 		default:
-		case 1:
+		case AVCOL_RANGE_MPEG:
 			return VIDEO_RANGE_PARTIAL;
 		}
 	}
@@ -450,11 +460,13 @@ private:
 			obs_frame.data[i] = frame->data[i];
 			obs_frame.linesize[i] = frame->linesize[i];
 		}
-		
-		video_format_get_parameters(prop_to_colorspace(2), prop_to_range_type(0), obs_frame.color_matrix,
+
+		video_format_get_parameters(prop_to_colorspace(frame->colorspace),
+					    prop_to_range_type(frame->color_range), obs_frame.color_matrix,
 					    obs_frame.color_range_min, obs_frame.color_range_max);
 		obs_source_output_video(obs_source, &obs_frame);
-		obs_log(LOG_DEBUG, "Output video frame to OBS: %dx%d color: %d,%d", frame->width, frame->height, frame->colorspace, frame->color_range);
+		obs_log(LOG_DEBUG, "Output video frame to OBS: %dx%d color: %d,%d", frame->width, frame->height,
+			frame->colorspace, frame->color_range);
 	}
 
 public:
@@ -588,6 +600,14 @@ public:
 		RTPHeader rtpHeader;
 		rtpHeader.parseFromBuffer(data);
 
+		// Check for RTCP packet (pt == 72)
+		if (rtpHeader.pt == 72) {
+			obs_log(LOG_DEBUG, "Received RTCP packet: seq=%u, ts=%u, ssrc=%u, size=%d", rtpHeader.seq,
+				rtpHeader.ts, rtpHeader.ssrc, size);
+			// Optionally, dump more RTCP statistics here
+			return;
+		}
+
 		int headerSize = RTPHeader::getHeaderSize(data);
 		if (size <= headerSize)
 			return;
@@ -675,8 +695,8 @@ private:
 
 			obs_audio_frame.speakers = SPEAKERS_STEREO;
 
-			obs_audio_frame.timestamp = (uint64_t)(frame->best_effort_timestamp);
-
+			//obs_audio_frame.timestamp = (uint64_t)(frame->best_effort_timestamp);
+			obs_audio_frame.timestamp = os_gettime_ns();
 			obs_audio_frame.samples_per_sec = frame->sample_rate;
 			obs_audio_frame.format = AUDIO_FORMAT_FLOAT_PLANAR;
 			obs_audio_frame.frames = frame->nb_samples;
