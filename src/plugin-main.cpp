@@ -39,7 +39,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 const char *obs_module_name()
 {
-	return "DistroAV"
+	return PLUGIN_DISPLAY_NAME;
 }
 
 const char *obs_module_description()
