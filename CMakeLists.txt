@@ -37,32 +37,64 @@ if(ENABLE_QT)
   )
 endif()
 
-target_sources(
-  ${CMAKE_PROJECT_NAME}
-  PRIVATE
+
+add_library(distroav-core OBJECT
+    src/core/transport.cpp
     src/forms/output-settings.cpp
-    src/forms/output-settings.h
     src/forms/update.cpp
-    src/forms/update.h
-    src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
-    src/obs-support/remote-text.hpp
     src/obs-support/shared-update.cpp
-    src/obs-support/shared-update.hpp
     src/config.cpp
-    src/config.h
-    src/main-output.cpp
-    src/main-output.h
-    src/ndi-filter.cpp
-    src/ndi-finder.h
-    src/ndi-finder.cpp
-    src/ndi-output.cpp
-    src/ndi-source.cpp
-    src/plugin-main.cpp
-    src/plugin-main.h
-    src/premultiplied-alpha-filter.cpp
-    src/preview-output.cpp
-    src/preview-output.h
+)
+
+target_link_libraries(distroav-core PRIVATE OBS::libobs CURL::libcurl)
+if(ENABLE_FRONTEND_API)
+  target_link_libraries(distroav-core PRIVATE OBS::obs-frontend-api)
+endif()
+if(ENABLE_QT)
+  target_link_libraries(distroav-core PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)
+endif()
+
+add_library(distroav-ndi OBJECT
+    src/transports/ndi/ndi-transport.cpp
+    src/transports/ndi/ndi-filter.cpp
+    src/transports/ndi/ndi-finder.cpp
+    src/transports/ndi/ndi-output.cpp
+    src/transports/ndi/ndi-source.cpp
+    src/transports/ndi/main-output.cpp
+    src/transports/ndi/preview-output.cpp
+    src/transports/ndi/premultiplied-alpha-filter.cpp
+)
+
+target_link_libraries(distroav-ndi PRIVATE OBS::libobs CURL::libcurl)
+if(ENABLE_FRONTEND_API)
+  target_link_libraries(distroav-ndi PRIVATE OBS::obs-frontend-api)
+endif()
+if(ENABLE_QT)
+  target_link_libraries(distroav-ndi PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)
+endif()
+target_include_directories(distroav-ndi PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
+
+target_sources(
+    ${CMAKE_PROJECT_NAME}
+    PRIVATE
+      $<TARGET_OBJECTS:distroav-core>
+      $<TARGET_OBJECTS:distroav-ndi>
+      src/plugin-main.cpp
+      src/plugin-main.h
+      src/obs-support/obs-app.hpp
+      src/forms/output-settings.h
+      src/forms/update.h
+      src/obs-support/remote-text.hpp
+      src/obs-support/shared-update.hpp
+      src/config.h
+      src/core/transport.hpp
+      src/core/transport_factory.hpp
+      src/transports/ndi/ndi-transport.hpp
+      src/transports/ndi/ndi-common.h
+      src/transports/ndi/ndi-finder.h
+      src/transports/ndi/main-output.h
+      src/transports/ndi/preview-output.h
 )
 
 set(valid_uuid FALSE)

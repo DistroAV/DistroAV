@@ -18,8 +18,7 @@
 #include "output-settings.h"
 
 #include "plugin-main.h"
-#include "main-output.h"
-#include "preview-output.h"
+#include "core/transport.hpp"
 #include "update.h"
 
 #include <QClipboard>
@@ -199,44 +198,48 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-	if (mainSupported && config->OutputEnabled && !config->OutputName.isEmpty()) {
-		if ((last_config.OutputEnabled != config->OutputEnabled) ||
-		    (last_config.OutputName != config->OutputName) ||
-		    (last_config.OutputGroups != config->OutputGroups)) {
-			// The Output is supported and enabled, OutputName exists and a Name or GroupName has changed since last form submission
-			obs_log(LOG_INFO, "Initializing Main output");
-			main_output_init();
-		}
-	} else {
-		main_output_deinit();
-	}
-	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
-		if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
-		    (last_config.PreviewOutputName != config->PreviewOutputName) ||
-		    (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
-			// The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
-			obs_log(LOG_INFO, "Initializing Preview output");
-			preview_output_init();
-		}
-	} else {
-		preview_output_deinit();
-	}
+        auto transport = av::get_transport();
+        if (transport) {
+                if (mainSupported && config->OutputEnabled && !config->OutputName.isEmpty()) {
+                        if ((last_config.OutputEnabled != config->OutputEnabled) ||
+                            (last_config.OutputName != config->OutputName) ||
+                            (last_config.OutputGroups != config->OutputGroups)) {
+                                // The Output is supported and enabled, OutputName exists and a Name or GroupName has changed since last form submission
+                                obs_log(LOG_INFO, "Initializing Main output");
+                                transport->main_output_init();
+                        }
+                } else {
+                        transport->main_output_deinit();
+                }
+                if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
+                        if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
+                            (last_config.PreviewOutputName != config->PreviewOutputName) ||
+                            (last_config.PreviewOutputGroups != config->PreviewOutputGroups)) {
+                                // The Preview Output is enabled, OutputName exists and a Name or GroupName has changed since last form submission
+                                obs_log(LOG_INFO, "Initializing Preview output");
+                                transport->preview_output_init();
+                        }
+                } else {
+                        transport->preview_output_deinit();
+                }
+        }
 }
 
 void OutputSettings::showEvent(QShowEvent *)
 {
 	auto config = Config::Current();
 
-	// Set mainOutputGroupBox to enabled if main_output_is_supported()
-	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
+        auto transport = av::get_transport();
+        // Set mainOutputGroupBox to enabled if main_output_is_supported()
+        ui->mainOutputGroupBox->setEnabled(transport && transport->main_output_is_supported());
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
 	ui->mainOutputGroups->setText(config->OutputGroups);
 
-	auto lastError = main_output_last_error();
-	ui->mainOutputLastError->setText(lastError);
-	if (lastError.isEmpty()) {
+        auto lastError = transport ? transport->main_output_last_error() : QString();
+        ui->mainOutputLastError->setText(lastError);
+        if (lastError.isEmpty()) {
 		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space is error is no longer valid.
 	} else {
 		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());

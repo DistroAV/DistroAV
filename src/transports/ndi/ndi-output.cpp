@@ -15,7 +15,8 @@
 	along with this program; if not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-#include "plugin-main.h"
+#include "../plugin-main.h"
+#include "ndi-common.h"
 // #include "plugin-support.h"
 
 static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
