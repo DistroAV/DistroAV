@@ -69,8 +69,10 @@ typedef struct {
 	NDIlib_FourCC_video_type_e frame_fourcc;
 	double video_framerate;
 
-	size_t audio_channels;
-	uint32_t audio_samplerate;
+        size_t audio_channels;
+        uint32_t audio_samplerate;
+
+        uint32_t audio_tracks;
 
 	uint8_t *conv_buffer;
 	uint32_t conv_linesize;
@@ -93,8 +95,18 @@ obs_properties_t *ndi_output_getproperties(void *)
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
 	obs_properties_add_text(props, "ndi_name", obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
-	obs_properties_add_text(props, "ndi_groups", obs_module_text("NDIPlugin.OutputProps.NDIGroups"),
-				OBS_TEXT_DEFAULT);
+        obs_properties_add_text(props, "ndi_groups", obs_module_text("NDIPlugin.OutputProps.NDIGroups"),
+                                OBS_TEXT_DEFAULT);
+
+        auto tracks = obs_properties_create();
+        obs_properties_add_bool(tracks, "track1", "1");
+        obs_properties_add_bool(tracks, "track2", "2");
+        obs_properties_add_bool(tracks, "track3", "3");
+        obs_properties_add_bool(tracks, "track4", "4");
+        obs_properties_add_bool(tracks, "track5", "5");
+        obs_properties_add_bool(tracks, "track6", "6");
+        obs_properties_add_group(props, "tracks", obs_module_text("NDIPlugin.OutputProps.AudioTracks"), OBS_GROUP_NORMAL,
+                                 tracks);
 
 	obs_log(LOG_DEBUG, "-ndi_output_getproperties()");
 
@@ -104,11 +116,17 @@ obs_properties_t *ndi_output_getproperties(void *)
 void ndi_output_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+ndi_output_getdefaults()");
-	obs_data_set_default_string(settings, "ndi_name", "DistroAV output (changeme)");
-	obs_data_set_default_string(settings, "ndi_groups", "DistroAV output (changeme)");
-	obs_data_set_default_bool(settings, "uses_video", true);
-	obs_data_set_default_bool(settings, "uses_audio", true);
-	obs_log(LOG_DEBUG, "-ndi_output_getdefaults()");
+        obs_data_set_default_string(settings, "ndi_name", "DistroAV output (changeme)");
+        obs_data_set_default_string(settings, "ndi_groups", "DistroAV output (changeme)");
+        obs_data_set_default_bool(settings, "uses_video", true);
+        obs_data_set_default_bool(settings, "uses_audio", true);
+        obs_data_set_default_bool(settings, "track1", true);
+        obs_data_set_default_bool(settings, "track2", false);
+        obs_data_set_default_bool(settings, "track3", false);
+        obs_data_set_default_bool(settings, "track4", false);
+        obs_data_set_default_bool(settings, "track5", false);
+        obs_data_set_default_bool(settings, "track6", false);
+        obs_log(LOG_DEBUG, "-ndi_output_getdefaults()");
 }
 
 void ndi_output_update(void *data, obs_data_t *settings);
@@ -204,13 +222,13 @@ bool ndi_output_start(void *data)
 		flags |= OBS_OUTPUT_VIDEO;
 	}
 
-	if (o->uses_audio && audio) {
-		o->audio_samplerate = audio_output_get_sample_rate(audio);
-		o->audio_channels = audio_output_get_channels(audio);
-		flags |= OBS_OUTPUT_AUDIO;
-	}
+        if (o->uses_audio && audio) {
+                o->audio_samplerate = audio_output_get_sample_rate(audio);
+                o->audio_channels = audio_output_get_channels(audio);
+                flags |= OBS_OUTPUT_AUDIO;
+        }
 
-	NDIlib_send_create_t send_desc;
+        NDIlib_send_create_t send_desc;
 	send_desc.p_ndi_name = name;
 	if (groups && groups[0])
 		send_desc.p_groups = groups;
@@ -219,9 +237,10 @@ bool ndi_output_start(void *data)
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
-	o->ndi_sender = ndiLib->send_create(&send_desc);
-	if (o->ndi_sender) {
-		o->started = obs_output_begin_data_capture(o->output, flags);
+        o->ndi_sender = ndiLib->send_create(&send_desc);
+        if (o->ndi_sender) {
+                obs_output_set_mixers(o->output, o->audio_tracks);
+                o->started = obs_output_begin_data_capture(o->output, flags);
 		if (o->started) {
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi output started", name);
 		} else {
@@ -245,14 +264,31 @@ void ndi_output_update(void *data, obs_data_t *settings)
 	auto groups = obs_data_get_string(settings, "ndi_groups");
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', ...)", name, groups);
 
-	o->ndi_name = name;
-	o->ndi_groups = groups;
-	o->uses_video = obs_data_get_bool(settings, "uses_video");
-	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+        o->ndi_name = name;
+        o->ndi_groups = groups;
+        o->uses_video = obs_data_get_bool(settings, "uses_video");
+        o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+        uint32_t tracks = 0;
+        if (obs_data_get_bool(settings, "track1"))
+                tracks |= 1 << 0;
+        if (obs_data_get_bool(settings, "track2"))
+                tracks |= 1 << 1;
+        if (obs_data_get_bool(settings, "track3"))
+                tracks |= 1 << 2;
+        if (obs_data_get_bool(settings, "track4"))
+                tracks |= 1 << 3;
+        if (obs_data_get_bool(settings, "track5"))
+                tracks |= 1 << 4;
+        if (obs_data_get_bool(settings, "track6"))
+                tracks |= 1 << 5;
+        if (!tracks)
+                tracks = 1;
+        o->audio_tracks = tracks;
 
-	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
-	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,
-		o->uses_video ? "true" : "false", o->uses_audio ? "true" : "false");
+        obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
+        obs_log(LOG_DEBUG,
+                "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s', tracks=0x%X)", name, groups,
+                o->uses_video ? "true" : "false", o->uses_audio ? "true" : "false", o->audio_tracks);
 }
 
 void ndi_output_stop(void *data, uint64_t)
