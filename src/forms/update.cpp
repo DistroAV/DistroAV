@@ -33,8 +33,6 @@ Inspiration(s):
 
 #include "plugin-main.h"
 
-#include "obs-support/shared-update.hpp"
-
 #include <QDesktopServices>
 #include <QDialog>
 #include <QMainWindow>
@@ -44,6 +42,9 @@ Inspiration(s):
 #include <QTimer>
 #include <QTimeZone>
 #include <QUrlQuery>
+
+#include <QCryptographicHash>
+#include <QFile>
 
 #define UPDATE_TIMEOUT_SEC 10
 
@@ -207,6 +208,30 @@ public:
 //
 //
 //
+
+// Originally from The OBS Studio source code UI/update/shared-update.cpp with modifications for DistroAV Plugin.
+bool CalculateFileHash(const char *path, QString &hash)
+{
+	QFile file(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		obs_log(LOG_WARNING, "WARN-421 - Update Check could not open the update file : `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to open file: `%s`", path);
+		return false;
+	}
+
+	QCryptographicHash qhash(QCryptographicHash::Sha256);
+	if (!qhash.addData(&file)) {
+		obs_log(LOG_WARNING, "WARN-422 - Update Check could not verify the update file: `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to read data from file: `%s`", path);
+		return false;
+	}
+
+	hash = qhash.result().toHex();
+
+	return true;
+}
+//
+
 
 QString GetObsCurrentModuleSHA256()
 {
