@@ -29,6 +29,7 @@
 #define PARAM_MAIN_OUTPUT_ENABLED "MainOutputEnabled"
 #define PARAM_MAIN_OUTPUT_NAME "MainOutputName"
 #define PARAM_MAIN_OUTPUT_GROUPS "MainOutputGroups"
+#define PARAM_MAIN_OUTPUT_TRACKS "MainOutputTracks"
 #define PARAM_PREVIEW_OUTPUT_ENABLED "PreviewOutputEnabled"
 #define PARAM_PREVIEW_OUTPUT_NAME "PreviewOutputName"
 #define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
@@ -49,13 +50,14 @@ int Config::UpdateLocalPort = 0;
 bool Config::UpdateLastCheckIgnore = false;
 int Config::DetectObsNdiForce = 0;
 
-enum ObsConfigType { OBS_CONFIG_STRING, OBS_CONFIG_BOOL };
+enum ObsConfigType { OBS_CONFIG_STRING, OBS_CONFIG_BOOL, OBS_CONFIG_INT };
 
 std::map<std::string, enum ObsConfigType> ConfigTypeMap {
 	{PARAM_MAIN_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
 	{PARAM_MAIN_OUTPUT_NAME, OBS_CONFIG_STRING},
-	{PARAM_MAIN_OUTPUT_GROUPS, OBS_CONFIG_STRING},
-	{PARAM_PREVIEW_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
+        {PARAM_MAIN_OUTPUT_GROUPS, OBS_CONFIG_STRING},
+        {PARAM_MAIN_OUTPUT_TRACKS, OBS_CONFIG_INT},
+        {PARAM_PREVIEW_OUTPUT_ENABLED, OBS_CONFIG_BOOL},
 	{PARAM_PREVIEW_OUTPUT_NAME, OBS_CONFIG_STRING},
 	{PARAM_PREVIEW_OUTPUT_GROUPS, OBS_CONFIG_STRING},
 	{PARAM_TALLY_PROGRAM_ENABLED, OBS_CONFIG_BOOL},
@@ -170,28 +172,32 @@ void MigrateSetting(config_t *from, config_t *to, const char *section, const cha
 
 	const enum ObsConfigType type = ConfigTypeMap[name];
 
-	switch (type) {
-	case OBS_CONFIG_STRING:
-		config_set_string(to, section, name, config_get_string(from, section, name));
+        switch (type) {
+        case OBS_CONFIG_STRING:
+                config_set_string(to, section, name, config_get_string(from, section, name));
 
-		break;
-	case OBS_CONFIG_BOOL:
-		config_set_bool(to, section, name, config_get_bool(from, section, name));
-		break;
-	}
+                break;
+        case OBS_CONFIG_BOOL:
+                config_set_bool(to, section, name, config_get_bool(from, section, name));
+                break;
+        case OBS_CONFIG_INT:
+                config_set_int(to, section, name, config_get_int(from, section, name));
+                break;
+        }
 	config_remove_value(from, section, name);
 	obs_log(LOG_INFO, "config: migrated configuration setting %s", name);
 }
 
 Config::Config()
-	: OutputEnabled(false),
-	  OutputName("OBS PGM"),
-	  OutputGroups(""),
-	  PreviewOutputEnabled(false),
-	  PreviewOutputName("OBS Preview"),
-	  PreviewOutputGroups(""),
-	  TallyProgramEnabled(true),
-	  TallyPreviewEnabled(true)
+        : OutputEnabled(false),
+          OutputName("OBS PGM"),
+          OutputGroups(""),
+          OutputTrackMask(1),
+          PreviewOutputEnabled(false),
+          PreviewOutputName("OBS Preview"),
+          PreviewOutputGroups(""),
+          TallyProgramEnabled(true),
+          TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
 	SetDefaultsToUserStore();
@@ -205,9 +211,10 @@ void Config::SetDefaultsToUserStore()
 	if (obs_config) {
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
 		config_set_default_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, QT_TO_UTF8(OutputName));
-		config_set_default_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS, QT_TO_UTF8(OutputGroups));
+                config_set_default_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS, QT_TO_UTF8(OutputGroups));
+                config_set_default_int(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_TRACKS, OutputTrackMask);
 
-		config_set_default_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
+                config_set_default_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
 		config_set_default_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME,
 					  QT_TO_UTF8(PreviewOutputName));
 		config_set_default_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
@@ -226,9 +233,10 @@ void Config::GlobalToUserMigration()
 	if (app_config && user_config) {
 		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
 		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
-		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS);
+                MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS);
+                MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_MAIN_OUTPUT_TRACKS);
 
-		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
+                MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
 		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
 		MigrateSetting(app_config, user_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS);
 
@@ -247,10 +255,11 @@ void Config::Load()
 	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		OutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED);
-		OutputName = config_get_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
-		OutputGroups = config_get_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS);
+                OutputName = config_get_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME);
+                OutputGroups = config_get_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS);
+                OutputTrackMask = (uint32_t)config_get_int(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_TRACKS);
 
-		PreviewOutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
+                PreviewOutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED);
 		PreviewOutputName = config_get_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
 		PreviewOutputGroups = config_get_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS);
 
@@ -265,9 +274,10 @@ void Config::Save()
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_ENABLED, OutputEnabled);
 		config_set_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_NAME, QT_TO_UTF8(OutputName));
-		config_set_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS, QT_TO_UTF8(OutputGroups));
+                config_set_string(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_GROUPS, QT_TO_UTF8(OutputGroups));
+                config_set_int(obs_config, SECTION_NAME, PARAM_MAIN_OUTPUT_TRACKS, OutputTrackMask);
 
-		config_set_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
+                config_set_bool(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_ENABLED, PreviewOutputEnabled);
 		config_set_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, QT_TO_UTF8(PreviewOutputName));
 		config_set_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
 				  QT_TO_UTF8(PreviewOutputGroups));

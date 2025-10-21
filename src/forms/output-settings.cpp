@@ -27,6 +27,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPointer>
+#include <cstdint>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
@@ -173,9 +174,23 @@ void OutputSettings::onFormAccepted()
 	auto config = Config::Current();
 	auto last_config = *config;
 
-	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
-	config->OutputName = ui->mainOutputName->text();
-	config->OutputGroups = ui->mainOutputGroups->text();
+        config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
+        config->OutputName = ui->mainOutputName->text();
+        config->OutputGroups = ui->mainOutputGroups->text();
+        uint32_t trackMask = 0;
+        if (ui->mainTrack1->isChecked())
+                trackMask |= 1 << 0;
+        if (ui->mainTrack2->isChecked())
+                trackMask |= 1 << 1;
+        if (ui->mainTrack3->isChecked())
+                trackMask |= 1 << 2;
+        if (ui->mainTrack4->isChecked())
+                trackMask |= 1 << 3;
+        if (ui->mainTrack5->isChecked())
+                trackMask |= 1 << 4;
+        if (ui->mainTrack6->isChecked())
+                trackMask |= 1 << 5;
+        config->OutputTrackMask = trackMask;
 
 	config->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	config->PreviewOutputName = ui->previewOutputName->text();
@@ -199,10 +214,11 @@ void OutputSettings::onFormAccepted()
 
 	config->Save();
 
-	if (mainSupported && config->OutputEnabled && !config->OutputName.isEmpty()) {
-		if ((last_config.OutputEnabled != config->OutputEnabled) ||
-		    (last_config.OutputName != config->OutputName) ||
-		    (last_config.OutputGroups != config->OutputGroups)) {
+        if (mainSupported && config->OutputEnabled && !config->OutputName.isEmpty()) {
+                if ((last_config.OutputEnabled != config->OutputEnabled) ||
+                    (last_config.OutputName != config->OutputName) ||
+                    (last_config.OutputGroups != config->OutputGroups) ||
+                    (last_config.OutputTrackMask != config->OutputTrackMask)) {
 			// The Output is supported and enabled, OutputName exists and a Name or GroupName has changed since last form submission
 			obs_log(LOG_INFO, "Initializing Main output");
 			main_output_init();
@@ -231,8 +247,14 @@ void OutputSettings::showEvent(QShowEvent *)
 	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
-	ui->mainOutputName->setText(config->OutputName);
-	ui->mainOutputGroups->setText(config->OutputGroups);
+        ui->mainOutputName->setText(config->OutputName);
+        ui->mainOutputGroups->setText(config->OutputGroups);
+        ui->mainTrack1->setChecked(config->OutputTrackMask & (1 << 0));
+        ui->mainTrack2->setChecked(config->OutputTrackMask & (1 << 1));
+        ui->mainTrack3->setChecked(config->OutputTrackMask & (1 << 2));
+        ui->mainTrack4->setChecked(config->OutputTrackMask & (1 << 3));
+        ui->mainTrack5->setChecked(config->OutputTrackMask & (1 << 4));
+        ui->mainTrack6->setChecked(config->OutputTrackMask & (1 << 5));
 
 	auto lastError = main_output_last_error();
 	ui->mainOutputLastError->setText(lastError);
