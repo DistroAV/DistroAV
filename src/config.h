@@ -28,7 +28,7 @@
  * Linux: ~/.config/obs-studio/global.ini
  * MacOS: ~/Library/Application Support/obs-studio/global.ini
  * Windows: %APPDATA%\obs-studio\global.ini
- * 
+ *
  * Example:
  * ```
  * [NDIPlugin]
