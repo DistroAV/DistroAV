@@ -141,7 +141,6 @@ If you are running a local build, don't forget to add your build info to the upd
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
 	ui->labelNdiRegisteredTrademark->setText(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
-
 }
 
 void OutputSettings::onFormAccepted()
