@@ -138,17 +138,10 @@ If you are running a local build, don't forget to add your build info to the upd
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DONATE_URL))); });
 
 	connect(ui->pushButtonWiki, &QPushButton::clicked,
-		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_TROUBLESHOOTING_URL))); });
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
 	ui->labelNdiRegisteredTrademark->setText(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
 
-	// ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
-	// connect(ui->labelDonateUrl, &QLabel::linkActivated,
-	//	[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
-
-	// ui->labelDiscordUrl->setText(makeLink(PLUGIN_REDIRECT_DISCORD_URL));
-	// connect(ui->labelDiscordUrl, &QLabel::linkActivated,
-	//	[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
 }
 
 void OutputSettings::onFormAccepted()

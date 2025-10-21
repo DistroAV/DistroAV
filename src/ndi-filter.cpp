@@ -90,15 +90,6 @@ obs_properties_t *ndi_filter_getproperties(void *)
 				  });
 
 	obs_properties_add_text(props, "ndi_trademark", NDI_IS_A_REGISTERED_TRADEMARK_TEXT, OBS_TEXT_INFO);
-	/* 
-	auto group_ndi = obs_properties_create();
-	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
-				  [](obs_properties_t *, obs_property_t *, void *) {
-					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
-					  return false;
-				  });
-	obs_properties_add_group(props, "ndi", "NDI", OBS_GROUP_NORMAL, group_ndi);
-	*/
 
 	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
