@@ -39,7 +39,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
 const char *obs_module_name()
 {
-	return PLUGIN_NAME;
+	return PLUGIN_DISPLAY_NAME;
 }
 
 const char *obs_module_description()
@@ -109,7 +109,7 @@ QString makeLink(const char *url, const char *text)
  *  5. The message box is shown after a delay (default 2000ms)
  *  6. Shows the dialog as WindowStaysOnTopHint and NonModal
  *  7. Deletes the dialog when closed
- * 
+ *
  * References:
  * * QMessageBox::showNewMessageBox
  *   https://code.qt.io/cgit/qt/qtbase.git/tree/src/widgets/dialogs/qmessagebox.cpp
@@ -119,7 +119,7 @@ QString makeLink(const char *url, const char *text)
  *     https://code.qt.io/cgit/qt/qtbase.git/tree/src/widgets/dialogs/qmessagebox.cpp#n284
  *     ```
  * void QMessageBoxPrivate::init(const QString &title, const QString &text)
- * ... 
+ * ...
  * #ifdef Q_OS_MAC
  *     QFont f = q->font();
  *     f.setBold(true);
@@ -129,7 +129,7 @@ QString makeLink(const char *url, const char *text)
  *     ```
  * * MacOS guidelines say that dialog title bars have no text.
  *   https://stackoverflow.com/a/22187538/25683720
- * 
+ *
  * @param title The title of the message box
  * @param message The message to display in the message box
  * @param milliseconds The delay in milliseconds before the message box is shown
@@ -419,6 +419,7 @@ const NDIlib_v6 *load_ndilib()
 	// ... the redistributable on MacOS is installed within `/usr/local/lib` ..."
 	// Flatpak install will look for the NDI lib in /app/plugins/DistroAV/extra/lib
 	locations << "/usr/lib";
+	locations << "/usr/lib64";
 	locations << "/usr/local/lib";
 #if defined(Q_OS_LINUX)
 	locations << "/app/plugins/DistroAV/extra/lib";
