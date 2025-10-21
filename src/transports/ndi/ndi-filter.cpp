@@ -15,7 +15,8 @@
 	along with this program; if not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-#include "plugin-main.h"
+#include "../plugin-main.h"
+#include "ndi-common.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
