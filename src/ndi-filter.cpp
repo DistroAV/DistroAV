@@ -89,8 +89,6 @@ obs_properties_t *ndi_filter_getproperties(void *)
 					  return true;
 				  });
 
-	obs_properties_add_text(props, "ndi_trademark", NDI_IS_A_REGISTERED_TRADEMARK_TEXT, OBS_TEXT_INFO);
-
 	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
 }

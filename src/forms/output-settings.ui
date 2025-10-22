@@ -335,7 +335,7 @@
                             <item>
                                 <widget class="QPushButton" name="pushButtonNdi">
                                     <property name="text">
-                                        <string>NDI®</string>
+                                        <string>ndi.video</string>
                                     </property>
                                 </widget>
                             </item>

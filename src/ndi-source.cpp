@@ -323,14 +323,6 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_properties_add_group(props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE,
 				 group_ptz);
 
-	auto group_ndi = obs_properties_create();
-	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
-				  [](obs_properties_t *, obs_property_t *, void *) {
-					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
-					  return false;
-				  });
-	obs_properties_add_group(props, "ndi", "NDI", OBS_GROUP_NORMAL, group_ndi);
-
 	obs_log(LOG_DEBUG, "-ndi_source_getproperties(…)");
 
 	return props;
@@ -1234,6 +1226,7 @@ obs_source_info create_ndi_source_info()
 	obs_source_info ndi_source_info = {};
 	ndi_source_info.id = "ndi_source";
 	ndi_source_info.type = OBS_SOURCE_TYPE_INPUT;
+	ndi_source_info.icon_type = OBS_ICON_TYPE_CAMERA;
 	ndi_source_info.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE;
 
 	ndi_source_info.get_name = ndi_source_getname;
