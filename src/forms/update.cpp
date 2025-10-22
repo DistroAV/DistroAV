@@ -230,8 +230,6 @@ bool CalculateFileHash(const char *path, QString &hash)
 
 	return true;
 }
-//
-
 
 QString GetObsCurrentModuleSHA256()
 {
