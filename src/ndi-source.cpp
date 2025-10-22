@@ -323,7 +323,6 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_properties_add_group(props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE,
 				 group_ptz);
 
-
 	obs_log(LOG_DEBUG, "-ndi_source_getproperties(…)");
 
 	return props;
