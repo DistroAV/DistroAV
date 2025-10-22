@@ -1226,6 +1226,7 @@ obs_source_info create_ndi_source_info()
 	obs_source_info ndi_source_info = {};
 	ndi_source_info.id = "ndi_source";
 	ndi_source_info.type = OBS_SOURCE_TYPE_INPUT;
+	ndi_source_info.icon_type = OBS_ICON_TYPE_CAMERA;
 	ndi_source_info.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE;
 
 	ndi_source_info.get_name = ndi_source_getname;
