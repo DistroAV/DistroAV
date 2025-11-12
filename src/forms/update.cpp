@@ -33,8 +33,6 @@ Inspiration(s):
 
 #include "plugin-main.h"
 
-#include "obs-support/shared-update.hpp"
-
 #include <QDesktopServices>
 #include <QDialog>
 #include <QMainWindow>
@@ -44,6 +42,9 @@ Inspiration(s):
 #include <QTimer>
 #include <QTimeZone>
 #include <QUrlQuery>
+
+#include <QCryptographicHash>
+#include <QFile>
 
 #define UPDATE_TIMEOUT_SEC 10
 
@@ -207,6 +208,28 @@ public:
 //
 //
 //
+
+// Originally from The OBS Studio source code UI/update/shared-update.cpp with modifications for DistroAV Plugin.
+bool CalculateFileHash(const char *path, QString &hash)
+{
+	QFile file(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		obs_log(LOG_WARNING, "WARN-421 - Update Check could not open the update file : `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to open file: `%s`", path);
+		return false;
+	}
+
+	QCryptographicHash qhash(QCryptographicHash::Sha256);
+	if (!qhash.addData(&file)) {
+		obs_log(LOG_WARNING, "WARN-422 - Update Check could not verify the update file: `%s`", path);
+		obs_log(LOG_DEBUG, "CalculateFileHash: Failed to read data from file: `%s`", path);
+		return false;
+	}
+
+	hash = qhash.result().toHex();
+
+	return true;
+}
 
 QString GetObsCurrentModuleSHA256()
 {
@@ -454,7 +477,15 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	obs_log(LOG_DEBUG, "updateCheckStart: url='%s'", QT_TO_UTF8(url.toString()));
 
 	auto pluginVersion = QString(PLUGIN_VERSION);
-	auto obsGuid = GetProgramGUID();
+	auto obsGuid = config->GetInstallGUID();
+
+	if (!obsGuid.isEmpty()) {
+		obs_log(LOG_VERBOSE, "OBS GUID detected : '%s' ", QT_TO_UTF8(obsGuid));
+	} else {
+		obs_log(LOG_VERBOSE, "No OBS GUID detected - Assuming this is a new installation");
+		obsGuid = "noguiddetectednewfreshinstalldistroavobs";
+	}
+
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
 	auto userAgent = QString("DistroAV/%1 (OBS/%2 %3; %4; %5; %6) %7")
 				 .arg(pluginVersion)
