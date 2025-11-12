@@ -79,6 +79,7 @@ public:
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 
+	QString GetInstallGUID();
 	bool AutoCheckForUpdates();
 	void AutoCheckForUpdates(bool value);
 	void SkipUpdateVersion(const QVersionNumber &version);
