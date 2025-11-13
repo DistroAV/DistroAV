@@ -62,7 +62,7 @@ void on_preview_output_stopped(void *, calldata_t *)
 void preview_output_stop()
 {
 	obs_log(LOG_DEBUG, "+preview_output_stop()");
-	if (context.is_running) {
+	if (context.output) {
 		obs_log(LOG_DEBUG, "preview_output_stop: stopping NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
