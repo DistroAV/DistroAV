@@ -55,7 +55,7 @@ void on_main_output_stopped(void *, calldata_t *)
 void main_output_stop()
 {
 	obs_log(LOG_DEBUG, "+main_output_stop()");
-	if (context.is_running) {
+	if (context.output) {
 		obs_log(LOG_DEBUG, "main_output_stop: stopping NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
 
