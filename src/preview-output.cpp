@@ -167,6 +167,10 @@ void preview_output_start()
 			obs_log(LOG_WARNING,
 				"preview_output_start: failed to start NDI preview output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), error);
+			obs_log(LOG_ERROR, "ERR-400 - Failed to start NDI preview output '%s'",
+				QT_TO_UTF8(context.ndi_name));
+			// Could not start Output, still trigger it to stop.
+			obs_output_stop(context.output);
 		}
 	} else {
 		obs_log(LOG_WARNING,
