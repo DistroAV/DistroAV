@@ -21,7 +21,6 @@
 #include <random>
 
 struct main_output {
-	bool is_running;
 	QString ndi_name;
 	QString ndi_groups;
 	QString last_error;
@@ -59,8 +58,6 @@ void main_output_stop()
 		obs_log(LOG_DEBUG, "main_output_stop: stopping NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
 
-		context.is_running = false;
-
 		obs_log(LOG_DEBUG, "main_output_stop: successfully stopped NDI Main Output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
@@ -74,14 +71,14 @@ void main_output_start()
 {
 	obs_log(LOG_DEBUG, "+main_output_start()");
 	if (context.output) {
-		if (context.is_running) {
+		if (obs_output_active(context.output)) {
 			main_output_stop();
 		}
 
 		obs_log(LOG_DEBUG, "main_output_start: starting NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
 
-		context.is_running = obs_output_start(context.output);
-		if (context.is_running) {
+		obs_output_start(context.output);
+		if (obs_output_active(context.output)) {
 			obs_log(LOG_DEBUG, "main_output_start: successfully started NDI Main Output '%s'",
 				QT_TO_UTF8(context.ndi_name));
 			context.last_error = QString("");

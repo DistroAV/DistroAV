@@ -23,7 +23,6 @@
 #include <media-io/video-frame.h>
 
 struct preview_output {
-	bool is_running;
 	QString ndi_name;
 	QString ndi_groups;
 
@@ -82,8 +81,6 @@ void preview_output_stop()
 		video_output_close(context.video_queue);
 		audio_output_close(context.dummy_audio_queue);
 
-		context.is_running = false;
-
 		obs_log(LOG_DEBUG, "preview_output_stop: successfully stopped NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
@@ -97,7 +94,7 @@ void preview_output_start()
 {
 	obs_log(LOG_DEBUG, "+preview_output_start()");
 	if (context.output) {
-		if (context.is_running) {
+		if (obs_output_active(context.output)) {
 			preview_output_stop();
 		}
 
@@ -158,8 +155,8 @@ void preview_output_start()
 
 		obs_output_set_media(context.output, context.video_queue, context.dummy_audio_queue);
 
-		context.is_running = obs_output_start(context.output);
-		if (context.is_running) {
+		obs_output_start(context.output);
+		if (obs_output_active(context.output)) {
 			obs_log(LOG_DEBUG, "preview_output_start: successfully started NDI preview output '%s'",
 				QT_TO_UTF8(context.ndi_name));
 		} else {
