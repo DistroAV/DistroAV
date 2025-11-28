@@ -27,7 +27,7 @@ fi
 pushd "$LIBNDI_TMP"
 
 # Download LIBNDI
-# The follwoing should work with tmp folder in the user home directory - but not always... So we do not use it.
+# The following should work with tmp folder in the user home directory - but not always... So we do not use it.
 # curl -o "$LIBNDI_TMP/$LIBNDI_INSTALLER" $LIBNDI_INSTALLER_URL -f --retry 5
 
 # The following is required if the temp directory is not in the user home directory.
