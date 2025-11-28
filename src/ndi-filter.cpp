@@ -112,9 +112,9 @@ bool is_filter_valid(ndi_filter_t *filter)
 	uint32_t width = obs_source_get_width(filter->obs_source);
 	uint32_t height = obs_source_get_height(filter->obs_source);
 
-	// Valid if parent width/height are nonzero, source is enabled, and parent is active
+	// Valid if parent width/height are nonzero, source is enabled, and parent is showing somewhere in OBS's windows
 	bool is_valid = (width != 0) && (height != 0) && obs_source_enabled(filter->obs_source) &&
-			obs_source_active(parent);
+			obs_source_showing(parent);
 
 	return is_valid;
 }
