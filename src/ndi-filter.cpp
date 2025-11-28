@@ -41,6 +41,7 @@ typedef struct {
 
 	uint32_t known_width;
 	uint32_t known_height;
+	bool rendered;
 
 	gs_texrender_t *texrender;
 	gs_stagesurf_t *stagesurface;
@@ -149,6 +150,9 @@ void ndi_filter_render_video(void *data, gs_effect_t *)
 	auto f = (ndi_filter_t *)data;
 	obs_source_skip_video_filter(f->obs_source);
 
+	if (f->rendered)
+		return;
+
 	obs_source_t *target = obs_filter_get_target(f->obs_source);
 	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
 
@@ -226,6 +230,8 @@ void ndi_filter_render_video(void *data, gs_effect_t *)
 			gs_stagesurface_unmap(f->stagesurface);
 		}
 	}
+
+	f->rendered = true;
 }
 
 void ndi_sender_destroy(ndi_filter_t *filter)
@@ -395,6 +401,8 @@ void ndi_filter_tick(void *data, float)
 {
 	auto f = (ndi_filter_t *)data;
 	obs_get_video_info(&f->ovi);
+
+	f->rendered = false;
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
