@@ -395,13 +395,6 @@ void ndi_filter_tick(void *data, float)
 {
 	auto f = (ndi_filter_t *)data;
 	obs_get_video_info(&f->ovi);
-
-	if (!is_filter_valid(f)) {
-		return;
-	} else if (!f->ndi_sender) {
-		// If the sender is null then recreate it
-		ndi_sender_create(f, nullptr);
-	}
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
