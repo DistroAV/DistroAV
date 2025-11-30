@@ -41,6 +41,7 @@ typedef struct {
 
 	uint32_t known_width;
 	uint32_t known_height;
+	bool rendered;
 
 	gs_texrender_t *texrender;
 	gs_stagesurf_t *stagesurface;
@@ -112,9 +113,9 @@ bool is_filter_valid(ndi_filter_t *filter)
 	uint32_t width = obs_source_get_width(filter->obs_source);
 	uint32_t height = obs_source_get_height(filter->obs_source);
 
-	// Valid if parent width/height are nonzero, source is enabled, and parent is active
+	// Valid if parent width/height are nonzero, source is enabled, and parent is showing somewhere in OBS's windows
 	bool is_valid = (width != 0) && (height != 0) && obs_source_enabled(filter->obs_source) &&
-			obs_source_active(parent);
+			obs_source_showing(parent);
 
 	return is_valid;
 }
@@ -148,6 +149,9 @@ void ndi_filter_render_video(void *data, gs_effect_t *)
 {
 	auto f = (ndi_filter_t *)data;
 	obs_source_skip_video_filter(f->obs_source);
+
+	if (f->rendered)
+		return;
 
 	obs_source_t *target = obs_filter_get_target(f->obs_source);
 	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
@@ -226,6 +230,8 @@ void ndi_filter_render_video(void *data, gs_effect_t *)
 			gs_stagesurface_unmap(f->stagesurface);
 		}
 	}
+
+	f->rendered = true;
 }
 
 void ndi_sender_destroy(ndi_filter_t *filter)
@@ -396,12 +402,7 @@ void ndi_filter_tick(void *data, float)
 	auto f = (ndi_filter_t *)data;
 	obs_get_video_info(&f->ovi);
 
-	if (!is_filter_valid(f)) {
-		return;
-	} else if (!f->ndi_sender) {
-		// If the sender is null then recreate it
-		ndi_sender_create(f, nullptr);
-	}
+	f->rendered = false;
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
