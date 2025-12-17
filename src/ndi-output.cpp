@@ -17,7 +17,8 @@
 
 #include "plugin-main.h"
 #include <util/threading.h>
- 
+#include <chrono>
+
 // #include "plugin-support.h"
 
 static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
@@ -82,6 +83,7 @@ typedef struct {
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
 	int8_t no_connections;
+	std::chrono::time_point<std::chrono::steady_clock> last_conn_check;
 } ndi_output_t;
 
 const char *ndi_output_getname(void *)
@@ -126,6 +128,10 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 	o->output = output;
 	pthread_mutex_init(&o->ndi_sender_mutex, NULL);
 	ndi_output_update(o, settings);
+
+	// initialize last_conn_check so first check will occur immediately
+	o->no_connections = -1;
+	o->last_conn_check = std::chrono::steady_clock::time_point();
 
 	obs_log(LOG_DEBUG, "-ndi_output_create(name='%s', groups='%s', ...)", name, groups);
 	return o;
@@ -241,7 +247,6 @@ bool ndi_output_start(void *data)
 		obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi sender init failed", name);
 	}
 
-	o->no_connections = -1;
 	obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s'...)", name, groups);
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
@@ -329,16 +334,20 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	if (!o->ndi_sender) {
 		pthread_mutex_unlock(&o->ndi_sender_mutex);
 		return;
-	}	
+	}
 
-	int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
+	// Throttle calls to send_get_no_connections to at most once per second
+	auto now = std::chrono::steady_clock::now();
+	if (now - o->last_conn_check >= std::chrono::seconds(1)) {
+		int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
+		o->last_conn_check = now;
 
-	if (nc != o->no_connections) {
-		auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
-		obs_log(LOG_INFO,
-			"NDI Output video sender status: ndi_name='%s', connections=%d)",
-			ndi_source->p_ndi_name, nc);
-		o->no_connections = nc;
+		if (nc != o->no_connections) {
+			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
+			obs_log(LOG_INFO, "NDI Output video sender status: ndi_name='%s', connections=%d)",
+				ndi_source->p_ndi_name, nc);
+			o->no_connections = nc;
+		}
 	}
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
@@ -385,13 +394,18 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 		return;
 	}
 
-	int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
+	auto now = std::chrono::steady_clock::now();
+	if (now - o->last_conn_check >= std::chrono::seconds(1)) {
+		o->last_conn_check = now;
 
-	if (nc != o->no_connections) {
-		auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
-		obs_log(LOG_INFO, "NDI Output audio sender status: ndi_name='%s', connections=%d)",
-			ndi_source->p_ndi_name, nc);
-		o->no_connections = nc;
+		int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
+
+		if (nc != o->no_connections) {
+			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
+			obs_log(LOG_INFO, "NDI Output audio sender status: ndi_name='%s', connections=%d)",
+				ndi_source->p_ndi_name, nc);
+			o->no_connections = nc;
+		}
 	}
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
