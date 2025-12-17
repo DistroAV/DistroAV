@@ -280,7 +280,12 @@ bool obs_module_load(void)
 	if (!ndiLib) {
 		auto title = Str("NDIPlugin.LibError.Title");
 		auto message = "Error-401: " + QTStr("NDIPlugin.LibError.Message") + "<br>";
+
+#if defined(NDI_OFFICIAL_TOOLS_URL)
 		message += makeLink(NDI_OFFICIAL_TOOLS_URL);
+#else
+		message += makeLink(NDI_OFFICIAL_WEB_URL);
+#endif
 		obs_log(LOG_ERROR, "ERR-401 - NDI library failed to load with message: '%s'", QT_TO_UTF8(message));
 		obs_log(LOG_DEBUG, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
 		showCriticalUnloadingMessageBoxDelayed(title, message);
