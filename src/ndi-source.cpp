@@ -65,6 +65,7 @@
 
 #define PROP_YUV_SPACE_BT601 1
 #define PROP_YUV_SPACE_BT709 2
+#define PROP_YUV_SPACE_BT2100 3
 
 #define PROP_LATENCY_UNDEFINED -1
 #define PROP_LATENCY_NORMAL 0
@@ -186,6 +187,8 @@ static video_colorspace prop_to_colorspace(int index)
 	switch (index) {
 	case PROP_YUV_SPACE_BT601:
 		return VIDEO_CS_601;
+	case PROP_YUV_SPACE_BT2100:
+		return VIDEO_CS_2100_HLG;
 	default:
 	case PROP_YUV_SPACE_BT709:
 		return VIDEO_CS_709;
@@ -296,6 +299,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 							     OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(yuv_spaces, "BT.709", PROP_YUV_SPACE_BT709);
 	obs_property_list_add_int(yuv_spaces, "BT.601", PROP_YUV_SPACE_BT601);
+	obs_property_list_add_int(yuv_spaces, "BT.2100", PROP_YUV_SPACE_BT2100);
 
 	obs_property_t *latency_modes = obs_properties_add_list(props, PROP_LATENCY,
 								obs_module_text("NDIPlugin.SourceProps.Latency"),
@@ -318,14 +322,6 @@ obs_properties_t *ndi_source_getproperties(void *data)
 					0.001);
 	obs_properties_add_group(props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE,
 				 group_ptz);
-
-	auto group_ndi = obs_properties_create();
-	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
-				  [](obs_properties_t *, obs_property_t *, void *) {
-					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
-					  return false;
-				  });
-	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL, group_ndi);
 
 	obs_log(LOG_DEBUG, "-ndi_source_getproperties(…)");
 
@@ -473,6 +469,10 @@ void *ndi_source_thread(void *data)
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.color_format=%d",
 				obs_source_name, //
 				recv_desc.color_format);
+
+			video_format_get_parameters(s->config.yuv_colorspace, s->config.yuv_range,
+						    obs_video_frame.color_matrix, obs_video_frame.color_range_min,
+						    obs_video_frame.color_range_max);
 
 			//
 			// recv_desc is fully populated;
@@ -940,6 +940,20 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		s->config.hw_accel_enabled ? "true" : "false");
 	s->config.hw_accel_enabled = new_hw_accel_enabled;
 
+	auto new_yuv_range = prop_to_range_type((int)obs_data_get_int(settings, PROP_YUV_RANGE));
+	reset_ndi_receiver |= (s->config.yuv_range != new_yuv_range);
+	obs_log(LOG_DEBUG,
+		"'%s' ndi_source_update: Check for 'YUV Range' setting changes: new_yuv_range='%d' vs config.yuv_range='%d'",
+		obs_source_name, new_yuv_range, s->config.yuv_range);
+	s->config.yuv_range = new_yuv_range;
+
+	auto new_yuv_colorspace = prop_to_colorspace((int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
+	reset_ndi_receiver |= (s->config.yuv_colorspace != new_yuv_colorspace);
+	obs_log(LOG_DEBUG,
+		"'%s' ndi_source_update: Check for 'YUV Colorspace' setting changes: new_yuv_colorspace='%d' vs config.yuv_colorspace='%d'",
+		obs_source_name, new_yuv_colorspace, s->config.yuv_colorspace);
+	s->config.yuv_colorspace = new_yuv_colorspace;
+
 	//
 	// reset_ndi_receiver: END
 	//
@@ -1035,9 +1049,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			obs_source_release(new_filter);
 		}
 	}
-
-	s->config.yuv_range = prop_to_range_type((int)obs_data_get_int(settings, PROP_YUV_RANGE));
-	s->config.yuv_colorspace = prop_to_colorspace((int)obs_data_get_int(settings, PROP_YUV_COLORSPACE));
 
 	// Disable OBS buffering only for "Lowest" latency mode
 	const bool is_unbuffered = (s->config.latency == PROP_LATENCY_LOWEST);
@@ -1226,6 +1237,7 @@ obs_source_info create_ndi_source_info()
 	obs_source_info ndi_source_info = {};
 	ndi_source_info.id = "ndi_source";
 	ndi_source_info.type = OBS_SOURCE_TYPE_INPUT;
+	ndi_source_info.icon_type = OBS_ICON_TYPE_CAMERA;
 	ndi_source_info.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO | OBS_SOURCE_DO_NOT_DUPLICATE;
 
 	ndi_source_info.get_name = ndi_source_getname;

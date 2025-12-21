@@ -47,8 +47,6 @@ target_sources(
     src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
     src/obs-support/remote-text.hpp
-    src/obs-support/shared-update.cpp
-    src/obs-support/shared-update.hpp
     src/config.cpp
     src/config.h
     src/main-output.cpp

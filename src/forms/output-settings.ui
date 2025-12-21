@@ -18,525 +18,448 @@
 ******************************************************************************/
 -->
 <ui version="4.0">
- <class>OutputSettings</class>
- <widget class="QDialog" name="OutputSettings">
-  <property name="windowModality">
-   <enum>Qt::NonModal</enum>
-  </property>
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>565</width>
-    <height>549</height>
-   </rect>
-  </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
-  <property name="windowTitle">
-   <string>NDIPlugin.OutputSettings.DialogTitle</string>
-  </property>
-  <layout class="QVBoxLayout">
-   <property name="spacing">
-    <number>6</number>
-   </property>
-   <property name="leftMargin">
-    <number>12</number>
-   </property>
-   <property name="topMargin">
-    <number>12</number>
-   </property>
-   <property name="rightMargin">
-    <number>12</number>
-   </property>
-   <property name="bottomMargin">
-    <number>12</number>
-   </property>
-   <item>
-    <widget class="QGroupBox" name="mainOutputGroupBox">
-     <property name="styleSheet">
-      <string notr="true">QWidget { padding-top: 1em; }</string>
-     </property>
-     <property name="title">
-      <string>NDIPlugin.OutputSettings.GroupBox.Main</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout" name="gridName">
-      <item row="0" column="0">
-       <widget class="QLabel" name="mainOutputNameLabel">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
+    <class>OutputSettings</class>
+    <widget class="QDialog" name="OutputSettings">
+        <property name="windowModality">
+            <enum>Qt::NonModal</enum>
         </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>565</width>
+                <height>549</height>
+            </rect>
         </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.Main.Name</string>
+        <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+            </sizepolicy>
         </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="mainOutputName">
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
+        <property name="windowTitle">
+            <string>NDIPlugin.OutputSettings.DialogTitle</string>
         </property>
-        <property name="text">
-         <string>mainOutputName</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="mainOutputGroupsLabel">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.Main.Groups</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="mainOutputGroups">
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>mainOutputGroups</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="mainOutputLastError">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; color: red; }</string>
-        </property>
-        <property name="text">
-         <string>mainOutputLastError</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
+        <layout class="QVBoxLayout">
+            <property name="spacing">
+                <number>6</number>
+            </property>
+            <property name="leftMargin">
+                <number>12</number>
+            </property>
+            <property name="topMargin">
+                <number>12</number>
+            </property>
+            <property name="rightMargin">
+                <number>12</number>
+            </property>
+            <property name="bottomMargin">
+                <number>12</number>
+            </property>
+            <item>
+                <widget class="QGroupBox" name="mainOutputGroupBox">
+                    <property name="styleSheet">
+                        <string notr="true">QWidget { padding-top: 1em; }</string>
+                    </property>
+                    <property name="title">
+                        <string>NDIPlugin.OutputSettings.GroupBox.Main</string>
+                    </property>
+                    <property name="checkable">
+                        <bool>true</bool>
+                    </property>
+                    <layout class="QGridLayout" name="gridName">
+                        <item row="0" column="0">
+                            <widget class="QLabel" name="mainOutputNameLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Main.Name</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="0" column="1">
+                            <widget class="QLineEdit" name="mainOutputName">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>mainOutputName</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="0">
+                            <widget class="QLabel" name="mainOutputGroupsLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Main.Groups</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="1">
+                            <widget class="QLineEdit" name="mainOutputGroups">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>mainOutputGroups</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="0">
+                            <widget class="QLabel" name="tallyProgramNameLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.GroupBox.Tally.Program</string>
+                                </property>
+                                <property name="toolTip">
+                                    <string>NDIPlugin.OutputSettings.GroupBox.Tally.Program.ToolTip</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="1">
+                            <widget class="QCheckBox" name="tallyProgramCheckBox">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.GroupBox.Tally.Enable</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="3" column="0">
+                            <widget class="QLabel" name="mainOutputLastError">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; color: red; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>mainOutputLastError</string>
+                                </property>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+            <item>
+                <widget class="QGroupBox" name="previewOutputGroupBox">
+                    <property name="styleSheet">
+                        <string notr="true">QWidget { padding-top: 1em; }</string>
+                    </property>
+                    <property name="title">
+                        <string>NDIPlugin.OutputSettings.GroupBox.Preview</string>
+                    </property>
+                    <property name="checkable">
+                        <bool>true</bool>
+                    </property>
+                    <layout class="QGridLayout">
+                        <item row="0" column="0">
+                            <widget class="QLabel" name="previewOutputNameLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Preview.Name</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="0" column="1">
+                            <widget class="QLineEdit" name="previewOutputName">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>previewOutputName</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="0">
+                            <widget class="QLabel" name="previewOutputGroupsLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Preview.Groups</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="1">
+                            <widget class="QLineEdit" name="previewOutputGroups">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>previewOutputGroups</string>
+                                </property>
+                            </widget>
+                        </item>
+
+                        <item row="2" column="0">
+                            <widget class="QLabel" name="tallyPreviewNameLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.GroupBox.Tally.Preview</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="1">
+                            <widget class="QCheckBox" name="tallyPreviewCheckBox">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.GroupBox.Tally.Enable</string>
+                                </property>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
+                    <item>
+                        <widget class="QLabel" name="labelDistroAvVersion">
+                            <property name="font">
+                                <font>
+                                    <bold>true</bold>
+                                </font>
+                            </property>
+                            <property name="text">
+                                <string>Unknown DistroAV version</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QPushButton" name="pushButtonCheckForUpdate">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.CheckForUpdate</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayoutAutoCheckForUpdates">
+                    <item>
+                        <spacer>
+                            <property name="orientation">
+                                <enum>Qt::Horizontal</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                                <size>
+                                    <width>40</width>
+                                    <height>20</height>
+                                </size>
+                            </property>
+                        </spacer>
+                    </item>
+                    <item>
+                        <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
+                            <property name="text">
+                                <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <widget class="Line" name="line3">
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <layout class="QVBoxLayout" name="verticalLayoutNdi">
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayoutNdi">
+                            <item>
+                                <widget class="QLabel" name="labelNdiVersion">
+                                    <property name="font">
+                                        <font>
+                                            <bold>true</bold>
+                                        </font>
+                                    </property>
+                                    <property name="text">
+                                        <string>Unknown NDI version</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QPushButton" name="pushButtonNdi">
+                                    <property name="text">
+                                        <string>ndi.video</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                    <item>
+                        <widget class="QLabel" name="labelNdiRegisteredTrademark">
+                            <property name="text">
+                                <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight</set>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <widget class="Line" name="line2">
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                </widget>
+            </item>
+                                <item>
+                        <widget class="QLabel" name="labelDonate">
+                            <property name="text">
+                                <string>NDIPlugin.Donate</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayoutFooter">
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+
+                    <item>
+                        <widget class="QPushButton" name="pushButtonWiki">
+                            <property name="text">
+                                <string>Wiki</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QPushButton" name="pushButtonDiscord">
+                            <property name="text">
+                                <string>Discord</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QPushButton" name="pushButtonDonate">
+                            <property name="text">
+                                <string>Donate</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <spacer>
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                        <size>
+                            <width>40</width>
+                            <height>20</height>
+                        </size>
+                    </property>
+                </spacer>
+            </item>
+            <item>
+                <widget class="QDialogButtonBox" name="buttonBox">
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="standardButtons">
+                        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+                    </property>
+                </widget>
+            </item>
+        </layout>
     </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="previewOutputGroupBox">
-     <property name="styleSheet">
-      <string notr="true">QWidget { padding-top: 1em; }</string>
-     </property>
-     <property name="title">
-      <string>NDIPlugin.OutputSettings.GroupBox.Preview</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <layout class="QGridLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="previewOutputNameLabel">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.Preview.Name</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="previewOutputName">
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>previewOutputName</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="previewOutputGroupsLabel">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.Preview.Groups</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="previewOutputGroups">
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>previewOutputGroups</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="tallyGroupBox">
-     <property name="styleSheet">
-      <string notr="true">QWidget { padding-top: 1em; }</string>
-     </property>
-     <property name="title">
-      <string>NDIPlugin.OutputSettings.GroupBox.Tally</string>
-     </property>
-     <property name="checkable">
-      <bool>false</bool>
-     </property>
-     <layout class="QGridLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="tallyProgramNameLabel">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.GroupBox.Tally.Program</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QCheckBox" name="tallyProgramCheckBox">
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.GroupBox.Tally.Enable</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <spacer>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="tallyPreviewNameLabel">
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.GroupBox.Tally.Preview</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QCheckBox" name="tallyPreviewCheckBox">
-        <property name="styleSheet">
-         <string notr="true">QWidget { padding: 0; }</string>
-        </property>
-        <property name="text">
-         <string>NDIPlugin.OutputSettings.GroupBox.Tally.Enable</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <spacer>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
-     <item>
-      <widget class="QLabel" name="labelDistroAvVersion">
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Unknown DistroAV version</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonCheckForUpdate">
-       <property name="text">
-        <string>NDIPlugin.OutputSettings.CheckForUpdate</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutAutoCheckForUpdates">
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
-       <property name="text">
-        <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="Line" name="line3">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="verticalLayoutNdi">
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayoutNdi">
-       <item>
-        <widget class="QLabel" name="labelNdiVersion">
-         <property name="font">
-          <font>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Unknown NDI version</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButtonNdi">
-         <property name="text">
-          <string>NDI®</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButtonNdiTools">
-         <property name="text">
-          <string>NDI Tools</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButtonNdiRedist">
-         <property name="text">
-          <string>NDI Redist</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelNdiRegisteredTrademark">
-       <property name="text">
-        <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="Line" name="line2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QLabel" name="labelDonate">
-       <property name="text">
-        <string>NDIPlugin.Donate</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::LinksAccessibleByMouse</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelDonateUrl">
-       <property name="text">
-        <string>Donate URL</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="Line" name="line1">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutDiscord">
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelDiscord">
-       <property name="text">
-        <string>Discord (English):</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelDiscordUrl">
-       <property name="text">
-        <string>Discord URL</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-  </layout>
- </widget>
- <resources/>
- <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>OutputSettings</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>OutputSettings</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+    <resources />
+    <connections>
+        <connection>
+            <sender>buttonBox</sender>
+            <signal>accepted()</signal>
+            <receiver>OutputSettings</receiver>
+            <slot>accept()</slot>
+            <hints>
+                <hint type="sourcelabel">
+                    <x>248</x>
+                    <y>254</y>
+                </hint>
+                <hint type="destinationlabel">
+                    <x>157</x>
+                    <y>274</y>
+                </hint>
+            </hints>
+        </connection>
+        <connection>
+            <sender>buttonBox</sender>
+            <signal>rejected()</signal>
+            <receiver>OutputSettings</receiver>
+            <slot>reject()</slot>
+            <hints>
+                <hint type="sourcelabel">
+                    <x>316</x>
+                    <y>260</y>
+                </hint>
+                <hint type="destinationlabel">
+                    <x>286</x>
+                    <y>274</y>
+                </hint>
+            </hints>
+        </connection>
+    </connections>
 </ui>
