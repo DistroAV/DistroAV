@@ -1,0 +1,4 @@
+# Do not modify the NDI library files.
+
+DisableFormat: true
+SortIncludes: Never
