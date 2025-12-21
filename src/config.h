@@ -28,7 +28,7 @@
  * Linux: ~/.config/obs-studio/global.ini
  * MacOS: ~/Library/Application Support/obs-studio/global.ini
  * Windows: %APPDATA%\obs-studio\global.ini
- * 
+ *
  * Example:
  * ```
  * [NDIPlugin]
@@ -79,6 +79,7 @@ public:
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 
+	QString GetInstallGUID();
 	bool AutoCheckForUpdates();
 	void AutoCheckForUpdates(bool value);
 	void SkipUpdateVersion(const QVersionNumber &version);

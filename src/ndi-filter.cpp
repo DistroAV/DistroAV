@@ -41,6 +41,7 @@ typedef struct {
 
 	uint32_t known_width;
 	uint32_t known_height;
+	bool rendered;
 
 	gs_texrender_t *texrender;
 	gs_stagesurf_t *stagesurface;
@@ -89,14 +90,6 @@ obs_properties_t *ndi_filter_getproperties(void *)
 					  return true;
 				  });
 
-	auto group_ndi = obs_properties_create();
-	obs_properties_add_button(group_ndi, "ndi_website", NDI_OFFICIAL_WEB_URL,
-				  [](obs_properties_t *, obs_property_t *, void *) {
-					  QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL)));
-					  return false;
-				  });
-	obs_properties_add_group(props, "ndi", "NDI®", OBS_GROUP_NORMAL, group_ndi);
-
 	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
 }
@@ -117,20 +110,12 @@ bool is_filter_valid(ndi_filter_t *filter)
 		return false;
 	}
 
-	uint32_t width = obs_source_get_width(target);
-	uint32_t height = obs_source_get_height(target);
+	uint32_t width = obs_source_get_width(filter->obs_source);
+	uint32_t height = obs_source_get_height(filter->obs_source);
 
-	uint32_t parent_width = obs_source_get_base_width(parent);
-	uint32_t parent_height = obs_source_get_base_height(parent);
-
-	if (target == parent) {
-		width = parent_width;
-		height = parent_height;
-	}
-
-	// Valid if parent width/height are nonzero, source is enabled, and parent is active
-	bool is_valid = (parent_width != 0) && (parent_height != 0) && obs_source_enabled(filter->obs_source) &&
-			obs_source_active(parent);
+	// Valid if parent width/height are nonzero, source is enabled, and parent is showing somewhere in OBS's windows
+	bool is_valid = (width != 0) && (height != 0) && obs_source_enabled(filter->obs_source) &&
+			obs_source_showing(parent);
 
 	return is_valid;
 }
@@ -160,12 +145,18 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
-void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
+void ndi_filter_render_video(void *data, gs_effect_t *)
 {
 	auto f = (ndi_filter_t *)data;
+	obs_source_skip_video_filter(f->obs_source);
 
-	obs_source_t *target = obs_filter_get_parent(f->obs_source);
-	if (!target) {
+	if (f->rendered)
+		return;
+
+	obs_source_t *target = obs_filter_get_target(f->obs_source);
+	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+
+	if (!target || !parent) {
 		return;
 	}
 
@@ -175,8 +166,31 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		return;
 	}
 
-	uint32_t width = obs_source_get_base_width(target);
-	uint32_t height = obs_source_get_base_height(target);
+	uint32_t width = obs_source_get_width(f->obs_source);
+	uint32_t height = obs_source_get_height(f->obs_source);
+
+	if (f->known_width != width || f->known_height != height) {
+		gs_stagesurface_destroy(f->stagesurface);
+		f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
+
+		video_output_info vi = {0};
+		vi.format = VIDEO_FORMAT_BGRA;
+		vi.width = width;
+		vi.height = height;
+		vi.fps_den = f->ovi.fps_den;
+		vi.fps_num = f->ovi.fps_num;
+		vi.cache_size = 16;
+		vi.colorspace = VIDEO_CS_DEFAULT;
+		vi.range = VIDEO_RANGE_DEFAULT;
+		vi.name = obs_source_get_name(f->obs_source);
+
+		video_output_close(f->video_output);
+		video_output_open(&f->video_output, &vi);
+		video_output_connect(f->video_output, nullptr, ndi_filter_raw_video, f);
+
+		f->known_width = width;
+		f->known_height = height;
+	}
 
 	gs_texrender_reset(f->texrender);
 
@@ -190,55 +204,34 @@ void ndi_filter_offscreen_render(void *data, uint32_t, uint32_t)
 		gs_blend_state_push();
 		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 
-		obs_source_video_render(target);
+		if (target == parent) {
+			obs_source_skip_video_filter(f->obs_source);
+		} else {
+			obs_source_video_render(target);
+		}
 
 		gs_blend_state_pop();
 		gs_texrender_end(f->texrender);
 
-		if (f->known_width != width || f->known_height != height) {
+		gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
+		if (gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize)) {
+			video_frame output_frame;
+			if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
+				uint32_t linesize = output_frame.linesize[0];
+				for (uint32_t i = 0; i < f->known_height; ++i) {
+					uint32_t dst_offset = linesize * i;
+					uint32_t src_offset = f->video_linesize * i;
+					memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset, linesize);
+				}
 
-			gs_stagesurface_destroy(f->stagesurface);
-			f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
-
-			video_output_info vi = {0};
-			vi.format = VIDEO_FORMAT_BGRA;
-			vi.width = width;
-			vi.height = height;
-			vi.fps_den = f->ovi.fps_den;
-			vi.fps_num = f->ovi.fps_num;
-			vi.cache_size = 16;
-			vi.colorspace = VIDEO_CS_DEFAULT;
-			vi.range = VIDEO_RANGE_DEFAULT;
-			vi.name = obs_source_get_name(f->obs_source);
-
-			video_output_close(f->video_output);
-			video_output_open(&f->video_output, &vi);
-			video_output_connect(f->video_output, nullptr, ndi_filter_raw_video, f);
-
-			f->known_width = width;
-			f->known_height = height;
-		}
-
-		video_frame output_frame;
-		if (video_output_lock_frame(f->video_output, &output_frame, 1, os_gettime_ns())) {
-			if (f->video_data) {
-				gs_stagesurface_unmap(f->stagesurface);
-				f->video_data = nullptr;
+				video_output_unlock_frame(f->video_output);
 			}
 
-			gs_stage_texture(f->stagesurface, gs_texrender_get_texture(f->texrender));
-			gs_stagesurface_map(f->stagesurface, &f->video_data, &f->video_linesize);
-
-			uint32_t linesize = output_frame.linesize[0];
-			for (uint32_t i = 0; i < f->known_height; ++i) {
-				uint32_t dst_offset = linesize * i;
-				uint32_t src_offset = f->video_linesize * i;
-				memcpy(output_frame.data[0] + dst_offset, f->video_data + src_offset, linesize);
-			}
-
-			video_output_unlock_frame(f->video_output);
+			gs_stagesurface_unmap(f->stagesurface);
 		}
 	}
+
+	f->rendered = true;
 }
 
 void ndi_sender_destroy(ndi_filter_t *filter)
@@ -303,13 +296,7 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 	auto name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
-
 	ndi_sender_create(f, settings);
-
-	if (!f->is_audioonly) {
-		obs_add_main_render_callback(ndi_filter_offscreen_render, f);
-	}
 
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 
@@ -365,7 +352,6 @@ void ndi_filter_destroy(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
-	obs_remove_main_render_callback(ndi_filter_offscreen_render, f);
 	video_output_close(f->video_output);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
@@ -416,18 +402,7 @@ void ndi_filter_tick(void *data, float)
 	auto f = (ndi_filter_t *)data;
 	obs_get_video_info(&f->ovi);
 
-	if (!is_filter_valid(f)) {
-		return;
-	} else if (!f->ndi_sender) {
-		// If the sender is null then recreate it
-		ndi_sender_create(f, nullptr);
-	}
-}
-
-void ndi_filter_videorender(void *data, gs_effect_t *)
-{
-	auto f = (ndi_filter_t *)data;
-	obs_source_skip_video_filter(f->obs_source);
+	f->rendered = false;
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
@@ -494,7 +469,7 @@ obs_source_info create_ndi_filter_info()
 	ndi_filter_info.update = ndi_filter_update;
 
 	ndi_filter_info.video_tick = ndi_filter_tick;
-	ndi_filter_info.video_render = ndi_filter_videorender;
+	ndi_filter_info.video_render = ndi_filter_render_video;
 
 	// Audio is available only with async sources
 	ndi_filter_info.filter_audio = ndi_filter_asyncaudio;
