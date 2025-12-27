@@ -758,7 +758,7 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 
 	switch (config->sync_mode) {
 	case PROP_SYNC_NDI_TIMESTAMP:
-		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timestamp * 100);
+		obs_audio_frame->timestamp = ndi_audio_frame->timestamp;
 		break;
 
 	case PROP_SYNC_NDI_SOURCE_TIMECODE:
@@ -819,7 +819,7 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 
 	switch (config->sync_mode) {
 	case PROP_SYNC_NDI_TIMESTAMP:
-		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timestamp * 100);
+		obs_video_frame->timestamp = ndi_video_frame->timestamp;
 		break;
 
 	case PROP_SYNC_NDI_SOURCE_TIMECODE:
