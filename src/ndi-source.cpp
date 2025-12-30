@@ -247,7 +247,12 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time
 		*base_ndi = ndi_time_100ns;
 		sync->base_obs_time = now;
 
-		obs_log(LOG_DEBUG, "Timestamp sync initialized: NDI base=%lld (100ns), OBS base=%llu ns",
+		// IMPORTANT: Reset OBS's internal async frame buffer state
+		// This clears any stale last_frame_ts that accumulated while waiting for NDI source
+		// Without this, OBS's frame timing may be out of sync with our new baseline
+		obs_source_output_video(source->obs_source, NULL);
+
+		obs_log(LOG_INFO, "Timestamp sync initialized: NDI base=%lld (100ns), OBS base=%llu ns - cleared OBS frame buffer",
 			(long long)ndi_time_100ns, (unsigned long long)now);
 
 		return now;
