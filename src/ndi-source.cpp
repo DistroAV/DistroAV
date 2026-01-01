@@ -120,9 +120,9 @@ typedef struct ndi_source_config_t {
 typedef struct ndi_timestamp_sync_t {
 	bool timestamp_initialized;
 	bool timecode_initialized;
-	int64_t base_ndi_timestamp;     // First NDI timestamp (100ns units)
-	int64_t base_ndi_timecode;      // First NDI timecode (100ns units)
-	uint64_t base_obs_time;         // OBS system time at first frame
+	int64_t base_ndi_timestamp; // First NDI timestamp (100ns units)
+	int64_t base_ndi_timecode;  // First NDI timecode (100ns units)
+	uint64_t base_obs_time;     // OBS system time at first frame
 } ndi_timestamp_sync_t;
 
 typedef struct ndi_source_t {
@@ -252,7 +252,8 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time
 		// Without this, OBS's frame timing may be out of sync with our new baseline
 		obs_source_output_video(source->obs_source, NULL);
 
-		obs_log(LOG_INFO, "Timestamp sync initialized: NDI base=%lld (100ns), OBS base=%llu ns - cleared OBS frame buffer",
+		obs_log(LOG_INFO,
+			"Timestamp sync initialized: NDI base=%lld (100ns), OBS base=%llu ns - cleared OBS frame buffer",
 			(long long)ndi_time_100ns, (unsigned long long)now);
 
 		return now;
@@ -729,8 +730,7 @@ void *ndi_source_thread(void *data)
 			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 				timestamp_audio = audio_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
-				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source,
-								 &obs_audio_frame);
+				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source, &obs_audio_frame);
 			}
 			ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
 
@@ -761,8 +761,7 @@ void *ndi_source_thread(void *data)
 				// AUDIO
 				//
 				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
-				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source,
-								 &obs_audio_frame);
+				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source, &obs_audio_frame);
 
 				ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				continue;
