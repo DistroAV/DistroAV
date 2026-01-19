@@ -119,25 +119,28 @@ bool main_output_is_supported()
 	obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_support_test_name));
 	obs_data_set_string(output_settings, "ndi_groups", "DistroAV Config");
 
-	bool is_supported = true;
+	bool is_supported = false;
 	context.last_error = QString("");
 
 	auto output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
 	obs_data_release(output_settings);
 
 	if (output != nullptr) {
-		bool is_running = obs_output_start(output);
+		obs_output_start(output);
 
-		if (!is_running) {
+		if (!obs_output_active(output)) {
 			is_supported = false;
 			context.last_error = obs_output_get_last_error(output);
 			obs_log(LOG_DEBUG, "main_output_is_supported: '%s'", QT_TO_UTF8(context.last_error));
+		} else {
+			is_supported = true;
+			obs_log(LOG_DEBUG, "main_output_is_supported: NDI Main Output is supported");
 		}
 		obs_output_stop(output);
 		obs_output_release(output);
 	} else {
 		is_supported = false;
-		obs_log(LOG_DEBUG, "main_output_is_supported: NDI Main Output could not created");
+		obs_log(LOG_DEBUG, "main_output_is_supported: NDI Main Output could not be created");
 	}
 	obs_log(LOG_DEBUG, "-main_output_is_supported()");
 	return is_supported;
