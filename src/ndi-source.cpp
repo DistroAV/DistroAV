@@ -230,46 +230,26 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.base_obs_time = 0;
 }
 
-// Translate NDI timestamp/timecode to OBS time domain
-// This preserves relative timing while aligning with OBS's clock expectations
+// Translate NDI timestamp to OBS time domain using arrival time.
+// Uses os_gettime_ns() at delivery moment for each frame rather than
+// mapping NDI timestamps through a baseline offset. This produces stable
+// A/V sync across OBS restarts because both audio and video timestamps
+// naturally align with OBS's processing pipeline timing.
 // Fixes: https://github.com/DistroAV/DistroAV/issues/1386
 static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time_100ns, bool is_timecode)
 {
+	(void)ndi_time_100ns;
+	(void)is_timecode;
+
 	ndi_timestamp_sync_t *sync = &source->ts_sync;
-	uint64_t now = os_gettime_ns();
 
-	bool *initialized = is_timecode ? &sync->timecode_initialized : &sync->timestamp_initialized;
-	int64_t *base_ndi = is_timecode ? &sync->base_ndi_timecode : &sync->base_ndi_timestamp;
-
-	if (!*initialized) {
-		// First frame - establish baseline mapping between NDI and OBS time domains
-		*initialized = true;
-		*base_ndi = ndi_time_100ns;
-		sync->base_obs_time = now;
-
-		// IMPORTANT: Reset OBS's internal async frame buffer state
-		// This clears any stale last_frame_ts that accumulated while waiting for NDI source
-		// Without this, OBS's frame timing may be out of sync with our new baseline
+	if (!sync->timestamp_initialized) {
+		sync->timestamp_initialized = true;
 		obs_source_output_video(source->obs_source, NULL);
-
-		obs_log(LOG_INFO,
-			"Timestamp sync initialized: NDI base=%lld (100ns), OBS base=%llu ns - cleared OBS frame buffer",
-			(long long)ndi_time_100ns, (unsigned long long)now);
-
-		return now;
+		obs_log(LOG_INFO, "Timestamp sync: using arrival-time mode - cleared OBS frame buffer");
 	}
 
-	// Calculate relative offset from first frame (convert 100ns to nanoseconds)
-	int64_t ndi_offset_100ns = ndi_time_100ns - *base_ndi;
-	int64_t ndi_offset_ns = ndi_offset_100ns * 100;
-
-	// Apply offset to OBS baseline time
-	// Handle potential negative offset (frame arrived before baseline - shouldn't happen but be safe)
-	if (ndi_offset_ns < 0 && (uint64_t)(-ndi_offset_ns) > sync->base_obs_time) {
-		return 0;
-	}
-
-	return sync->base_obs_time + ndi_offset_ns;
+	return os_gettime_ns();
 }
 
 const char *ndi_source_getname(void *)
