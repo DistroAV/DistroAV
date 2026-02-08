@@ -1228,13 +1228,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		}
 	}
 
-	// Disable OBS async frame buffering for Low and Lowest latency modes.
-	// With buffering enabled, OBS's async video pipeline introduces
-	// render-phase-dependent delays that vary per restart, causing
-	// non-deterministic A/V sync offsets.
-	const bool is_unbuffered = (s->config.latency == PROP_LATENCY_LOW || s->config.latency == PROP_LATENCY_LOWEST);
-	obs_source_set_async_unbuffered(obs_source, is_unbuffered);
-
 	s->config.audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 	obs_source_set_audio_active(obs_source, s->config.audio_enabled);
 
@@ -1244,6 +1237,15 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		"'%s' ndi_source_update: sync_lock_enabled=%s",
 		obs_source_get_name(obs_source),
 		s->config.sync_lock_enabled ? "true" : "false");
+
+	// Sync Lock forces buffered mode for consistent A/V sync across restarts.
+	// In unbuffered mode, NDI pipeline latency variation (~25ms between
+	// connections) and render-phase quantization cause non-deterministic
+	// A/V sync offsets. Buffered mode lets OBS select frames based on
+	// timestamps, smoothing out these variations.
+	const bool is_unbuffered = !s->config.sync_lock_enabled &&
+		(s->config.latency == PROP_LATENCY_LOW || s->config.latency == PROP_LATENCY_LOWEST);
+	obs_source_set_async_unbuffered(obs_source, is_unbuffered);
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
