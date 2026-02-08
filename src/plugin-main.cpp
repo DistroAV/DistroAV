@@ -360,8 +360,14 @@ bool obs_module_load(void)
 		obs_frontend_add_event_callback(
 			[](enum obs_frontend_event event, void *) {
 				if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-					main_output_init();
-					preview_output_init();
+					auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
+					QMetaObject::invokeMethod(
+						main_window,
+						[] {
+							main_output_init();
+							preview_output_init();
+						},
+						Qt::QueuedConnection);
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
 					main_output_deinit();
