@@ -283,8 +283,9 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
 		return os_gettime_ns();
 	}
 
-	// Sync Lock: PTP timecodes mapped to QPC via UTC, phase-aligned
-	// to OBS render tick grid for deterministic timing_adjust
+	// Sync Lock: PTP timecodes phase-aligned to OBS render tick grid,
+	// with one-time sleep to synchronize first frame display to a
+	// PTP-deterministic render tick (eliminates 33ms variance).
 	int64_t ndi_tc_ns = ndi_time_100ns * 100;
 
 	if (!sync->timecode_initialized) {
@@ -297,17 +298,12 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
 		int64_t utc_to_qpc = (int64_t)qpc_ns - (int64_t)utc_ns;
 		int64_t ndi_tc_qpc = ndi_tc_ns + utc_to_qpc;
 
-		// Phase-align to OBS render tick grid so timing_adjust
-		// (render_tick - frame_timestamp) is always a whole number
-		// of frame intervals, making A/V sync deterministic across
-		// restarts regardless of pipeline delay variance.
+		// Phase-align to OBS render tick grid.
+		// render_tick % interval is deterministic despite thread
+		// race (tick N vs N+1 differ by exactly one interval).
 		uint64_t interval = obs_get_frame_interval_ns();
 		uint64_t render_tick = obs_get_video_frame_time();
 
-		// Extract phase of each grid (mod interval).
-		// render_tick % interval is deterministic even if we race
-		// with the render thread (tick N vs N+1 differ by exactly
-		// one interval, so their phase mod interval is identical).
 		int64_t render_phase = (int64_t)(render_tick % interval);
 		int64_t ndi_phase = ndi_tc_qpc % (int64_t)interval;
 		if (ndi_phase < 0)
@@ -320,18 +316,52 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
 		if (phase_shift > half)
 			phase_shift -= (int64_t)interval;
 
-		sync->base_obs_time = (uint64_t)(ndi_tc_qpc + phase_shift);
+		int64_t ndi_tc_aligned =  ndi_tc_qpc + phase_shift;
+
+		// Sleep until a PTP-deterministic render tick boundary.
+		// This ensures the first frame is always displayed at the
+		// same tick relative to its PTP timecode, eliminating the
+		// 33ms variance caused by pipeline delay crossing a render
+		// tick boundary. The sleep target is computed solely from
+		// PTP values (not arrival time), so it's consistent across
+		// restarts regardless of pipeline delay.
+		//
+		// Buffer of 2 frames: handles pipeline delays up to ~66ms
+		// (sufficient for 2-hop LAN NDI chains).
+		uint64_t buffer_ns = 2 * interval;
+		uint64_t sleep_target =
+			(uint64_t)ndi_tc_aligned + buffer_ns;
+		uint64_t now = os_gettime_ns();
+
+		if (sleep_target > now) {
+			uint64_t sleep_ns = sleep_target - now;
+			os_sleepto_ns(sleep_target);
+			obs_log(LOG_INFO,
+				"'%s' Sync Lock: slept %llu ns "
+				"for render-tick sync",
+				obs_source_get_name(source->obs_source),
+				(unsigned long long)sleep_ns);
+		} else {
+			obs_log(LOG_WARNING,
+				"'%s' Sync Lock: pipeline delay "
+				"(%lld ns) exceeds buffer (%llu ns)",
+				obs_source_get_name(source->obs_source),
+				(long long)(now - (uint64_t)ndi_tc_aligned),
+				(unsigned long long)buffer_ns);
+		}
+
+		sync->base_obs_time = (uint64_t)ndi_tc_aligned;
 
 		obs_source_output_video(source->obs_source, NULL);
 		obs_log(LOG_INFO,
-			"'%s' Sync Lock: PTP-to-QPC baseline "
-			"(ndi_tc=%lld ns, qpc=%llu ns, "
-			"phase_shift=%lld ns, interval=%llu ns)",
+			"'%s' Sync Lock: PTP baseline "
+			"(ndi_tc=%lld ns, base=%llu ns, "
+			"phase_shift=%lld ns, buffer=%llu ns)",
 			obs_source_get_name(source->obs_source),
 			(long long)ndi_tc_ns,
 			(unsigned long long)sync->base_obs_time,
 			(long long)phase_shift,
-			(unsigned long long)interval);
+			(unsigned long long)buffer_ns);
 	}
 
 	int64_t tc_delta = ndi_tc_ns - sync->base_ndi_timecode;
