@@ -257,6 +257,8 @@ static void ndi_source_video_tick(void *data, float seconds)
 {
 	(void)seconds;
 	auto s = (ndi_source_t *)data;
+	if (!s->phase_lock.enabled)
+		return;
 	s->phase_lock.last_tick_time_ns = os_gettime_ns();
 	uint64_t interval = obs_get_frame_interval_ns();
 	if (interval > 0)
