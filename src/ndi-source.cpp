@@ -234,10 +234,11 @@ static void reset_timestamp_sync(ndi_source_t *source)
 }
 
 // Translate NDI timestamp to OBS time domain using arrival time.
-// Uses os_gettime_ns() at delivery moment for each frame, keeping
-// timestamps aligned with OBS's continuous timeline. This ensures
-// consistent A/V sync across OBS restarts because both audio and
-// video timestamps reference the same system clock without resets.
+// Uses os_gettime_ns() at delivery moment for each frame rather than
+// mapping NDI timestamps through a baseline offset. This produces stable
+// A/V sync within each OBS session because both audio and video
+// timestamps naturally align with OBS's processing pipeline timing.
+// The frame buffer clear on first frame ensures a clean async state.
 // Fixes: https://github.com/DistroAV/DistroAV/issues/1386
 static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time_100ns, bool is_timecode)
 {
@@ -248,7 +249,8 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time
 
 	if (!sync->timestamp_initialized) {
 		sync->timestamp_initialized = true;
-		obs_log(LOG_INFO, "'%s' Timestamp sync: first frame, arrival-time mode (os_gettime_ns=%llu)",
+		obs_source_output_video(source->obs_source, NULL);
+		obs_log(LOG_INFO, "'%s' Timestamp sync: first frame, cleared OBS frame buffer (os_gettime_ns=%llu)",
 			obs_source_get_name(source->obs_source), (unsigned long long)os_gettime_ns());
 	}
 
