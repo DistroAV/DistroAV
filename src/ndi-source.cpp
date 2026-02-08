@@ -123,7 +123,7 @@ typedef struct ndi_timestamp_sync_t {
 	bool timestamp_initialized;
 	bool timecode_initialized;
 	int64_t base_ndi_timestamp; // First NDI timestamp (100ns units)
-	int64_t base_ndi_timecode;  // First NDI timecode (converted to ns)
+	int64_t base_ndi_timecode;  // First NDI timecode (100ns units)
 	uint64_t base_obs_time;     // OBS system time at first frame
 } ndi_timestamp_sync_t;
 
@@ -235,52 +235,26 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.base_obs_time = 0;
 }
 
-// Translate NDI timestamp to OBS time domain.
-// Two modes:
-// 1. Non-Sync-Lock: uses os_gettime_ns() arrival time (existing behavior)
-// 2. Sync Lock + PTP: uses NDI timecodes mapped to OBS monotonic clock
-//    via a fixed offset established on first frame. This makes inter-frame
-//    spacing deterministic (driven by PTP-synced sender timecodes) rather
-//    than dependent on random network arrival timing.
+// Translate NDI timestamp to OBS time domain using arrival time.
+// Uses os_gettime_ns() at delivery moment for each frame. This produces stable
+// A/V sync within each OBS session because both audio and video timestamps
+// naturally align with OBS's processing pipeline timing.
+// The frame buffer clear on first frame ensures a clean async state.
 // Fixes: https://github.com/DistroAV/DistroAV/issues/1386
-static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
-	int64_t ndi_time_100ns, bool is_timecode)
+static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time_100ns, bool is_timecode)
 {
 	ndi_timestamp_sync_t *sync = &source->ts_sync;
 
-	if (!source->config.sync_lock_enabled || !is_timecode) {
-		// Non-Sync-Lock mode: use arrival time (existing behavior)
-		if (!sync->timestamp_initialized) {
-			sync->timestamp_initialized = true;
-			obs_source_output_video(source->obs_source, NULL);
-			obs_log(LOG_INFO,
-				"'%s' Timestamp sync: first frame, cleared OBS frame buffer",
-				obs_source_get_name(source->obs_source));
-		}
-		return os_gettime_ns();
-	}
-
-	// Sync Lock + PTP mode: use NDI timecodes for consistent timing
-	int64_t ndi_tc_ns = ndi_time_100ns * 100;
-
-	if (!sync->timecode_initialized) {
-		sync->timecode_initialized = true;
-		sync->base_ndi_timecode = ndi_tc_ns;
-		sync->base_obs_time = os_gettime_ns();
+	if (!sync->timestamp_initialized) {
+		sync->timestamp_initialized = true;
 		obs_source_output_video(source->obs_source, NULL);
-		obs_log(LOG_INFO,
-			"'%s' Sync Lock: PTP timecode baseline established "
-			"(ndi_tc=%lld ns, obs_time=%llu ns)",
-			obs_source_get_name(source->obs_source),
-			(long long)ndi_tc_ns,
-			(unsigned long long)sync->base_obs_time);
+		obs_log(LOG_INFO, "'%s' Timestamp sync: first frame, cleared OBS frame buffer (os_gettime_ns=%llu)",
+			obs_source_get_name(source->obs_source), (unsigned long long)os_gettime_ns());
 	}
 
-	// Map NDI timecode to OBS time domain using fixed offset
-	int64_t tc_delta = ndi_tc_ns - sync->base_ndi_timecode;
-	uint64_t obs_time = sync->base_obs_time + (uint64_t)tc_delta;
-
-	return obs_time;
+	(void)ndi_time_100ns;
+	(void)is_timecode;
+	return os_gettime_ns();
 }
 
 const char *ndi_source_getname(void *)
@@ -864,21 +838,16 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	if (source->config.sync_lock_enabled) {
-		// Sync Lock always uses timecodes for PTP-consistent timing
-		obs_audio_frame->timestamp = translate_ndi_to_obs_time(
-			source, ndi_audio_frame->timecode, true);
-	} else {
-		switch (config->sync_mode) {
-		case PROP_SYNC_NDI_TIMESTAMP:
-			obs_audio_frame->timestamp = translate_ndi_to_obs_time(
-				source, ndi_audio_frame->timestamp, false);
-			break;
-		case PROP_SYNC_NDI_SOURCE_TIMECODE:
-			obs_audio_frame->timestamp = translate_ndi_to_obs_time(
-				source, ndi_audio_frame->timecode, true);
-			break;
-		}
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		// Translate NDI timestamp to OBS time domain (fixes issue #1386)
+		obs_audio_frame->timestamp = translate_ndi_to_obs_time(source, ndi_audio_frame->timestamp, false);
+		break;
+
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		// Translate NDI timecode to OBS time domain (fixes issue #1386)
+		obs_audio_frame->timestamp = translate_ndi_to_obs_time(source, ndi_audio_frame->timecode, true);
+		break;
 	}
 
 	obs_audio_frame->samples_per_sec = ndi_audio_frame->sample_rate;
@@ -932,21 +901,13 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 
 	auto config = &source->config;
 
-	if (source->config.sync_lock_enabled) {
-		// Sync Lock always uses timecodes for PTP-consistent timing
-		obs_video_frame->timestamp = translate_ndi_to_obs_time(
-			source, ndi_video_frame->timecode, true);
-	} else {
-		switch (config->sync_mode) {
-		case PROP_SYNC_NDI_TIMESTAMP:
-			obs_video_frame->timestamp = translate_ndi_to_obs_time(
-				source, ndi_video_frame->timestamp, false);
-			break;
-		case PROP_SYNC_NDI_SOURCE_TIMECODE:
-			obs_video_frame->timestamp = translate_ndi_to_obs_time(
-				source, ndi_video_frame->timecode, true);
-			break;
-		}
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_video_frame->timestamp = translate_ndi_to_obs_time(source, ndi_video_frame->timestamp, false);
+		break;
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_video_frame->timestamp = translate_ndi_to_obs_time(source, ndi_video_frame->timecode, true);
+		break;
 	}
 
 	source->width = ndi_video_frame->xres;
