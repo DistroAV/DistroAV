@@ -24,7 +24,6 @@
 #include <QDesktopServices>
 #include <QUrl>
 
-#include <chrono>
 #include <thread>
 
 #define PROP_SOURCE "ndi_source_name"
@@ -128,20 +127,6 @@ typedef struct ndi_timestamp_sync_t {
 	uint64_t base_obs_time;     // OBS system time at first frame
 } ndi_timestamp_sync_t;
 
-// Timecode drift calibration for consistent A/V sync across OBS restarts.
-// On first-ever connection, records the wall-clock-to-NDI-timecode offset as
-// a baseline (persisted to OBS source settings). On each subsequent connection,
-// computes how much the NDI pipeline latency has changed relative to baseline
-// and adjusts video timestamps to compensate. This works because the NDI sender
-// (strih.lan) runs continuously across receiver restarts, so timecodes form a
-// stable reference that survives OBS restarts on the receiver.
-typedef struct ndi_sync_calibration_t {
-	int64_t baseline_offset_ns; // wall_time - ndi_timecode, saved to settings
-	int64_t drift_ns;           // per-connection: current - baseline
-	bool baseline_set;
-	bool drift_computed;
-} ndi_sync_calibration_t;
-
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
@@ -154,9 +139,6 @@ typedef struct ndi_source_t {
 
 	// Timestamp synchronization for network timing mode
 	ndi_timestamp_sync_t ts_sync;
-
-	// Timecode drift calibration for consistent A/V sync
-	ndi_sync_calibration_t sync_cal;
 
 	uint64_t last_frame_timestamp;
 
@@ -253,65 +235,10 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.base_obs_time = 0;
 }
 
-static void reset_sync_calibration(ndi_source_t *source)
-{
-	source->sync_cal.drift_computed = false;
-}
-
-// Get wall clock time in nanoseconds (persists across OBS restarts, unlike os_gettime_ns).
-static int64_t get_wall_time_ns()
-{
-	auto now = std::chrono::system_clock::now();
-	auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-		now.time_since_epoch());
-	return ns.count();
-}
-
-// Calibrate sync offset on first video frame of each connection.
-// Computes drift = (wall_time - ndi_timecode) - baseline and adjusts
-// timestamps to compensate for NDI pipeline latency variation.
-static void calibrate_sync_drift(ndi_source_t *source, int64_t ndi_timecode_100ns)
-{
-	ndi_sync_calibration_t *cal = &source->sync_cal;
-
-	if (cal->drift_computed || !source->config.sync_lock_enabled)
-		return;
-
-	int64_t wall_ns = get_wall_time_ns();
-	int64_t timecode_ns = ndi_timecode_100ns * 100;
-	int64_t current_offset = wall_ns - timecode_ns;
-
-	if (!cal->baseline_set) {
-		cal->baseline_offset_ns = current_offset;
-		cal->baseline_set = true;
-		cal->drift_ns = 0;
-
-		// Save baseline to OBS settings for persistence across restarts
-		obs_data_t *settings = obs_source_get_settings(source->obs_source);
-		obs_data_set_int(settings, "sync_lock_baseline_ns", current_offset);
-		obs_data_release(settings);
-
-		obs_log(LOG_INFO,
-			"'%s' sync_lock: baseline calibrated (wall-timecode=%lld ms)",
-			obs_source_get_name(source->obs_source),
-			(long long)(current_offset / 1000000));
-	} else {
-		cal->drift_ns = current_offset - cal->baseline_offset_ns;
-
-		obs_log(LOG_INFO,
-			"'%s' sync_lock: drift=%lld ms (current=%lld ms, baseline=%lld ms)",
-			obs_source_get_name(source->obs_source),
-			(long long)(cal->drift_ns / 1000000),
-			(long long)(current_offset / 1000000),
-			(long long)(cal->baseline_offset_ns / 1000000));
-	}
-
-	cal->drift_computed = true;
-}
-
 // Translate NDI timestamp to OBS time domain using arrival time.
-// When sync_lock is enabled, adjusts timestamps by the calibrated drift
-// to compensate for NDI pipeline latency variation across connections.
+// Uses os_gettime_ns() at delivery moment for each frame. This produces stable
+// A/V sync within each OBS session because both audio and video timestamps
+// naturally align with OBS's processing pipeline timing.
 // The frame buffer clear on first frame ensures a clean async state.
 // Fixes: https://github.com/DistroAV/DistroAV/issues/1386
 static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time_100ns, bool is_timecode)
@@ -325,18 +252,9 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time
 			obs_source_get_name(source->obs_source), (unsigned long long)os_gettime_ns());
 	}
 
-	uint64_t now = os_gettime_ns();
-
-	// Apply drift compensation when sync_lock is enabled
-	(void)is_timecode;
-	if (source->config.sync_lock_enabled && source->sync_cal.drift_computed) {
-		int64_t adjusted = (int64_t)now - source->sync_cal.drift_ns;
-		if (adjusted > 0)
-			now = (uint64_t)adjusted;
-	}
-
 	(void)ndi_time_100ns;
-	return now;
+	(void)is_timecode;
+	return os_gettime_ns();
 }
 
 const char *ndi_source_getname(void *)
@@ -634,7 +552,6 @@ void *ndi_source_thread(void *data)
 			// Reset timestamp synchronization when receiver is reset
 			// This ensures proper time domain translation on next frame
 			reset_timestamp_sync(s);
-			reset_sync_calibration(s);
 
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: recv_desc = { p_ndi_recv_name='%s', source_to_connect_to.p_ndi_name='%s' }",
@@ -794,8 +711,7 @@ void *ndi_source_thread(void *data)
 					obs_source_name,
 					(unsigned long long)(now - s->last_frame_received_time) / 1000000ULL);
 				reset_timestamp_sync(s);
-				reset_sync_calibration(s);
-			}
+				}
 			s->last_frame_received_time = now;
 		}
 
@@ -869,8 +785,7 @@ void *ndi_source_thread(void *data)
 				obs_log(LOG_INFO, "'%s' NDI status change detected, resetting timestamp sync",
 					obs_source_name);
 				reset_timestamp_sync(s);
-				reset_sync_calibration(s);
-				timestamp_audio = 0;
+					timestamp_audio = 0;
 				timestamp_video = 0;
 				continue;
 			}
@@ -1004,7 +919,6 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
 
-	calibrate_sync_drift(source, ndi_video_frame->timecode);
 	obs_source_output_video(obs_source, obs_video_frame);
 }
 
@@ -1217,19 +1131,6 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_source_get_name(obs_source),
 		s->config.sync_lock_enabled ? "true" : "false");
 
-	// Load persisted calibration baseline from settings
-	if (s->config.sync_lock_enabled) {
-		int64_t saved_baseline = obs_data_get_int(settings, "sync_lock_baseline_ns");
-		if (saved_baseline != 0 && !s->sync_cal.baseline_set) {
-			s->sync_cal.baseline_offset_ns = saved_baseline;
-			s->sync_cal.baseline_set = true;
-			obs_log(LOG_INFO,
-				"'%s' sync_lock: loaded baseline from settings (%lld ms)",
-				obs_source_get_name(obs_source),
-				(long long)(saved_baseline / 1000000));
-		}
-	}
-
 	// Sync Lock forces buffered mode for consistent A/V sync across restarts.
 	// In unbuffered mode, NDI pipeline latency variation (~25ms between
 	// connections) and render-phase quantization cause non-deterministic
@@ -1436,7 +1337,6 @@ obs_source_info create_ndi_source_info()
 
 	ndi_source_info.get_width = ndi_source_get_width;
 	ndi_source_info.get_height = ndi_source_get_height;
-	// video_tick removed: timecode drift calibration doesn't need render-thread timing
 
 	return ndi_source_info;
 }
