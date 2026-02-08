@@ -139,6 +139,9 @@ typedef struct ndi_source_t {
 	ndi_timestamp_sync_t ts_sync;
 
 	uint64_t last_frame_timestamp;
+
+	// Reconnection detection: time of last received frame (os_gettime_ns)
+	uint64_t last_frame_received_time;
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -607,9 +610,12 @@ void *ndi_source_thread(void *data)
 				ndiLib->recv_send_metadata(ndi_receiver, &hwAccelMetadata);
 			}
 
+			// Always reset frame timestamp guards on receiver reset
+			timestamp_audio = 0;
+			timestamp_video = 0;
+			s->last_frame_received_time = 0;
+
 			if (s->config.framesync_enabled) {
-				timestamp_audio = 0;
-				timestamp_video = 0;
 				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: +ndi_frame_sync = ndiLib->framesync_create(ndi_receiver)",
 					obs_source_name);
@@ -692,6 +698,19 @@ void *ndi_source_thread(void *data)
 			ndiLib->recv_set_tally(ndi_receiver, &tally);
 		}
 
+		// Detect source reconnection after sustained frame gap (>2 seconds)
+		{
+			uint64_t now = os_gettime_ns();
+			if (s->last_frame_received_time > 0 && (now - s->last_frame_received_time) > 2000000000ULL) {
+				obs_log(LOG_INFO,
+					"'%s' NDI source reconnected after %llu ms gap, resetting timestamp sync",
+					obs_source_name,
+					(unsigned long long)(now - s->last_frame_received_time) / 1000000ULL);
+				reset_timestamp_sync(s);
+			}
+			s->last_frame_received_time = now;
+		}
+
 		if (ndi_frame_sync) {
 			//
 			// ndi_frame_sync
@@ -755,6 +774,15 @@ void *ndi_source_thread(void *data)
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
+				continue;
+			}
+
+			if (frame_received == NDIlib_frame_type_status_change) {
+				obs_log(LOG_INFO, "'%s' NDI status change detected, resetting timestamp sync",
+					obs_source_name);
+				reset_timestamp_sync(s);
+				timestamp_audio = 0;
+				timestamp_video = 0;
 				continue;
 			}
 
@@ -1093,8 +1121,11 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		}
 	}
 
-	// Disable OBS buffering only for "Lowest" latency mode
-	const bool is_unbuffered = (s->config.latency == PROP_LATENCY_LOWEST);
+	// Disable OBS async frame buffering for Low and Lowest latency modes.
+	// With buffering enabled, OBS's async video pipeline introduces
+	// render-phase-dependent delays that vary per restart, causing
+	// non-deterministic A/V sync offsets.
+	const bool is_unbuffered = (s->config.latency == PROP_LATENCY_LOW || s->config.latency == PROP_LATENCY_LOWEST);
 	obs_source_set_async_unbuffered(obs_source, is_unbuffered);
 
 	s->config.audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);

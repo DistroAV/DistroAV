@@ -1,0 +1,164 @@
+name: NDI Sync Integration Test
+run-name: NDI A/V Sync Test - ${{ inputs.restart_target || 'all' }} (${{ inputs.restart_cycles || '10' }} cycles)
+
+on:
+  workflow_dispatch:
+    inputs:
+      restart_target:
+        description: "Which machine(s) to restart-test"
+        required: true
+        type: choice
+        options:
+          - all
+          - stream.lan
+          - strih.lan
+          - resolume.lan
+      restart_cycles:
+        description: "Number of restart cycles per machine"
+        required: false
+        default: "10"
+      tolerance_ms:
+        description: "Max allowed latency variance in ms"
+        required: false
+        default: "1.0"
+      stabilization_seconds:
+        description: "Seconds to wait after restart for sync stabilization"
+        required: false
+        default: "30"
+      deploy_plugin:
+        description: "Build and deploy plugin before testing"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows Plugin
+    if: ${{ inputs.deploy_plugin }}
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set Up Environment
+        id: setup
+        run: |
+          $BuildSpec = Get-Content -Path buildspec.json -Raw | ConvertFrom-Json
+          $ProductName = $BuildSpec.name
+          $ProductVersion = $BuildSpec.version
+          "pluginName=${ProductName}" >> $env:GITHUB_OUTPUT
+          "pluginVersion=${ProductVersion}" >> $env:GITHUB_OUTPUT
+
+      - name: Build Plugin
+        uses: ./.github/actions/build-plugin
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Package Plugin
+        uses: ./.github/actions/package-plugin
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: distroav-sync-test-build
+          path: ${{ github.workspace }}/release/distroav-*-windows-x64*.zip
+
+  deploy-and-test:
+    name: Deploy & Run Sync Tests
+    needs: [build-windows]
+    if: ${{ always() && (needs.build-windows.result == 'success' || needs.build-windows.result == 'skipped') }}
+    runs-on: [self-hosted, linux, ndi-testbed]
+    timeout-minutes: 120
+    env:
+      STREAM_HOST: stream.lan
+      STREAM_USER: newlevel
+      STRIH_HOST: strih.lan
+      STRIH_USER: newlevel
+      STRIH_PASS: ${{ secrets.STRIH_SSH_PASS }}
+      RESOLUME_HOST: resolume.lan
+      RESOLUME_USER: newlevel
+      RESOLUME_PASS: ${{ secrets.RESOLUME_SSH_PASS }}
+      RESTART_CYCLES: ${{ inputs.restart_cycles || '10' }}
+      TOLERANCE_MS: ${{ inputs.tolerance_ms || '1.0' }}
+      STABILIZATION_SECS: ${{ inputs.stabilization_seconds || '30' }}
+      RESTART_TARGET: ${{ inputs.restart_target || 'all' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Plugin
+        if: ${{ inputs.deploy_plugin }}
+        uses: actions/download-artifact@v4
+        with:
+          name: distroav-sync-test-build
+          path: ${{ github.workspace }}/artifact
+
+      - name: Extract and Deploy to Machines
+        if: ${{ inputs.deploy_plugin }}
+        run: |
+          cd ${{ github.workspace }}
+          ZIP_FILE=$(ls artifact/distroav-*-windows-x64.zip 2>/dev/null | head -1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No build artifact found, skipping deploy"
+            exit 0
+          fi
+
+          echo "Deploying $ZIP_FILE"
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted/
+
+          # Find the DLL
+          DLL_PATH=$(find extracted -name "distroav.dll" -o -name "obs-ndi.dll" | head -1)
+          if [ -z "$DLL_PATH" ]; then
+            echo "ERROR: Plugin DLL not found in artifact"
+            exit 1
+          fi
+          DLL_DIR=$(dirname "$DLL_PATH")
+          echo "Found plugin DLL at: $DLL_DIR"
+
+          deploy_to() {
+            local host=$1 user=$2 pass=$3
+            local ssh_cmd="ssh -o StrictHostKeyChecking=no"
+            local scp_cmd="scp -o StrictHostKeyChecking=no"
+            if [ -n "$pass" ]; then
+              ssh_cmd="sshpass -p $pass $ssh_cmd"
+              scp_cmd="sshpass -p $pass $scp_cmd"
+            fi
+
+            echo "--- Deploying to ${host} ---"
+            $ssh_cmd ${user}@${host} "taskkill /IM obs64.exe /F 2>nul & exit /b 0" || true
+            sleep 3
+            $scp_cmd "$DLL_DIR"/* ${user}@${host}:"C:/ProgramData/obs-studio/plugins/distroav/bin/64bit/" 2>/dev/null || \
+              $scp_cmd "$DLL_DIR"/* ${user}@${host}:"%APPDATA%/obs-studio/plugins/distroav/bin/64bit/" 2>/dev/null || \
+              echo "WARNING: Deploy to ${host} may have failed"
+          }
+
+          deploy_to "$STREAM_HOST" "$STREAM_USER" ""
+          deploy_to "$STRIH_HOST" "$STRIH_USER" "$STRIH_PASS"
+          deploy_to "$RESOLUME_HOST" "$RESOLUME_USER" "$RESOLUME_PASS"
+
+      - name: Run Sync Integration Tests
+        run: |
+          chmod +x .github/scripts/ndi-sync-test.sh
+          RESULTS_DIR="${{ github.workspace }}/test-results" \
+            .github/scripts/ndi-sync-test.sh
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ndi-sync-test-results
+          path: ${{ github.workspace }}/test-results/
