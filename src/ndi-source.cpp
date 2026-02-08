@@ -240,13 +240,19 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.base_obs_time = 0;
 }
 
-// Get wall clock (UTC) time in nanoseconds. PTP-synced on configured systems.
+// Get wall clock (UTC) time in nanoseconds since Unix epoch (1970).
+// PTP-synced on configured systems.
 static uint64_t get_utc_time_ns(void)
 {
 #ifdef _WIN32
 	FILETIME ft;
 	GetSystemTimePreciseAsFileTime(&ft);
-	return ((uint64_t)ft.dwHighDateTime << 32 | ft.dwLowDateTime) * 100;
+	// FILETIME is 100ns intervals since Jan 1, 1601.
+	// Subtract offset to Unix epoch (Jan 1, 1970).
+	const uint64_t FILETIME_UNIX_OFFSET = 116444736000000000ULL;
+	uint64_t ft_100ns =
+		((uint64_t)ft.dwHighDateTime << 32 | ft.dwLowDateTime);
+	return (ft_100ns - FILETIME_UNIX_OFFSET) * 100;
 #else
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
