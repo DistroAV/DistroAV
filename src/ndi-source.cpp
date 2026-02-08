@@ -42,6 +42,7 @@
 #define PROP_PAN "ndi_pan"
 #define PROP_TILT "ndi_tilt"
 #define PROP_ZOOM "ndi_zoom"
+#define PROP_SYNC_LOCK "ndi_sync_lock"
 
 #define PROP_BW_UNDEFINED -1
 #define PROP_BW_HIGHEST 0
@@ -110,6 +111,7 @@ typedef struct ndi_source_config_t {
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
 	bool audio_enabled;
+	bool sync_lock_enabled;
 	ptz_t ptz;
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
@@ -125,6 +127,16 @@ typedef struct ndi_timestamp_sync_t {
 	uint64_t base_obs_time;     // OBS system time at first frame
 } ndi_timestamp_sync_t;
 
+// Phase-lock state for consistent first-frame timing across OBS restarts.
+// video_tick runs on the render thread; receiver thread reads last_tick_time_ns.
+// Aligned uint64_t stores are atomic on x86-64/ARM64 (single writer, single reader).
+typedef struct ndi_phase_lock_t {
+	volatile uint64_t last_tick_time_ns;
+	uint64_t frame_interval_ns;
+	bool first_video_submitted;
+	bool enabled;
+} ndi_phase_lock_t;
+
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
@@ -137,6 +149,9 @@ typedef struct ndi_source_t {
 
 	// Timestamp synchronization for network timing mode
 	ndi_timestamp_sync_t ts_sync;
+
+	// Phase-lock state for first-frame render alignment
+	ndi_phase_lock_t phase_lock;
 
 	uint64_t last_frame_timestamp;
 
@@ -231,6 +246,72 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.base_ndi_timestamp = 0;
 	source->ts_sync.base_ndi_timecode = 0;
 	source->ts_sync.base_obs_time = 0;
+}
+
+static void reset_phase_lock(ndi_source_t *source)
+{
+	source->phase_lock.first_video_submitted = false;
+}
+
+static void ndi_source_video_tick(void *data, float seconds)
+{
+	(void)seconds;
+	auto s = (ndi_source_t *)data;
+	s->phase_lock.last_tick_time_ns = os_gettime_ns();
+	uint64_t interval = obs_get_frame_interval_ns();
+	if (interval > 0)
+		s->phase_lock.frame_interval_ns = interval;
+}
+
+// Phase-align the first video frame within the OBS render cycle.
+// Sleeps briefly so the frame is submitted at 75% through the interval,
+// giving a consistent ~25% render-phase delay on every restart.
+static void phase_lock_first_frame(ndi_source_t *source)
+{
+	ndi_phase_lock_t *pl = &source->phase_lock;
+
+	if (pl->first_video_submitted || !pl->enabled)
+		return;
+
+	uint64_t tick_time = pl->last_tick_time_ns;
+	uint64_t interval = pl->frame_interval_ns;
+
+	if (tick_time == 0 || interval == 0) {
+		pl->first_video_submitted = true;
+		return;
+	}
+
+	uint64_t now = os_gettime_ns();
+	if (now < tick_time) {
+		pl->first_video_submitted = true;
+		return;
+	}
+
+	uint64_t elapsed = now - tick_time;
+	uint64_t phase = elapsed % interval;
+	uint64_t target = (interval * 3) / 4;
+
+	uint64_t sleep_ns;
+	if (phase < target)
+		sleep_ns = target - phase;
+	else
+		sleep_ns = interval - phase + target;
+
+	if (sleep_ns > interval)
+		sleep_ns = interval;
+
+	if (sleep_ns > 1000) {
+		obs_log(LOG_INFO,
+			"'%s' phase_lock: sleeping %llu us (phase=%llu/%llu us)",
+			obs_source_get_name(source->obs_source),
+			(unsigned long long)(sleep_ns / 1000),
+			(unsigned long long)(phase / 1000),
+			(unsigned long long)(interval / 1000));
+		std::this_thread::sleep_for(
+			std::chrono::microseconds(sleep_ns / 1000));
+	}
+
+	pl->first_video_submitted = true;
 }
 
 // Translate NDI timestamp to OBS time domain using arrival time.
@@ -363,6 +444,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 				  PROP_LATENCY_LOWEST);
 
 	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
+	obs_properties_add_bool(props, PROP_SYNC_LOCK, obs_module_text("NDIPlugin.SourceProps.SyncLock"));
 
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
@@ -390,6 +472,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
+	obs_data_set_default_bool(settings, PROP_SYNC_LOCK, false);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -550,6 +633,7 @@ void *ndi_source_thread(void *data)
 			// Reset timestamp synchronization when receiver is reset
 			// This ensures proper time domain translation on next frame
 			reset_timestamp_sync(s);
+			reset_phase_lock(s);
 
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: recv_desc = { p_ndi_recv_name='%s', source_to_connect_to.p_ndi_name='%s' }",
@@ -709,6 +793,7 @@ void *ndi_source_thread(void *data)
 					obs_source_name,
 					(unsigned long long)(now - s->last_frame_received_time) / 1000000ULL);
 				reset_timestamp_sync(s);
+				reset_phase_lock(s);
 			}
 			s->last_frame_received_time = now;
 		}
@@ -783,6 +868,7 @@ void *ndi_source_thread(void *data)
 				obs_log(LOG_INFO, "'%s' NDI status change detected, resetting timestamp sync",
 					obs_source_name);
 				reset_timestamp_sync(s);
+				reset_phase_lock(s);
 				timestamp_audio = 0;
 				timestamp_video = 0;
 				continue;
@@ -920,6 +1006,7 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
 
+	phase_lock_first_frame(source);
 	obs_source_output_video(obs_source, obs_video_frame);
 }
 
@@ -1133,6 +1220,9 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 	obs_source_set_audio_active(obs_source, s->config.audio_enabled);
 
+	s->config.sync_lock_enabled = obs_data_get_bool(settings, PROP_SYNC_LOCK);
+	s->phase_lock.enabled = s->config.sync_lock_enabled;
+
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
@@ -1330,6 +1420,7 @@ obs_source_info create_ndi_source_info()
 
 	ndi_source_info.get_width = ndi_source_get_width;
 	ndi_source_info.get_height = ndi_source_get_height;
+	ndi_source_info.video_tick = ndi_source_video_tick;
 
 	return ndi_source_info;
 }
