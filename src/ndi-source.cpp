@@ -26,6 +26,11 @@
 
 #include <thread>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BEHAVIOR "ndi_behavior"
 #define PROP_TIMEOUT "ndi_behavior_timeout"
@@ -124,7 +129,7 @@ typedef struct ndi_timestamp_sync_t {
 	bool timecode_initialized;
 	int64_t base_ndi_timestamp; // First NDI timestamp (100ns units)
 	int64_t base_ndi_timecode;  // First NDI timecode (converted to ns)
-	uint64_t base_obs_time;     // OBS render tick at first frame
+	uint64_t base_obs_time;     // First timecode mapped to QPC domain
 } ndi_timestamp_sync_t;
 
 typedef struct ndi_source_t {
@@ -235,14 +240,26 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.base_obs_time = 0;
 }
 
+// Get wall clock (UTC) time in nanoseconds. PTP-synced on configured systems.
+static uint64_t get_utc_time_ns(void)
+{
+#ifdef _WIN32
+	FILETIME ft;
+	GetSystemTimePreciseAsFileTime(&ft);
+	return ((uint64_t)ft.dwHighDateTime << 32 | ft.dwLowDateTime) * 100;
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+#endif
+}
+
 // Translate NDI timestamp to OBS time domain.
 // Two modes:
 // 1. Non-Sync-Lock: uses os_gettime_ns() arrival time (existing behavior)
-// 2. Sync Lock: anchors first frame to OBS render tick via
-//    obs_get_video_frame_time(), then uses PTP-synced NDI timecodes for
-//    inter-frame spacing. This makes timing_adjust (video_time - timestamp)
-//    deterministic across restarts, producing consistent A/V sync.
-// Fixes: https://github.com/DistroAV/DistroAV/issues/1386
+// 2. Sync Lock: maps PTP timecodes directly from UTC to QPC domain using
+//    the wall-clock-to-monotonic offset. Combined with PTP-aligned render
+//    tick in OBS, this produces deterministic A/V sync across restarts.
 static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
 	int64_t ndi_time_100ns, bool is_timecode)
 {
@@ -260,20 +277,28 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
 		return os_gettime_ns();
 	}
 
-	// Sync Lock: PTP timecodes anchored to OBS render tick
+	// Sync Lock: PTP timecodes mapped to QPC via UTC
 	int64_t ndi_tc_ns = ndi_time_100ns * 100;
 
 	if (!sync->timecode_initialized) {
 		sync->timecode_initialized = true;
 		sync->base_ndi_timecode = ndi_tc_ns;
-		sync->base_obs_time = obs_get_video_frame_time();
+
+		// Map first PTP timecode from UTC to QPC domain
+		uint64_t utc_ns = get_utc_time_ns();
+		uint64_t qpc_ns = os_gettime_ns();
+		int64_t utc_to_qpc = (int64_t)qpc_ns - (int64_t)utc_ns;
+		sync->base_obs_time =
+			(uint64_t)((int64_t)ndi_tc_ns + utc_to_qpc);
+
 		obs_source_output_video(source->obs_source, NULL);
 		obs_log(LOG_INFO,
-			"'%s' Sync Lock: baseline established "
-			"(ndi_tc=%lld ns, render_tick=%llu ns)",
+			"'%s' Sync Lock: PTP-to-QPC baseline "
+			"(ndi_tc=%lld ns, qpc=%llu ns, offset=%lld ns)",
 			obs_source_get_name(source->obs_source),
 			(long long)ndi_tc_ns,
-			(unsigned long long)sync->base_obs_time);
+			(unsigned long long)sync->base_obs_time,
+			(long long)utc_to_qpc);
 	}
 
 	int64_t tc_delta = ndi_tc_ns - sync->base_ndi_timecode;
