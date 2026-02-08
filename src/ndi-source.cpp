@@ -318,17 +318,17 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source,
 
 		int64_t ndi_tc_aligned =  ndi_tc_qpc + phase_shift;
 
-		// Sleep until a PTP-deterministic render tick boundary.
-		// This ensures the first frame is always displayed at the
-		// same tick relative to its PTP timecode, eliminating the
-		// 33ms variance caused by pipeline delay crossing a render
-		// tick boundary. The sleep target is computed solely from
-		// PTP values (not arrival time), so it's consistent across
-		// restarts regardless of pipeline delay.
+		// Sleep to a PTP-deterministic point WITHIN a render tick
+		// interval. This ensures the first frame always enters OBS's
+		// async queue at the same relative position within the
+		// interval, eliminating the 33ms variance caused by waking
+		// up right on a tick boundary (where ±1ms sleep jitter
+		// determines which tick processes the frame).
 		//
-		// Buffer of 2 frames: handles pipeline delays up to ~66ms
-		// (sufficient for 2-hop LAN NDI chains).
-		uint64_t buffer_ns = 2 * interval;
+		// Target: 2.5 intervals past ndi_tc_aligned. The 0.5
+		// offset places us at the MIDDLE of an interval, giving
+		// ±16ms margin for sleep precision and processing delay.
+		uint64_t buffer_ns = 2 * interval + interval / 2;
 		uint64_t sleep_target =
 			(uint64_t)ndi_tc_aligned + buffer_ns;
 		uint64_t now = os_gettime_ns();
