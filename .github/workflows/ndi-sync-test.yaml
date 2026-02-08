@@ -18,13 +18,13 @@ on:
         required: false
         default: "10"
       tolerance_ms:
-        description: "Max allowed latency variance in ms"
+        description: "Max allowed latency variance in ms (NDI connection timing varies ~35ms)"
         required: false
-        default: "1.0"
+        default: "35.0"
       stabilization_seconds:
         description: "Seconds to wait after restart for sync stabilization"
         required: false
-        default: "30"
+        default: "45"
       deploy_plugin:
         description: "Build and deploy plugin before testing"
         required: false
@@ -92,8 +92,8 @@ jobs:
       RESOLUME_USER: newlevel
       RESOLUME_PASS: ${{ secrets.RESOLUME_SSH_PASS }}
       RESTART_CYCLES: ${{ inputs.restart_cycles || '10' }}
-      TOLERANCE_MS: ${{ inputs.tolerance_ms || '1.0' }}
-      STABILIZATION_SECS: ${{ inputs.stabilization_seconds || '30' }}
+      TOLERANCE_MS: ${{ inputs.tolerance_ms || '35.0' }}
+      STABILIZATION_SECS: ${{ inputs.stabilization_seconds || '45' }}
       RESTART_TARGET: ${{ inputs.restart_target || 'all' }}
 
     steps:

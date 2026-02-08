@@ -83,6 +83,12 @@ restart_obs() {
     start_obs "$ssh_func" "$host_name" "$task_name"
 }
 
+activate_sync_dock() {
+    log "Activating sync-dock on stream.lan..."
+    ssh_stream "schtasks /Run /TN ClickSyncDock 2>nul & exit /b 0" 2>/dev/null || true
+    sleep 15
+}
+
 # ============================================================================
 # Sync-Dock Measurement Collection
 #
@@ -107,7 +113,7 @@ collect_latency_samples() {
 
     # Get the last N sync-dock latency lines from the log
     ssh_stream "powershell -Command \"Get-Content '%APPDATA%\\obs-studio\\logs\\${log_file}' | Select-String 'sync-dock.*latency=' | Select-Object -Last ${num_samples}\"" 2>/dev/null | \
-        grep -oP 'latency=\K[0-9]+\.[0-9]+' || true
+        grep -oP 'latency=\K-?[0-9]+\.[0-9]+' || true
 }
 
 collect_dropped_frames() {
@@ -150,14 +156,27 @@ run_restart_test() {
 
         restart_obs "$ssh_func" "$machine_name" "$task_name"
 
+        # If we restarted stream.lan, re-activate the sync-dock
+        if [ "$machine_name" = "stream.lan" ]; then
+            activate_sync_dock
+        fi
+
         # Wait for NDI chain to reconnect and sync-dock to stabilize
         log "Waiting ${STABILIZATION_SECS}s for sync stabilization..."
         sleep "$STABILIZATION_SECS"
 
-        # Collect sync measurements
+        # Collect sync measurements, retry up to 3 times with extra waits
         log "Collecting latency samples..."
-        local samples
-        samples=$(collect_latency_samples 20)
+        local samples=""
+        local retries=0
+        while [ -z "$samples" ] && [ $retries -lt 3 ]; do
+            samples=$(collect_latency_samples 20)
+            if [ -z "$samples" ]; then
+                retries=$((retries + 1))
+                log "No measurements yet, waiting 15s more (retry ${retries}/3)..."
+                sleep 15
+            fi
+        done
 
         if [ -z "$samples" ]; then
             log "ERROR: No sync-dock measurements found for cycle ${cycle}"
@@ -177,7 +196,7 @@ else:
     avg = sum(vals) / len(vals)
     mn = min(vals)
     mx = max(vals)
-    rng = mx - mn
+    rng = max(vals) - min(vals)
     print(f'{avg:.1f},{mn:.1f},{mx:.1f},{rng:.1f}')
 ")
 
@@ -246,14 +265,23 @@ log "Ensuring OBS is running on all machines..."
 start_obs ssh_resolume "resolume.lan" "$OBS_TASK_RESOLUME"
 start_obs ssh_strih "strih.lan" "$OBS_TASK_STRIH"
 start_obs ssh_stream "stream.lan" "$OBS_TASK_STREAM"
+activate_sync_dock
 log "Waiting 30s for full NDI chain to establish..."
 sleep 30
 
-# Verify sync-dock is producing measurements
+# Verify sync-dock is producing measurements (retry up to 5 times)
 log "Verifying sync-dock is active..."
-initial_samples=$(collect_latency_samples 3)
+initial_samples=""
+for attempt in $(seq 1 5); do
+    initial_samples=$(collect_latency_samples 3)
+    if [ -n "$initial_samples" ]; then
+        break
+    fi
+    log "No sync-dock measurements yet, waiting 15s (attempt ${attempt}/5)..."
+    sleep 15
+done
 if [ -z "$initial_samples" ]; then
-    log "ERROR: No sync-dock measurements found. Is obs-audio-video-sync-dock running on stream.lan?"
+    log "ERROR: No sync-dock measurements found after retries. Is obs-audio-video-sync-dock running on stream.lan?"
     exit 1
 fi
 log "Sync-dock active. Initial latency samples: $(echo "$initial_samples" | tr '\n' ' ')"
@@ -287,6 +315,7 @@ for machine in "${targets[@]}"; do
         restart_obs ssh_resolume "resolume.lan" "$OBS_TASK_RESOLUME"
         restart_obs ssh_strih "strih.lan" "$OBS_TASK_STRIH"
         restart_obs ssh_stream "stream.lan" "$OBS_TASK_STREAM"
+        activate_sync_dock
         sleep 30
     fi
 done
