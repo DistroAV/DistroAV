@@ -350,25 +350,6 @@ static uint64_t translate_ndi_to_obs_time(ndi_source_t *source, int64_t ndi_time
 			obs_source_get_name(source->obs_source), (unsigned long long)os_gettime_ns());
 	}
 
-	// Sync Lock: use baseline-mapped NDI timecodes for consistent frame
-	// timing in buffered mode. Timestamps advance at the sender's rate,
-	// independent of network jitter, giving OBS's buffer management
-	// stable inter-frame intervals for more consistent frame selection.
-	if (source->config.sync_lock_enabled && is_timecode) {
-		if (!sync->timecode_initialized) {
-			sync->timecode_initialized = true;
-			sync->base_ndi_timecode = ndi_time_100ns;
-			sync->base_obs_time = os_gettime_ns();
-			obs_log(LOG_INFO,
-				"'%s' sync_lock: timecode baseline established (ndi=%lld, obs=%llu)",
-				obs_source_get_name(source->obs_source),
-				(long long)ndi_time_100ns,
-				(unsigned long long)sync->base_obs_time);
-		}
-		int64_t delta_100ns = ndi_time_100ns - sync->base_ndi_timecode;
-		return sync->base_obs_time + (uint64_t)(delta_100ns * 100);
-	}
-
 	(void)ndi_time_100ns;
 	(void)is_timecode;
 	return os_gettime_ns();
@@ -1021,18 +1002,13 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 
 	auto config = &source->config;
 
-	// Sync Lock always uses NDI timecodes for consistent frame timing
-	if (config->sync_lock_enabled) {
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_video_frame->timestamp = translate_ndi_to_obs_time(source, ndi_video_frame->timestamp, false);
+		break;
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
 		obs_video_frame->timestamp = translate_ndi_to_obs_time(source, ndi_video_frame->timecode, true);
-	} else {
-		switch (config->sync_mode) {
-		case PROP_SYNC_NDI_TIMESTAMP:
-			obs_video_frame->timestamp = translate_ndi_to_obs_time(source, ndi_video_frame->timestamp, false);
-			break;
-		case PROP_SYNC_NDI_SOURCE_TIMECODE:
-			obs_video_frame->timestamp = translate_ndi_to_obs_time(source, ndi_video_frame->timecode, true);
-			break;
-		}
+		break;
 	}
 
 	source->width = ndi_video_frame->xres;
