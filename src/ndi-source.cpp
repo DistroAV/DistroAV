@@ -270,19 +270,35 @@ static void phase_lock_first_frame(ndi_source_t *source)
 {
 	ndi_phase_lock_t *pl = &source->phase_lock;
 
-	if (pl->first_video_submitted || !pl->enabled)
+	if (pl->first_video_submitted)
 		return;
+
+	if (!pl->enabled) {
+		obs_log(LOG_INFO,
+			"'%s' phase_lock: disabled, skipping",
+			obs_source_get_name(source->obs_source));
+		pl->first_video_submitted = true;
+		return;
+	}
 
 	uint64_t tick_time = pl->last_tick_time_ns;
 	uint64_t interval = pl->frame_interval_ns;
 
 	if (tick_time == 0 || interval == 0) {
+		obs_log(LOG_WARNING,
+			"'%s' phase_lock: no tick data yet (tick_time=%llu, interval=%llu), skipping",
+			obs_source_get_name(source->obs_source),
+			(unsigned long long)tick_time,
+			(unsigned long long)interval);
 		pl->first_video_submitted = true;
 		return;
 	}
 
 	uint64_t now = os_gettime_ns();
 	if (now < tick_time) {
+		obs_log(LOG_WARNING,
+			"'%s' phase_lock: clock anomaly (now < tick_time), skipping",
+			obs_source_get_name(source->obs_source));
 		pl->first_video_submitted = true;
 		return;
 	}
@@ -300,13 +316,15 @@ static void phase_lock_first_frame(ndi_source_t *source)
 	if (sleep_ns > interval)
 		sleep_ns = interval;
 
+	obs_log(LOG_INFO,
+		"'%s' phase_lock: sleeping %llu us (phase=%llu/%llu us, target=%llu us)",
+		obs_source_get_name(source->obs_source),
+		(unsigned long long)(sleep_ns / 1000),
+		(unsigned long long)(phase / 1000),
+		(unsigned long long)(interval / 1000),
+		(unsigned long long)(target / 1000));
+
 	if (sleep_ns > 1000) {
-		obs_log(LOG_INFO,
-			"'%s' phase_lock: sleeping %llu us (phase=%llu/%llu us)",
-			obs_source_get_name(source->obs_source),
-			(unsigned long long)(sleep_ns / 1000),
-			(unsigned long long)(phase / 1000),
-			(unsigned long long)(interval / 1000));
 		std::this_thread::sleep_for(
 			std::chrono::microseconds(sleep_ns / 1000));
 	}
@@ -1222,6 +1240,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	s->config.sync_lock_enabled = obs_data_get_bool(settings, PROP_SYNC_LOCK);
 	s->phase_lock.enabled = s->config.sync_lock_enabled;
+	obs_log(LOG_INFO,
+		"'%s' ndi_source_update: sync_lock_enabled=%s",
+		obs_source_get_name(obs_source),
+		s->config.sync_lock_enabled ? "true" : "false");
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
