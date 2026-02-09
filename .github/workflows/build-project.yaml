@@ -290,26 +290,6 @@ jobs:
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
 
-      - name: Collect OBS DLLs from build
-        shell: pwsh
-        run: |
-          $ObsDll = Get-ChildItem -Path .deps -Recurse -Filter "obs.dll" | Where-Object { $_.DirectoryName -match 'Release' -or $_.DirectoryName -match 'RelWithDebInfo' } | Select-Object -First 1
-          if ($ObsDll) {
-            $OutDir = "${{ github.workspace }}/release/obs-ptp"
-            New-Item -ItemType Directory -Path $OutDir -Force
-            Copy-Item $ObsDll.FullName "$OutDir/obs.dll"
-            Write-Host "Copied obs.dll from $($ObsDll.FullName)"
-          } else {
-            Write-Warning "obs.dll not found in .deps build directory"
-          }
-
-      - name: Upload OBS PTP DLLs
-        uses: actions/upload-artifact@v4
-        with:
-          name: obs-ptp-dlls-${{ needs.check-event.outputs.commitHash }}
-          path: ${{ github.workspace }}/release/obs-ptp/
-          if-no-files-found: warn
-
       - name: Upload Zip Artifacts 📡
         uses: actions/upload-artifact@v4
         with:
