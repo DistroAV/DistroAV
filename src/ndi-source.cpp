@@ -965,12 +965,39 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// Sync Lock: translate audio timecodes to OBS time domain (same as video)
-	if (config->sync_lock_enabled && source->ts_sync.initialized) {
-		// Use the same clock_offset as video for consistent A/V sync
+	// Sync Lock: translate audio timecodes to OBS time domain
+	if (config->sync_lock_enabled) {
+		ndi_timestamp_sync_t *sync = &source->ts_sync;
 		int64_t ndi_tc_ns = ndi_audio_frame->timecode * 100;
-		int64_t presentation = ndi_tc_ns - source->ts_sync.clock_offset_ns;
-		obs_audio_frame->timestamp = (uint64_t)presentation;
+
+		// For audio-only sources (no video), we need to anchor clock_offset on audio frames
+		// Use the same 5-frame warmup as video
+		if (sync->warmup_frames_remaining > 0) {
+			// Still in warmup - use arrival time
+			sync->warmup_frames_remaining--;
+			obs_audio_frame->timestamp = os_gettime_ns();
+		} else if (!sync->initialized) {
+			// First frame after warmup - anchor clock_offset
+			sync->initialized = true;
+			int64_t wall_now = get_wall_clock_ns();
+			uint64_t obs_now = os_gettime_ns();
+			sync->clock_offset_ns = wall_now - (int64_t)obs_now;
+
+			obs_log(LOG_INFO, "'%s' AUDIO_SYNC_LOCK_ANCHOR (frame 6): "
+				"ndi_tc=%lld ms, wall=%lld ms, obs=%llu ms, clock_offset=%lld ms",
+				obs_source_get_name(obs_source),
+				(long long)(ndi_tc_ns / 1000000),
+				(long long)(wall_now / 1000000),
+				(unsigned long long)(obs_now / 1000000),
+				(long long)(sync->clock_offset_ns / 1000000));
+
+			int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
+			obs_audio_frame->timestamp = (uint64_t)presentation;
+		} else {
+			// Normal operation - use clock_offset
+			int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
+			obs_audio_frame->timestamp = (uint64_t)presentation;
+		}
 	} else {
 		// No sync lock - use raw timestamps
 		switch (config->sync_mode) {

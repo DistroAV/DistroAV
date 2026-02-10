@@ -72,6 +72,7 @@ jobs:
           fi
 
   macos-build:
+    if: false # Disabled - Windows only
     name: Build for macOS 🍏
     runs-on: macos-15
     needs: check-event
@@ -176,6 +177,7 @@ jobs:
           key: ${{ runner.os }}-ccache-${{ needs.check-event.outputs.config }}
 
   ubuntu-build:
+    if: false # Disabled - Windows only
     name: Build for Ubuntu 🐧
     strategy:
       matrix:
