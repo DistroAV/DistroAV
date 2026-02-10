@@ -58,6 +58,7 @@ static inline int64_t get_wall_clock_ns()
 #define PROP_YUV_COLORSPACE "yuv_colorspace"
 #define PROP_LATENCY "latency"
 #define PROP_AUDIO "ndi_audio"
+#define PROP_SYNC_LOCK "ndi_sync_lock"
 #define PROP_PTZ "ndi_ptz"
 #define PROP_PAN "ndi_pan"
 #define PROP_TILT "ndi_tilt"
@@ -130,9 +131,18 @@ typedef struct ndi_source_config_t {
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
 	bool audio_enabled;
+	bool sync_lock_enabled;  // Enable clock offset translation for consistent A/V sync
 	ptz_t ptz;
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
+
+// State for Sync Lock clock offset tracking
+typedef struct ndi_timestamp_sync_t {
+	bool initialized;
+	int64_t clock_offset_ns;      // wall_clock - obs_clock (translation factor)
+	int warmup_frames_remaining;  // Skip first N frames before anchoring
+	uint64_t video_frame_count;
+} ndi_timestamp_sync_t;
 
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
@@ -146,6 +156,8 @@ typedef struct ndi_source_t {
 
 	uint64_t last_frame_timestamp;
 	uint64_t video_frame_count;    // Sequential frame counter for monitoring
+
+	ndi_timestamp_sync_t ts_sync;  // Sync Lock state
 } ndi_source_t;
 
 // Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
@@ -166,6 +178,69 @@ typedef struct ndi_timing_info_t {
 	// Debug
 	uint64_t frame_number;         // Sequential video frame counter
 } ndi_timing_info_t;
+
+// Reset Sync Lock state (call when NDI connection is established)
+static void reset_timestamp_sync(ndi_source_t *source)
+{
+	source->ts_sync.initialized = false;
+	source->ts_sync.clock_offset_ns = 0;
+	source->ts_sync.warmup_frames_remaining = 5;  // Skip first 5 frames before anchoring
+	source->ts_sync.video_frame_count = 0;
+	obs_log(LOG_INFO, "'%s' Sync Lock: reset timestamp sync (5-frame warmup)",
+		obs_source_get_name(source->obs_source));
+}
+
+// Translate NDI timecode to OBS presentation time using clock offset
+static uint64_t translate_timecode_to_obs(ndi_source_t *source, int64_t ndi_timecode_100ns)
+{
+	ndi_timestamp_sync_t *sync = &source->ts_sync;
+	int64_t ndi_tc_ns = ndi_timecode_100ns * 100;  // Convert 100ns to ns
+
+	// If sync not initialized or not using sync_lock, fall back to arrival time
+	if (!source->config.sync_lock_enabled) {
+		return os_gettime_ns();
+	}
+
+	// Warmup phase: skip first 5 frames before anchoring clock_offset
+	if (sync->warmup_frames_remaining > 0) {
+		int frame_num = 6 - sync->warmup_frames_remaining;
+		sync->warmup_frames_remaining--;
+		sync->video_frame_count++;
+
+		obs_log(LOG_INFO, "'%s' WARMUP: frame %d/5, skipping anchor",
+			obs_source_get_name(source->obs_source), frame_num);
+
+		// Return arrival time during warmup
+		return os_gettime_ns();
+	}
+
+	// First frame after warmup: anchor clock_offset
+	if (!sync->initialized) {
+		sync->initialized = true;
+		int64_t wall_now = get_wall_clock_ns();
+		uint64_t obs_now = os_gettime_ns();
+		sync->clock_offset_ns = wall_now - (int64_t)obs_now;
+
+		int64_t presentation_init = ndi_tc_ns - sync->clock_offset_ns;
+
+		obs_log(LOG_INFO, "'%s' SYNC_LOCK_ANCHOR (frame 6): "
+			"ndi_tc=%lld ms (raw_100ns=%lld), wall=%lld ms, obs=%llu ms, "
+			"clock_offset=%lld ms, presentation=%lld ms",
+			obs_source_get_name(source->obs_source),
+			(long long)(ndi_tc_ns / 1000000),
+			(long long)ndi_timecode_100ns,
+			(long long)(wall_now / 1000000),
+			(unsigned long long)(obs_now / 1000000),
+			(long long)(sync->clock_offset_ns / 1000000),
+			(long long)(presentation_init / 1000000));
+	}
+
+	sync->video_frame_count++;
+
+	// Translate: presentation = ndi_timecode - clock_offset
+	int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
+	return (uint64_t)presentation;
+}
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 {
@@ -352,6 +427,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 				  PROP_LATENCY_LOWEST);
 
 	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
+	obs_properties_add_bool(props, PROP_SYNC_LOCK, obs_module_text("NDIPlugin.SourceProps.SyncLock"));
 
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
@@ -379,6 +455,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
+	obs_data_set_default_bool(settings, PROP_SYNC_LOCK, false);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -618,6 +695,9 @@ void *ndi_source_thread(void *data)
 					break;
 				}
 			}
+
+			// Reset Sync Lock state for new NDI connection
+			reset_timestamp_sync(s);
 		}
 		//
 		// reset_ndi_receiver: END
@@ -857,14 +937,19 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 
 	auto config = &source->config;
 
-	switch (config->sync_mode) {
-	case PROP_SYNC_NDI_TIMESTAMP:
-		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timestamp * 100);
-		break;
+	// Sync Lock: translate timecodes to OBS time domain with 5-frame warmup
+	if (source->config.sync_lock_enabled) {
+		obs_video_frame->timestamp = translate_timecode_to_obs(source, ndi_video_frame->timecode);
+	} else {
+		switch (config->sync_mode) {
+		case PROP_SYNC_NDI_TIMESTAMP:
+			obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timestamp * 100);
+			break;
 
-	case PROP_SYNC_NDI_SOURCE_TIMECODE:
-		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
-		break;
+		case PROP_SYNC_NDI_SOURCE_TIMECODE:
+			obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
+			break;
+		}
 	}
 
 	source->width = ndi_video_frame->xres;
@@ -1109,6 +1194,11 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	s->config.audio_enabled = obs_data_get_bool(settings, PROP_AUDIO);
 	obs_source_set_audio_active(obs_source, s->config.audio_enabled);
+
+	s->config.sync_lock_enabled = obs_data_get_bool(settings, PROP_SYNC_LOCK);
+	obs_log(LOG_INFO, "'%s' Sync Lock: %s",
+		obs_source_get_name(obs_source),
+		s->config.sync_lock_enabled ? "enabled" : "disabled");
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
