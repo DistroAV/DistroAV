@@ -158,6 +158,12 @@ typedef struct ndi_source_t {
 	uint64_t video_frame_count;    // Sequential frame counter for monitoring
 
 	ndi_timestamp_sync_t ts_sync;  // Sync Lock state
+
+	// Startup timing debug
+	uint64_t first_video_ts;       // First video timestamp received
+	uint64_t first_audio_ts;       // First audio timestamp received
+	uint64_t audio_frame_count;    // Audio frame counter for startup logging
+	bool startup_logged;           // Whether startup timing has been logged
 } ndi_source_t;
 
 // Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
@@ -186,8 +192,19 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->ts_sync.clock_offset_ns = 0;
 	source->ts_sync.warmup_frames_remaining = 5;  // Skip first 5 frames before anchoring
 	source->ts_sync.video_frame_count = 0;
-	obs_log(LOG_INFO, "'%s' Sync Lock: reset timestamp sync (5-frame warmup)",
-		obs_source_get_name(source->obs_source));
+
+	// Reset startup timing debug
+	source->first_video_ts = 0;
+	source->first_audio_ts = 0;
+	source->audio_frame_count = 0;
+	source->startup_logged = false;
+
+	int64_t wall_now = get_wall_clock_ns();
+	uint64_t obs_now = os_gettime_ns();
+	obs_log(LOG_INFO, "'%s' STARTUP_TIMING: reset at wall=%lld ms, obs=%llu ms",
+		obs_source_get_name(source->obs_source),
+		(long long)(wall_now / 1000000),
+		(unsigned long long)(obs_now / 1000000));
 }
 
 // Translate NDI timecode to OBS presentation time using clock offset
@@ -779,7 +796,21 @@ void *ndi_source_thread(void *data)
 			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
 			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 				timestamp_audio = audio_frame.timestamp;
-				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
+				// Log first 10 audio frames for startup timing analysis
+				s->audio_frame_count++;
+				if (s->audio_frame_count <= 10) {
+					uint64_t audio_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
+						? (uint64_t)(audio_frame.timecode * 100)
+						: (uint64_t)(audio_frame.timestamp * 100);
+					if (s->audio_frame_count == 1) {
+						s->first_audio_ts = audio_ts;
+					}
+					obs_log(LOG_INFO, "'%s' AUDIO_STARTUP: frame %llu, ts=%llu ms, tc=%lld ms",
+						obs_source_name,
+						(unsigned long long)s->audio_frame_count,
+						(unsigned long long)(audio_ts / 1000000),
+						(long long)(audio_frame.timecode * 100 / 1000000));
+				}
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
 			}
@@ -793,8 +824,29 @@ void *ndi_source_thread(void *data)
 							NDIlib_frame_format_type_progressive);
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
-				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
+				// Log first video frame for startup timing
+				if (s->first_video_ts == 0) {
+					uint64_t video_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
+						? (uint64_t)(video_frame.timecode * 100)
+						: (uint64_t)(video_frame.timestamp * 100);
+					s->first_video_ts = video_ts;
+					obs_log(LOG_INFO, "'%s' VIDEO_STARTUP: first frame ts=%llu ms, tc=%lld ms",
+						obs_source_name,
+						(unsigned long long)(video_ts / 1000000),
+						(long long)(video_frame.timecode * 100 / 1000000));
+				}
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
+
+				// Log A/V offset once both first frames are known
+				if (!s->startup_logged && s->first_audio_ts > 0 && s->first_video_ts > 0) {
+					s->startup_logged = true;
+					int64_t av_offset_ms = ((int64_t)s->first_audio_ts - (int64_t)s->first_video_ts) / 1000000;
+					obs_log(LOG_INFO, "'%s' STARTUP_AV_OFFSET: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (audio-video)",
+						obs_source_name,
+						(unsigned long long)(s->first_audio_ts / 1000000),
+						(unsigned long long)(s->first_video_ts / 1000000),
+						(long long)av_offset_ms);
+				}
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
 
@@ -811,7 +863,21 @@ void *ndi_source_thread(void *data)
 				//
 				// AUDIO
 				//
-				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
+				// Log first 10 audio frames for startup timing (non-framesync path)
+				s->audio_frame_count++;
+				if (s->audio_frame_count <= 10) {
+					uint64_t audio_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
+						? (uint64_t)(audio_frame.timecode * 100)
+						: (uint64_t)(audio_frame.timestamp * 100);
+					if (s->audio_frame_count == 1) {
+						s->first_audio_ts = audio_ts;
+					}
+					obs_log(LOG_INFO, "'%s' AUDIO_STARTUP: frame %llu, ts=%llu ms, tc=%lld ms",
+						obs_source_name,
+						(unsigned long long)s->audio_frame_count,
+						(unsigned long long)(audio_ts / 1000000),
+						(long long)(audio_frame.timecode * 100 / 1000000));
+				}
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
 
@@ -823,8 +889,29 @@ void *ndi_source_thread(void *data)
 				//
 				// VIDEO
 				//
-				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
+				// Log first video frame for startup timing (non-framesync path)
+				if (s->first_video_ts == 0) {
+					uint64_t video_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
+						? (uint64_t)(video_frame.timecode * 100)
+						: (uint64_t)(video_frame.timestamp * 100);
+					s->first_video_ts = video_ts;
+					obs_log(LOG_INFO, "'%s' VIDEO_STARTUP: first frame ts=%llu ms, tc=%lld ms",
+						obs_source_name,
+						(unsigned long long)(video_ts / 1000000),
+						(long long)(video_frame.timecode * 100 / 1000000));
+				}
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
+
+				// Log A/V offset once both first frames are known (non-framesync path)
+				if (!s->startup_logged && s->first_audio_ts > 0 && s->first_video_ts > 0) {
+					s->startup_logged = true;
+					int64_t av_offset_ms = ((int64_t)s->first_audio_ts - (int64_t)s->first_video_ts) / 1000000;
+					obs_log(LOG_INFO, "'%s' STARTUP_AV_OFFSET: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (audio-video)",
+						obs_source_name,
+						(unsigned long long)(s->first_audio_ts / 1000000),
+						(unsigned long long)(s->first_video_ts / 1000000),
+						(long long)av_offset_ms);
+				}
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
 				continue;
