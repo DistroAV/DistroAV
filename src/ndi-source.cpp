@@ -46,6 +46,26 @@ static inline int64_t get_wall_clock_ns()
 #endif
 }
 
+// Global clock offset shared by all NDI sources
+// With NTP-synced clocks, wall_clock - obs_clock is constant
+static int64_t g_global_clock_offset_ns = 0;
+static bool g_global_clock_offset_initialized = false;
+
+static int64_t get_global_clock_offset()
+{
+	if (!g_global_clock_offset_initialized) {
+		int64_t wall_now = get_wall_clock_ns();
+		uint64_t obs_now = os_gettime_ns();
+		g_global_clock_offset_ns = wall_now - (int64_t)obs_now;
+		g_global_clock_offset_initialized = true;
+		obs_log(LOG_INFO, "[distroav] GLOBAL_CLOCK_OFFSET initialized: %lld ms (wall=%lld, obs=%llu)",
+			(long long)(g_global_clock_offset_ns / 1000000),
+			(long long)(wall_now / 1000000),
+			(unsigned long long)(obs_now / 1000000));
+	}
+	return g_global_clock_offset_ns;
+}
+
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BEHAVIOR "ndi_behavior"
 #define PROP_TIMEOUT "ndi_behavior_timeout"
@@ -213,42 +233,24 @@ static uint64_t translate_timecode_to_obs(ndi_source_t *source, int64_t ndi_time
 	ndi_timestamp_sync_t *sync = &source->ts_sync;
 	int64_t ndi_tc_ns = ndi_timecode_100ns * 100;  // Convert 100ns to ns
 
-	// If sync not initialized or not using sync_lock, fall back to arrival time
+	// If not using sync_lock, fall back to arrival time
 	if (!source->config.sync_lock_enabled) {
 		return os_gettime_ns();
 	}
 
-	// Warmup phase: skip first 5 frames before anchoring clock_offset
-	if (sync->warmup_frames_remaining > 0) {
-		int frame_num = 6 - sync->warmup_frames_remaining;
-		sync->warmup_frames_remaining--;
-		sync->video_frame_count++;
-
-		obs_log(LOG_INFO, "'%s' WARMUP: frame %d/5, skipping anchor",
-			obs_source_get_name(source->obs_source), frame_num);
-
-		// Return arrival time during warmup
-		return os_gettime_ns();
-	}
-
-	// First frame after warmup: anchor clock_offset
+	// Use global clock offset (constant with NTP sync - no warmup needed)
 	if (!sync->initialized) {
 		sync->initialized = true;
-		int64_t wall_now = get_wall_clock_ns();
-		uint64_t obs_now = os_gettime_ns();
-		sync->clock_offset_ns = wall_now - (int64_t)obs_now;
+		sync->clock_offset_ns = get_global_clock_offset();
+		sync->warmup_frames_remaining = 0;
 
 		int64_t presentation_init = ndi_tc_ns - sync->clock_offset_ns;
 
-		obs_log(LOG_INFO, "'%s' SYNC_LOCK_ANCHOR (frame 6): "
-			"ndi_tc=%lld ms (raw_100ns=%lld), wall=%lld ms, obs=%llu ms, "
-			"clock_offset=%lld ms, presentation=%lld ms",
+		obs_log(LOG_INFO, "'%s' VIDEO_SYNC_LOCK: using global_clock_offset=%lld ms, "
+			"ndi_tc=%lld ms, presentation=%lld ms",
 			obs_source_get_name(source->obs_source),
-			(long long)(ndi_tc_ns / 1000000),
-			(long long)ndi_timecode_100ns,
-			(long long)(wall_now / 1000000),
-			(unsigned long long)(obs_now / 1000000),
 			(long long)(sync->clock_offset_ns / 1000000),
+			(long long)(ndi_tc_ns / 1000000),
 			(long long)(presentation_init / 1000000));
 	}
 
@@ -965,39 +967,25 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// Sync Lock: translate audio timecodes to OBS time domain
+	// Sync Lock: translate audio timecodes to OBS time domain using global clock offset
 	if (config->sync_lock_enabled) {
 		ndi_timestamp_sync_t *sync = &source->ts_sync;
 		int64_t ndi_tc_ns = ndi_audio_frame->timecode * 100;
 
-		// For audio-only sources (no video), we need to anchor clock_offset on audio frames
-		// Use the same 5-frame warmup as video
-		if (sync->warmup_frames_remaining > 0) {
-			// Still in warmup - use arrival time
-			sync->warmup_frames_remaining--;
-			obs_audio_frame->timestamp = os_gettime_ns();
-		} else if (!sync->initialized) {
-			// First frame after warmup - anchor clock_offset
+		// Use global clock offset (no warmup needed - offset is constant with NTP sync)
+		if (!sync->initialized) {
 			sync->initialized = true;
-			int64_t wall_now = get_wall_clock_ns();
-			uint64_t obs_now = os_gettime_ns();
-			sync->clock_offset_ns = wall_now - (int64_t)obs_now;
+			sync->clock_offset_ns = get_global_clock_offset();
+			sync->warmup_frames_remaining = 0;
 
-			obs_log(LOG_INFO, "'%s' AUDIO_SYNC_LOCK_ANCHOR (frame 6): "
-				"ndi_tc=%lld ms, wall=%lld ms, obs=%llu ms, clock_offset=%lld ms",
+			obs_log(LOG_INFO, "'%s' AUDIO_SYNC_LOCK: using global_clock_offset=%lld ms, ndi_tc=%lld ms",
 				obs_source_get_name(obs_source),
-				(long long)(ndi_tc_ns / 1000000),
-				(long long)(wall_now / 1000000),
-				(unsigned long long)(obs_now / 1000000),
-				(long long)(sync->clock_offset_ns / 1000000));
-
-			int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
-			obs_audio_frame->timestamp = (uint64_t)presentation;
-		} else {
-			// Normal operation - use clock_offset
-			int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
-			obs_audio_frame->timestamp = (uint64_t)presentation;
+				(long long)(sync->clock_offset_ns / 1000000),
+				(long long)(ndi_tc_ns / 1000000));
 		}
+
+		int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
+		obs_audio_frame->timestamp = (uint64_t)presentation;
 	} else {
 		// No sync lock - use raw timestamps
 		switch (config->sync_mode) {
