@@ -25,6 +25,26 @@
 #include <QUrl>
 
 #include <thread>
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+// Get wall clock time in nanoseconds (for timing monitoring)
+static inline int64_t get_wall_clock_ns()
+{
+#ifdef _WIN32
+	FILETIME ft;
+	GetSystemTimePreciseAsFileTime(&ft);
+	uint64_t t = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+	// Convert from 100ns intervals since 1601 to ns since Unix epoch
+	return (int64_t)((t - 116444736000000000ULL) * 100);
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	return (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+#endif
+}
 
 #define PROP_SOURCE "ndi_source_name"
 #define PROP_BEHAVIOR "ndi_behavior"
@@ -125,7 +145,27 @@ typedef struct ndi_source_t {
 	uint32_t height;
 
 	uint64_t last_frame_timestamp;
+	uint64_t video_frame_count;    // Sequential frame counter for monitoring
 } ndi_source_t;
+
+// Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
+typedef struct ndi_timing_info_t {
+	// Input values
+	int64_t ndi_timecode_ns;       // NDI PTP capture time from sender (100ns units converted to ns)
+	int64_t clock_offset_ns;       // Conversion factor: wall_clock - obs_clock (0 for simple mode)
+	int64_t buffer_ns;             // Buffer setting in nanoseconds (0 for simple mode)
+
+	// Computed values
+	int64_t presentation_ns;       // OBS presentation timestamp
+	int64_t obs_now_ns;            // Current OBS monotonic time at signal emission
+
+	// Derived metrics
+	int64_t ts_ahead_ns;           // presentation - obs_now (buffer headroom)
+	int64_t pipeline_latency_ns;   // wall_now - ndi_timecode (network + processing delay)
+
+	// Debug
+	uint64_t frame_number;         // Sequential video frame counter
+} ndi_timing_info_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 {
@@ -837,6 +877,30 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
 
 	obs_source_output_video(obs_source, obs_video_frame);
+
+	// Emit ndi_timing signal for external monitoring (e.g., sync-dock)
+	{
+		source->video_frame_count++;
+		int64_t ndi_tc_ns = ndi_video_frame->timecode * 100;  // Convert 100ns to ns
+		int64_t wall_now = get_wall_clock_ns();
+		uint64_t obs_now = os_gettime_ns();
+
+		ndi_timing_info_t timing = {};
+		timing.ndi_timecode_ns = ndi_tc_ns;
+		timing.clock_offset_ns = wall_now - (int64_t)obs_now;  // Approximate clock offset
+		timing.buffer_ns = 0;  // No buffer in simple mode
+		timing.presentation_ns = obs_video_frame->timestamp;
+		timing.obs_now_ns = obs_now;
+		timing.ts_ahead_ns = (int64_t)obs_video_frame->timestamp - (int64_t)obs_now;
+		timing.pipeline_latency_ns = wall_now - ndi_tc_ns;
+		timing.frame_number = source->video_frame_count;
+
+		uint8_t stack[128];
+		struct calldata cd;
+		calldata_init_fixed(&cd, stack, sizeof(stack));
+		calldata_set_ptr(&cd, "data", &timing);
+		signal_handler_signal(obs_source_get_signal_handler(obs_source), "ndi_timing", &cd);
+	}
 }
 
 void ndi_source_thread_start(ndi_source_t *s)
@@ -1174,6 +1238,9 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
+
+	// Register ndi_timing signal for external monitoring (e.g., sync-dock)
+	signal_handler_add(sh, "void ndi_timing(ptr data)");
 
 	ndi_source_update(s, settings);
 
