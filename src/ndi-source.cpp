@@ -509,7 +509,7 @@ void process_empty_frame(ndi_source_t *source)
 	}
 }
 
-void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_frame_v3_t *ndi_audio_frame,
+void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v3_t *ndi_audio_frame,
 				      obs_source_t *obs_source, obs_source_audio *obs_audio_frame);
 
 void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
@@ -811,7 +811,7 @@ void *ndi_source_thread(void *data)
 						(unsigned long long)(audio_ts / 1000000),
 						(long long)(audio_frame.timecode * 100 / 1000000));
 				}
-				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
+				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
 			}
 			ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
@@ -878,7 +878,7 @@ void *ndi_source_thread(void *data)
 						(unsigned long long)(audio_ts / 1000000),
 						(long long)(audio_frame.timecode * 100 / 1000000));
 				}
-				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
+				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
 
 				ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
@@ -952,9 +952,11 @@ void *ndi_source_thread(void *data)
 	return nullptr;
 }
 
-void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_frame_v3_t *ndi_audio_frame,
+void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v3_t *ndi_audio_frame,
 				      obs_source_t *obs_source, obs_source_audio *obs_audio_frame)
 {
+	ndi_source_config_t *config = &source->config;
+
 	if (!config->audio_enabled) {
 		return;
 	}
@@ -963,14 +965,23 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	switch (config->sync_mode) {
-	case PROP_SYNC_NDI_TIMESTAMP:
-		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timestamp * 100);
-		break;
+	// Sync Lock: translate audio timecodes to OBS time domain (same as video)
+	if (config->sync_lock_enabled && source->ts_sync.initialized) {
+		// Use the same clock_offset as video for consistent A/V sync
+		int64_t ndi_tc_ns = ndi_audio_frame->timecode * 100;
+		int64_t presentation = ndi_tc_ns - source->ts_sync.clock_offset_ns;
+		obs_audio_frame->timestamp = (uint64_t)presentation;
+	} else {
+		// No sync lock - use raw timestamps
+		switch (config->sync_mode) {
+		case PROP_SYNC_NDI_TIMESTAMP:
+			obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timestamp * 100);
+			break;
 
-	case PROP_SYNC_NDI_SOURCE_TIMECODE:
-		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100);
-		break;
+		case PROP_SYNC_NDI_SOURCE_TIMECODE:
+			obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100);
+			break;
+		}
 	}
 
 	obs_audio_frame->samples_per_sec = ndi_audio_frame->sample_rate;
