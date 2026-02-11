@@ -307,6 +307,7 @@ void SyncTestDock::on_reset()
 	last_diff_ns = 0;
 	last_presentation_ns = 0;
 	last_rendered_ns = 0;
+	last_clock_offset_ns = 0;
 
 	disconnect_from_ndi_source();
 	start_output();
@@ -368,19 +369,22 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t diff_us = diff_ns / 1000;
 	diffDisplay->setText(QStringLiteral("%1ms (%2us)").arg(diff_ms).arg(diff_us));
 
-	// Presenting time: OBS scheduled presentation time
-	presentingDisplay->setText(format_time_ns(timing.presentation_ns));
+	// Presenting time: OBS scheduled presentation time (convert from OBS monotonic to wall clock)
+	// presentation_ns is in OBS monotonic time, clock_offset_ns = wall_now - obs_now
+	int64_t presentation_wall_ns = timing.presentation_ns + timing.clock_offset_ns;
+	presentingDisplay->setText(format_time_ns(presentation_wall_ns));
 
 	// Queue time: Received → Presenting (how long frame waited in OBS buffer)
-	int64_t queue_ns = timing.presentation_ns - receive_time_ns;
-	int64_t queue_ms = queue_ns / 1000000;
+	// ts_ahead_ns tells us how far ahead the frame is scheduled
+	int64_t queue_ms = timing.ts_ahead_ns / 1000000;
 	queueTimeDisplay->setText(QStringLiteral("%1ms").arg(queue_ms));
 
 	// Cache for logging and render timing calculations
 	last_ndi_timecode_ns = timing.ndi_timecode_ns;
 	last_receive_time_ns = receive_time_ns;
 	last_diff_ns = diff_ns;
-	last_presentation_ns = timing.presentation_ns;
+	last_presentation_ns = presentation_wall_ns;
+	last_clock_offset_ns = timing.clock_offset_ns;
 
 	// Log consolidated status every second
 	log_consolidated_status(timing.obs_now_ns);
@@ -388,19 +392,21 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 void SyncTestDock::on_render_timing(int64_t rendered_ns)
 {
-	last_rendered_ns = rendered_ns;
-	renderedDisplay->setText(format_time_ns(rendered_ns));
+	// rendered_ns is in OBS monotonic time, convert to wall clock
+	int64_t rendered_wall_ns = rendered_ns + last_clock_offset_ns;
+	last_rendered_ns = rendered_wall_ns;
+	renderedDisplay->setText(format_time_ns(rendered_wall_ns));
 
-	// Render delay: Presenting → Rendered
-	if (last_presentation_ns > 0 && rendered_ns > 0) {
-		int64_t delay_ns = rendered_ns - last_presentation_ns;
+	// Render delay: Presenting → Rendered (both now in wall clock time)
+	if (last_presentation_ns > 0 && rendered_wall_ns > 0) {
+		int64_t delay_ns = rendered_wall_ns - last_presentation_ns;
 		int64_t delay_ms = delay_ns / 1000000;
 		renderDelayDisplay->setText(QStringLiteral("%1ms").arg(delay_ms));
 	}
 
 	// Total latency: Created → Rendered
-	if (last_ndi_timecode_ns > 0 && rendered_ns > 0) {
-		int64_t total_ns = rendered_ns - last_ndi_timecode_ns;
+	if (last_ndi_timecode_ns > 0 && rendered_wall_ns > 0) {
+		int64_t total_ns = rendered_wall_ns - last_ndi_timecode_ns;
 		int64_t total_ms = total_ns / 1000000;
 		totalLatencyDisplay->setText(QStringLiteral("%1ms").arg(total_ms));
 	}

@@ -82,6 +82,7 @@ private:
 	int64_t last_diff_ns = 0;
 	int64_t last_presentation_ns = 0;
 	int64_t last_rendered_ns = 0;
+	int64_t last_clock_offset_ns = 0;
 
 private:
 	void start_output();
