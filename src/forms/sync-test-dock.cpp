@@ -266,14 +266,14 @@ void SyncTestDock::cb_obs_frame_output(void *param, calldata_t *cd)
 	auto *dock = (SyncTestDock *)param;
 
 	int64_t render_wall_clock_ns;
-	int64_t frame_ts;
+	int64_t source_frame_ts;
 	if (!calldata_get_int(cd, "output_wall_clock_ns", &render_wall_clock_ns))
 		return;
-	if (!calldata_get_int(cd, "frame_ts", &frame_ts))
+	if (!calldata_get_int(cd, "source_frame_ts", &source_frame_ts))
 		return;
 
-	QMetaObject::invokeMethod(dock, [dock, render_wall_clock_ns, frame_ts]() {
-		dock->on_obs_frame_output(render_wall_clock_ns, frame_ts);
+	QMetaObject::invokeMethod(dock, [dock, render_wall_clock_ns, source_frame_ts]() {
+		dock->on_obs_frame_output(render_wall_clock_ns, source_frame_ts);
 	});
 }
 
@@ -496,13 +496,17 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 }
 
-void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t frame_ts)
+void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t source_frame_ts)
 {
 	// This callback receives the TRUE render completion time from OBS core
-	// render_wall_clock_ns: OBS monotonic time when scene render completed
-	// frame_ts: OBS presentation timestamp of the rendered frame
+	// render_wall_clock_ns: wall-clock time when frame was actually output
+	// source_frame_ts: original frame timestamp from the source (tracked through pipeline)
+	//
+	// Frame identity tagging allows us to correlate this output timestamp with
+	// the ACTUAL source frame that was rendered, even after going through
+	// filters like Render Delay that reorder/delay frames.
 
-	// Find matching frame in FIFO queue by presentation timestamp
+	// Find matching frame in FIFO queue by source frame timestamp
 	if (pending_frames.empty())
 		return;
 
@@ -513,7 +517,7 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t fra
 	int64_t best_diff = 1000000000000LL; // Large initial value
 
 	for (auto it = pending_frames.begin(); it != pending_frames.end(); ++it) {
-		int64_t diff = it->presentation_obs_ns - frame_ts;
+		int64_t diff = it->presentation_obs_ns - source_frame_ts;
 		if (diff < 0) diff = -diff;
 		if (diff < best_diff && diff <= tolerance_ns) {
 			best_diff = diff;
@@ -525,8 +529,8 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t fra
 		// No match found within tolerance
 		if (!pending_frames.empty()) {
 			int64_t first_ts = pending_frames.front().presentation_obs_ns;
-			blog(LOG_DEBUG, "[distroav] OBS_RENDER_MATCH_FAIL: frame_ts=%" PRId64 " first_pending=%" PRId64 " diff=%" PRId64 " queue_size=%zu",
-				frame_ts, first_ts, first_ts - frame_ts, pending_frames.size());
+			blog(LOG_DEBUG, "[distroav] OBS_RENDER_MATCH_FAIL: source_frame_ts=%" PRId64 " first_pending=%" PRId64 " diff=%" PRId64 " queue_size=%zu",
+				source_frame_ts, first_ts, first_ts - source_frame_ts, pending_frames.size());
 		}
 		return;
 	}
