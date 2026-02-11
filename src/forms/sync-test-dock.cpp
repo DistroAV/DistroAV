@@ -443,6 +443,14 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	// Convert OBS monotonic render time to wall-clock
 	int64_t rendered_wall_clock_ns = rendered_ns + pft.clock_offset_ns;
 
+	// Debug: log actual values every second
+	static int64_t last_render_debug = 0;
+	if (rendered_ns - last_render_debug > 1000000000LL) {
+		blog(LOG_INFO, "[distroav] RENDER_WALLCLOCK: obs_mono=%" PRId64 " offset=%" PRId64 " wall=%" PRId64 " present=%" PRId64,
+			rendered_ns, pft.clock_offset_ns, rendered_wall_clock_ns, pft.present_ns);
+		last_render_debug = rendered_ns;
+	}
+
 	// Render delay = actual wall-clock render time - scheduled present time
 	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
 	last_render_delay_ns = render_delay_ns;
