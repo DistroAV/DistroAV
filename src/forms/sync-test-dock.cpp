@@ -174,6 +174,12 @@ SyncTestDock::~SyncTestDock()
 {
 	disconnect_from_ndi_source();
 
+	// Disconnect from OBS global render_complete signal
+	signal_handler_t *obs_sh = obs_get_signal_handler();
+	if (obs_sh) {
+		signal_handler_disconnect(obs_sh, "render_complete", cb_obs_render_complete, this);
+	}
+
 	if (sync_test) {
 		obs_output_stop(sync_test);
 		sync_test = nullptr;
@@ -255,6 +261,22 @@ void SyncTestDock::cb_render_timing(void *param, calldata_t *cd)
 	QMetaObject::invokeMethod(dock, [dock, frame_ts, rendered_ns]() { dock->on_render_timing(frame_ts, rendered_ns); });
 }
 
+void SyncTestDock::cb_obs_render_complete(void *param, calldata_t *cd)
+{
+	auto *dock = (SyncTestDock *)param;
+
+	int64_t render_wall_clock_ns;
+	int64_t frame_ts;
+	if (!calldata_get_int(cd, "render_wall_clock_ns", &render_wall_clock_ns))
+		return;
+	if (!calldata_get_int(cd, "frame_ts", &frame_ts))
+		return;
+
+	QMetaObject::invokeMethod(dock, [dock, render_wall_clock_ns, frame_ts]() {
+		dock->on_obs_render_complete(render_wall_clock_ns, frame_ts);
+	});
+}
+
 void SyncTestDock::start_output()
 {
 	OBSOutputAutoRelease o = obs_output_create(SYNC_TEST_OUTPUT_ID, "sync-test-output", nullptr, nullptr);
@@ -277,6 +299,10 @@ void SyncTestDock::start_output()
 	signal_handler_connect(sh, "sync_found", cb_sync_found, this);
 	signal_handler_connect(sh, "frame_drop_detected", cb_frame_drop_detected, this);
 	signal_handler_connect(sh, "render_timing", cb_render_timing, this);
+
+	// Connect to OBS global render_complete signal for true render timing
+	signal_handler_t *obs_sh = obs_get_signal_handler();
+	signal_handler_connect(obs_sh, "render_complete", cb_obs_render_complete, this);
 
 	bool success = obs_output_start(o);
 
@@ -452,6 +478,74 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 			(long long)(rendered_wall_clock_ns - pft.present_ns) / 1000000,
 			rendered_wall_clock_ns, pft.present_ns);
 		last_render_debug = rendered_ns;
+	}
+
+	// Render delay = actual wall-clock render time - scheduled present time
+	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
+	last_render_delay_ns = render_delay_ns;
+
+	int64_t render_ms = render_delay_ns / 1000000;
+	renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
+
+	// Display actual wall-clock render time
+	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
+
+	// Total delay = network + buffer + render
+	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
+	int64_t total_ms = total_ns / 1000000;
+	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
+}
+
+void SyncTestDock::on_obs_render_complete(int64_t render_wall_clock_ns, int64_t frame_ts)
+{
+	// This callback receives the TRUE render completion time from OBS core
+	// render_wall_clock_ns: OBS monotonic time when scene render completed
+	// frame_ts: OBS presentation timestamp of the rendered frame
+
+	// Find matching frame in FIFO queue by presentation timestamp
+	if (pending_frames.empty())
+		return;
+
+	// Find closest match (allow tolerance for timestamp precision)
+	const int64_t tolerance_ns = 500000000LL; // 500ms tolerance for debugging
+	PendingFrameTiming pft;
+	auto best_it = pending_frames.end();
+	int64_t best_diff = 1000000000000LL; // Large initial value
+
+	for (auto it = pending_frames.begin(); it != pending_frames.end(); ++it) {
+		int64_t diff = it->presentation_obs_ns - frame_ts;
+		if (diff < 0) diff = -diff;
+		if (diff < best_diff && diff <= tolerance_ns) {
+			best_diff = diff;
+			best_it = it;
+		}
+	}
+
+	if (best_it == pending_frames.end()) {
+		// No match found within tolerance
+		if (!pending_frames.empty()) {
+			int64_t first_ts = pending_frames.front().presentation_obs_ns;
+			blog(LOG_DEBUG, "[distroav] OBS_RENDER_MATCH_FAIL: frame_ts=%" PRId64 " first_pending=%" PRId64 " diff=%" PRId64 " queue_size=%zu",
+				frame_ts, first_ts, first_ts - frame_ts, pending_frames.size());
+		}
+		return;
+	}
+
+	pft = *best_it;
+	pending_frames.erase(best_it);
+
+	// Convert OBS monotonic render time to wall-clock using stored offset
+	int64_t rendered_wall_clock_ns = render_wall_clock_ns + pft.clock_offset_ns;
+
+	// Debug: log actual values every second
+	static int64_t last_obs_render_debug = 0;
+	QString render_time_str = format_time_ns(rendered_wall_clock_ns);
+	if (render_wall_clock_ns - last_obs_render_debug > 1000000000LL) {
+		blog(LOG_INFO, "[distroav] OBS_RENDER_COMPLETE: rendered=%s delay=%lldms (monotonic=%" PRId64 " wall=%" PRId64 " present=%" PRId64 ")",
+			render_time_str.toUtf8().constData(),
+			(long long)(rendered_wall_clock_ns - pft.present_ns) / 1000000,
+			render_wall_clock_ns, rendered_wall_clock_ns, pft.present_ns);
+		last_obs_render_debug = render_wall_clock_ns;
 	}
 
 	// Render delay = actual wall-clock render time - scheduled present time
