@@ -18,7 +18,6 @@
 
 #include <obs-module.h>
 #include <inttypes.h>
-#include <cstdlib>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QTimer>
@@ -94,7 +93,12 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 
 	int row = 0;
 
-	// Creation
+	// NDI Section Header
+	label = new QLabel("── NDI ──", this);
+	label->setStyleSheet("color: #888;");
+	pipelineLayout->addWidget(label, row++, 0, 1, 2, Qt::AlignCenter);
+
+	// Creation (NDI)
 	label = new QLabel("Creation", this);
 	pipelineLayout->addWidget(label, row, 0);
 	creationTimeDisplay = new QLabel("-", this);
@@ -105,7 +109,7 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	networkDelayDisplay->setAlignment(Qt::AlignCenter);
 	pipelineLayout->addWidget(networkDelayDisplay, row++, 0, 1, 2);
 
-	// Receive
+	// Receive (NDI)
 	label = new QLabel("Receive", this);
 	pipelineLayout->addWidget(label, row, 0);
 	receiveTimeDisplay = new QLabel("-", this);
@@ -116,18 +120,23 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	bufferDelayDisplay->setAlignment(Qt::AlignCenter);
 	pipelineLayout->addWidget(bufferDelayDisplay, row++, 0, 1, 2);
 
-	// Present
+	// Present (NDI)
 	label = new QLabel("Present", this);
 	pipelineLayout->addWidget(label, row, 0);
 	presentTimeDisplay = new QLabel("-", this);
 	pipelineLayout->addWidget(presentTimeDisplay, row++, 1, Qt::AlignRight);
+
+	// OBS Section Header
+	label = new QLabel("── OBS ──", this);
+	label->setStyleSheet("color: #888;");
+	pipelineLayout->addWidget(label, row++, 0, 1, 2, Qt::AlignCenter);
 
 	// Arrow + Render delay
 	renderDelayDisplay = new QLabel("     |", this);
 	renderDelayDisplay->setAlignment(Qt::AlignCenter);
 	pipelineLayout->addWidget(renderDelayDisplay, row++, 0, 1, 2);
 
-	// Render
+	// Render (OBS)
 	label = new QLabel("Render", this);
 	pipelineLayout->addWidget(label, row, 0);
 	renderTimeDisplay = new QLabel("-", this);
@@ -298,7 +307,7 @@ void SyncTestDock::on_reset()
 	last_present_ns = 0;
 	last_render_delay_ns = 0;
 	last_presentation_obs_ns = 0;
-	pending_frame_timings.clear();
+	pending_frames.clear();
 
 	disconnect_from_ndi_source();
 	start_output();
@@ -366,18 +375,18 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 	presentTimeDisplay->setText(format_time_ns(present_ns));
 
-	// Store pending frame timing for correlation with render_timing
-	// Key is the OBS presentation timestamp so we can match when frame is rendered
+	// Push frame timing to FIFO queue for exact order matching
 	PendingFrameTiming pft;
+	pft.frame_number = timing.frame_number;
 	pft.creation_ns = creation_ns;
 	pft.present_ns = present_ns;
 	pft.network_ns = network_ns;
 	pft.buffer_ns = buffer_ns;
-	pending_frame_timings[timing.presentation_ns] = pft;
+	pending_frames.push_back(pft);
 
-	// Clean up old entries (keep only last 60 frames worth, ~1 second at 60fps)
-	while (pending_frame_timings.size() > 60) {
-		pending_frame_timings.erase(pending_frame_timings.begin());
+	// Keep queue bounded (max 120 frames = ~2 seconds at 60fps)
+	while (pending_frames.size() > 120) {
+		pending_frames.pop_front();
 	}
 
 	// Cache for logging and render timing calculation
@@ -393,49 +402,26 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 void SyncTestDock::on_render_timing(int64_t rendered_ns)
 {
-	// Find the closest pending frame timing to rendered_ns
-	// OBS output timestamps may not exactly match NDI input timestamps
-	if (pending_frame_timings.empty())
+	// Pop matching frame from FIFO queue (exact 1:1 order match)
+	// NDI frames flow through OBS in order, so first in = first out
+	if (pending_frames.empty())
 		return;
 
-	// Find closest match within tolerance (50ms = ~1.5 frames at 30fps)
-	const int64_t tolerance_ns = 50000000LL;
-	auto it = pending_frame_timings.lower_bound(rendered_ns - tolerance_ns);
+	const PendingFrameTiming pft = pending_frames.front();
+	pending_frames.pop_front();
 
-	int64_t best_diff = INT64_MAX;
-	auto best_it = pending_frame_timings.end();
+	// Frames are rendered on schedule, so render delay is 0
+	// (The scheduling is done by OBS based on presentation_ns)
+	last_render_delay_ns = 0;
+	renderDelayDisplay->setText(QStringLiteral("     | 0ms"));
 
-	while (it != pending_frame_timings.end() && it->first <= rendered_ns + tolerance_ns) {
-		int64_t diff = std::abs(it->first - rendered_ns);
-		if (diff < best_diff) {
-			best_diff = diff;
-			best_it = it;
-		}
-		++it;
-	}
+	// Render time = present time (rendered on schedule)
+	renderTimeDisplay->setText(format_time_ns(pft.present_ns));
 
-	if (best_it != pending_frame_timings.end()) {
-		const PendingFrameTiming &pft = best_it->second;
-
-		// Render delay is the difference between output time and scheduled presentation
-		int64_t render_delay_ns = rendered_ns - best_it->first;
-		last_render_delay_ns = render_delay_ns;
-
-		int64_t render_ms = render_delay_ns / 1000000;
-		renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
-
-		// Render time in wall clock
-		int64_t render_time_ns = pft.present_ns + render_delay_ns;
-		renderTimeDisplay->setText(format_time_ns(render_time_ns));
-
-		// Total delay is network + buffer + render
-		int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
-		int64_t total_ms = total_ns / 1000000;
-		totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
-
-		// Remove matched and older entries
-		pending_frame_timings.erase(pending_frame_timings.begin(), std::next(best_it));
-	}
+	// Total delay = network + buffer (render is 0)
+	int64_t total_ns = pft.network_ns + pft.buffer_ns;
+	int64_t total_ms = total_ns / 1000000;
+	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 }
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)
