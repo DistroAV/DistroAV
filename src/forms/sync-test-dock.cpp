@@ -245,11 +245,14 @@ void SyncTestDock::cb_render_timing(void *param, calldata_t *cd)
 {
 	auto *dock = (SyncTestDock *)param;
 
+	int64_t frame_ts;
 	int64_t rendered_ns;
+	if (!calldata_get_int(cd, "frame_ts", &frame_ts))
+		return;
 	if (!calldata_get_int(cd, "rendered_ns", &rendered_ns))
 		return;
 
-	QMetaObject::invokeMethod(dock, [dock, rendered_ns]() { dock->on_render_timing(rendered_ns); });
+	QMetaObject::invokeMethod(dock, [dock, frame_ts, rendered_ns]() { dock->on_render_timing(frame_ts, rendered_ns); });
 }
 
 void SyncTestDock::start_output()
@@ -401,18 +404,32 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	log_consolidated_status(timing.obs_now_ns);
 }
 
-void SyncTestDock::on_render_timing(int64_t rendered_ns)
+void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 {
-	// Pop matching frame from FIFO queue (exact 1:1 order match)
-	// NDI frames flow through OBS in order, so first in = first out
+	// Find matching frame in FIFO queue by presentation timestamp
+	// frame_ts is the OBS presentation timestamp from the rendered frame
 	if (pending_frames.empty())
 		return;
 
-	const PendingFrameTiming pft = pending_frames.front();
-	pending_frames.pop_front();
+	// Find and remove matching frame from queue
+	PendingFrameTiming pft;
+	bool found = false;
+	for (auto it = pending_frames.begin(); it != pending_frames.end(); ++it) {
+		if (it->presentation_obs_ns == frame_ts) {
+			pft = *it;
+			pending_frames.erase(it);
+			found = true;
+			break;
+		}
+	}
 
-	// Render delay = actual render time - scheduled presentation time (both OBS time)
-	int64_t render_delay_ns = rendered_ns - pft.presentation_obs_ns;
+	if (!found) {
+		// No exact match - frame might have been dropped or timing mismatch
+		return;
+	}
+
+	// Render delay = actual OBS time - scheduled presentation time
+	int64_t render_delay_ns = rendered_ns - frame_ts;
 	last_render_delay_ns = render_delay_ns;
 
 	int64_t render_ms = render_delay_ns / 1000000;

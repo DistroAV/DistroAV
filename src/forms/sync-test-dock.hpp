@@ -112,7 +112,7 @@ private:
 	void on_sync_found(sync_index data);
 	void on_frame_drop_detected(frame_drop_event_s data);
 	void on_ndi_timing(ndi_timing_info_t timing);
-	void on_render_timing(int64_t rendered_ns);
+	void on_render_timing(int64_t frame_ts, int64_t rendered_ns);
 
 	static void cb_video_marker_found(void *param, calldata_t *cd);
 	static void cb_audio_marker_found(void *param, calldata_t *cd);
