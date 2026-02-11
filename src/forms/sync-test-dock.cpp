@@ -297,6 +297,7 @@ void SyncTestDock::on_reset()
 	last_present_ns = 0;
 	last_render_delay_ns = 0;
 	last_presentation_obs_ns = 0;
+	pending_frame_timings.clear();
 
 	disconnect_from_ndi_source();
 	start_output();
@@ -364,6 +365,20 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 	presentTimeDisplay->setText(format_time_ns(present_ns));
 
+	// Store pending frame timing for correlation with render_timing
+	// Key is the OBS presentation timestamp so we can match when frame is rendered
+	PendingFrameTiming pft;
+	pft.creation_ns = creation_ns;
+	pft.present_ns = present_ns;
+	pft.network_ns = network_ns;
+	pft.buffer_ns = buffer_ns;
+	pending_frame_timings[timing.presentation_ns] = pft;
+
+	// Clean up old entries (keep only last 60 frames worth, ~1 second at 60fps)
+	while (pending_frame_timings.size() > 60) {
+		pending_frame_timings.erase(pending_frame_timings.begin());
+	}
+
 	// Cache for logging and render timing calculation
 	last_creation_ns = creation_ns;
 	last_network_ns = network_ns;
@@ -377,25 +392,30 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 void SyncTestDock::on_render_timing(int64_t rendered_ns)
 {
-	// Render delay: time from OBS presentation to actual render
-	// rendered_ns is OBS monotonic time when frame was rendered
-	// last_presentation_obs_ns is OBS monotonic time when frame was scheduled
-	if (last_presentation_obs_ns > 0 && rendered_ns > 0) {
-		int64_t render_delay_ns = rendered_ns - last_presentation_obs_ns;
-		last_render_delay_ns = render_delay_ns;
+	// Look up the pending frame timing by its presentation timestamp
+	// rendered_ns is the OBS presentation timestamp of the frame being output
+	auto it = pending_frame_timings.find(rendered_ns);
+	if (it != pending_frame_timings.end()) {
+		// Found matching frame! Use its timing data
+		const PendingFrameTiming &pft = it->second;
 
-		int64_t render_ms = render_delay_ns / 1000000;
-		renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
+		// Frame is being rendered at its scheduled time - render delay is ~0
+		// The actual render happens synchronously when raw_video fires
+		last_render_delay_ns = 0;
+		renderDelayDisplay->setText(QStringLiteral("     | 0ms"));
 
-		// Convert render time to wall clock by adding to present time
-		int64_t render_time_ns = last_present_ns + render_delay_ns;
-		renderTimeDisplay->setText(format_time_ns(render_time_ns));
+		// Render time is same as present time (rendered on schedule)
+		renderTimeDisplay->setText(format_time_ns(pft.present_ns));
 
-		// Update total delay (network + buffer + render)
-		int64_t total_ns = last_network_ns + last_buffer_ns + render_delay_ns;
+		// Total delay is network + buffer (render adds ~0)
+		int64_t total_ns = pft.network_ns + pft.buffer_ns;
 		int64_t total_ms = total_ns / 1000000;
 		totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
+
+		// Remove the matched entry
+		pending_frame_timings.erase(it);
 	}
+	// If not found, frame wasn't from NDI source or was already processed
 }
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)

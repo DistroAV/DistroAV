@@ -22,6 +22,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <obs.hpp>
+#include <map>
 #include "../sync-test-output.hpp"
 
 // NDI timing information received from DistroAV ndi_source
@@ -87,6 +88,16 @@ private:
 	int64_t last_present_ns = 0;
 	int64_t last_render_delay_ns = 0;
 	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
+
+	// Frame timing correlation: map presentation_obs_ns -> (creation_ns, present_ns)
+	// Used to match render_timing callback frames with their NDI timing data
+	struct PendingFrameTiming {
+		int64_t creation_ns;   // Wall clock creation time
+		int64_t present_ns;    // Wall clock present time
+		int64_t network_ns;    // Network delay
+		int64_t buffer_ns;     // Buffer delay
+	};
+	std::map<int64_t, PendingFrameTiming> pending_frame_timings;
 
 private:
 	void start_output();
