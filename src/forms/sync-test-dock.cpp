@@ -310,11 +310,12 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 {
-	// Only log once per second
+	// Only log once per second using OBS monotonic clock
 	if (last_log_ts == 0)
 		last_log_ts = now_ts;
 
-	if (now_ts - last_log_ts < 1000000000ULL)
+	// Ensure we have valid timing data and enough time has passed
+	if (now_ts < last_log_ts || now_ts - last_log_ts < 1000000000ULL)
 		return;
 
 	// Calculate average latency
@@ -327,24 +328,30 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	double drop_rate = total > 0 ? (double)total_frame_drops * 100.0 / (double)total : 0.0;
 
 	// Format times for logging
-	int64_t created_ms = last_ndi_timecode_ns / 1000000;
-	int64_t received_ms = last_receive_time_ns / 1000000;
 	int64_t diff_ms = last_diff_ns / 1000000;
 	int64_t diff_us = last_diff_ns / 1000;
 
-	// Format as HH:MM:SS.mmm for created and received
-	int64_t c_sec = (created_ms / 1000) % 86400;
-	int64_t c_ms = created_ms % 1000;
-	int64_t r_sec = (received_ms / 1000) % 86400;
-	int64_t r_ms = received_ms % 1000;
+	// Format created/received as time-of-day HH:MM:SS.mmm
+	int64_t created_tod = (last_ndi_timecode_ns / 1000000) % 86400000LL;
+	int64_t received_tod = (last_receive_time_ns / 1000000) % 86400000LL;
+
+	int c_h = (int)(created_tod / 3600000);
+	int c_m = (int)((created_tod % 3600000) / 60000);
+	int c_s = (int)((created_tod % 60000) / 1000);
+	int c_ms = (int)(created_tod % 1000);
+
+	int r_h = (int)(received_tod / 3600000);
+	int r_m = (int)((received_tod % 3600000) / 60000);
+	int r_s = (int)((received_tod % 60000) / 1000);
+	int r_ms = (int)(received_tod % 1000);
 
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "/%" PRId64 "(%.1f%%) "
 		"created=%02d:%02d:%02d.%03d received=%02d:%02d:%02d.%03d diff=%" PRId64 "ms(%" PRId64 "us)",
 		avg_latency,
 		total_frame_drops, total,
 		drop_rate,
-		(int)(c_sec / 3600), (int)((c_sec % 3600) / 60), (int)(c_sec % 60), (int)c_ms,
-		(int)(r_sec / 3600), (int)((r_sec % 3600) / 60), (int)(r_sec % 60), (int)r_ms,
+		c_h, c_m, c_s, c_ms,
+		r_h, r_m, r_s, r_ms,
 		diff_ms, diff_us);
 
 	// Reset counters

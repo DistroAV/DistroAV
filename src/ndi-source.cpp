@@ -184,9 +184,6 @@ typedef struct ndi_source_t {
 	uint64_t first_audio_ts;       // First audio timestamp received
 	uint64_t audio_frame_count;    // Audio frame counter for startup logging
 	bool startup_logged;           // Whether startup timing has been logged
-
-	// Raw timecode logging
-	uint64_t last_timecode_log_ns; // Track last log time for 1-second interval
 } ndi_source_t;
 
 // Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
@@ -1101,36 +1098,7 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		calldata_init_fixed(&cd, stack, sizeof(stack));
 		calldata_set_ptr(&cd, "data", &timing);
 		signal_handler_signal(obs_source_get_signal_handler(obs_source), "ndi_timing", &cd);
-
-		// Log NDI timing every 1 second: created vs received in HH:MM:SS.mmm
-		if (wall_now - source->last_timecode_log_ns >= 1000000000ULL) {
-			source->last_timecode_log_ns = wall_now;
-			int64_t diff_ns = wall_now - ndi_tc_ns;
-			int64_t diff_us = diff_ns / 1000;
-			int64_t diff_ms = diff_ns / 1000000;
-
-			// Convert to time of day (ms since midnight)
-			int64_t created_ms = ndi_tc_ns / 1000000;
-			int64_t received_ms = wall_now / 1000000;
-			int64_t created_tod = created_ms % 86400000LL;
-			int64_t received_tod = received_ms % 86400000LL;
-
-			int c_h = (int)(created_tod / 3600000);
-			int c_m = (int)((created_tod % 3600000) / 60000);
-			int c_s = (int)((created_tod % 60000) / 1000);
-			int c_ms = (int)(created_tod % 1000);
-
-			int r_h = (int)(received_tod / 3600000);
-			int r_m = (int)((received_tod % 3600000) / 60000);
-			int r_s = (int)((received_tod % 60000) / 1000);
-			int r_ms = (int)(received_tod % 1000);
-
-			obs_log(LOG_INFO, "'%s' NDI_TIMING: created=%02d:%02d:%02d.%03d received=%02d:%02d:%02d.%03d diff=%lldms (%lldus)",
-				obs_source_get_name(obs_source),
-				c_h, c_m, c_s, c_ms,
-				r_h, r_m, r_s, r_ms,
-				(long long)diff_ms, (long long)diff_us);
-		}
+		// Logging moved to sync-test-dock for consolidated A/V sync output
 	}
 }
 
