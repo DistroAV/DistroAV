@@ -411,22 +411,28 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	if (pending_frames.empty())
 		return;
 
-	// Find and remove matching frame from queue
+	// Find closest match (allow small tolerance for timestamp precision)
+	const int64_t tolerance_ns = 2000000LL; // 2ms tolerance
 	PendingFrameTiming pft;
-	bool found = false;
+	auto best_it = pending_frames.end();
+	int64_t best_diff = 1000000000000LL; // Large initial value
+
 	for (auto it = pending_frames.begin(); it != pending_frames.end(); ++it) {
-		if (it->presentation_obs_ns == frame_ts) {
-			pft = *it;
-			pending_frames.erase(it);
-			found = true;
-			break;
+		int64_t diff = it->presentation_obs_ns - frame_ts;
+		if (diff < 0) diff = -diff;
+		if (diff < best_diff && diff <= tolerance_ns) {
+			best_diff = diff;
+			best_it = it;
 		}
 	}
 
-	if (!found) {
-		// No exact match - frame might have been dropped or timing mismatch
+	if (best_it == pending_frames.end()) {
+		// No match found within tolerance
 		return;
 	}
+
+	pft = *best_it;
+	pending_frames.erase(best_it);
 
 	// Render delay = actual OBS time - scheduled presentation time
 	int64_t render_delay_ns = rendered_ns - frame_ts;
