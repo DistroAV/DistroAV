@@ -633,7 +633,7 @@ static void video_marker_found(struct sync_test_output *st, uint64_t timestamp, 
 	data.qr_data = st->qr_data;
 
 	calldata_set_ptr(&cd, "data", &data);
-	signal_handler_signal(sh, "video_marker_found", &data);
+	signal_handler_signal(sh, "video_marker_found", &cd);
 
 	sync_index_found(st, data.qr_data.index, data.timestamp, true, data.qr_data.index_max);
 }
