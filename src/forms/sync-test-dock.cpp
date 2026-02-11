@@ -174,10 +174,10 @@ SyncTestDock::~SyncTestDock()
 {
 	disconnect_from_ndi_source();
 
-	// Disconnect from OBS global render_complete signal
+	// Disconnect from OBS global frame_output signal
 	signal_handler_t *obs_sh = obs_get_signal_handler();
 	if (obs_sh) {
-		signal_handler_disconnect(obs_sh, "render_complete", cb_obs_render_complete, this);
+		signal_handler_disconnect(obs_sh, "frame_output", cb_obs_frame_output, this);
 	}
 
 	if (sync_test) {
@@ -261,19 +261,19 @@ void SyncTestDock::cb_render_timing(void *param, calldata_t *cd)
 	QMetaObject::invokeMethod(dock, [dock, frame_ts, rendered_ns]() { dock->on_render_timing(frame_ts, rendered_ns); });
 }
 
-void SyncTestDock::cb_obs_render_complete(void *param, calldata_t *cd)
+void SyncTestDock::cb_obs_frame_output(void *param, calldata_t *cd)
 {
 	auto *dock = (SyncTestDock *)param;
 
 	int64_t render_wall_clock_ns;
 	int64_t frame_ts;
-	if (!calldata_get_int(cd, "render_wall_clock_ns", &render_wall_clock_ns))
+	if (!calldata_get_int(cd, "output_wall_clock_ns", &render_wall_clock_ns))
 		return;
 	if (!calldata_get_int(cd, "frame_ts", &frame_ts))
 		return;
 
 	QMetaObject::invokeMethod(dock, [dock, render_wall_clock_ns, frame_ts]() {
-		dock->on_obs_render_complete(render_wall_clock_ns, frame_ts);
+		dock->on_obs_frame_output(render_wall_clock_ns, frame_ts);
 	});
 }
 
@@ -300,9 +300,9 @@ void SyncTestDock::start_output()
 	signal_handler_connect(sh, "frame_drop_detected", cb_frame_drop_detected, this);
 	signal_handler_connect(sh, "render_timing", cb_render_timing, this);
 
-	// Connect to OBS global render_complete signal for true render timing
+	// Connect to OBS global frame_output signal for true render timing
 	signal_handler_t *obs_sh = obs_get_signal_handler();
-	signal_handler_connect(obs_sh, "render_complete", cb_obs_render_complete, this);
+	signal_handler_connect(obs_sh, "frame_output", cb_obs_frame_output, this);
 
 	bool success = obs_output_start(o);
 
@@ -496,7 +496,7 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 }
 
-void SyncTestDock::on_obs_render_complete(int64_t render_wall_clock_ns, int64_t frame_ts)
+void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t frame_ts)
 {
 	// This callback receives the TRUE render completion time from OBS core
 	// render_wall_clock_ns: OBS monotonic time when scene render completed

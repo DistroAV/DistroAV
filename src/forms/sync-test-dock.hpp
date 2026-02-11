@@ -114,7 +114,7 @@ private:
 	void on_frame_drop_detected(frame_drop_event_s data);
 	void on_ndi_timing(ndi_timing_info_t timing);
 	void on_render_timing(int64_t frame_ts, int64_t rendered_ns);
-	void on_obs_render_complete(int64_t render_wall_clock_ns, int64_t frame_ts);
+	void on_obs_frame_output(int64_t render_wall_clock_ns, int64_t frame_ts);
 
 	static void cb_video_marker_found(void *param, calldata_t *cd);
 	static void cb_audio_marker_found(void *param, calldata_t *cd);
@@ -122,7 +122,7 @@ private:
 	static void cb_frame_drop_detected(void *param, calldata_t *cd);
 	static void cb_ndi_timing(void *param, calldata_t *cd);
 	static void cb_render_timing(void *param, calldata_t *cd);
-	static void cb_obs_render_complete(void *param, calldata_t *cd);
+	static void cb_obs_frame_output(void *param, calldata_t *cd);
 };
 
 extern "C" QWidget *create_sync_test_dock();
