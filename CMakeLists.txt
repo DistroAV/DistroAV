@@ -44,6 +44,10 @@ target_sources(
     src/forms/output-settings.h
     src/forms/update.cpp
     src/forms/update.h
+    src/forms/sync-test-dock.cpp
+    src/forms/sync-test-dock.hpp
+    src/forms/dock-compat.cpp
+    src/forms/dock-compat.hpp
     src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
     src/obs-support/remote-text.hpp
@@ -61,6 +65,13 @@ target_sources(
     src/premultiplied-alpha-filter.cpp
     src/preview-output.cpp
     src/preview-output.h
+    src/sync-test-output.cpp
+    src/sync-test-output.hpp
+    src/peak-finder.hpp
+    deps/quirc/lib/decode.c
+    deps/quirc/lib/identify.c
+    deps/quirc/lib/quirc.c
+    deps/quirc/lib/version_db.c
 )
 
 set(valid_uuid FALSE)
@@ -74,4 +85,13 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
 )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/deps/quirc/lib)
+
+# Windows-specific settings for quirc and sync-test
+if(OS_WINDOWS)
+  if(MSVC)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "-D_USE_MATH_DEFINES")
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "-Dstrtok_r=strtok_s")
+  endif()
+endif()
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

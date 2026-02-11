@@ -40,5 +40,6 @@ scratch/
 
 # Except specific project files (DistroAV)
 !/CI
+!/deps
 !/lib
 !/tools

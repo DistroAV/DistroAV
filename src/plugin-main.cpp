@@ -21,8 +21,10 @@
 
 #include "forms/output-settings.h"
 #include "forms/update.h"
+#include "forms/sync-test-dock.hpp"
 #include "main-output.h"
 #include "preview-output.h"
+#include "sync-test-output.hpp"
 
 #include <QAction>
 #include <QDir>
@@ -344,7 +346,14 @@ bool obs_module_load(void)
 	alpha_filter_info = create_alpha_filter_info();
 	obs_register_source(&alpha_filter_info);
 
+	// Register sync test output for A/V sync measurement
+	register_sync_test_output();
+
 	if (main_window) {
+		// Register sync test dock
+		obs_frontend_add_dock_by_id("distroav-sync-dock",
+			obs_module_text("NDIPlugin.SyncDock.Title"),
+			create_sync_test_dock());
 		auto menu_action = static_cast<QAction *>(
 			obs_frontend_add_tools_menu_qaction(obs_module_text("NDIPlugin.Menu.OutputSettings")));
 
