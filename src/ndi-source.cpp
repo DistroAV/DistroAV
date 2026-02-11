@@ -184,6 +184,9 @@ typedef struct ndi_source_t {
 	uint64_t first_audio_ts;       // First audio timestamp received
 	uint64_t audio_frame_count;    // Audio frame counter for startup logging
 	bool startup_logged;           // Whether startup timing has been logged
+
+	// Raw timecode logging
+	uint64_t last_timecode_log_ns; // Track last log time for 1-second interval
 } ndi_source_t;
 
 // Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
@@ -1098,6 +1101,16 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		calldata_init_fixed(&cd, stack, sizeof(stack));
 		calldata_set_ptr(&cd, "data", &timing);
 		signal_handler_signal(obs_source_get_signal_handler(obs_source), "ndi_timing", &cd);
+
+		// Log raw NDI timecode every 1 second for debugging
+		if (wall_now - source->last_timecode_log_ns >= 1000000000ULL) {
+			source->last_timecode_log_ns = wall_now;
+			obs_log(LOG_INFO, "'%s' NDI_TIMECODE: raw=%lld frame=%llu pipeline=%lldms",
+				obs_source_get_name(obs_source),
+				(long long)ndi_video_frame->timecode,
+				(unsigned long long)source->video_frame_count,
+				(long long)(timing.pipeline_latency_ns / 1000000));
+		}
 	}
 }
 
