@@ -18,6 +18,7 @@
 
 #include <obs-module.h>
 #include <inttypes.h>
+#include <cstdlib>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QTimer>
@@ -392,30 +393,49 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 void SyncTestDock::on_render_timing(int64_t rendered_ns)
 {
-	// Look up the pending frame timing by its presentation timestamp
-	// rendered_ns is the OBS presentation timestamp of the frame being output
-	auto it = pending_frame_timings.find(rendered_ns);
-	if (it != pending_frame_timings.end()) {
-		// Found matching frame! Use its timing data
-		const PendingFrameTiming &pft = it->second;
+	// Find the closest pending frame timing to rendered_ns
+	// OBS output timestamps may not exactly match NDI input timestamps
+	if (pending_frame_timings.empty())
+		return;
 
-		// Frame is being rendered at its scheduled time - render delay is ~0
-		// The actual render happens synchronously when raw_video fires
-		last_render_delay_ns = 0;
-		renderDelayDisplay->setText(QStringLiteral("     | 0ms"));
+	// Find closest match within tolerance (50ms = ~1.5 frames at 30fps)
+	const int64_t tolerance_ns = 50000000LL;
+	auto it = pending_frame_timings.lower_bound(rendered_ns - tolerance_ns);
 
-		// Render time is same as present time (rendered on schedule)
-		renderTimeDisplay->setText(format_time_ns(pft.present_ns));
+	int64_t best_diff = INT64_MAX;
+	auto best_it = pending_frame_timings.end();
 
-		// Total delay is network + buffer (render adds ~0)
-		int64_t total_ns = pft.network_ns + pft.buffer_ns;
+	while (it != pending_frame_timings.end() && it->first <= rendered_ns + tolerance_ns) {
+		int64_t diff = std::abs(it->first - rendered_ns);
+		if (diff < best_diff) {
+			best_diff = diff;
+			best_it = it;
+		}
+		++it;
+	}
+
+	if (best_it != pending_frame_timings.end()) {
+		const PendingFrameTiming &pft = best_it->second;
+
+		// Render delay is the difference between output time and scheduled presentation
+		int64_t render_delay_ns = rendered_ns - best_it->first;
+		last_render_delay_ns = render_delay_ns;
+
+		int64_t render_ms = render_delay_ns / 1000000;
+		renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
+
+		// Render time in wall clock
+		int64_t render_time_ns = pft.present_ns + render_delay_ns;
+		renderTimeDisplay->setText(format_time_ns(render_time_ns));
+
+		// Total delay is network + buffer + render
+		int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
 		int64_t total_ms = total_ns / 1000000;
 		totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 
-		// Remove the matched entry
-		pending_frame_timings.erase(it);
+		// Remove matched and older entries
+		pending_frame_timings.erase(pending_frame_timings.begin(), std::next(best_it));
 	}
-	// If not found, frame wasn't from NDI source or was already processed
 }
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)
