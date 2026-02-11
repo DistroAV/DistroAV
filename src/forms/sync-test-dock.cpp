@@ -411,8 +411,8 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	if (pending_frames.empty())
 		return;
 
-	// Find closest match (allow small tolerance for timestamp precision)
-	const int64_t tolerance_ns = 2000000LL; // 2ms tolerance
+	// Find closest match (allow tolerance for timestamp precision)
+	const int64_t tolerance_ns = 500000000LL; // 500ms tolerance for debugging
 	PendingFrameTiming pft;
 	auto best_it = pending_frames.end();
 	int64_t best_diff = 1000000000000LL; // Large initial value
@@ -427,7 +427,12 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	}
 
 	if (best_it == pending_frames.end()) {
-		// No match found within tolerance
+		// No match found within tolerance - log debug info
+		if (!pending_frames.empty()) {
+			int64_t first_ts = pending_frames.front().presentation_obs_ns;
+			blog(LOG_DEBUG, "[distroav] RENDER_MATCH_FAIL: frame_ts=%" PRId64 " first_pending=%" PRId64 " diff=%" PRId64 " queue_size=%zu",
+				frame_ts, first_ts, first_ts - frame_ts, pending_frames.size());
+		}
 		return;
 	}
 
