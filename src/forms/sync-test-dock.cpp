@@ -110,6 +110,58 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	diffDisplay->setObjectName("diffDisplay");
 	topLayout->addWidget(diffDisplay, y++, 1);
 
+	// Separator line
+	QFrame *line2 = new QFrame(this);
+	line2->setFrameShape(QFrame::HLine);
+	line2->setFrameShadow(QFrame::Sunken);
+	topLayout->addWidget(line2, y++, 0, 1, 2);
+
+	// Presenting time (OBS scheduled)
+	label = new QLabel(obs_module_text("NDIPlugin.SyncDock.Presenting"), this);
+	topLayout->addWidget(label, y, 0);
+
+	presentingDisplay = new QLabel("-", this);
+	presentingDisplay->setObjectName("presentingDisplay");
+	topLayout->addWidget(presentingDisplay, y++, 1);
+
+	// Rendered time (raw_video callback)
+	label = new QLabel(obs_module_text("NDIPlugin.SyncDock.Rendered"), this);
+	topLayout->addWidget(label, y, 0);
+
+	renderedDisplay = new QLabel("-", this);
+	renderedDisplay->setObjectName("renderedDisplay");
+	topLayout->addWidget(renderedDisplay, y++, 1);
+
+	// Separator line
+	QFrame *line3 = new QFrame(this);
+	line3->setFrameShape(QFrame::HLine);
+	line3->setFrameShadow(QFrame::Sunken);
+	topLayout->addWidget(line3, y++, 0, 1, 2);
+
+	// Queue time (Received → Presenting)
+	label = new QLabel(obs_module_text("NDIPlugin.SyncDock.QueueTime"), this);
+	topLayout->addWidget(label, y, 0);
+
+	queueTimeDisplay = new QLabel("-", this);
+	queueTimeDisplay->setObjectName("queueTimeDisplay");
+	topLayout->addWidget(queueTimeDisplay, y++, 1);
+
+	// Render delay (Presenting → Rendered)
+	label = new QLabel(obs_module_text("NDIPlugin.SyncDock.RenderDelay"), this);
+	topLayout->addWidget(label, y, 0);
+
+	renderDelayDisplay = new QLabel("-", this);
+	renderDelayDisplay->setObjectName("renderDelayDisplay");
+	topLayout->addWidget(renderDelayDisplay, y++, 1);
+
+	// Total latency (Created → Rendered)
+	label = new QLabel(obs_module_text("NDIPlugin.SyncDock.TotalLatency"), this);
+	topLayout->addWidget(label, y, 0);
+
+	totalLatencyDisplay = new QLabel("-", this);
+	totalLatencyDisplay->setObjectName("totalLatencyDisplay");
+	topLayout->addWidget(totalLatencyDisplay, y++, 1);
+
 	mainLayout->addLayout(topLayout);
 	setLayout(mainLayout);
 
@@ -190,6 +242,17 @@ void SyncTestDock::cb_ndi_timing(void *param, calldata_t *cd)
 	QMetaObject::invokeMethod(dock, [dock, timing]() { dock->on_ndi_timing(timing); });
 }
 
+void SyncTestDock::cb_render_timing(void *param, calldata_t *cd)
+{
+	auto *dock = (SyncTestDock *)param;
+
+	int64_t rendered_ns;
+	if (!calldata_get_int(cd, "rendered_ns", &rendered_ns))
+		return;
+
+	QMetaObject::invokeMethod(dock, [dock, rendered_ns]() { dock->on_render_timing(rendered_ns); });
+}
+
 void SyncTestDock::start_output()
 {
 	OBSOutputAutoRelease o = obs_output_create(SYNC_TEST_OUTPUT_ID, "sync-test-output", nullptr, nullptr);
@@ -211,6 +274,7 @@ void SyncTestDock::start_output()
 	signal_handler_connect(sh, "audio_marker_found", cb_audio_marker_found, this);
 	signal_handler_connect(sh, "sync_found", cb_sync_found, this);
 	signal_handler_connect(sh, "frame_drop_detected", cb_frame_drop_detected, this);
+	signal_handler_connect(sh, "render_timing", cb_render_timing, this);
 
 	bool success = obs_output_start(o);
 
@@ -232,10 +296,17 @@ void SyncTestDock::on_reset()
 	createdDisplay->setText("-");
 	receivedDisplay->setText("-");
 	diffDisplay->setText("-");
+	presentingDisplay->setText("-");
+	renderedDisplay->setText("-");
+	queueTimeDisplay->setText("-");
+	renderDelayDisplay->setText("-");
+	totalLatencyDisplay->setText("-");
 
 	last_ndi_timecode_ns = 0;
 	last_receive_time_ns = 0;
 	last_diff_ns = 0;
+	last_presentation_ns = 0;
+	last_rendered_ns = 0;
 
 	disconnect_from_ndi_source();
 	start_output();
@@ -297,13 +368,42 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t diff_us = diff_ns / 1000;
 	diffDisplay->setText(QStringLiteral("%1ms (%2us)").arg(diff_ms).arg(diff_us));
 
-	// Cache for logging
+	// Presenting time: OBS scheduled presentation time
+	presentingDisplay->setText(format_time_ns(timing.presentation_ns));
+
+	// Queue time: Received → Presenting (how long frame waited in OBS buffer)
+	int64_t queue_ns = timing.presentation_ns - receive_time_ns;
+	int64_t queue_ms = queue_ns / 1000000;
+	queueTimeDisplay->setText(QStringLiteral("%1ms").arg(queue_ms));
+
+	// Cache for logging and render timing calculations
 	last_ndi_timecode_ns = timing.ndi_timecode_ns;
 	last_receive_time_ns = receive_time_ns;
 	last_diff_ns = diff_ns;
+	last_presentation_ns = timing.presentation_ns;
 
 	// Log consolidated status every second
 	log_consolidated_status(timing.obs_now_ns);
+}
+
+void SyncTestDock::on_render_timing(int64_t rendered_ns)
+{
+	last_rendered_ns = rendered_ns;
+	renderedDisplay->setText(format_time_ns(rendered_ns));
+
+	// Render delay: Presenting → Rendered
+	if (last_presentation_ns > 0 && rendered_ns > 0) {
+		int64_t delay_ns = rendered_ns - last_presentation_ns;
+		int64_t delay_ms = delay_ns / 1000000;
+		renderDelayDisplay->setText(QStringLiteral("%1ms").arg(delay_ms));
+	}
+
+	// Total latency: Created → Rendered
+	if (last_ndi_timecode_ns > 0 && rendered_ns > 0) {
+		int64_t total_ns = rendered_ns - last_ndi_timecode_ns;
+		int64_t total_ms = total_ns / 1000000;
+		totalLatencyDisplay->setText(QStringLiteral("%1ms").arg(total_ms));
+	}
 }
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)
@@ -326,12 +426,19 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	double drop_rate = total > 0 ? (double)total_frame_drops * 100.0 / (double)total : 0.0;
 
 	// Format times for logging
-	int64_t diff_ms = last_diff_ns / 1000000;
-	int64_t diff_us = last_diff_ns / 1000;
+	int64_t network_ms = last_diff_ns / 1000000;
 
-	// Format created/received as time-of-day HH:MM:SS.mmm
+	// Calculate queue and render times
+	int64_t queue_ms = (last_presentation_ns - last_receive_time_ns) / 1000000;
+	int64_t render_delay_ms = (last_rendered_ns > 0 && last_presentation_ns > 0)
+		? (last_rendered_ns - last_presentation_ns) / 1000000 : 0;
+	int64_t total_latency_ms = (last_rendered_ns > 0 && last_ndi_timecode_ns > 0)
+		? (last_rendered_ns - last_ndi_timecode_ns) / 1000000 : 0;
+
+	// Format created/received/presenting as time-of-day HH:MM:SS.mmm
 	int64_t created_tod = (last_ndi_timecode_ns / 1000000) % 86400000LL;
 	int64_t received_tod = (last_receive_time_ns / 1000000) % 86400000LL;
+	int64_t presenting_tod = (last_presentation_ns / 1000000) % 86400000LL;
 
 	int c_h = (int)(created_tod / 3600000);
 	int c_m = (int)((created_tod % 3600000) / 60000);
@@ -343,14 +450,21 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	int r_s = (int)((received_tod % 60000) / 1000);
 	int r_ms = (int)(received_tod % 1000);
 
+	int p_h = (int)(presenting_tod / 3600000);
+	int p_m = (int)((presenting_tod % 3600000) / 60000);
+	int p_s = (int)((presenting_tod % 60000) / 1000);
+	int p_ms = (int)(presenting_tod % 1000);
+
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "/%" PRId64 "(%.1f%%) "
-		"created=%02d:%02d:%02d.%03d received=%02d:%02d:%02d.%03d diff=%" PRId64 "ms(%" PRId64 "us)",
+		"created=%02d:%02d:%02d.%03d received=%02d:%02d:%02d.%03d presenting=%02d:%02d:%02d.%03d "
+		"network=%" PRId64 "ms queue=%" PRId64 "ms render=%" PRId64 "ms total=%" PRId64 "ms",
 		avg_latency,
 		total_frame_drops, total,
 		drop_rate,
 		c_h, c_m, c_s, c_ms,
 		r_h, r_m, r_s, r_ms,
-		diff_ms, diff_us);
+		p_h, p_m, p_s, p_ms,
+		network_ms, queue_ms, render_delay_ms, total_latency_ms);
 
 	// Reset counters
 	sync_count_since_log = 0;

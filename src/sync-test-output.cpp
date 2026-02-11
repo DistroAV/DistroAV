@@ -162,6 +162,7 @@ static void *st_create(obs_data_t *, obs_output_t *output)
 		"void qrcode_found(int timestamp, int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3)",
 		"void sync_found(ptr data)",
 		"void frame_drop_detected(ptr data)",
+		"void render_timing(int rendered_ns)",
 		NULL,
 	};
 	signal_handler_add_array(obs_output_get_signal_handler(output), signals);
@@ -650,6 +651,13 @@ static void st_raw_video(void *data, struct video_data *frame)
 
 	st_raw_video_qrcode_decode(st, frame);
 	st_raw_video_find_marker(st, frame);
+
+	// Emit render timing signal with the frame's timestamp (when OBS rendered this frame)
+	uint8_t stack[64];
+	struct calldata cd;
+	calldata_init_fixed(&cd, stack, sizeof(stack));
+	calldata_set_int(&cd, "rendered_ns", frame->timestamp);
+	signal_handler_signal(obs_output_get_signal_handler(st->context), "render_timing", &cd);
 }
 
 static uint32_t identify_audio_index_max(struct sync_test_output *st, int index)

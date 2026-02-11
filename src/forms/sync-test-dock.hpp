@@ -53,6 +53,11 @@ private:
 	QLabel *createdDisplay = nullptr;
 	QLabel *receivedDisplay = nullptr;
 	QLabel *diffDisplay = nullptr;
+	QLabel *presentingDisplay = nullptr;
+	QLabel *renderedDisplay = nullptr;
+	QLabel *queueTimeDisplay = nullptr;
+	QLabel *renderDelayDisplay = nullptr;
+	QLabel *totalLatencyDisplay = nullptr;
 
 private:
 	OBSOutput sync_test;
@@ -75,6 +80,8 @@ private:
 	int64_t last_ndi_timecode_ns = 0;
 	int64_t last_receive_time_ns = 0;
 	int64_t last_diff_ns = 0;
+	int64_t last_presentation_ns = 0;
+	int64_t last_rendered_ns = 0;
 
 private:
 	void start_output();
@@ -88,12 +95,14 @@ private:
 	void on_sync_found(sync_index data);
 	void on_frame_drop_detected(frame_drop_event_s data);
 	void on_ndi_timing(ndi_timing_info_t timing);
+	void on_render_timing(int64_t rendered_ns);
 
 	static void cb_video_marker_found(void *param, calldata_t *cd);
 	static void cb_audio_marker_found(void *param, calldata_t *cd);
 	static void cb_sync_found(void *param, calldata_t *cd);
 	static void cb_frame_drop_detected(void *param, calldata_t *cd);
 	static void cb_ndi_timing(void *param, calldata_t *cd);
+	static void cb_render_timing(void *param, calldata_t *cd);
 };
 
 extern "C" QWidget *create_sync_test_dock();
