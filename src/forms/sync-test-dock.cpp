@@ -268,8 +268,8 @@ void SyncTestDock::on_sync_found(sync_index data)
 	sync_count_since_log++;
 	latency_sum_since_log += latency_ms;
 
-	// Check if we should log
-	log_consolidated_status(data.video_ts);
+	// Don't log here - let on_ndi_timing handle consolidated logging
+	// to avoid duplicate logs with different time bases
 }
 
 void SyncTestDock::on_frame_drop_detected(frame_drop_event_s data)
