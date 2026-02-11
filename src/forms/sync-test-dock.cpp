@@ -311,9 +311,12 @@ void SyncTestDock::start_output()
 	signal_handler_connect(sh, "audio_marker_found", cb_audio_marker_found, this);
 	signal_handler_connect(sh, "sync_found", cb_sync_found, this);
 	signal_handler_connect(sh, "frame_drop_detected", cb_frame_drop_detected, this);
-	signal_handler_connect(sh, "render_timing", cb_render_timing, this);
+	// Disabled: render_timing uses current frame timestamp, not delayed timestamp
+	// signal_handler_connect(sh, "render_timing", cb_render_timing, this);
 
 	// Connect to OBS global frame_output signal for true render timing
+	// This receives source_frame_ts from frame identity tracking, which
+	// properly tracks through GPU delay filter
 	signal_handler_t *obs_sh = obs_get_signal_handler();
 	signal_handler_connect(obs_sh, "frame_output", cb_obs_frame_output, this);
 
@@ -524,7 +527,9 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 		return;
 
 	// Find closest match (allow tolerance for timestamp precision)
-	const int64_t tolerance_ns = 500000000LL; // 500ms tolerance for debugging
+	// With GPU delay filter disabled on render_timing, frames should
+	// accumulate in queue and match correctly with delayed source_frame_ts
+	const int64_t tolerance_ns = 100000000LL; // 100ms tolerance (3 frames at 30fps)
 	PendingFrameTiming pft;
 	auto best_it = pending_frames.end();
 	int64_t best_diff = 1000000000000LL; // Large initial value
