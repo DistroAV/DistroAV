@@ -18,6 +18,27 @@
 #include "plugin-main.h"
 // #include "plugin-support.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+// Get wall clock time in 100-nanosecond intervals for NDI timecode
+static inline int64_t get_wall_clock_timecode()
+{
+#ifdef _WIN32
+	FILETIME ft;
+	GetSystemTimePreciseAsFileTime(&ft);
+	uint64_t t = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+	// Convert from 100ns intervals since 1601 to 100ns intervals since Unix epoch
+	return (int64_t)(t - 116444736000000000ULL);
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	// Convert to 100ns intervals
+	return (int64_t)ts.tv_sec * 10000000LL + ts.tv_nsec / 100;
+#endif
+}
+
 static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
 {
 	return a < b ? a : b;
@@ -324,7 +345,7 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.frame_rate_D =
 		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-	video_frame.timecode = NDIlib_send_timecode_synthesize;
+	video_frame.timecode = get_wall_clock_timecode();  // Use real wall clock time
 	video_frame.FourCC = o->frame_fourcc;
 
 	if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
@@ -350,7 +371,7 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
-	audio_frame.timecode = NDIlib_send_timecode_synthesize;
+	audio_frame.timecode = get_wall_clock_timecode();  // Use real wall clock time
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;

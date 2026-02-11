@@ -17,6 +17,10 @@
 
 #include "plugin-main.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <util/platform.h>
 #include <util/threading.h>
 #include <media-io/video-frame.h>
@@ -27,6 +31,23 @@
 #define TEXFORMAT GS_BGRA
 #define FLT_PROP_NAME "ndi_filter_ndiname"
 #define FLT_PROP_GROUPS "ndi_filter_ndigroups"
+
+// Get wall clock time in 100-nanosecond intervals for NDI timecode
+static inline int64_t get_wall_clock_timecode()
+{
+#ifdef _WIN32
+	FILETIME ft;
+	GetSystemTimePreciseAsFileTime(&ft);
+	uint64_t t = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+	// Convert from 100ns intervals since 1601 to 100ns intervals since Unix epoch
+	return (int64_t)(t - 116444736000000000ULL);
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	// Convert to 100ns intervals
+	return (int64_t)ts.tv_sec * 10000000LL + ts.tv_nsec / 100;
+#endif
+}
 
 typedef struct {
 	obs_source_t *obs_source;
@@ -135,7 +156,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		video_frame.frame_rate_D = f->ovi.fps_den;
 		video_frame.picture_aspect_ratio = 0; // square pixels
 		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-		video_frame.timecode = NDIlib_send_timecode_synthesize;
+		video_frame.timecode = get_wall_clock_timecode();  // Use real wall clock time
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
@@ -416,7 +437,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
-	audio_frame.timecode = NDIlib_send_timecode_synthesize;
+	audio_frame.timecode = get_wall_clock_timecode();  // Use real wall clock time
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.channel_stride_in_bytes =
 		audio_frame.no_samples *
