@@ -1105,11 +1105,13 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		// Log NDI timing every 1 second: created vs received in HH:MM:SS.mmm
 		if (wall_now - source->last_timecode_log_ns >= 1000000000ULL) {
 			source->last_timecode_log_ns = wall_now;
-			int64_t created_ms = ndi_tc_ns / 1000000;
-			int64_t received_ms = wall_now / 1000000;
-			int64_t diff_ms = received_ms - created_ms;
+			int64_t diff_ns = wall_now - ndi_tc_ns;
+			int64_t diff_us = diff_ns / 1000;
+			int64_t diff_ms = diff_ns / 1000000;
 
 			// Convert to time of day (ms since midnight)
+			int64_t created_ms = ndi_tc_ns / 1000000;
+			int64_t received_ms = wall_now / 1000000;
 			int64_t created_tod = created_ms % 86400000LL;
 			int64_t received_tod = received_ms % 86400000LL;
 
@@ -1123,11 +1125,11 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 			int r_s = (int)((received_tod % 60000) / 1000);
 			int r_ms = (int)(received_tod % 1000);
 
-			obs_log(LOG_INFO, "'%s' NDI_TIMING: created=%02d:%02d:%02d.%03d received=%02d:%02d:%02d.%03d diff=%lldms",
+			obs_log(LOG_INFO, "'%s' NDI_TIMING: created=%02d:%02d:%02d.%03d received=%02d:%02d:%02d.%03d diff=%lldms (%lldus)",
 				obs_source_get_name(obs_source),
 				c_h, c_m, c_s, c_ms,
 				r_h, r_m, r_s, r_ms,
-				(long long)diff_ms);
+				(long long)diff_ms, (long long)diff_us);
 		}
 	}
 }
