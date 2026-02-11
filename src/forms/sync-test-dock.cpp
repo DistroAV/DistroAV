@@ -25,25 +25,23 @@
 #include <obs-frontend-api.h>
 #include "sync-test-dock.hpp"
 
-// Format nanoseconds as HH:MM:SS.mmm
+// Format nanoseconds as time-of-day HH:MM:SS.mmm (UTC)
 static QString format_time_ns(int64_t ns)
 {
-	// Convert from nanoseconds to milliseconds
+	// Convert from nanoseconds to milliseconds, then to time-of-day
 	int64_t total_ms = ns / 1000000;
 
-	// Handle negative values
-	bool negative = total_ms < 0;
-	if (negative) total_ms = -total_ms;
+	// Get time-of-day (milliseconds since midnight)
+	int64_t tod_ms = total_ms % 86400000LL;  // 86400000 = 24*60*60*1000
+	if (tod_ms < 0) tod_ms += 86400000LL;    // Handle negative values
 
-	int64_t ms = total_ms % 1000;
-	int64_t total_sec = total_ms / 1000;
+	int64_t ms = tod_ms % 1000;
+	int64_t total_sec = tod_ms / 1000;
 	int64_t sec = total_sec % 60;
-	int64_t total_min = total_sec / 60;
-	int64_t min = total_min % 60;
-	int64_t hours = total_min / 60;
+	int64_t min = (total_sec / 60) % 60;
+	int64_t hours = (total_sec / 3600) % 24;
 
-	return QStringLiteral("%1%2:%3:%4.%5")
-		.arg(negative ? "-" : "")
+	return QStringLiteral("%1:%2:%3.%4")
 		.arg(hours, 2, 10, QChar('0'))
 		.arg(min, 2, 10, QChar('0'))
 		.arg(sec, 2, 10, QChar('0'))
