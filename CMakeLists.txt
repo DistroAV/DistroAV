@@ -94,4 +94,14 @@ if(OS_WINDOWS)
     target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE "-Dstrtok_r=strtok_s")
   endif()
 endif()
+
+# Disable warnings for quirc library (third-party code)
+set_source_files_properties(
+  deps/quirc/lib/decode.c
+  deps/quirc/lib/identify.c
+  deps/quirc/lib/quirc.c
+  deps/quirc/lib/version_db.c
+  PROPERTIES
+    COMPILE_FLAGS "$<$<C_COMPILER_ID:MSVC>:/w>$<$<NOT:$<C_COMPILER_ID:MSVC>>:-w>"
+)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
