@@ -441,6 +441,14 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 
 	// Render delay = actual OBS time - scheduled presentation time
 	int64_t render_delay_ns = rendered_ns - frame_ts;
+
+	// Debug: log actual timestamps every ~1 second
+	static int64_t last_debug_log = 0;
+	if (rendered_ns - last_debug_log > 1000000000LL) {
+		blog(LOG_INFO, "[distroav] RENDER_TIMING: frame_ts=%" PRId64 " rendered_ns=%" PRId64 " diff=%" PRId64 "ms matched_pres=%" PRId64,
+			frame_ts, rendered_ns, render_delay_ns / 1000000, pft.presentation_obs_ns);
+		last_debug_log = rendered_ns;
+	}
 	last_render_delay_ns = render_delay_ns;
 
 	int64_t render_ms = render_delay_ns / 1000000;
