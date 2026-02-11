@@ -93,11 +93,11 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 
 	int row = 0;
 
-	// Capture
-	label = new QLabel("Capture", this);
+	// Creation
+	label = new QLabel("Creation", this);
 	pipelineLayout->addWidget(label, row, 0);
-	captureTimeDisplay = new QLabel("-", this);
-	pipelineLayout->addWidget(captureTimeDisplay, row++, 1, Qt::AlignRight);
+	creationTimeDisplay = new QLabel("-", this);
+	pipelineLayout->addWidget(creationTimeDisplay, row++, 1, Qt::AlignRight);
 
 	// Arrow + Network delay
 	networkDelayDisplay = new QLabel("     |", this);
@@ -120,6 +120,17 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	pipelineLayout->addWidget(label, row, 0);
 	presentTimeDisplay = new QLabel("-", this);
 	pipelineLayout->addWidget(presentTimeDisplay, row++, 1, Qt::AlignRight);
+
+	// Arrow + Render delay
+	renderDelayDisplay = new QLabel("     |", this);
+	renderDelayDisplay->setAlignment(Qt::AlignCenter);
+	pipelineLayout->addWidget(renderDelayDisplay, row++, 0, 1, 2);
+
+	// Render
+	label = new QLabel("Render", this);
+	pipelineLayout->addWidget(label, row, 0);
+	renderTimeDisplay = new QLabel("-", this);
+	pipelineLayout->addWidget(renderTimeDisplay, row++, 1, Qt::AlignRight);
 
 	mainLayout->addLayout(pipelineLayout);
 
@@ -220,6 +231,17 @@ void SyncTestDock::cb_ndi_timing(void *param, calldata_t *cd)
 	QMetaObject::invokeMethod(dock, [dock, timing]() { dock->on_ndi_timing(timing); });
 }
 
+void SyncTestDock::cb_render_timing(void *param, calldata_t *cd)
+{
+	auto *dock = (SyncTestDock *)param;
+
+	int64_t rendered_ns;
+	if (!calldata_get_int(cd, "rendered_ns", &rendered_ns))
+		return;
+
+	QMetaObject::invokeMethod(dock, [dock, rendered_ns]() { dock->on_render_timing(rendered_ns); });
+}
+
 void SyncTestDock::start_output()
 {
 	OBSOutputAutoRelease o = obs_output_create(SYNC_TEST_OUTPUT_ID, "sync-test-output", nullptr, nullptr);
@@ -241,6 +263,7 @@ void SyncTestDock::start_output()
 	signal_handler_connect(sh, "audio_marker_found", cb_audio_marker_found, this);
 	signal_handler_connect(sh, "sync_found", cb_sync_found, this);
 	signal_handler_connect(sh, "frame_drop_detected", cb_frame_drop_detected, this);
+	signal_handler_connect(sh, "render_timing", cb_render_timing, this);
 
 	bool success = obs_output_start(o);
 
@@ -259,16 +282,21 @@ void SyncTestDock::on_reset()
 
 	latencyDisplay->setText("-");
 	frameDropDisplay->setText("-");
-	captureTimeDisplay->setText("-");
+	creationTimeDisplay->setText("-");
 	networkDelayDisplay->setText("     |");
 	receiveTimeDisplay->setText("-");
 	bufferDelayDisplay->setText("     |");
 	presentTimeDisplay->setText("-");
+	renderDelayDisplay->setText("     |");
+	renderTimeDisplay->setText("-");
 	totalDelayDisplay->setText("-");
 
-	last_capture_ns = 0;
+	last_creation_ns = 0;
 	last_network_ns = 0;
 	last_buffer_ns = 0;
+	last_present_ns = 0;
+	last_render_delay_ns = 0;
+	last_presentation_obs_ns = 0;
 
 	disconnect_from_ndi_source();
 	start_output();
@@ -314,20 +342,17 @@ void SyncTestDock::on_frame_drop_detected(frame_drop_event_s data)
 void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 {
 	// Pipeline timing values
-	int64_t capture_ns = timing.ndi_timecode_ns;
+	int64_t creation_ns = timing.ndi_timecode_ns;
 	int64_t network_ns = timing.pipeline_latency_ns;
-	int64_t receive_ns = capture_ns + network_ns;
+	int64_t receive_ns = creation_ns + network_ns;
 
 	// Buffer time: ts_ahead_ns tells us how far ahead the frame is scheduled
 	// Positive = frame is buffered, Negative = frame is late/no buffer
 	int64_t buffer_ns = timing.ts_ahead_ns;
 	int64_t present_ns = receive_ns + buffer_ns;
 
-	// Total delay from capture to present
-	int64_t total_ns = network_ns + buffer_ns;
-
 	// Update displays
-	captureTimeDisplay->setText(format_time_ns(capture_ns));
+	creationTimeDisplay->setText(format_time_ns(creation_ns));
 
 	int64_t network_ms = network_ns / 1000000;
 	networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
@@ -339,16 +364,38 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 	presentTimeDisplay->setText(format_time_ns(present_ns));
 
-	int64_t total_ms = total_ns / 1000000;
-	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
-
-	// Cache for logging
-	last_capture_ns = capture_ns;
+	// Cache for logging and render timing calculation
+	last_creation_ns = creation_ns;
 	last_network_ns = network_ns;
 	last_buffer_ns = buffer_ns;
+	last_present_ns = present_ns;
+	last_presentation_obs_ns = timing.presentation_ns;
 
 	// Log consolidated status every second
 	log_consolidated_status(timing.obs_now_ns);
+}
+
+void SyncTestDock::on_render_timing(int64_t rendered_ns)
+{
+	// Render delay: time from OBS presentation to actual render
+	// rendered_ns is OBS monotonic time when frame was rendered
+	// last_presentation_obs_ns is OBS monotonic time when frame was scheduled
+	if (last_presentation_obs_ns > 0 && rendered_ns > 0) {
+		int64_t render_delay_ns = rendered_ns - last_presentation_obs_ns;
+		last_render_delay_ns = render_delay_ns;
+
+		int64_t render_ms = render_delay_ns / 1000000;
+		renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
+
+		// Convert render time to wall clock by adding to present time
+		int64_t render_time_ns = last_present_ns + render_delay_ns;
+		renderTimeDisplay->setText(format_time_ns(render_time_ns));
+
+		// Update total delay (network + buffer + render)
+		int64_t total_ns = last_network_ns + last_buffer_ns + render_delay_ns;
+		int64_t total_ms = total_ns / 1000000;
+		totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
+	}
 }
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)
@@ -372,22 +419,23 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	// Calculate times
 	int64_t network_ms = last_network_ns / 1000000;
 	int64_t buffer_ms = last_buffer_ns / 1000000;
-	int64_t total_delay_ms = network_ms + buffer_ms;
+	int64_t render_ms = last_render_delay_ns / 1000000;
+	int64_t total_delay_ms = network_ms + buffer_ms + render_ms;
 
-	// Format capture time as time-of-day
-	int64_t capture_tod = (last_capture_ns / 1000000) % 86400000LL;
-	int c_h = (int)(capture_tod / 3600000);
-	int c_m = (int)((capture_tod % 3600000) / 60000);
-	int c_s = (int)((capture_tod % 60000) / 1000);
-	int c_ms = (int)(capture_tod % 1000);
+	// Format creation time as time-of-day
+	int64_t creation_tod = (last_creation_ns / 1000000) % 86400000LL;
+	int c_h = (int)(creation_tod / 3600000);
+	int c_m = (int)((creation_tod % 3600000) / 60000);
+	int c_s = (int)((creation_tod % 60000) / 1000);
+	int c_ms = (int)(creation_tod % 1000);
 
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "/%" PRId64 "(%.1f%%) "
-		"capture=%02d:%02d:%02d.%03d network=%" PRId64 "ms buffer=%" PRId64 "ms total=%" PRId64 "ms",
+		"creation=%02d:%02d:%02d.%03d network=%" PRId64 "ms buffer=%" PRId64 "ms render=%" PRId64 "ms total=%" PRId64 "ms",
 		avg_latency,
 		total_frame_drops, total,
 		drop_rate,
 		c_h, c_m, c_s, c_ms,
-		network_ms, buffer_ms, total_delay_ms);
+		network_ms, buffer_ms, render_ms, total_delay_ms);
 
 	// Reset counters
 	sync_count_since_log = 0;

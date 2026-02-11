@@ -52,11 +52,13 @@ private:
 	QLabel *frameDropDisplay = nullptr;
 
 	// Pipeline displays
-	QLabel *captureTimeDisplay = nullptr;
+	QLabel *creationTimeDisplay = nullptr;
 	QLabel *networkDelayDisplay = nullptr;
 	QLabel *receiveTimeDisplay = nullptr;
 	QLabel *bufferDelayDisplay = nullptr;
 	QLabel *presentTimeDisplay = nullptr;
+	QLabel *renderDelayDisplay = nullptr;
+	QLabel *renderTimeDisplay = nullptr;
 
 	// Total
 	QLabel *totalDelayDisplay = nullptr;
@@ -79,9 +81,12 @@ private:
 	double last_latency_ms = 0.0;
 
 	// NDI timing cache for logging
-	int64_t last_capture_ns = 0;
+	int64_t last_creation_ns = 0;
 	int64_t last_network_ns = 0;
 	int64_t last_buffer_ns = 0;
+	int64_t last_present_ns = 0;
+	int64_t last_render_delay_ns = 0;
+	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
 
 private:
 	void start_output();
@@ -95,12 +100,14 @@ private:
 	void on_sync_found(sync_index data);
 	void on_frame_drop_detected(frame_drop_event_s data);
 	void on_ndi_timing(ndi_timing_info_t timing);
+	void on_render_timing(int64_t rendered_ns);
 
 	static void cb_video_marker_found(void *param, calldata_t *cd);
 	static void cb_audio_marker_found(void *param, calldata_t *cd);
 	static void cb_sync_found(void *param, calldata_t *cd);
 	static void cb_frame_drop_detected(void *param, calldata_t *cd);
 	static void cb_ndi_timing(void *param, calldata_t *cd);
+	static void cb_render_timing(void *param, calldata_t *cd);
 };
 
 extern "C" QWidget *create_sync_test_dock();
