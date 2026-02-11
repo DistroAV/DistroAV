@@ -17,6 +17,7 @@
 ******************************************************************************/
 
 #include <obs-module.h>
+#include <util/platform.h>
 #include <inttypes.h>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
