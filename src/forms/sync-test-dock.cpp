@@ -445,9 +445,12 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 
 	// Debug: log actual values every second
 	static int64_t last_render_debug = 0;
+	QString render_time_str = format_time_ns(rendered_wall_clock_ns);
 	if (rendered_ns - last_render_debug > 1000000000LL) {
-		blog(LOG_INFO, "[distroav] RENDER_WALLCLOCK: obs_mono=%" PRId64 " offset=%" PRId64 " wall=%" PRId64 " present=%" PRId64,
-			rendered_ns, pft.clock_offset_ns, rendered_wall_clock_ns, pft.present_ns);
+		blog(LOG_INFO, "[distroav] RENDER_WALLCLOCK: rendered=%s delay=%lldms (wall=%" PRId64 " present=%" PRId64 ")",
+			render_time_str.toUtf8().constData(),
+			(long long)(rendered_wall_clock_ns - pft.present_ns) / 1000000,
+			rendered_wall_clock_ns, pft.present_ns);
 		last_render_debug = rendered_ns;
 	}
 
