@@ -550,8 +550,11 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	static int64_t last_obs_render_debug = 0;
 	QString render_time_str = format_time_ns(rendered_wall_clock_ns);
 	if (render_wall_clock_ns - last_obs_render_debug > 1000000000LL) {
-		blog(LOG_INFO, "[distroav] OBS_RENDER_MATCH: source_frame_ts=%" PRId64 " matched_ts=%" PRId64 " diff=%" PRId64 "ns frame_age=%" PRId64 "ms",
-			source_frame_ts, pft.presentation_obs_ns, best_diff, frame_age_ns / 1000000);
+		int64_t oldest_ts = pending_frames.empty() ? 0 : pending_frames.front().presentation_obs_ns;
+		int64_t queue_span_ms = pending_frames.empty() ? 0 : (newest_ts - oldest_ts) / 1000000;
+		blog(LOG_INFO, "[distroav] OBS_RENDER_MATCH: source_frame_ts=%" PRId64 " matched_ts=%" PRId64 " diff=%" PRId64 "ns frame_age=%" PRId64 "ms queue=%zu span=%lldms oldest=%" PRId64,
+			source_frame_ts, pft.presentation_obs_ns, best_diff, frame_age_ns / 1000000,
+			pending_frames.size() + 1, (long long)queue_span_ms, oldest_ts);
 		blog(LOG_INFO, "[distroav] OBS_RENDER_COMPLETE: rendered=%s delay=%lldms (monotonic=%" PRId64 " wall=%" PRId64 " present=%" PRId64 ")",
 			render_time_str.toUtf8().constData(),
 			(long long)(rendered_wall_clock_ns - pft.present_ns) / 1000000,
