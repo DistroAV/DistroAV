@@ -265,12 +265,24 @@ void SyncTestDock::cb_obs_frame_output(void *param, calldata_t *cd)
 {
 	auto *dock = (SyncTestDock *)param;
 
+	// Debug: log that callback was called
+	static int64_t last_cb_debug = 0;
+	int64_t now = os_gettime_ns();
+	if (now - last_cb_debug > 1000000000LL) {
+		blog(LOG_INFO, "[distroav] cb_obs_frame_output called");
+		last_cb_debug = now;
+	}
+
 	int64_t render_wall_clock_ns;
 	int64_t source_frame_ts;
-	if (!calldata_get_int(cd, "output_wall_clock_ns", &render_wall_clock_ns))
+	if (!calldata_get_int(cd, "output_wall_clock_ns", &render_wall_clock_ns)) {
+		blog(LOG_DEBUG, "[distroav] frame_output: missing output_wall_clock_ns");
 		return;
-	if (!calldata_get_int(cd, "source_frame_ts", &source_frame_ts))
+	}
+	if (!calldata_get_int(cd, "source_frame_ts", &source_frame_ts)) {
+		blog(LOG_DEBUG, "[distroav] frame_output: missing source_frame_ts");
 		return;
+	}
 
 	QMetaObject::invokeMethod(dock, [dock, render_wall_clock_ns, source_frame_ts]() {
 		dock->on_obs_frame_output(render_wall_clock_ns, source_frame_ts);
