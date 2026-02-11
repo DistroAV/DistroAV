@@ -1102,14 +1102,18 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		calldata_set_ptr(&cd, "data", &timing);
 		signal_handler_signal(obs_source_get_signal_handler(obs_source), "ndi_timing", &cd);
 
-		// Log raw NDI timecode every 1 second for debugging
+		// Log NDI timing every 1 second: created vs received
 		if (wall_now - source->last_timecode_log_ns >= 1000000000ULL) {
 			source->last_timecode_log_ns = wall_now;
-			obs_log(LOG_INFO, "'%s' NDI_TIMECODE: raw=%lld frame=%llu pipeline=%lldms",
+			int64_t created_ms = ndi_tc_ns / 1000000;
+			int64_t received_ms = wall_now / 1000000;
+			int64_t diff_ms = received_ms - created_ms;
+			obs_log(LOG_INFO, "'%s' NDI_TIMING: created=%lldms received=%lldms diff=%lldms frame=%llu",
 				obs_source_get_name(obs_source),
-				(long long)ndi_video_frame->timecode,
-				(unsigned long long)source->video_frame_count,
-				(long long)(timing.pipeline_latency_ns / 1000000));
+				(long long)created_ms,
+				(long long)received_ms,
+				(long long)diff_ms,
+				(unsigned long long)source->video_frame_count);
 		}
 	}
 }
