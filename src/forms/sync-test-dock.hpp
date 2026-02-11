@@ -97,6 +97,7 @@ private:
 		int64_t presentation_obs_ns; // OBS monotonic presentation time
 		int64_t network_ns;         // Network delay
 		int64_t buffer_ns;          // Buffer delay
+		int64_t clock_offset_ns;    // OBS monotonic → wall clock offset
 	};
 	std::deque<PendingFrameTiming> pending_frames;
 

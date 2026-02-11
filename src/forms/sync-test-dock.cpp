@@ -386,6 +386,7 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	pft.presentation_obs_ns = timing.presentation_ns;
 	pft.network_ns = network_ns;
 	pft.buffer_ns = buffer_ns;
+	pft.clock_offset_ns = timing.clock_offset_ns;
 	pending_frames.push_back(pft);
 
 	// Keep queue bounded (max 120 frames = ~2 seconds at 60fps)
@@ -439,24 +440,18 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	pft = *best_it;
 	pending_frames.erase(best_it);
 
-	// Render delay = actual OBS time - scheduled presentation time
-	int64_t render_delay_ns = rendered_ns - frame_ts;
+	// Convert OBS monotonic render time to wall-clock
+	int64_t rendered_wall_clock_ns = rendered_ns + pft.clock_offset_ns;
 
-	// Debug: log actual timestamps every ~1 second
-	static int64_t last_debug_log = 0;
-	if (rendered_ns - last_debug_log > 1000000000LL) {
-		blog(LOG_INFO, "[distroav] RENDER_TIMING: frame_ts=%" PRId64 " rendered_ns=%" PRId64 " diff=%" PRId64 "ms matched_pres=%" PRId64,
-			frame_ts, rendered_ns, render_delay_ns / 1000000, pft.presentation_obs_ns);
-		last_debug_log = rendered_ns;
-	}
+	// Render delay = actual wall-clock render time - scheduled present time
+	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
 	last_render_delay_ns = render_delay_ns;
 
 	int64_t render_ms = render_delay_ns / 1000000;
 	renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
 
-	// Render time in wall clock = present time + render delay
-	int64_t render_time_ns = pft.present_ns + render_delay_ns;
-	renderTimeDisplay->setText(format_time_ns(render_time_ns));
+	// Display actual wall-clock render time
+	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
 
 	// Total delay = network + buffer + render
 	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
