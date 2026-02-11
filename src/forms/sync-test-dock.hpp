@@ -91,11 +91,12 @@ private:
 
 	// FIFO queue for exact frame matching (NDI frames -> OBS output in order)
 	struct PendingFrameTiming {
-		uint64_t frame_number; // NDI frame number for debugging
-		int64_t creation_ns;   // Wall clock creation time
-		int64_t present_ns;    // Wall clock present time
-		int64_t network_ns;    // Network delay
-		int64_t buffer_ns;     // Buffer delay
+		uint64_t frame_number;      // NDI frame number for debugging
+		int64_t creation_ns;        // Wall clock creation time
+		int64_t present_ns;         // Wall clock present time
+		int64_t presentation_obs_ns; // OBS monotonic presentation time
+		int64_t network_ns;         // Network delay
+		int64_t buffer_ns;          // Buffer delay
 	};
 	std::deque<PendingFrameTiming> pending_frames;
 

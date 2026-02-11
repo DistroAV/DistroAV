@@ -380,6 +380,7 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	pft.frame_number = timing.frame_number;
 	pft.creation_ns = creation_ns;
 	pft.present_ns = present_ns;
+	pft.presentation_obs_ns = timing.presentation_ns;
 	pft.network_ns = network_ns;
 	pft.buffer_ns = buffer_ns;
 	pending_frames.push_back(pft);
@@ -410,16 +411,19 @@ void SyncTestDock::on_render_timing(int64_t rendered_ns)
 	const PendingFrameTiming pft = pending_frames.front();
 	pending_frames.pop_front();
 
-	// Frames are rendered on schedule, so render delay is 0
-	// (The scheduling is done by OBS based on presentation_ns)
-	last_render_delay_ns = 0;
-	renderDelayDisplay->setText(QStringLiteral("     | 0ms"));
+	// Render delay = actual render time - scheduled presentation time (both OBS time)
+	int64_t render_delay_ns = rendered_ns - pft.presentation_obs_ns;
+	last_render_delay_ns = render_delay_ns;
 
-	// Render time = present time (rendered on schedule)
-	renderTimeDisplay->setText(format_time_ns(pft.present_ns));
+	int64_t render_ms = render_delay_ns / 1000000;
+	renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
 
-	// Total delay = network + buffer (render is 0)
-	int64_t total_ns = pft.network_ns + pft.buffer_ns;
+	// Render time in wall clock = present time + render delay
+	int64_t render_time_ns = pft.present_ns + render_delay_ns;
+	renderTimeDisplay->setText(format_time_ns(render_time_ns));
+
+	// Total delay = network + buffer + render
+	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
 	int64_t total_ms = total_ns / 1000000;
 	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 }
