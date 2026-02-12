@@ -94,6 +94,13 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	frameDropDisplay = new QLabel("-", this);
 	metricsLayout->addWidget(frameDropDisplay, 1, 1);
 
+	// A/V Index display
+	label = new QLabel("Index:", this);
+	metricsLayout->addWidget(label, 2, 0);
+
+	indexDisplay = new QLabel("A(-) V(-)", this);
+	metricsLayout->addWidget(indexDisplay, 2, 1);
+
 	mainLayout->addLayout(metricsLayout);
 
 	// Separator
@@ -366,11 +373,17 @@ void SyncTestDock::on_video_marker_found(struct video_marker_found_s data)
 
 	if (total_frame_drops == 0 && total_frames_seen > 0)
 		frameDropDisplay->setText(QStringLiteral("0 (0.0%)"));
+
+	// Update index display
+	indexDisplay->setText(QStringLiteral("A(%1) V(%2)").arg(last_audio_ix).arg(last_video_ix));
 }
 
 void SyncTestDock::on_audio_marker_found(struct audio_marker_found_s data)
 {
 	last_audio_ix = data.index;
+
+	// Update index display
+	indexDisplay->setText(QStringLiteral("A(%1) V(%2)").arg(last_audio_ix).arg(last_video_ix));
 }
 
 void SyncTestDock::on_sync_found(sync_index data)

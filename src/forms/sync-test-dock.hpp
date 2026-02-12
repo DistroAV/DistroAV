@@ -55,6 +55,7 @@ private:
 	// Top metrics
 	QLabel *latencyDisplay = nullptr;
 	QLabel *frameDropDisplay = nullptr;
+	QLabel *indexDisplay = nullptr;  // Shows A(id) V(id)
 
 	// Pipeline displays
 	QLabel *creationTimeDisplay = nullptr;
