@@ -21,6 +21,7 @@
 #include <QFrame>
 #include <QPushButton>
 #include <QLabel>
+#include <QComboBox>
 #include <obs.hpp>
 #include <deque>
 #include "../sync-test-output.hpp"
@@ -46,6 +47,8 @@ public:
 	~SyncTestDock();
 
 private:
+	QComboBox *ndiSourceCombo = nullptr;
+	QString selectedSourceName;
 	QPushButton *resetButton = nullptr;
 
 	// Top metrics
@@ -107,6 +110,8 @@ private:
 	void connect_to_ndi_source();
 	void disconnect_from_ndi_source();
 	void log_consolidated_status(uint64_t now_ts);
+	void populateNdiSourceList();
+	void onSourceSelectionChanged(int index);
 
 	void on_video_marker_found(video_marker_found_s data);
 	void on_audio_marker_found(audio_marker_found_s data);
@@ -123,6 +128,11 @@ private:
 	static void cb_ndi_timing(void *param, calldata_t *cd);
 	static void cb_render_timing(void *param, calldata_t *cd);
 	static void cb_obs_frame_output(void *param, calldata_t *cd);
+
+	// OBS global signal handlers for source list refresh
+	static void cb_source_created(void *param, calldata_t *cd);
+	static void cb_source_destroyed(void *param, calldata_t *cd);
+	static void cb_source_renamed(void *param, calldata_t *cd);
 };
 
 extern "C" QWidget *create_sync_test_dock();

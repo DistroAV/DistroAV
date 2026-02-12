@@ -52,6 +52,20 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	mainLayout->setSpacing(4);
 	mainLayout->setContentsMargins(8, 8, 8, 8);
 
+	// NDI Source selector
+	QHBoxLayout *sourceLayout = new QHBoxLayout();
+	QLabel *sourceLabel = new QLabel(obs_module_text("NDIPlugin.SyncDock.Source"), this);
+	sourceLayout->addWidget(sourceLabel);
+
+	ndiSourceCombo = new QComboBox(this);
+	ndiSourceCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	ndiSourceCombo->setPlaceholderText(obs_module_text("NDIPlugin.SyncDock.NoSources"));
+	sourceLayout->addWidget(ndiSourceCombo);
+	mainLayout->addLayout(sourceLayout);
+
+	connect(ndiSourceCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		this, &SyncTestDock::onSourceSelectionChanged);
+
 	// Reset button
 	resetButton = new QPushButton(obs_module_text("NDIPlugin.SyncDock.Reset"), this);
 	mainLayout->addWidget(resetButton);
@@ -154,9 +168,16 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	mainLayout->addStretch();
 	setLayout(mainLayout);
 
+	// Subscribe to OBS global signals for source list refresh
+	signal_handler_t *core_sh = obs_get_signal_handler();
+	signal_handler_connect(core_sh, "source_create", cb_source_created, this);
+	signal_handler_connect(core_sh, "source_destroy", cb_source_destroyed, this);
+	signal_handler_connect(core_sh, "source_rename", cb_source_renamed, this);
+
 	QTimer::singleShot(0, this, [this]() {
 		start_output();
-		connect_to_ndi_source();
+		populateNdiSourceList();
+		// Connection happens via onSourceSelectionChanged when combo box gets first item
 	});
 }
 
@@ -164,10 +185,13 @@ SyncTestDock::~SyncTestDock()
 {
 	disconnect_from_ndi_source();
 
-	// Disconnect from OBS global frame_output signal
+	// Disconnect from OBS global signals
 	signal_handler_t *obs_sh = obs_get_signal_handler();
 	if (obs_sh) {
 		signal_handler_disconnect(obs_sh, "frame_output", cb_obs_frame_output, this);
+		signal_handler_disconnect(obs_sh, "source_create", cb_source_created, this);
+		signal_handler_disconnect(obs_sh, "source_destroy", cb_source_destroyed, this);
+		signal_handler_disconnect(obs_sh, "source_rename", cb_source_renamed, this);
 	}
 
 	if (sync_test) {
@@ -585,30 +609,116 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	last_log_ts = now_ts;
 }
 
+void SyncTestDock::populateNdiSourceList()
+{
+	// Block signals to avoid triggering onSourceSelectionChanged during population
+	ndiSourceCombo->blockSignals(true);
+
+	// Remember current selection
+	QString currentSelection = selectedSourceName;
+	int newSelectionIndex = -1;
+
+	ndiSourceCombo->clear();
+
+	// Collect all NDI sources
+	struct EnumData {
+		QStringList names;
+	} enumData;
+
+	obs_enum_sources([](void *param, obs_source_t *source) {
+		auto *data = (EnumData *)param;
+		const char *source_id = obs_source_get_id(source);
+		if (source_id && strcmp(source_id, "ndi_source") == 0) {
+			const char *name = obs_source_get_name(source);
+			if (name)
+				data->names.append(QString::fromUtf8(name));
+		}
+		return true;
+	}, &enumData);
+
+	// Sort alphabetically
+	enumData.names.sort(Qt::CaseInsensitive);
+
+	// Add to combo box
+	for (int i = 0; i < enumData.names.size(); i++) {
+		ndiSourceCombo->addItem(enumData.names[i]);
+		if (enumData.names[i] == currentSelection)
+			newSelectionIndex = i;
+	}
+
+	ndiSourceCombo->blockSignals(false);
+
+	// Restore selection or select first if previous selection is gone
+	if (ndiSourceCombo->count() > 0) {
+		if (newSelectionIndex >= 0) {
+			ndiSourceCombo->setCurrentIndex(newSelectionIndex);
+		} else {
+			// Previous selection gone, select first item
+			ndiSourceCombo->setCurrentIndex(0);
+			onSourceSelectionChanged(0);
+		}
+	} else {
+		// No sources available
+		selectedSourceName.clear();
+		disconnect_from_ndi_source();
+	}
+}
+
+void SyncTestDock::onSourceSelectionChanged(int index)
+{
+	if (index < 0) {
+		selectedSourceName.clear();
+		disconnect_from_ndi_source();
+		return;
+	}
+
+	QString newSourceName = ndiSourceCombo->itemText(index);
+	if (newSourceName == selectedSourceName && ndi_source_ref)
+		return;  // Already connected to this source
+
+	selectedSourceName = newSourceName;
+
+	// Clear pending frames queue when switching sources
+	pending_frames.clear();
+
+	// Disconnect from current source
+	disconnect_from_ndi_source();
+
+	// Connect to newly selected source
+	connect_to_ndi_source();
+}
+
 void SyncTestDock::connect_to_ndi_source()
 {
 	if (ndi_source_ref)
 		return;
+
+	if (selectedSourceName.isEmpty()) {
+		blog(LOG_DEBUG, "[distroav] SyncDock: No source selected");
+		return;
+	}
 
 	obs_enum_sources([](void *param, obs_source_t *source) {
 		auto *dock = (SyncTestDock *)param;
 
 		const char *source_id = obs_source_get_id(source);
 		if (source_id && strcmp(source_id, "ndi_source") == 0) {
-			auto *sh = obs_source_get_signal_handler(source);
-			signal_handler_connect(sh, "ndi_timing", cb_ndi_timing, dock);
-			dock->ndi_source_ref = obs_source_get_weak_source(source);
+			const char *name = obs_source_get_name(source);
+			if (name && dock->selectedSourceName == QString::fromUtf8(name)) {
+				auto *sh = obs_source_get_signal_handler(source);
+				signal_handler_connect(sh, "ndi_timing", cb_ndi_timing, dock);
+				dock->ndi_source_ref = obs_source_get_weak_source(source);
 
-			blog(LOG_INFO, "[distroav] SyncDock: Connected to NDI source '%s' for timing signals",
-			     obs_source_get_name(source));
-			return false;
+				blog(LOG_INFO, "[distroav] SyncDock: Connected to NDI source '%s' for timing signals", name);
+				return false;
+			}
 		}
 		return true;
 	}, this);
 
 	if (!ndi_source_ref) {
-		blog(LOG_DEBUG, "[distroav] SyncDock: No NDI source found, will retry in 2 seconds");
-		QTimer::singleShot(2000, this, [this]() { connect_to_ndi_source(); });
+		blog(LOG_WARNING, "[distroav] SyncDock: Could not find NDI source '%s'",
+			selectedSourceName.toUtf8().constData());
 	}
 }
 
@@ -625,4 +735,64 @@ void SyncTestDock::disconnect_from_ndi_source()
 	}
 
 	ndi_source_ref = nullptr;
+}
+
+void SyncTestDock::cb_source_created(void *param, calldata_t *cd)
+{
+	auto *dock = (SyncTestDock *)param;
+	obs_source_t *source = nullptr;
+	if (!calldata_get_ptr(cd, "source", &source) || !source)
+		return;
+
+	const char *source_id = obs_source_get_id(source);
+	if (source_id && strcmp(source_id, "ndi_source") == 0) {
+		QMetaObject::invokeMethod(dock, [dock]() {
+			dock->populateNdiSourceList();
+		});
+	}
+}
+
+void SyncTestDock::cb_source_destroyed(void *param, calldata_t *cd)
+{
+	auto *dock = (SyncTestDock *)param;
+	obs_source_t *source = nullptr;
+	if (!calldata_get_ptr(cd, "source", &source) || !source)
+		return;
+
+	const char *source_id = obs_source_get_id(source);
+	if (source_id && strcmp(source_id, "ndi_source") == 0) {
+		QMetaObject::invokeMethod(dock, [dock]() {
+			dock->populateNdiSourceList();
+		});
+	}
+}
+
+void SyncTestDock::cb_source_renamed(void *param, calldata_t *cd)
+{
+	auto *dock = (SyncTestDock *)param;
+	obs_source_t *source = nullptr;
+	if (!calldata_get_ptr(cd, "source", &source) || !source)
+		return;
+
+	const char *source_id = obs_source_get_id(source);
+	if (source_id && strcmp(source_id, "ndi_source") == 0) {
+		// Get old and new names to update selectedSourceName if needed
+		const char *new_name = nullptr;
+		calldata_get_string(cd, "new_name", &new_name);
+
+		QMetaObject::invokeMethod(dock, [dock, new_name = QString::fromUtf8(new_name ? new_name : "")]() {
+			// If the renamed source was our selected source, update our selection name
+			// The populateNdiSourceList will handle updating the combo box
+			if (!new_name.isEmpty() && dock->ndi_source_ref) {
+				OBSSourceAutoRelease src = obs_weak_source_get_source(dock->ndi_source_ref);
+				if (src) {
+					const char *current_name = obs_source_get_name(src);
+					if (current_name && new_name == QString::fromUtf8(current_name)) {
+						dock->selectedSourceName = new_name;
+					}
+				}
+			}
+			dock->populateNdiSourceList();
+		});
+	}
 }
