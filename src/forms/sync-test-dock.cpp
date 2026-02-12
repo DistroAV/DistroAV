@@ -409,14 +409,23 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	// presentation_ns is in OBS monotonic time, convert to wall clock
 	int64_t present_wall_clock_ns = timing.presentation_ns + timing.clock_offset_ns;
 
-	// Update network delay display (other values updated in on_obs_frame_output
-	// from the matched frame to show consistent values with render time)
+	// Update NDI-side timestamps immediately (always visible, even when not in program)
+	creationTimeDisplay->setText(format_time_ns(creation_ns));
+	receiveTimeDisplay->setText(format_time_ns(receive_ns));
+	releaseTimeDisplay->setText(format_time_ns(release_ns));
+	presentTimeDisplay->setText(format_time_ns(present_wall_clock_ns));
+
+	// Update delay displays
 	int64_t network_ms = network_ns / 1000000;
 	networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
 
-	// Update release delay display
 	int64_t release_ms = release_delay_ns / 1000000;
 	releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
+
+	// Buffer wait estimate (release → present) - actual value refined in on_obs_frame_output
+	int64_t buffer_wait_ns = present_wall_clock_ns - release_ns;
+	int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
+	bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
 
 	// Push frame timing to FIFO queue for exact order matching
 	PendingFrameTiming pft;
