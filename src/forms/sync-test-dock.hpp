@@ -39,6 +39,8 @@ typedef struct ndi_timing_info_t {
 	int64_t release_wall_clock_ns;  // Wall clock time when frame released to OBS
 	uint64_t frame_number;
 	bool wall_clock_mode;           // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
+	bool scheduled_mode;            // True when scheduled-playback mode is active (buffer_ns is applied)
+	int buffer_offset_ms;           // Configured buffer offset in milliseconds
 } ndi_timing_info_t;
 
 class SyncTestDock : public QFrame {
@@ -115,6 +117,7 @@ private:
 		int64_t present_wall_clock_ns; // Wall clock scheduled present time
 		int64_t clock_offset_ns;      // OBS monotonic → wall clock offset
 		bool wall_clock_mode;         // True when OBS wall-clock API is active
+		bool scheduled_mode;          // True when scheduled-playback mode is active
 	};
 	std::deque<PendingFrameTiming> pending_frames;
 

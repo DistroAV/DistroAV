@@ -461,6 +461,7 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	pft.present_wall_clock_ns = present_wall_clock_ns;
 	pft.clock_offset_ns = timing.clock_offset_ns;
 	pft.wall_clock_mode = timing.wall_clock_mode;
+	pft.scheduled_mode = timing.scheduled_mode;
 	pending_frames.push_back(pft);
 
 	// Keep queue bounded (max 120 frames = ~2 seconds at 60fps)

@@ -32,13 +32,15 @@
 #include <dlfcn.h>
 #endif
 
-// Function pointer for OBS wall-clock frame selection API
-// This function is only available in our modified OBS fork
+// Function pointers for OBS wall-clock and scheduled frame selection APIs
+// These functions are only available in our modified OBS fork
 typedef void (*obs_source_set_async_wall_clock_t)(obs_source_t *source, bool enabled);
+typedef void (*obs_source_set_async_scheduled_t)(obs_source_t *source, bool enabled);
 static obs_source_set_async_wall_clock_t obs_source_set_async_wall_clock_func = nullptr;
+static obs_source_set_async_scheduled_t obs_source_set_async_scheduled_func = nullptr;
 static bool wall_clock_api_checked = false;
 
-// Try to load obs_source_set_async_wall_clock from OBS at runtime
+// Try to load obs_source_set_async_wall_clock and obs_source_set_async_scheduled from OBS at runtime
 static void try_load_wall_clock_api()
 {
 	if (wall_clock_api_checked)
@@ -50,13 +52,19 @@ static void try_load_wall_clock_api()
 	if (obs_module) {
 		obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
 			GetProcAddress(obs_module, "obs_source_set_async_wall_clock");
+		obs_source_set_async_scheduled_func = (obs_source_set_async_scheduled_t)
+			GetProcAddress(obs_module, "obs_source_set_async_scheduled");
 	}
 #else
 	obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
 		dlsym(RTLD_DEFAULT, "obs_source_set_async_wall_clock");
+	obs_source_set_async_scheduled_func = (obs_source_set_async_scheduled_t)
+		dlsym(RTLD_DEFAULT, "obs_source_set_async_scheduled");
 #endif
 
-	if (obs_source_set_async_wall_clock_func) {
+	if (obs_source_set_async_scheduled_func) {
+		obs_log(LOG_INFO, "OBS scheduled-playback API available - deterministic frame timing enabled");
+	} else if (obs_source_set_async_wall_clock_func) {
 		obs_log(LOG_INFO, "OBS wall-clock API available - NTP-based frame selection enabled");
 	} else {
 		obs_log(LOG_INFO, "OBS wall-clock API not available - using fallback timestamp translation");
@@ -112,6 +120,7 @@ static int64_t get_global_clock_offset()
 #define PROP_LATENCY "latency"
 #define PROP_AUDIO "ndi_audio"
 #define PROP_SYNC_LOCK "ndi_sync_lock"
+#define PROP_BUFFER_OFFSET "ndi_buffer_offset_ms"
 #define PROP_PTZ "ndi_ptz"
 #define PROP_PAN "ndi_pan"
 #define PROP_TILT "ndi_tilt"
@@ -185,6 +194,7 @@ typedef struct ndi_source_config_t {
 	video_colorspace yuv_colorspace;
 	bool audio_enabled;
 	bool sync_lock_enabled;  // Enable clock offset translation for consistent A/V sync
+	int buffer_offset_ms;    // Fixed buffer offset in ms for scheduled playback
 	ptz_t ptz;
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
@@ -212,6 +222,7 @@ typedef struct ndi_source_t {
 
 	ndi_timestamp_sync_t ts_sync;  // Sync Lock state
 	bool wall_clock_mode_active;   // True if OBS wall-clock API is available and enabled
+	bool scheduled_mode_active;    // True if OBS scheduled-playback API is available and enabled
 
 	// Startup timing debug
 	uint64_t first_video_ts;       // First video timestamp received
@@ -241,6 +252,8 @@ typedef struct ndi_timing_info_t {
 
 	// Mode flags
 	bool wall_clock_mode;          // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
+	bool scheduled_mode;           // True when scheduled-playback mode is active (buffer_ns is applied)
+	int buffer_offset_ms;          // Configured buffer offset in milliseconds
 } ndi_timing_info_t;
 
 // Reset Sync Lock state (call when NDI connection is established)
@@ -485,6 +498,8 @@ obs_properties_t *ndi_source_getproperties(void *data)
 
 	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
 	obs_properties_add_bool(props, PROP_SYNC_LOCK, obs_module_text("NDIPlugin.SourceProps.SyncLock"));
+	obs_properties_add_int(props, PROP_BUFFER_OFFSET,
+		obs_module_text("NDIPlugin.SourceProps.BufferOffset"), 1, 100, 1);
 
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
@@ -513,6 +528,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 	obs_data_set_default_bool(settings, PROP_SYNC_LOCK, false);
+	obs_data_set_default_int(settings, PROP_BUFFER_OFFSET, 10);  // 10ms default buffer offset
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -1005,8 +1021,12 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// Sync Lock: use wall-clock mode if available, otherwise fall back to translation
-	if (source->wall_clock_mode_active) {
+	// Scheduled mode: presentation_time = ndi_timecode + buffer_offset
+	// Audio uses same offset as video for A/V sync
+	if (source->scheduled_mode_active) {
+		int64_t buffer_offset_ns = (int64_t)config->buffer_offset_ms * 1000000LL;
+		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100) + buffer_offset_ns;
+	} else if (source->wall_clock_mode_active) {
 		// OBS wall-clock API available: pass NDI timecodes directly
 		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100);
 	} else if (config->sync_lock_enabled) {
@@ -1076,8 +1096,12 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 
 	auto config = &source->config;
 
-	// Sync Lock: use wall-clock mode if available, otherwise fall back to translation
-	if (source->wall_clock_mode_active) {
+	// Scheduled mode: presentation_time = ndi_timecode + buffer_offset
+	// This provides deterministic timing where frame renders at exactly that wall-clock time
+	if (source->scheduled_mode_active) {
+		int64_t buffer_offset_ns = (int64_t)config->buffer_offset_ms * 1000000LL;
+		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100) + buffer_offset_ns;
+	} else if (source->wall_clock_mode_active) {
 		// OBS wall-clock API available: pass NDI timecodes directly
 		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
 	} else if (source->config.sync_lock_enabled) {
@@ -1112,18 +1136,21 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		int64_t ndi_tc_ns = ndi_video_frame->timecode * 100;  // Convert 100ns to ns
 		int64_t wall_now = get_wall_clock_ns();
 		uint64_t obs_now = os_gettime_ns();
+		int64_t buffer_offset_ns = (int64_t)source->config.buffer_offset_ms * 1000000LL;
 
 		ndi_timing_info_t timing = {};
 		timing.ndi_timecode_ns = ndi_tc_ns;
 		timing.clock_offset_ns = wall_now - (int64_t)obs_now;  // Approximate clock offset
-		timing.buffer_ns = 0;  // No buffer in simple mode
+		timing.buffer_ns = source->scheduled_mode_active ? buffer_offset_ns : 0;
 		timing.presentation_ns = obs_video_frame->timestamp;
 		timing.obs_now_ns = obs_now;
 		timing.ts_ahead_ns = (int64_t)obs_video_frame->timestamp - (int64_t)obs_now;
 		timing.pipeline_latency_ns = wall_now - ndi_tc_ns;
-		timing.release_wall_clock_ns = wall_now;  // Frame just released to OBS at line 1077
+		timing.release_wall_clock_ns = wall_now;
 		timing.frame_number = source->video_frame_count;
 		timing.wall_clock_mode = source->wall_clock_mode_active;
+		timing.scheduled_mode = source->scheduled_mode_active;
+		timing.buffer_offset_ms = source->config.buffer_offset_ms;
 
 		uint8_t stack[128];
 		struct calldata cd;
@@ -1342,18 +1369,30 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	obs_source_set_audio_active(obs_source, s->config.audio_enabled);
 
 	s->config.sync_lock_enabled = obs_data_get_bool(settings, PROP_SYNC_LOCK);
-	obs_log(LOG_INFO, "'%s' Sync Lock: %s",
+	s->config.buffer_offset_ms = (int)obs_data_get_int(settings, PROP_BUFFER_OFFSET);
+	obs_log(LOG_INFO, "'%s' Sync Lock: %s, Buffer Offset: %d ms",
 		obs_source_get_name(obs_source),
-		s->config.sync_lock_enabled ? "enabled" : "disabled");
+		s->config.sync_lock_enabled ? "enabled" : "disabled",
+		s->config.buffer_offset_ms);
 
-	// Enable wall-clock frame selection when sync_lock is enabled
-	// This allows OBS to use NTP-based timestamps for frame selection
+	// Enable scheduled-playback or wall-clock frame selection when sync_lock is enabled
+	// Scheduled mode provides deterministic timing: frame renders when wall_clock >= timestamp
 	try_load_wall_clock_api();
-	if (obs_source_set_async_wall_clock_func && s->config.sync_lock_enabled) {
+	if (obs_source_set_async_scheduled_func && s->config.sync_lock_enabled) {
+		// Prefer scheduled mode for deterministic timing
+		obs_source_set_async_scheduled_func(obs_source, true);
+		s->scheduled_mode_active = true;
+		s->wall_clock_mode_active = true;  // Scheduled mode implies wall-clock
+		obs_log(LOG_INFO, "'%s' Scheduled playback mode enabled (buffer offset: %d ms)",
+			obs_source_get_name(obs_source), s->config.buffer_offset_ms);
+	} else if (obs_source_set_async_wall_clock_func && s->config.sync_lock_enabled) {
+		// Fall back to wall-clock mode if scheduled not available
 		obs_source_set_async_wall_clock_func(obs_source, true);
 		s->wall_clock_mode_active = true;
+		s->scheduled_mode_active = false;
 	} else {
 		s->wall_clock_mode_active = false;
+		s->scheduled_mode_active = false;
 	}
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
