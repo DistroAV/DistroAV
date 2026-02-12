@@ -606,15 +606,13 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	};
 
 	std::string creation_str = format_tod(last_creation_ns);
-	std::string present_str = format_tod(last_present_ns);
 	std::string render_str = format_tod(last_render_wall_clock_ns);
 
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
-		"creation=%s +%" PRId64 "ms(net) +%" PRId64 "ms(buf) present=%s +%" PRId64 "ms(render) rendered=%s total=%" PRId64 "ms",
+		"creation=%s +%" PRId64 "ms(net) +%" PRId64 "ms(buf) +%" PRId64 "ms(render) rendered=%s total=%" PRId64 "ms",
 		avg_latency,
 		total_frame_drops, drop_rate,
-		creation_str.c_str(), network_ms, buffer_ms,
-		present_str.c_str(), render_ms,
+		creation_str.c_str(), network_ms, buffer_ms, render_ms,
 		render_str.c_str(), total_delay_ms);
 
 	// Reset counters
