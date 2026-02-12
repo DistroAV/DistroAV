@@ -56,9 +56,7 @@ private:
 	QLabel *creationTimeDisplay = nullptr;
 	QLabel *networkDelayDisplay = nullptr;
 	QLabel *receiveTimeDisplay = nullptr;
-	QLabel *bufferDelayDisplay = nullptr;
-	QLabel *presentTimeDisplay = nullptr;
-	QLabel *renderDelayDisplay = nullptr;
+	QLabel *bufferRenderDelayDisplay = nullptr;  // Combined buffer + render delay
 	QLabel *renderTimeDisplay = nullptr;
 
 	// Total
@@ -83,6 +81,7 @@ private:
 
 	// NDI timing cache for logging
 	int64_t last_creation_ns = 0;
+	int64_t last_receive_ns = 0;
 	int64_t last_network_ns = 0;
 	int64_t last_buffer_ns = 0;
 	int64_t last_present_ns = 0;

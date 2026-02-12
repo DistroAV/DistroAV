@@ -116,26 +116,15 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	receiveTimeDisplay = new QLabel("-", this);
 	pipelineLayout->addWidget(receiveTimeDisplay, row++, 1, Qt::AlignRight);
 
-	// Arrow + Buffer delay
-	bufferDelayDisplay = new QLabel("     |", this);
-	bufferDelayDisplay->setAlignment(Qt::AlignCenter);
-	pipelineLayout->addWidget(bufferDelayDisplay, row++, 0, 1, 2);
-
-	// Present (NDI)
-	label = new QLabel("Present", this);
-	pipelineLayout->addWidget(label, row, 0);
-	presentTimeDisplay = new QLabel("-", this);
-	pipelineLayout->addWidget(presentTimeDisplay, row++, 1, Qt::AlignRight);
+	// Arrow + Buffer delay + Render delay (combined since Present is removed)
+	bufferRenderDelayDisplay = new QLabel("     |", this);
+	bufferRenderDelayDisplay->setAlignment(Qt::AlignCenter);
+	pipelineLayout->addWidget(bufferRenderDelayDisplay, row++, 0, 1, 2);
 
 	// OBS Section Header
 	label = new QLabel("── OBS ──", this);
 	label->setStyleSheet("color: #888;");
 	pipelineLayout->addWidget(label, row++, 0, 1, 2, Qt::AlignCenter);
-
-	// Arrow + Render delay
-	renderDelayDisplay = new QLabel("     |", this);
-	renderDelayDisplay->setAlignment(Qt::AlignCenter);
-	pipelineLayout->addWidget(renderDelayDisplay, row++, 0, 1, 2);
 
 	// Render (OBS)
 	label = new QLabel("Render", this);
@@ -328,13 +317,12 @@ void SyncTestDock::on_reset()
 	creationTimeDisplay->setText("-");
 	networkDelayDisplay->setText("     |");
 	receiveTimeDisplay->setText("-");
-	bufferDelayDisplay->setText("     |");
-	presentTimeDisplay->setText("-");
-	renderDelayDisplay->setText("     |");
+	bufferRenderDelayDisplay->setText("     |");
 	renderTimeDisplay->setText("-");
 	totalDelayDisplay->setText("-");
 
 	last_creation_ns = 0;
+	last_receive_ns = 0;
 	last_network_ns = 0;
 	last_buffer_ns = 0;
 	last_present_ns = 0;
@@ -396,13 +384,10 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t buffer_ns = timing.ts_ahead_ns;
 	int64_t present_ns = receive_ns + buffer_ns;
 
-	// Update delay displays (timestamps are updated in on_obs_frame_output
+	// Update network delay display (other values updated in on_obs_frame_output
 	// from the matched frame to show consistent values with render time)
 	int64_t network_ms = network_ns / 1000000;
 	networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
-
-	int64_t buffer_ms = buffer_ns / 1000000;
-	bufferDelayDisplay->setText(QStringLiteral("     | %1ms").arg(buffer_ms));
 
 	// Push frame timing to FIFO queue for exact order matching
 	PendingFrameTiming pft;
@@ -422,6 +407,7 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 	// Cache for logging and render timing calculation
 	last_creation_ns = creation_ns;
+	last_receive_ns = receive_ns;
 	last_network_ns = network_ns;
 	last_buffer_ns = buffer_ns;
 	last_present_ns = present_ns;
@@ -484,8 +470,9 @@ void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
 	last_render_delay_ns = render_delay_ns;
 
-	int64_t render_ms = render_delay_ns / 1000000;
-	renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
+	// Combined buffer + render delay
+	int64_t buffer_render_ms = (pft.buffer_ns + render_delay_ns) / 1000000;
+	bufferRenderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(buffer_render_ms));
 
 	// Display actual wall-clock render time
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
@@ -550,17 +537,16 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
 	last_render_delay_ns = render_delay_ns;
 
-	int64_t render_ms = render_delay_ns / 1000000;
-	renderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(render_ms));
+	// Combined buffer + render delay (since Present is removed from UI)
+	int64_t buffer_render_ms = (pft.buffer_ns + render_delay_ns) / 1000000;
+	bufferRenderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(buffer_render_ms));
 
 	// Display actual wall-clock render time
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
 
-	// Update all timestamps from the MATCHED frame so they're consistent
-	// (the ndi_timing callback only updates delay values now)
+	// Update timestamps from the MATCHED frame so they're consistent
 	creationTimeDisplay->setText(format_time_ns(pft.creation_ns));
 	receiveTimeDisplay->setText(format_time_ns(pft.creation_ns + pft.network_ns));
-	presentTimeDisplay->setText(format_time_ns(pft.present_ns));
 
 	// Total delay = network + buffer + render
 	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
@@ -606,13 +592,15 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	};
 
 	std::string creation_str = format_tod(last_creation_ns);
+	std::string receive_str = format_tod(last_receive_ns);
 	std::string render_str = format_tod(last_render_wall_clock_ns);
 
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
-		"creation=%s +%" PRId64 "ms(net) +%" PRId64 "ms(buf) +%" PRId64 "ms(render) rendered=%s total=%" PRId64 "ms",
+		"creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(buf+render) rendered=%s total=%" PRId64 "ms",
 		avg_latency,
 		total_frame_drops, drop_rate,
-		creation_str.c_str(), network_ms, buffer_ms, render_ms,
+		creation_str.c_str(), network_ms,
+		receive_str.c_str(), buffer_ms + render_ms,
 		render_str.c_str(), total_delay_ms);
 
 	// Reset counters
