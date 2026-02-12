@@ -62,7 +62,9 @@ private:
 	QLabel *receiveTimeDisplay = nullptr;
 	QLabel *releaseDelayDisplay = nullptr;       // Delay: receive → release
 	QLabel *releaseTimeDisplay = nullptr;        // Release timestamp
-	QLabel *obsProcessingDelayDisplay = nullptr; // Delay: release → render
+	QLabel *bufferWaitDisplay = nullptr;         // Delay: release → present (OBS buffer)
+	QLabel *presentTimeDisplay = nullptr;        // Present timestamp (scheduled)
+	QLabel *renderDelayDisplay = nullptr;        // Delay: present → render (GPU)
 	QLabel *renderTimeDisplay = nullptr;
 
 	// Total
@@ -91,21 +93,22 @@ private:
 	int64_t last_network_ns = 0;
 	int64_t last_release_ns = 0;           // Wall clock release time
 	int64_t last_release_delay_ns = 0;     // Receive to release delay
-	int64_t last_obs_processing_ns = 0;    // Release to render delay
+	int64_t last_present_ns = 0;           // Wall clock scheduled present time
+	int64_t last_buffer_wait_ns = 0;       // Release to present (OBS buffer wait)
+	int64_t last_render_delay_ns = 0;      // Present to render (GPU processing)
 	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
 	int64_t last_render_wall_clock_ns = 0; // Wall clock time when frame was rendered
 
 	// FIFO queue for exact frame matching (NDI frames -> OBS output in order)
 	struct PendingFrameTiming {
-		uint64_t frame_number;      // NDI frame number for debugging
-		int64_t creation_ns;        // Wall clock creation time
-		int64_t present_ns;         // Wall clock present time
-		int64_t presentation_obs_ns; // OBS monotonic presentation time
-		int64_t network_ns;         // Network delay
-		int64_t buffer_ns;          // Buffer delay
-		int64_t release_ns;         // Wall clock release time
-		int64_t release_delay_ns;   // Receive to release delay
-		int64_t clock_offset_ns;    // OBS monotonic → wall clock offset
+		uint64_t frame_number;        // NDI frame number for debugging
+		int64_t creation_ns;          // Wall clock creation time
+		int64_t presentation_obs_ns;  // OBS monotonic presentation time
+		int64_t network_ns;           // Network delay
+		int64_t release_ns;           // Wall clock release time
+		int64_t release_delay_ns;     // Receive to release delay
+		int64_t present_wall_clock_ns; // Wall clock scheduled present time
+		int64_t clock_offset_ns;      // OBS monotonic → wall clock offset
 	};
 	std::deque<PendingFrameTiming> pending_frames;
 
