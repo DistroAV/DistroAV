@@ -28,7 +28,40 @@
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <dlfcn.h>
 #endif
+
+// Function pointer for OBS wall-clock frame selection API
+// This function is only available in our modified OBS fork
+typedef void (*obs_source_set_async_wall_clock_t)(obs_source_t *source, bool enabled);
+static obs_source_set_async_wall_clock_t obs_source_set_async_wall_clock_func = nullptr;
+static bool wall_clock_api_checked = false;
+
+// Try to load obs_source_set_async_wall_clock from OBS at runtime
+static void try_load_wall_clock_api()
+{
+	if (wall_clock_api_checked)
+		return;
+	wall_clock_api_checked = true;
+
+#ifdef _WIN32
+	HMODULE obs_module = GetModuleHandleA("obs.dll");
+	if (obs_module) {
+		obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
+			GetProcAddress(obs_module, "obs_source_set_async_wall_clock");
+	}
+#else
+	obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
+		dlsym(RTLD_DEFAULT, "obs_source_set_async_wall_clock");
+#endif
+
+	if (obs_source_set_async_wall_clock_func) {
+		obs_log(LOG_INFO, "OBS wall-clock API available - NTP-based frame selection enabled");
+	} else {
+		obs_log(LOG_INFO, "OBS wall-clock API not available - using fallback timestamp translation");
+	}
+}
 
 // Get wall clock time in nanoseconds (for timing monitoring)
 static inline int64_t get_wall_clock_ns()
@@ -178,6 +211,7 @@ typedef struct ndi_source_t {
 	uint64_t video_frame_count;    // Sequential frame counter for monitoring
 
 	ndi_timestamp_sync_t ts_sync;  // Sync Lock state
+	bool wall_clock_mode_active;   // True if OBS wall-clock API is available and enabled
 
 	// Startup timing debug
 	uint64_t first_video_ts;       // First video timestamp received
@@ -968,25 +1002,13 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// Sync Lock: translate audio timecodes to OBS time domain using global clock offset
-	if (config->sync_lock_enabled) {
-		ndi_timestamp_sync_t *sync = &source->ts_sync;
-		int64_t ndi_tc_ns = ndi_audio_frame->timecode * 100;
-
-		// Use global clock offset (no warmup needed - offset is constant with NTP sync)
-		if (!sync->initialized) {
-			sync->initialized = true;
-			sync->clock_offset_ns = get_global_clock_offset();
-			sync->warmup_frames_remaining = 0;
-
-			obs_log(LOG_INFO, "'%s' AUDIO_SYNC_LOCK: using global_clock_offset=%lld ms, ndi_tc=%lld ms",
-				obs_source_get_name(obs_source),
-				(long long)(sync->clock_offset_ns / 1000000),
-				(long long)(ndi_tc_ns / 1000000));
-		}
-
-		int64_t presentation = ndi_tc_ns - sync->clock_offset_ns;
-		obs_audio_frame->timestamp = (uint64_t)presentation;
+	// Sync Lock: use wall-clock mode if available, otherwise fall back to translation
+	if (source->wall_clock_mode_active) {
+		// OBS wall-clock API available: pass NDI timecodes directly
+		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100);
+	} else if (config->sync_lock_enabled) {
+		// Fallback: translate timecodes to OBS time domain (same as video)
+		obs_audio_frame->timestamp = translate_timecode_to_obs(source, ndi_audio_frame->timecode);
 	} else {
 		// No sync lock - use raw timestamps
 		switch (config->sync_mode) {
@@ -1051,8 +1073,12 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 
 	auto config = &source->config;
 
-	// Sync Lock: translate timecodes to OBS time domain with 5-frame warmup
-	if (source->config.sync_lock_enabled) {
+	// Sync Lock: use wall-clock mode if available, otherwise fall back to translation
+	if (source->wall_clock_mode_active) {
+		// OBS wall-clock API available: pass NDI timecodes directly
+		obs_video_frame->timestamp = (uint64_t)(ndi_video_frame->timecode * 100);
+	} else if (source->config.sync_lock_enabled) {
+		// Fallback: translate timecodes to OBS time domain
 		obs_video_frame->timestamp = translate_timecode_to_obs(source, ndi_video_frame->timecode);
 	} else {
 		switch (config->sync_mode) {
@@ -1315,6 +1341,16 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	obs_log(LOG_INFO, "'%s' Sync Lock: %s",
 		obs_source_get_name(obs_source),
 		s->config.sync_lock_enabled ? "enabled" : "disabled");
+
+	// Enable wall-clock frame selection when sync_lock is enabled
+	// This allows OBS to use NTP-based timestamps for frame selection
+	try_load_wall_clock_api();
+	if (obs_source_set_async_wall_clock_func && s->config.sync_lock_enabled) {
+		obs_source_set_async_wall_clock_func(obs_source, true);
+		s->wall_clock_mode_active = true;
+	} else {
+		s->wall_clock_mode_active = false;
+	}
 
 	bool ptz_enabled = obs_data_get_bool(settings, PROP_PTZ);
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
