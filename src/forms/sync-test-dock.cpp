@@ -307,33 +307,9 @@ void SyncTestDock::start_output()
 
 void SyncTestDock::on_reset()
 {
-	if (sync_test) {
-		obs_output_stop(sync_test);
-		sync_test = nullptr;
-	}
-
-	latencyDisplay->setText("-");
-	frameDropDisplay->setText("-");
-	creationTimeDisplay->setText("-");
-	networkDelayDisplay->setText("     |");
-	receiveTimeDisplay->setText("-");
-	bufferRenderDelayDisplay->setText("     |");
-	renderTimeDisplay->setText("-");
-	totalDelayDisplay->setText("-");
-
-	last_creation_ns = 0;
-	last_receive_ns = 0;
-	last_network_ns = 0;
-	last_buffer_ns = 0;
-	last_present_ns = 0;
-	last_render_delay_ns = 0;
-	last_presentation_obs_ns = 0;
-	last_render_wall_clock_ns = 0;
-	pending_frames.clear();
-
-	disconnect_from_ndi_source();
-	start_output();
-	connect_to_ndi_source();
+	total_frame_drops = 0;
+	total_frames_seen = 0;
+	frameDropDisplay->setText(QStringLiteral("0 (0.0%)"));
 }
 
 void SyncTestDock::on_video_marker_found(struct video_marker_found_s data)
