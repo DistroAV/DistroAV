@@ -567,6 +567,12 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	// Display actual wall-clock render time
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
 
+	// Update all timestamps from the MATCHED frame so they're consistent
+	// (the ndi_timing callback updates these with the latest frame, but
+	// with GPU delay filter, we want to show the matched delayed frame)
+	creationTimeDisplay->setText(format_time_ns(pft.creation_ns));
+	presentTimeDisplay->setText(format_time_ns(pft.present_ns));
+
 	// Total delay = network + buffer + render
 	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
 	int64_t total_ms = total_ns / 1000000;
