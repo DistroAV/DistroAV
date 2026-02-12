@@ -17,6 +17,7 @@
 ******************************************************************************/
 
 #include <obs-module.h>
+#include <util/platform.h>
 #include <inttypes.h>
 #include <string>
 #include <QHBoxLayout>
@@ -415,17 +416,23 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	releaseTimeDisplay->setText(format_time_ns(release_ns));
 	presentTimeDisplay->setText(format_time_ns(present_wall_clock_ns));
 
-	// Update delay displays
-	int64_t network_ms = network_ns / 1000000;
-	networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
+	// Throttle ms delay displays to once per second (timestamps still update every frame)
+	uint64_t now_ns = os_gettime_ns();
+	if (now_ns - last_ms_display_update_ns >= 1000000000ULL) {
+		last_ms_display_update_ns = now_ns;
 
-	int64_t release_ms = release_delay_ns / 1000000;
-	releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
+		// Update delay displays
+		int64_t network_ms = network_ns / 1000000;
+		networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
 
-	// Buffer wait estimate (release → present) - actual value refined in on_obs_frame_output
-	int64_t buffer_wait_ns = present_wall_clock_ns - release_ns;
-	int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
-	bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
+		int64_t release_ms = release_delay_ns / 1000000;
+		releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
+
+		// Buffer wait estimate (release → present) - actual value refined in on_obs_frame_output
+		int64_t buffer_wait_ns = present_wall_clock_ns - release_ns;
+		int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
+		bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
+	}
 
 	// Push frame timing to FIFO queue for exact order matching
 	PendingFrameTiming pft;
@@ -525,27 +532,40 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_wall_clock_ns;
 	last_render_delay_ns = render_delay_ns;
 
-	// Update buffer wait display (release → present)
-	int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
-	bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
-
-	// Update render delay display (present → render)
-	int64_t render_delay_ms = render_delay_ns / 1000000;
-	renderDelayDisplay->setText(QStringLiteral("     | %1ms (GPU)").arg(render_delay_ms));
-
-	// Display actual wall-clock render time
+	// Display actual wall-clock render time (timestamp - updates every frame)
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
 
-	// Update timestamps from the MATCHED frame so they're consistent
+	// Update timestamps from the MATCHED frame so they're consistent (timestamps - update every frame)
 	creationTimeDisplay->setText(format_time_ns(pft.creation_ns));
 	receiveTimeDisplay->setText(format_time_ns(pft.creation_ns + pft.network_ns));
 	releaseTimeDisplay->setText(format_time_ns(pft.release_ns));
 	presentTimeDisplay->setText(format_time_ns(pft.present_wall_clock_ns));
 
-	// Total delay = network + release + buffer wait + render
-	int64_t total_ns = pft.network_ns + pft.release_delay_ns + buffer_wait_ns + render_delay_ns;
-	int64_t total_ms = total_ns / 1000000;
-	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
+	// Throttle ms delay displays to once per second (timestamps still update every frame)
+	uint64_t now_ns = os_gettime_ns();
+	if (now_ns - last_ms_display_update_ns >= 1000000000ULL) {
+		last_ms_display_update_ns = now_ns;
+
+		// Update buffer wait display (release → present)
+		int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
+		bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
+
+		// Update render delay display (present → render)
+		int64_t render_delay_ms = render_delay_ns / 1000000;
+		renderDelayDisplay->setText(QStringLiteral("     | %1ms (GPU)").arg(render_delay_ms));
+
+		// Update network and release delays too (may have changed)
+		int64_t network_ms = pft.network_ns / 1000000;
+		networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
+
+		int64_t release_ms = pft.release_delay_ns / 1000000;
+		releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
+
+		// Total delay = network + release + buffer wait + render
+		int64_t total_ns = pft.network_ns + pft.release_delay_ns + buffer_wait_ns + render_delay_ns;
+		int64_t total_ms = total_ns / 1000000;
+		totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
+	}
 }
 
 void SyncTestDock::log_consolidated_status(uint64_t now_ts)

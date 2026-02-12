@@ -99,6 +99,9 @@ private:
 	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
 	int64_t last_render_wall_clock_ns = 0; // Wall clock time when frame was rendered
 
+	// Throttle ms display updates to once per second (timestamps still update every frame)
+	uint64_t last_ms_display_update_ns = 0;
+
 	// FIFO queue for exact frame matching (NDI frames -> OBS output in order)
 	struct PendingFrameTiming {
 		uint64_t frame_number;        // NDI frame number for debugging
