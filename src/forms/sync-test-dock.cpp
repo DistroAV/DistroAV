@@ -420,8 +420,11 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t release_delay_ns = release_ns - receive_ns;
 
 	// Present time: when OBS is scheduled to render this frame (wall clock)
-	// presentation_ns is in OBS monotonic time, convert to wall clock
-	int64_t present_wall_clock_ns = timing.presentation_ns + timing.clock_offset_ns;
+	// In wall-clock mode, presentation_ns is already wall-clock (NTP timestamp)
+	// Otherwise, it's OBS monotonic time that needs clock_offset conversion
+	int64_t present_wall_clock_ns = timing.wall_clock_mode
+		? timing.presentation_ns
+		: timing.presentation_ns + timing.clock_offset_ns;
 
 	// Update NDI-side timestamps immediately (always visible, even when not in program)
 	creationTimeDisplay->setText(format_time_ns(creation_ns));
@@ -457,6 +460,7 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	pft.release_delay_ns = release_delay_ns;
 	pft.present_wall_clock_ns = present_wall_clock_ns;
 	pft.clock_offset_ns = timing.clock_offset_ns;
+	pft.wall_clock_mode = timing.wall_clock_mode;
 	pending_frames.push_back(pft);
 
 	// Keep queue bounded (max 120 frames = ~2 seconds at 60fps)

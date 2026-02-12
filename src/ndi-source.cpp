@@ -238,6 +238,9 @@ typedef struct ndi_timing_info_t {
 
 	// Debug
 	uint64_t frame_number;         // Sequential video frame counter
+
+	// Mode flags
+	bool wall_clock_mode;          // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
 } ndi_timing_info_t;
 
 // Reset Sync Lock state (call when NDI connection is established)
@@ -1120,6 +1123,7 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		timing.pipeline_latency_ns = wall_now - ndi_tc_ns;
 		timing.release_wall_clock_ns = wall_now;  // Frame just released to OBS at line 1077
 		timing.frame_number = source->video_frame_count;
+		timing.wall_clock_mode = source->wall_clock_mode_active;
 
 		uint8_t stack[128];
 		struct calldata cd;
