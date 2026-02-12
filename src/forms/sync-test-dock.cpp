@@ -130,10 +130,21 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	receiveTimeDisplay = new QLabel("-", this);
 	pipelineLayout->addWidget(receiveTimeDisplay, row++, 1, Qt::AlignRight);
 
-	// Arrow + Buffer delay + Render delay (combined since Present is removed)
-	bufferRenderDelayDisplay = new QLabel("     |", this);
-	bufferRenderDelayDisplay->setAlignment(Qt::AlignCenter);
-	pipelineLayout->addWidget(bufferRenderDelayDisplay, row++, 0, 1, 2);
+	// Arrow + Release delay (receive → release)
+	releaseDelayDisplay = new QLabel("     |", this);
+	releaseDelayDisplay->setAlignment(Qt::AlignCenter);
+	pipelineLayout->addWidget(releaseDelayDisplay, row++, 0, 1, 2);
+
+	// Release (frame handed to OBS)
+	label = new QLabel("Release", this);
+	pipelineLayout->addWidget(label, row, 0);
+	releaseTimeDisplay = new QLabel("-", this);
+	pipelineLayout->addWidget(releaseTimeDisplay, row++, 1, Qt::AlignRight);
+
+	// Arrow + OBS processing delay (release → render)
+	obsProcessingDelayDisplay = new QLabel("     |", this);
+	obsProcessingDelayDisplay->setAlignment(Qt::AlignCenter);
+	pipelineLayout->addWidget(obsProcessingDelayDisplay, row++, 0, 1, 2);
 
 	// OBS Section Header
 	label = new QLabel("── OBS ──", this);
@@ -379,6 +390,10 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t network_ns = timing.pipeline_latency_ns;
 	int64_t receive_ns = creation_ns + network_ns;
 
+	// Release time: wall clock time when frame was handed to OBS
+	int64_t release_ns = timing.release_wall_clock_ns;
+	int64_t release_delay_ns = release_ns - receive_ns;
+
 	// Buffer time: ts_ahead_ns tells us how far ahead the frame is scheduled
 	// Positive = frame is buffered, Negative = frame is late/no buffer
 	int64_t buffer_ns = timing.ts_ahead_ns;
@@ -389,6 +404,10 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t network_ms = network_ns / 1000000;
 	networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
 
+	// Update release delay display
+	int64_t release_ms = release_delay_ns / 1000000;
+	releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
+
 	// Push frame timing to FIFO queue for exact order matching
 	PendingFrameTiming pft;
 	pft.frame_number = timing.frame_number;
@@ -397,6 +416,8 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	pft.presentation_obs_ns = timing.presentation_ns;
 	pft.network_ns = network_ns;
 	pft.buffer_ns = buffer_ns;
+	pft.release_ns = release_ns;
+	pft.release_delay_ns = release_delay_ns;
 	pft.clock_offset_ns = timing.clock_offset_ns;
 	pending_frames.push_back(pft);
 
@@ -409,8 +430,8 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	last_creation_ns = creation_ns;
 	last_receive_ns = receive_ns;
 	last_network_ns = network_ns;
-	last_buffer_ns = buffer_ns;
-	last_present_ns = present_ns;
+	last_release_ns = release_ns;
+	last_release_delay_ns = release_delay_ns;
 	last_presentation_obs_ns = timing.presentation_ns;
 
 	// Log consolidated status every second
@@ -419,68 +440,12 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 void SyncTestDock::on_render_timing(int64_t frame_ts, int64_t rendered_ns)
 {
-	// Find matching frame in FIFO queue by presentation timestamp
-	// frame_ts is the OBS presentation timestamp from the rendered frame
-	if (pending_frames.empty())
-		return;
-
-	// Find closest match (allow tolerance for timestamp precision)
-	const int64_t tolerance_ns = 500000000LL; // 500ms tolerance for debugging
-	PendingFrameTiming pft;
-	auto best_it = pending_frames.end();
-	int64_t best_diff = 1000000000000LL; // Large initial value
-
-	for (auto it = pending_frames.begin(); it != pending_frames.end(); ++it) {
-		int64_t diff = it->presentation_obs_ns - frame_ts;
-		if (diff < 0) diff = -diff;
-		if (diff < best_diff && diff <= tolerance_ns) {
-			best_diff = diff;
-			best_it = it;
-		}
-	}
-
-	if (best_it == pending_frames.end()) {
-		// No match found within tolerance - log debug info
-		if (!pending_frames.empty()) {
-			int64_t first_ts = pending_frames.front().presentation_obs_ns;
-			blog(LOG_DEBUG, "[distroav] RENDER_MATCH_FAIL: frame_ts=%" PRId64 " first_pending=%" PRId64 " diff=%" PRId64 " queue_size=%zu",
-				frame_ts, first_ts, first_ts - frame_ts, pending_frames.size());
-		}
-		return;
-	}
-
-	pft = *best_it;
-	pending_frames.erase(best_it);
-
-	// Convert OBS monotonic render time to wall-clock
-	int64_t rendered_wall_clock_ns = rendered_ns + pft.clock_offset_ns;
-
-	// Debug: log actual values every second
-	static int64_t last_render_debug = 0;
-	QString render_time_str = format_time_ns(rendered_wall_clock_ns);
-	if (rendered_ns - last_render_debug > 1000000000LL) {
-		blog(LOG_INFO, "[distroav] RENDER_WALLCLOCK: rendered=%s delay=%lldms (wall=%" PRId64 " present=%" PRId64 ")",
-			render_time_str.toUtf8().constData(),
-			(long long)(rendered_wall_clock_ns - pft.present_ns) / 1000000,
-			rendered_wall_clock_ns, pft.present_ns);
-		last_render_debug = rendered_ns;
-	}
-
-	// Render delay = actual wall-clock render time - scheduled present time
-	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
-	last_render_delay_ns = render_delay_ns;
-
-	// Combined buffer + render delay
-	int64_t buffer_render_ms = (pft.buffer_ns + render_delay_ns) / 1000000;
-	bufferRenderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(buffer_render_ms));
-
-	// Display actual wall-clock render time
-	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
-
-	// Total delay = network + buffer + render
-	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
-	int64_t total_ms = total_ns / 1000000;
-	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
+	// NOTE: This function is DISABLED (see start_output line 316)
+	// It's kept for potential future use but uses frame_ts which doesn't
+	// track through GPU delay filters correctly.
+	// Use on_obs_frame_output with source frame identity tracking instead.
+	UNUSED_PARAMETER(frame_ts);
+	UNUSED_PARAMETER(rendered_ns);
 }
 
 void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t source_frame_ts)
@@ -533,13 +498,13 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	// Cache render wall-clock for consolidated logging
 	last_render_wall_clock_ns = rendered_wall_clock_ns;
 
-	// Render delay = actual wall-clock render time - scheduled present time
-	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
-	last_render_delay_ns = render_delay_ns;
+	// OBS processing delay = render time - release time
+	int64_t obs_processing_ns = rendered_wall_clock_ns - pft.release_ns;
+	last_obs_processing_ns = obs_processing_ns;
 
-	// Combined buffer + render delay (since Present is removed from UI)
-	int64_t buffer_render_ms = (pft.buffer_ns + render_delay_ns) / 1000000;
-	bufferRenderDelayDisplay->setText(QStringLiteral("     | %1ms").arg(buffer_render_ms));
+	// Update OBS processing delay display
+	int64_t obs_processing_ms = obs_processing_ns / 1000000;
+	obsProcessingDelayDisplay->setText(QStringLiteral("     | %1ms").arg(obs_processing_ms));
 
 	// Display actual wall-clock render time
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
@@ -547,9 +512,10 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	// Update timestamps from the MATCHED frame so they're consistent
 	creationTimeDisplay->setText(format_time_ns(pft.creation_ns));
 	receiveTimeDisplay->setText(format_time_ns(pft.creation_ns + pft.network_ns));
+	releaseTimeDisplay->setText(format_time_ns(pft.release_ns));
 
-	// Total delay = network + buffer + render
-	int64_t total_ns = pft.network_ns + pft.buffer_ns + render_delay_ns;
+	// Total delay = network + release + OBS processing
+	int64_t total_ns = pft.network_ns + pft.release_delay_ns + obs_processing_ns;
 	int64_t total_ms = total_ns / 1000000;
 	totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 }
@@ -574,9 +540,9 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 
 	// Calculate times
 	int64_t network_ms = last_network_ns / 1000000;
-	int64_t buffer_ms = last_buffer_ns / 1000000;
-	int64_t render_ms = last_render_delay_ns / 1000000;
-	int64_t total_delay_ms = network_ms + buffer_ms + render_ms;
+	int64_t release_ms = last_release_delay_ns / 1000000;
+	int64_t obs_ms = last_obs_processing_ns / 1000000;
+	int64_t total_delay_ms = network_ms + release_ms + obs_ms;
 
 	// Format creation time as HH:MM:SS.mmm
 	auto format_tod = [](int64_t ns) -> std::string {
@@ -593,14 +559,16 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 
 	std::string creation_str = format_tod(last_creation_ns);
 	std::string receive_str = format_tod(last_receive_ns);
+	std::string release_str = format_tod(last_release_ns);
 	std::string render_str = format_tod(last_render_wall_clock_ns);
 
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
-		"creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(buf+render) rendered=%s total=%" PRId64 "ms",
+		"creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(rel) release=%s +%" PRId64 "ms(obs) rendered=%s total=%" PRId64 "ms",
 		avg_latency,
 		total_frame_drops, drop_rate,
 		creation_str.c_str(), network_ms,
-		receive_str.c_str(), buffer_ms + render_ms,
+		receive_str.c_str(), release_ms,
+		release_str.c_str(), obs_ms,
 		render_str.c_str(), total_delay_ms);
 
 	// Reset counters

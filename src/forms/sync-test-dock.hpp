@@ -36,6 +36,7 @@ typedef struct ndi_timing_info_t {
 	int64_t obs_now_ns;
 	int64_t ts_ahead_ns;
 	int64_t pipeline_latency_ns;
+	int64_t release_wall_clock_ns;  // Wall clock time when frame released to OBS
 	uint64_t frame_number;
 } ndi_timing_info_t;
 
@@ -59,7 +60,9 @@ private:
 	QLabel *creationTimeDisplay = nullptr;
 	QLabel *networkDelayDisplay = nullptr;
 	QLabel *receiveTimeDisplay = nullptr;
-	QLabel *bufferRenderDelayDisplay = nullptr;  // Combined buffer + render delay
+	QLabel *releaseDelayDisplay = nullptr;       // Delay: receive → release
+	QLabel *releaseTimeDisplay = nullptr;        // Release timestamp
+	QLabel *obsProcessingDelayDisplay = nullptr; // Delay: release → render
 	QLabel *renderTimeDisplay = nullptr;
 
 	// Total
@@ -86,9 +89,9 @@ private:
 	int64_t last_creation_ns = 0;
 	int64_t last_receive_ns = 0;
 	int64_t last_network_ns = 0;
-	int64_t last_buffer_ns = 0;
-	int64_t last_present_ns = 0;
-	int64_t last_render_delay_ns = 0;
+	int64_t last_release_ns = 0;           // Wall clock release time
+	int64_t last_release_delay_ns = 0;     // Receive to release delay
+	int64_t last_obs_processing_ns = 0;    // Release to render delay
 	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
 	int64_t last_render_wall_clock_ns = 0; // Wall clock time when frame was rendered
 
@@ -100,6 +103,8 @@ private:
 		int64_t presentation_obs_ns; // OBS monotonic presentation time
 		int64_t network_ns;         // Network delay
 		int64_t buffer_ns;          // Buffer delay
+		int64_t release_ns;         // Wall clock release time
+		int64_t release_delay_ns;   // Receive to release delay
 		int64_t clock_offset_ns;    // OBS monotonic → wall clock offset
 	};
 	std::deque<PendingFrameTiming> pending_frames;

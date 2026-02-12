@@ -200,6 +200,7 @@ typedef struct ndi_timing_info_t {
 	// Derived metrics
 	int64_t ts_ahead_ns;           // presentation - obs_now (buffer headroom)
 	int64_t pipeline_latency_ns;   // wall_now - ndi_timecode (network + processing delay)
+	int64_t release_wall_clock_ns; // Wall clock time when frame released to OBS
 
 	// Debug
 	uint64_t frame_number;         // Sequential video frame counter
@@ -1091,6 +1092,7 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 		timing.obs_now_ns = obs_now;
 		timing.ts_ahead_ns = (int64_t)obs_video_frame->timestamp - (int64_t)obs_now;
 		timing.pipeline_latency_ns = wall_now - ndi_tc_ns;
+		timing.release_wall_clock_ns = wall_now;  // Frame just released to OBS at line 1077
 		timing.frame_number = source->video_frame_count;
 
 		uint8_t stack[128];
