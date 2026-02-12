@@ -88,6 +88,7 @@ private:
 	int64_t last_present_ns = 0;
 	int64_t last_render_delay_ns = 0;
 	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
+	int64_t last_render_wall_clock_ns = 0; // Wall clock time when frame was rendered
 
 	// FIFO queue for exact frame matching (NDI frames -> OBS output in order)
 	struct PendingFrameTiming {

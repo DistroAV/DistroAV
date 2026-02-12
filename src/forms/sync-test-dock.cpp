@@ -18,6 +18,7 @@
 
 #include <obs-module.h>
 #include <inttypes.h>
+#include <string>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QTimer>
@@ -339,6 +340,7 @@ void SyncTestDock::on_reset()
 	last_present_ns = 0;
 	last_render_delay_ns = 0;
 	last_presentation_obs_ns = 0;
+	last_render_wall_clock_ns = 0;
 	pending_frames.clear();
 
 	disconnect_from_ndi_source();
@@ -541,16 +543,8 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	// Convert OBS monotonic render time to wall-clock using stored offset
 	int64_t rendered_wall_clock_ns = render_wall_clock_ns + pft.clock_offset_ns;
 
-	// Debug: log actual values every second
-	static int64_t last_obs_render_debug = 0;
-	QString render_time_str = format_time_ns(rendered_wall_clock_ns);
-	if (render_wall_clock_ns - last_obs_render_debug > 1000000000LL) {
-		blog(LOG_INFO, "[distroav] OBS_RENDER_COMPLETE: rendered=%s delay=%lldms (monotonic=%" PRId64 " wall=%" PRId64 " present=%" PRId64 ")",
-			render_time_str.toUtf8().constData(),
-			(long long)(rendered_wall_clock_ns - pft.present_ns) / 1000000,
-			render_wall_clock_ns, rendered_wall_clock_ns, pft.present_ns);
-		last_obs_render_debug = render_wall_clock_ns;
-	}
+	// Cache render wall-clock for consolidated logging
+	last_render_wall_clock_ns = rendered_wall_clock_ns;
 
 	// Render delay = actual wall-clock render time - scheduled present time
 	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_ns;
@@ -598,20 +592,30 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	int64_t render_ms = last_render_delay_ns / 1000000;
 	int64_t total_delay_ms = network_ms + buffer_ms + render_ms;
 
-	// Format creation time as time-of-day
-	int64_t creation_tod = (last_creation_ns / 1000000) % 86400000LL;
-	int c_h = (int)(creation_tod / 3600000);
-	int c_m = (int)((creation_tod % 3600000) / 60000);
-	int c_s = (int)((creation_tod % 60000) / 1000);
-	int c_ms = (int)(creation_tod % 1000);
+	// Format creation time as HH:MM:SS.mmm
+	auto format_tod = [](int64_t ns) -> std::string {
+		int64_t tod_ms = (ns / 1000000) % 86400000LL;
+		if (tod_ms < 0) tod_ms += 86400000LL;
+		int h = (int)(tod_ms / 3600000);
+		int m = (int)((tod_ms % 3600000) / 60000);
+		int s = (int)((tod_ms % 60000) / 1000);
+		int ms = (int)(tod_ms % 1000);
+		char buf[16];
+		snprintf(buf, sizeof(buf), "%02d:%02d:%02d.%03d", h, m, s, ms);
+		return buf;
+	};
 
-	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "/%" PRId64 "(%.1f%%) "
-		"creation=%02d:%02d:%02d.%03d network=%" PRId64 "ms buffer=%" PRId64 "ms render=%" PRId64 "ms total=%" PRId64 "ms",
+	std::string creation_str = format_tod(last_creation_ns);
+	std::string present_str = format_tod(last_present_ns);
+	std::string render_str = format_tod(last_render_wall_clock_ns);
+
+	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
+		"creation=%s +%" PRId64 "ms(net) +%" PRId64 "ms(buf) present=%s +%" PRId64 "ms(render) rendered=%s total=%" PRId64 "ms",
 		avg_latency,
-		total_frame_drops, total,
-		drop_rate,
-		c_h, c_m, c_s, c_ms,
-		network_ms, buffer_ms, render_ms, total_delay_ms);
+		total_frame_drops, drop_rate,
+		creation_str.c_str(), network_ms, buffer_ms,
+		present_str.c_str(), render_ms,
+		render_str.c_str(), total_delay_ms);
 
 	// Reset counters
 	sync_count_since_log = 0;
