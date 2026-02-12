@@ -394,18 +394,13 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	int64_t buffer_ns = timing.ts_ahead_ns;
 	int64_t present_ns = receive_ns + buffer_ns;
 
-	// Update displays
-	creationTimeDisplay->setText(format_time_ns(creation_ns));
-
+	// Update delay displays (timestamps are updated in on_obs_frame_output
+	// from the matched frame to show consistent values with render time)
 	int64_t network_ms = network_ns / 1000000;
 	networkDelayDisplay->setText(QStringLiteral("     | %1ms").arg(network_ms));
 
-	receiveTimeDisplay->setText(format_time_ns(receive_ns));
-
 	int64_t buffer_ms = buffer_ns / 1000000;
 	bufferDelayDisplay->setText(QStringLiteral("     | %1ms").arg(buffer_ms));
-
-	presentTimeDisplay->setText(format_time_ns(present_ns));
 
 	// Push frame timing to FIFO queue for exact order matching
 	PendingFrameTiming pft;
@@ -568,9 +563,9 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
 
 	// Update all timestamps from the MATCHED frame so they're consistent
-	// (the ndi_timing callback updates these with the latest frame, but
-	// with GPU delay filter, we want to show the matched delayed frame)
+	// (the ndi_timing callback only updates delay values now)
 	creationTimeDisplay->setText(format_time_ns(pft.creation_ns));
+	receiveTimeDisplay->setText(format_time_ns(pft.creation_ns + pft.network_ns));
 	presentTimeDisplay->setText(format_time_ns(pft.present_ns));
 
 	// Total delay = network + buffer + render
