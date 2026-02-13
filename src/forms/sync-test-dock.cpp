@@ -524,14 +524,8 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	// Cache render wall-clock for consolidated logging
 	last_render_wall_clock_ns = rendered_wall_clock_ns;
 
-	// Buffer wait = time OBS holds frame (release → present)
-	int64_t buffer_wait_ns = pft.present_wall_clock_ns - pft.release_ns;
-	last_buffer_wait_ns = buffer_wait_ns;
-	last_present_ns = pft.present_wall_clock_ns;
-
-	// Render delay = GPU processing time (present → render)
-	int64_t render_delay_ns = rendered_wall_clock_ns - pft.present_wall_clock_ns;
-	last_render_delay_ns = render_delay_ns;
+	// OBS delay = total time from release to render (buffer wait + GPU processing)
+	last_obs_delay_ns = rendered_wall_clock_ns - pft.release_ns;
 
 	// Display actual wall-clock render time (timestamp - updates every frame)
 	renderTimeDisplay->setText(format_time_ns(rendered_wall_clock_ns));
@@ -588,8 +582,8 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	// Calculate times
 	int64_t network_ms = last_network_ns / 1000000;
 	int64_t release_ms = last_release_delay_ns / 1000000;
-	// OBS delay = release to render (includes buffer wait + GPU processing)
-	int64_t obs_delay_ms = (last_render_wall_clock_ns - last_release_ns) / 1000000;
+	// OBS delay: use cached value from matched frame (computed in on_obs_frame_output)
+	int64_t obs_delay_ms = last_obs_delay_ns / 1000000;
 	int64_t total_delay_ms = network_ms + release_ms + obs_delay_ms;
 
 	// Format creation time as HH:MM:SS.mmm

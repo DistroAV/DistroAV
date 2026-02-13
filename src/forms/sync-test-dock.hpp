@@ -95,9 +95,7 @@ private:
 	int64_t last_network_ns = 0;
 	int64_t last_release_ns = 0;           // Wall clock release time
 	int64_t last_release_delay_ns = 0;     // Receive to release delay
-	int64_t last_present_ns = 0;           // Wall clock scheduled present time
-	int64_t last_buffer_wait_ns = 0;       // Release to present (OBS buffer wait)
-	int64_t last_render_delay_ns = 0;      // Present to render (GPU processing)
+	int64_t last_obs_delay_ns = 0;         // Release to render (total OBS processing)
 	int64_t last_presentation_obs_ns = 0;  // OBS monotonic time for render calc
 	int64_t last_render_wall_clock_ns = 0; // Wall clock time when frame was rendered
 
