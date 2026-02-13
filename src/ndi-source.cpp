@@ -229,6 +229,10 @@ typedef struct ndi_source_t {
 	uint64_t first_audio_ts;       // First audio timestamp received
 	uint64_t audio_frame_count;    // Audio frame counter for startup logging
 	bool startup_logged;           // Whether startup timing has been logged
+
+	// A/V calibration for scheduled mode
+	int64_t av_offset_ns;          // Calibration: audio_ts - video_ts offset to correct
+	bool av_calibrated;            // True once calibration is complete
 } ndi_source_t;
 
 // Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
@@ -269,6 +273,10 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	source->first_audio_ts = 0;
 	source->audio_frame_count = 0;
 	source->startup_logged = false;
+
+	// Reset A/V calibration
+	source->av_offset_ns = 0;
+	source->av_calibrated = false;
 
 	int64_t wall_now = get_wall_clock_ns();
 	uint64_t obs_now = os_gettime_ns();
@@ -893,15 +901,19 @@ void *ndi_source_thread(void *data)
 				}
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 
-				// Log A/V offset once both first frames are known
+				// Log A/V offset and calibrate once both first frames are known
 				if (!s->startup_logged && s->first_audio_ts > 0 && s->first_video_ts > 0) {
 					s->startup_logged = true;
-					int64_t av_offset_ms = ((int64_t)s->first_audio_ts - (int64_t)s->first_video_ts) / 1000000;
-					obs_log(LOG_INFO, "'%s' STARTUP_AV_OFFSET: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (audio-video)",
+					// Calculate and store the A/V offset for calibration
+					s->av_offset_ns = (int64_t)s->first_audio_ts - (int64_t)s->first_video_ts;
+					s->av_calibrated = true;
+					int64_t av_offset_ms = s->av_offset_ns / 1000000;
+					obs_log(LOG_INFO, "'%s' AV_CALIBRATED: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (will correct audio by %+lld ms)",
 						obs_source_name,
 						(unsigned long long)(s->first_audio_ts / 1000000),
 						(unsigned long long)(s->first_video_ts / 1000000),
-						(long long)av_offset_ms);
+						(long long)av_offset_ms,
+						(long long)(-av_offset_ms));
 				}
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
@@ -958,15 +970,19 @@ void *ndi_source_thread(void *data)
 				}
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 
-				// Log A/V offset once both first frames are known (non-framesync path)
+				// Log A/V offset and calibrate once both first frames are known (non-framesync path)
 				if (!s->startup_logged && s->first_audio_ts > 0 && s->first_video_ts > 0) {
 					s->startup_logged = true;
-					int64_t av_offset_ms = ((int64_t)s->first_audio_ts - (int64_t)s->first_video_ts) / 1000000;
-					obs_log(LOG_INFO, "'%s' STARTUP_AV_OFFSET: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (audio-video)",
+					// Calculate and store the A/V offset for calibration
+					s->av_offset_ns = (int64_t)s->first_audio_ts - (int64_t)s->first_video_ts;
+					s->av_calibrated = true;
+					int64_t av_offset_ms = s->av_offset_ns / 1000000;
+					obs_log(LOG_INFO, "'%s' AV_CALIBRATED: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (will correct audio by %+lld ms)",
 						obs_source_name,
 						(unsigned long long)(s->first_audio_ts / 1000000),
 						(unsigned long long)(s->first_video_ts / 1000000),
-						(long long)av_offset_ms);
+						(long long)av_offset_ms,
+						(long long)(-av_offset_ms));
 				}
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
@@ -1021,11 +1037,16 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 
 	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// Scheduled mode: presentation_time = ndi_timecode + buffer_offset
-	// Audio uses same offset as video for A/V sync
+	// Scheduled mode: presentation_time = ndi_timecode + buffer_offset + video_latency_compensation
+	// Video has ~38ms GPU rendering latency. Audio needs to be delayed to match.
+	// Using fixed offset since dynamic calibration didn't help with OBS thread scheduling variance.
 	if (source->scheduled_mode_active) {
+		int64_t audio_tc_ns = ndi_audio_frame->timecode * 100;
 		int64_t buffer_offset_ns = (int64_t)config->buffer_offset_ms * 1000000LL;
-		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100) + buffer_offset_ns;
+		// Add GPU latency compensation: delay audio to account for video render time
+		// This shifts audio to play later, matching video's GPU-delayed output
+		int64_t gpu_latency_compensation_ns = 35 * 1000000LL;  // ~35ms to match video render
+		obs_audio_frame->timestamp = (uint64_t)(audio_tc_ns + buffer_offset_ns + gpu_latency_compensation_ns);
 	} else if (source->wall_clock_mode_active) {
 		// OBS wall-clock API available: pass NDI timecodes directly
 		obs_audio_frame->timestamp = (uint64_t)(ndi_audio_frame->timecode * 100);
