@@ -149,26 +149,15 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	releaseTimeDisplay = new QLabel("-", this);
 	pipelineLayout->addWidget(releaseTimeDisplay, row++, 1, Qt::AlignRight);
 
-	// Arrow + Buffer wait delay (release → present)
-	bufferWaitDisplay = new QLabel("     |", this);
-	bufferWaitDisplay->setAlignment(Qt::AlignCenter);
-	pipelineLayout->addWidget(bufferWaitDisplay, row++, 0, 1, 2);
-
 	// OBS Section Header
 	label = new QLabel("── OBS ──", this);
 	label->setStyleSheet("color: #888;");
 	pipelineLayout->addWidget(label, row++, 0, 1, 2, Qt::AlignCenter);
 
-	// Present (scheduled render time)
-	label = new QLabel("Present", this);
-	pipelineLayout->addWidget(label, row, 0);
-	presentTimeDisplay = new QLabel("-", this);
-	pipelineLayout->addWidget(presentTimeDisplay, row++, 1, Qt::AlignRight);
-
-	// Arrow + Render delay (present → render)
-	renderDelayDisplay = new QLabel("     |", this);
-	renderDelayDisplay->setAlignment(Qt::AlignCenter);
-	pipelineLayout->addWidget(renderDelayDisplay, row++, 0, 1, 2);
+	// Arrow + OBS delay (release → render)
+	obsDelayDisplay = new QLabel("     |", this);
+	obsDelayDisplay->setAlignment(Qt::AlignCenter);
+	pipelineLayout->addWidget(obsDelayDisplay, row++, 0, 1, 2);
 
 	// Render (actual output time)
 	label = new QLabel("Render", this);
@@ -430,7 +419,6 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	creationTimeDisplay->setText(format_time_ns(creation_ns));
 	receiveTimeDisplay->setText(format_time_ns(receive_ns));
 	releaseTimeDisplay->setText(format_time_ns(release_ns));
-	presentTimeDisplay->setText(format_time_ns(present_wall_clock_ns));
 
 	// Throttle ms delay displays to once per second (timestamps still update every frame)
 	uint64_t now_ns = os_gettime_ns();
@@ -443,11 +431,6 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 
 		int64_t release_ms = release_delay_ns / 1000000;
 		releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
-
-		// Buffer wait estimate (release → present) - actual value refined in on_obs_frame_output
-		int64_t buffer_wait_ns = present_wall_clock_ns - release_ns;
-		int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
-		bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
 	}
 
 	// Push frame timing to FIFO queue for exact order matching
@@ -557,20 +540,18 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 	creationTimeDisplay->setText(format_time_ns(pft.creation_ns));
 	receiveTimeDisplay->setText(format_time_ns(pft.creation_ns + pft.network_ns));
 	releaseTimeDisplay->setText(format_time_ns(pft.release_ns));
-	presentTimeDisplay->setText(format_time_ns(pft.present_wall_clock_ns));
+
+	// OBS delay = total time from release to render (includes buffer wait + GPU processing)
+	int64_t obs_delay_ns = rendered_wall_clock_ns - pft.release_ns;
 
 	// Throttle ms delay displays to once per second (timestamps still update every frame)
 	uint64_t now_ns = os_gettime_ns();
 	if (now_ns - last_ms_display_update_ns >= 1000000000ULL) {
 		last_ms_display_update_ns = now_ns;
 
-		// Update buffer wait display (release → present)
-		int64_t buffer_wait_ms = buffer_wait_ns / 1000000;
-		bufferWaitDisplay->setText(QStringLiteral("     | %1ms (buffer)").arg(buffer_wait_ms));
-
-		// Update render delay display (present → render)
-		int64_t render_delay_ms = render_delay_ns / 1000000;
-		renderDelayDisplay->setText(QStringLiteral("     | %1ms (GPU)").arg(render_delay_ms));
+		// Update OBS delay display (release → render)
+		int64_t obs_delay_ms = obs_delay_ns / 1000000;
+		obsDelayDisplay->setText(QStringLiteral("     | %1ms (OBS)").arg(obs_delay_ms));
 
 		// Update network and release delays too (may have changed)
 		int64_t network_ms = pft.network_ns / 1000000;
@@ -579,8 +560,8 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 		int64_t release_ms = pft.release_delay_ns / 1000000;
 		releaseDelayDisplay->setText(QStringLiteral("     | %1ms").arg(release_ms));
 
-		// Total delay = network + release + buffer wait + render
-		int64_t total_ns = pft.network_ns + pft.release_delay_ns + buffer_wait_ns + render_delay_ns;
+		// Total delay = network + release + OBS delay
+		int64_t total_ns = pft.network_ns + pft.release_delay_ns + obs_delay_ns;
 		int64_t total_ms = total_ns / 1000000;
 		totalDelayDisplay->setText(QStringLiteral("%1 ms").arg(total_ms));
 	}

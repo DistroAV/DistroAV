@@ -66,9 +66,7 @@ private:
 	QLabel *receiveTimeDisplay = nullptr;
 	QLabel *releaseDelayDisplay = nullptr;       // Delay: receive → release
 	QLabel *releaseTimeDisplay = nullptr;        // Release timestamp
-	QLabel *bufferWaitDisplay = nullptr;         // Delay: release → present (OBS buffer)
-	QLabel *presentTimeDisplay = nullptr;        // Present timestamp (scheduled)
-	QLabel *renderDelayDisplay = nullptr;        // Delay: present → render (GPU)
+	QLabel *obsDelayDisplay = nullptr;           // Delay: release → render (OBS processing)
 	QLabel *renderTimeDisplay = nullptr;
 
 	// Total
