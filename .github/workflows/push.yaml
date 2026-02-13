@@ -5,9 +5,9 @@ on:
     branches:
       - master
       - main
-      - 'release/**'
+      - "release/**"
     tags:
-      - '*'
+      - "*"
 permissions:
   contents: write
 jobs:
@@ -119,3 +119,80 @@ jobs:
             ${{ github.workspace }}/*.deb
             ${{ github.workspace }}/*.ddeb
             ${{ github.workspace }}/*.tar.xz
+
+  deploy:
+    name: Deploy to stream.lan 🚀
+    if: github.ref_type == 'branch'
+    needs: build-project
+    runs-on: [self-hosted, linux, deployer]
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "distroav-*-windows-x64-*"
+          merge-multiple: false
+
+      - name: Stop OBS
+        run: |
+          ssh stream.lan 'taskkill /IM obs64.exe /F' 2>/dev/null || true
+          sleep 3
+
+      - name: Deploy plugin files
+        run: |
+          ARTIFACT_DIR=$(ls -d distroav-*-windows-x64-*/ 2>/dev/null | grep -v portable | grep -v installer | head -1)
+          if [ -z "$ARTIFACT_DIR" ]; then
+            echo "FAIL: No artifact directory found"
+            ls -la
+            exit 1
+          fi
+          echo "Using artifact directory: $ARTIFACT_DIR"
+
+          cd "$ARTIFACT_DIR"
+          ZIP_FILE=$(ls *.zip 2>/dev/null | head -1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "FAIL: No ZIP file found in $ARTIFACT_DIR"
+            ls -la
+            exit 1
+          fi
+          echo "Extracting: $ZIP_FILE"
+          unzip -o "$ZIP_FILE" -d extracted/
+
+          echo "=== Extracted contents ==="
+          find extracted/ -type f
+
+          # Deploy DLL to legacy plugin path
+          echo "Deploying distroav.dll..."
+          scp extracted/distroav/bin/64bit/distroav.dll \
+            'stream.lan:C:\Program Files\obs-studio\obs-plugins\64bit\distroav.dll'
+
+          # Deploy data/locale files
+          echo "Deploying locale files..."
+          ssh stream.lan 'if not exist "C:\ProgramData\obs-studio\plugins\distroav\data\locale" mkdir "C:\ProgramData\obs-studio\plugins\distroav\data\locale"' 2>/dev/null || true
+          scp -r extracted/distroav/data/locale/* \
+            'stream.lan:C:\ProgramData\obs-studio\plugins\distroav\data\locale\'
+
+          echo "Deployment complete"
+
+      - name: Start OBS
+        run: |
+          ssh stream.lan 'schtasks /Run /TN "StartOBS"'
+          echo "Waiting 12s for OBS startup and plugin initialization..."
+          sleep 12
+
+      - name: Verify deployment
+        run: |
+          echo "=== Checking OBS process ==="
+          ssh stream.lan 'tasklist /FI "IMAGENAME eq obs64.exe"' | grep -q obs64.exe \
+            || { echo "FAIL: OBS not running"; exit 1; }
+          echo "OBS is running"
+
+          echo "=== Checking plugin load ==="
+          ssh stream.lan 'powershell -Command "
+            \$log = Get-ChildItem \"$env:APPDATA\\obs-studio\\logs\\*.txt\" |
+              Sort-Object LastWriteTime -Descending | Select-Object -First 1;
+            Get-Content \$log.FullName | Select-String \"\\[distroav\\]\" | Select-Object -Last 5
+          "'
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf distroav-*/
