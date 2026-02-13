@@ -588,9 +588,9 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	// Calculate times
 	int64_t network_ms = last_network_ns / 1000000;
 	int64_t release_ms = last_release_delay_ns / 1000000;
-	int64_t buffer_ms = last_buffer_wait_ns / 1000000;
-	int64_t render_ms = last_render_delay_ns / 1000000;
-	int64_t total_delay_ms = network_ms + release_ms + buffer_ms + render_ms;
+	// OBS delay = release to render (includes buffer wait + GPU processing)
+	int64_t obs_delay_ms = (last_render_wall_clock_ns - last_release_ns) / 1000000;
+	int64_t total_delay_ms = network_ms + release_ms + obs_delay_ms;
 
 	// Format creation time as HH:MM:SS.mmm
 	auto format_tod = [](int64_t ns) -> std::string {
@@ -608,17 +608,15 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	std::string creation_str = format_tod(last_creation_ns);
 	std::string receive_str = format_tod(last_receive_ns);
 	std::string release_str = format_tod(last_release_ns);
-	std::string present_str = format_tod(last_present_ns);
 	std::string render_str = format_tod(last_render_wall_clock_ns);
 
 	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
-		"creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(rel) release=%s +%" PRId64 "ms(buf) present=%s +%" PRId64 "ms(gpu) rendered=%s total=%" PRId64 "ms",
+		"creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(rel) release=%s +%" PRId64 "ms(obs) render=%s total=%" PRId64 "ms",
 		avg_latency,
 		total_frame_drops, drop_rate,
 		creation_str.c_str(), network_ms,
 		receive_str.c_str(), release_ms,
-		release_str.c_str(), buffer_ms,
-		present_str.c_str(), render_ms,
+		release_str.c_str(), obs_delay_ms,
 		render_str.c_str(), total_delay_ms);
 
 	// Reset counters
