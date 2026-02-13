@@ -36,11 +36,13 @@
 // These functions are only available in our modified OBS fork
 typedef void (*obs_source_set_async_wall_clock_t)(obs_source_t *source, bool enabled);
 typedef void (*obs_source_set_async_scheduled_t)(obs_source_t *source, bool enabled);
+typedef void (*obs_source_set_scheduled_look_ahead_ns_t)(obs_source_t *source, int64_t look_ahead_ns);
 static obs_source_set_async_wall_clock_t obs_source_set_async_wall_clock_func = nullptr;
 static obs_source_set_async_scheduled_t obs_source_set_async_scheduled_func = nullptr;
+static obs_source_set_scheduled_look_ahead_ns_t obs_source_set_scheduled_look_ahead_ns_func = nullptr;
 static bool wall_clock_api_checked = false;
 
-// Try to load obs_source_set_async_wall_clock and obs_source_set_async_scheduled from OBS at runtime
+// Try to load obs_source_set_async_wall_clock, obs_source_set_async_scheduled, and look-ahead API from OBS at runtime
 static void try_load_wall_clock_api()
 {
 	if (wall_clock_api_checked)
@@ -54,16 +56,23 @@ static void try_load_wall_clock_api()
 			GetProcAddress(obs_module, "obs_source_set_async_wall_clock");
 		obs_source_set_async_scheduled_func = (obs_source_set_async_scheduled_t)
 			GetProcAddress(obs_module, "obs_source_set_async_scheduled");
+		obs_source_set_scheduled_look_ahead_ns_func = (obs_source_set_scheduled_look_ahead_ns_t)
+			GetProcAddress(obs_module, "obs_source_set_scheduled_look_ahead_ns");
 	}
 #else
 	obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
 		dlsym(RTLD_DEFAULT, "obs_source_set_async_wall_clock");
 	obs_source_set_async_scheduled_func = (obs_source_set_async_scheduled_t)
 		dlsym(RTLD_DEFAULT, "obs_source_set_async_scheduled");
+	obs_source_set_scheduled_look_ahead_ns_func = (obs_source_set_scheduled_look_ahead_ns_t)
+		dlsym(RTLD_DEFAULT, "obs_source_set_scheduled_look_ahead_ns");
 #endif
 
 	if (obs_source_set_async_scheduled_func) {
 		obs_log(LOG_INFO, "OBS scheduled-playback API available - deterministic frame timing enabled");
+		if (obs_source_set_scheduled_look_ahead_ns_func) {
+			obs_log(LOG_INFO, "OBS look-ahead API available - GPU pipeline compensation enabled");
+		}
 	} else if (obs_source_set_async_wall_clock_func) {
 		obs_log(LOG_INFO, "OBS wall-clock API available - NTP-based frame selection enabled");
 	} else {
@@ -121,6 +130,7 @@ static int64_t get_global_clock_offset()
 #define PROP_AUDIO "ndi_audio"
 #define PROP_SYNC_LOCK "ndi_sync_lock"
 #define PROP_BUFFER_OFFSET "ndi_buffer_offset_ms"
+#define PROP_GPU_ADVANCE "ndi_gpu_advance_frames"
 #define PROP_PTZ "ndi_ptz"
 #define PROP_PAN "ndi_pan"
 #define PROP_TILT "ndi_tilt"
@@ -195,6 +205,7 @@ typedef struct ndi_source_config_t {
 	bool audio_enabled;
 	bool sync_lock_enabled;  // Enable clock offset translation for consistent A/V sync
 	int buffer_offset_ms;    // Fixed buffer offset in ms for scheduled playback
+	int gpu_advance_frames;  // GPU pipeline compensation: how many vsync frames to advance selection
 	ptz_t ptz;
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
@@ -508,6 +519,8 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_properties_add_bool(props, PROP_SYNC_LOCK, obs_module_text("NDIPlugin.SourceProps.SyncLock"));
 	obs_properties_add_int(props, PROP_BUFFER_OFFSET,
 		obs_module_text("NDIPlugin.SourceProps.BufferOffset"), 1, 100, 1);
+	obs_properties_add_int(props, PROP_GPU_ADVANCE,
+		obs_module_text("NDIPlugin.SourceProps.GPUAdvance"), 0, 3, 1);
 
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
@@ -537,6 +550,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 	obs_data_set_default_bool(settings, PROP_SYNC_LOCK, false);
 	obs_data_set_default_int(settings, PROP_BUFFER_OFFSET, 10);  // 10ms default buffer offset
+	obs_data_set_default_int(settings, PROP_GPU_ADVANCE, 2);     // 2 vsync frames default (~33ms at 60Hz)
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -1391,10 +1405,12 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	s->config.sync_lock_enabled = obs_data_get_bool(settings, PROP_SYNC_LOCK);
 	s->config.buffer_offset_ms = (int)obs_data_get_int(settings, PROP_BUFFER_OFFSET);
-	obs_log(LOG_INFO, "'%s' Sync Lock: %s, Buffer Offset: %d ms",
+	s->config.gpu_advance_frames = (int)obs_data_get_int(settings, PROP_GPU_ADVANCE);
+	obs_log(LOG_INFO, "'%s' Sync Lock: %s, Buffer Offset: %d ms, GPU Advance: %d frames",
 		obs_source_get_name(obs_source),
 		s->config.sync_lock_enabled ? "enabled" : "disabled",
-		s->config.buffer_offset_ms);
+		s->config.buffer_offset_ms,
+		s->config.gpu_advance_frames);
 
 	// Enable scheduled-playback or wall-clock frame selection when sync_lock is enabled
 	// Scheduled mode provides deterministic timing: frame renders when wall_clock >= timestamp
@@ -1404,8 +1420,20 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_source_set_async_scheduled_func(obs_source, true);
 		s->scheduled_mode_active = true;
 		s->wall_clock_mode_active = true;  // Scheduled mode implies wall-clock
-		obs_log(LOG_INFO, "'%s' Scheduled playback mode enabled (buffer offset: %d ms)",
-			obs_source_get_name(obs_source), s->config.buffer_offset_ms);
+
+		// Configure GPU pipeline look-ahead compensation
+		// Each frame is gpu_advance_frames * vsync interval (~16.67ms for 60Hz)
+		if (obs_source_set_scheduled_look_ahead_ns_func) {
+			int64_t vsync_ns = 16666666LL;  // ~16.67ms at 60Hz (TODO: query actual from OBS)
+			int64_t look_ahead_ns = (int64_t)s->config.gpu_advance_frames * vsync_ns;
+			obs_source_set_scheduled_look_ahead_ns_func(obs_source, look_ahead_ns);
+			obs_log(LOG_INFO, "'%s' Scheduled playback mode enabled (buffer offset: %d ms, GPU advance: %d frames = %lld ms)",
+				obs_source_get_name(obs_source), s->config.buffer_offset_ms,
+				s->config.gpu_advance_frames, (long long)(look_ahead_ns / 1000000));
+		} else {
+			obs_log(LOG_INFO, "'%s' Scheduled playback mode enabled (buffer offset: %d ms)",
+				obs_source_get_name(obs_source), s->config.buffer_offset_ms);
+		}
 	} else if (obs_source_set_async_wall_clock_func && s->config.sync_lock_enabled) {
 		// Fall back to wall-clock mode if scheduled not available
 		obs_source_set_async_wall_clock_func(obs_source, true);
