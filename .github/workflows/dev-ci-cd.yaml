@@ -60,13 +60,13 @@ jobs:
           # Deploy DLL to legacy plugin path
           echo "Deploying distroav.dll..."
           scp extracted/distroav/bin/64bit/distroav.dll \
-            'stream.lan:"C:\Program Files\obs-studio\obs-plugins\64bit\distroav.dll"'
+            'stream.lan:C:\Program Files\obs-studio\obs-plugins\64bit\distroav.dll'
 
           # Deploy data/locale files
           echo "Deploying locale files..."
           ssh stream.lan 'if not exist "C:\ProgramData\obs-studio\plugins\distroav\data\locale" mkdir "C:\ProgramData\obs-studio\plugins\distroav\data\locale"' 2>/dev/null || true
           scp -r extracted/distroav/data/locale/* \
-            'stream.lan:"C:\ProgramData\obs-studio\plugins\distroav\data\locale\"'
+            'stream.lan:C:\ProgramData\obs-studio\plugins\distroav\data\locale\'
 
           echo "Deployment complete"
 
