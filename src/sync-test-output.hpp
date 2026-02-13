@@ -22,8 +22,7 @@
 
 #define SYNC_TEST_OUTPUT_ID "distroav_sync_test_output"
 
-struct st_qr_data
-{
+struct st_qr_data {
 	uint32_t f = 0;
 	uint32_t c = 0;
 	uint32_t q_ms = 0;
@@ -108,23 +107,20 @@ struct st_qr_data
 	}
 };
 
-struct video_marker_found_s
-{
+struct video_marker_found_s {
 	uint64_t timestamp;
 	float score;
 	struct st_qr_data qr_data;
 };
 
-struct audio_marker_found_s
-{
+struct audio_marker_found_s {
 	uint64_t timestamp;
 	int index;
 	float score;
 	uint32_t index_max;
 };
 
-struct sync_index
-{
+struct sync_index {
 	int index = -1;
 	uint64_t video_ts = 0;
 	uint64_t audio_ts = 0;
@@ -132,8 +128,7 @@ struct sync_index
 	bool matched = false;
 };
 
-struct frame_drop_event_s
-{
+struct frame_drop_event_s {
 	uint64_t timestamp;
 	int expected_index;
 	int received_index;

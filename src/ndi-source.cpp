@@ -52,20 +52,20 @@ static void try_load_wall_clock_api()
 #ifdef _WIN32
 	HMODULE obs_module = GetModuleHandleA("obs.dll");
 	if (obs_module) {
-		obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
-			GetProcAddress(obs_module, "obs_source_set_async_wall_clock");
-		obs_source_set_async_scheduled_func = (obs_source_set_async_scheduled_t)
-			GetProcAddress(obs_module, "obs_source_set_async_scheduled");
-		obs_source_set_scheduled_look_ahead_ns_func = (obs_source_set_scheduled_look_ahead_ns_t)
-			GetProcAddress(obs_module, "obs_source_set_scheduled_look_ahead_ns");
+		obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)GetProcAddress(
+			obs_module, "obs_source_set_async_wall_clock");
+		obs_source_set_async_scheduled_func =
+			(obs_source_set_async_scheduled_t)GetProcAddress(obs_module, "obs_source_set_async_scheduled");
+		obs_source_set_scheduled_look_ahead_ns_func = (obs_source_set_scheduled_look_ahead_ns_t)GetProcAddress(
+			obs_module, "obs_source_set_scheduled_look_ahead_ns");
 	}
 #else
-	obs_source_set_async_wall_clock_func = (obs_source_set_async_wall_clock_t)
-		dlsym(RTLD_DEFAULT, "obs_source_set_async_wall_clock");
-	obs_source_set_async_scheduled_func = (obs_source_set_async_scheduled_t)
-		dlsym(RTLD_DEFAULT, "obs_source_set_async_scheduled");
-	obs_source_set_scheduled_look_ahead_ns_func = (obs_source_set_scheduled_look_ahead_ns_t)
-		dlsym(RTLD_DEFAULT, "obs_source_set_scheduled_look_ahead_ns");
+	obs_source_set_async_wall_clock_func =
+		(obs_source_set_async_wall_clock_t)dlsym(RTLD_DEFAULT, "obs_source_set_async_wall_clock");
+	obs_source_set_async_scheduled_func =
+		(obs_source_set_async_scheduled_t)dlsym(RTLD_DEFAULT, "obs_source_set_async_scheduled");
+	obs_source_set_scheduled_look_ahead_ns_func =
+		(obs_source_set_scheduled_look_ahead_ns_t)dlsym(RTLD_DEFAULT, "obs_source_set_scheduled_look_ahead_ns");
 #endif
 
 	if (obs_source_set_async_scheduled_func) {
@@ -109,8 +109,7 @@ static int64_t get_global_clock_offset()
 		g_global_clock_offset_ns = wall_now - (int64_t)obs_now;
 		g_global_clock_offset_initialized = true;
 		obs_log(LOG_INFO, "[distroav] GLOBAL_CLOCK_OFFSET initialized: %lld ms (wall=%lld, obs=%llu)",
-			(long long)(g_global_clock_offset_ns / 1000000),
-			(long long)(wall_now / 1000000),
+			(long long)(g_global_clock_offset_ns / 1000000), (long long)(wall_now / 1000000),
 			(unsigned long long)(obs_now / 1000000));
 	}
 	return g_global_clock_offset_ns;
@@ -203,9 +202,9 @@ typedef struct ndi_source_config_t {
 	video_range_type yuv_range;
 	video_colorspace yuv_colorspace;
 	bool audio_enabled;
-	bool sync_lock_enabled;  // Enable clock offset translation for consistent A/V sync
-	int buffer_offset_ms;    // Fixed buffer offset in ms for scheduled playback
-	int gpu_advance_frames;  // GPU pipeline compensation: how many vsync frames to advance selection
+	bool sync_lock_enabled; // Enable clock offset translation for consistent A/V sync
+	int buffer_offset_ms;   // Fixed buffer offset in ms for scheduled playback
+	int gpu_advance_frames; // GPU pipeline compensation: how many vsync frames to advance selection
 	ptz_t ptz;
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
@@ -213,8 +212,8 @@ typedef struct ndi_source_config_t {
 // State for Sync Lock clock offset tracking
 typedef struct ndi_timestamp_sync_t {
 	bool initialized;
-	int64_t clock_offset_ns;      // wall_clock - obs_clock (translation factor)
-	int warmup_frames_remaining;  // Skip first N frames before anchoring
+	int64_t clock_offset_ns;     // wall_clock - obs_clock (translation factor)
+	int warmup_frames_remaining; // Skip first N frames before anchoring
 	uint64_t video_frame_count;
 } ndi_timestamp_sync_t;
 
@@ -229,33 +228,33 @@ typedef struct ndi_source_t {
 	uint32_t height;
 
 	uint64_t last_frame_timestamp;
-	uint64_t video_frame_count;    // Sequential frame counter for monitoring
+	uint64_t video_frame_count; // Sequential frame counter for monitoring
 
-	ndi_timestamp_sync_t ts_sync;  // Sync Lock state
-	bool wall_clock_mode_active;   // True if OBS wall-clock API is available and enabled
-	bool scheduled_mode_active;    // True if OBS scheduled-playback API is available and enabled
+	ndi_timestamp_sync_t ts_sync; // Sync Lock state
+	bool wall_clock_mode_active;  // True if OBS wall-clock API is available and enabled
+	bool scheduled_mode_active;   // True if OBS scheduled-playback API is available and enabled
 
 	// Startup timing debug
-	uint64_t first_video_ts;       // First video timestamp received
-	uint64_t first_audio_ts;       // First audio timestamp received
-	uint64_t audio_frame_count;    // Audio frame counter for startup logging
-	bool startup_logged;           // Whether startup timing has been logged
+	uint64_t first_video_ts;    // First video timestamp received
+	uint64_t first_audio_ts;    // First audio timestamp received
+	uint64_t audio_frame_count; // Audio frame counter for startup logging
+	bool startup_logged;        // Whether startup timing has been logged
 
 	// A/V calibration for scheduled mode
-	int64_t av_offset_ns;          // Calibration: audio_ts - video_ts offset to correct
-	bool av_calibrated;            // True once calibration is complete
+	int64_t av_offset_ns; // Calibration: audio_ts - video_ts offset to correct
+	bool av_calibrated;   // True once calibration is complete
 } ndi_source_t;
 
 // Timing information emitted via ndi_timing signal for external monitoring (e.g., sync-dock)
 typedef struct ndi_timing_info_t {
 	// Input values
-	int64_t ndi_timecode_ns;       // NDI PTP capture time from sender (100ns units converted to ns)
-	int64_t clock_offset_ns;       // Conversion factor: wall_clock - obs_clock (0 for simple mode)
-	int64_t buffer_ns;             // Buffer setting in nanoseconds (0 for simple mode)
+	int64_t ndi_timecode_ns; // NDI PTP capture time from sender (100ns units converted to ns)
+	int64_t clock_offset_ns; // Conversion factor: wall_clock - obs_clock (0 for simple mode)
+	int64_t buffer_ns;       // Buffer setting in nanoseconds (0 for simple mode)
 
 	// Computed values
-	int64_t presentation_ns;       // OBS presentation timestamp
-	int64_t obs_now_ns;            // Current OBS monotonic time at signal emission
+	int64_t presentation_ns; // OBS presentation timestamp
+	int64_t obs_now_ns;      // Current OBS monotonic time at signal emission
 
 	// Derived metrics
 	int64_t ts_ahead_ns;           // presentation - obs_now (buffer headroom)
@@ -263,12 +262,12 @@ typedef struct ndi_timing_info_t {
 	int64_t release_wall_clock_ns; // Wall clock time when frame released to OBS
 
 	// Debug
-	uint64_t frame_number;         // Sequential video frame counter
+	uint64_t frame_number; // Sequential video frame counter
 
 	// Mode flags
-	bool wall_clock_mode;          // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
-	bool scheduled_mode;           // True when scheduled-playback mode is active (buffer_ns is applied)
-	int buffer_offset_ms;          // Configured buffer offset in milliseconds
+	bool wall_clock_mode; // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
+	bool scheduled_mode;  // True when scheduled-playback mode is active (buffer_ns is applied)
+	int buffer_offset_ms; // Configured buffer offset in milliseconds
 } ndi_timing_info_t;
 
 // Reset Sync Lock state (call when NDI connection is established)
@@ -276,7 +275,7 @@ static void reset_timestamp_sync(ndi_source_t *source)
 {
 	source->ts_sync.initialized = false;
 	source->ts_sync.clock_offset_ns = 0;
-	source->ts_sync.warmup_frames_remaining = 5;  // Skip first 5 frames before anchoring
+	source->ts_sync.warmup_frames_remaining = 5; // Skip first 5 frames before anchoring
 	source->ts_sync.video_frame_count = 0;
 
 	// Reset startup timing debug
@@ -292,8 +291,7 @@ static void reset_timestamp_sync(ndi_source_t *source)
 	int64_t wall_now = get_wall_clock_ns();
 	uint64_t obs_now = os_gettime_ns();
 	obs_log(LOG_INFO, "'%s' STARTUP_TIMING: reset at wall=%lld ms, obs=%llu ms",
-		obs_source_get_name(source->obs_source),
-		(long long)(wall_now / 1000000),
+		obs_source_get_name(source->obs_source), (long long)(wall_now / 1000000),
 		(unsigned long long)(obs_now / 1000000));
 }
 
@@ -301,7 +299,7 @@ static void reset_timestamp_sync(ndi_source_t *source)
 static uint64_t translate_timecode_to_obs(ndi_source_t *source, int64_t ndi_timecode_100ns)
 {
 	ndi_timestamp_sync_t *sync = &source->ts_sync;
-	int64_t ndi_tc_ns = ndi_timecode_100ns * 100;  // Convert 100ns to ns
+	int64_t ndi_tc_ns = ndi_timecode_100ns * 100; // Convert 100ns to ns
 
 	// If not using sync_lock, fall back to arrival time
 	if (!source->config.sync_lock_enabled) {
@@ -316,12 +314,11 @@ static uint64_t translate_timecode_to_obs(ndi_source_t *source, int64_t ndi_time
 
 		int64_t presentation_init = ndi_tc_ns - sync->clock_offset_ns;
 
-		obs_log(LOG_INFO, "'%s' VIDEO_SYNC_LOCK: using global_clock_offset=%lld ms, "
+		obs_log(LOG_INFO,
+			"'%s' VIDEO_SYNC_LOCK: using global_clock_offset=%lld ms, "
 			"ndi_tc=%lld ms, presentation=%lld ms",
-			obs_source_get_name(source->obs_source),
-			(long long)(sync->clock_offset_ns / 1000000),
-			(long long)(ndi_tc_ns / 1000000),
-			(long long)(presentation_init / 1000000));
+			obs_source_get_name(source->obs_source), (long long)(sync->clock_offset_ns / 1000000),
+			(long long)(ndi_tc_ns / 1000000), (long long)(presentation_init / 1000000));
 	}
 
 	sync->video_frame_count++;
@@ -517,10 +514,9 @@ obs_properties_t *ndi_source_getproperties(void *data)
 
 	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
 	obs_properties_add_bool(props, PROP_SYNC_LOCK, obs_module_text("NDIPlugin.SourceProps.SyncLock"));
-	obs_properties_add_int(props, PROP_BUFFER_OFFSET,
-		obs_module_text("NDIPlugin.SourceProps.BufferOffset"), 1, 100, 1);
-	obs_properties_add_int(props, PROP_GPU_ADVANCE,
-		obs_module_text("NDIPlugin.SourceProps.GPUAdvance"), 0, 3, 1);
+	obs_properties_add_int(props, PROP_BUFFER_OFFSET, obs_module_text("NDIPlugin.SourceProps.BufferOffset"), 1, 100,
+			       1);
+	obs_properties_add_int(props, PROP_GPU_ADVANCE, obs_module_text("NDIPlugin.SourceProps.GPUAdvance"), 0, 3, 1);
 
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
@@ -549,8 +545,8 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 	obs_data_set_default_bool(settings, PROP_SYNC_LOCK, false);
-	obs_data_set_default_int(settings, PROP_BUFFER_OFFSET, 10);  // 10ms default buffer offset
-	obs_data_set_default_int(settings, PROP_GPU_ADVANCE, 2);     // 2 vsync frames default (~33ms at 60Hz)
+	obs_data_set_default_int(settings, PROP_BUFFER_OFFSET, 10); // 10ms default buffer offset
+	obs_data_set_default_int(settings, PROP_GPU_ADVANCE, 2);    // 2 vsync frames default (~33ms at 60Hz)
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -878,19 +874,17 @@ void *ndi_source_thread(void *data)
 				s->audio_frame_count++;
 				if (s->audio_frame_count <= 10) {
 					uint64_t audio_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
-						? (uint64_t)(audio_frame.timecode * 100)
-						: (uint64_t)(audio_frame.timestamp * 100);
+								    ? (uint64_t)(audio_frame.timecode * 100)
+								    : (uint64_t)(audio_frame.timestamp * 100);
 					if (s->audio_frame_count == 1) {
 						s->first_audio_ts = audio_ts;
 					}
 					obs_log(LOG_INFO, "'%s' AUDIO_STARTUP: frame %llu, ts=%llu ms, tc=%lld ms",
-						obs_source_name,
-						(unsigned long long)s->audio_frame_count,
+						obs_source_name, (unsigned long long)s->audio_frame_count,
 						(unsigned long long)(audio_ts / 1000000),
 						(long long)(audio_frame.timecode * 100 / 1000000));
 				}
-				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source,
-								 &obs_audio_frame);
+				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source, &obs_audio_frame);
 			}
 			ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
 
@@ -905,12 +899,11 @@ void *ndi_source_thread(void *data)
 				// Log first video frame for startup timing
 				if (s->first_video_ts == 0) {
 					uint64_t video_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
-						? (uint64_t)(video_frame.timecode * 100)
-						: (uint64_t)(video_frame.timestamp * 100);
+								    ? (uint64_t)(video_frame.timecode * 100)
+								    : (uint64_t)(video_frame.timestamp * 100);
 					s->first_video_ts = video_ts;
 					obs_log(LOG_INFO, "'%s' VIDEO_STARTUP: first frame ts=%llu ms, tc=%lld ms",
-						obs_source_name,
-						(unsigned long long)(video_ts / 1000000),
+						obs_source_name, (unsigned long long)(video_ts / 1000000),
 						(long long)(video_frame.timecode * 100 / 1000000));
 				}
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
@@ -922,12 +915,11 @@ void *ndi_source_thread(void *data)
 					s->av_offset_ns = (int64_t)s->first_audio_ts - (int64_t)s->first_video_ts;
 					s->av_calibrated = true;
 					int64_t av_offset_ms = s->av_offset_ns / 1000000;
-					obs_log(LOG_INFO, "'%s' AV_CALIBRATED: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (will correct audio by %+lld ms)",
-						obs_source_name,
-						(unsigned long long)(s->first_audio_ts / 1000000),
+					obs_log(LOG_INFO,
+						"'%s' AV_CALIBRATED: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (will correct audio by %+lld ms)",
+						obs_source_name, (unsigned long long)(s->first_audio_ts / 1000000),
 						(unsigned long long)(s->first_video_ts / 1000000),
-						(long long)av_offset_ms,
-						(long long)(-av_offset_ms));
+						(long long)av_offset_ms, (long long)(-av_offset_ms));
 				}
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
@@ -949,19 +941,17 @@ void *ndi_source_thread(void *data)
 				s->audio_frame_count++;
 				if (s->audio_frame_count <= 10) {
 					uint64_t audio_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
-						? (uint64_t)(audio_frame.timecode * 100)
-						: (uint64_t)(audio_frame.timestamp * 100);
+								    ? (uint64_t)(audio_frame.timecode * 100)
+								    : (uint64_t)(audio_frame.timestamp * 100);
 					if (s->audio_frame_count == 1) {
 						s->first_audio_ts = audio_ts;
 					}
 					obs_log(LOG_INFO, "'%s' AUDIO_STARTUP: frame %llu, ts=%llu ms, tc=%lld ms",
-						obs_source_name,
-						(unsigned long long)s->audio_frame_count,
+						obs_source_name, (unsigned long long)s->audio_frame_count,
 						(unsigned long long)(audio_ts / 1000000),
 						(long long)(audio_frame.timecode * 100 / 1000000));
 				}
-				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source,
-								 &obs_audio_frame);
+				ndi_source_thread_process_audio3(s, &audio_frame, s->obs_source, &obs_audio_frame);
 
 				ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				continue;
@@ -974,12 +964,11 @@ void *ndi_source_thread(void *data)
 				// Log first video frame for startup timing (non-framesync path)
 				if (s->first_video_ts == 0) {
 					uint64_t video_ts = (s->config.sync_mode == PROP_SYNC_NDI_SOURCE_TIMECODE)
-						? (uint64_t)(video_frame.timecode * 100)
-						: (uint64_t)(video_frame.timestamp * 100);
+								    ? (uint64_t)(video_frame.timecode * 100)
+								    : (uint64_t)(video_frame.timestamp * 100);
 					s->first_video_ts = video_ts;
 					obs_log(LOG_INFO, "'%s' VIDEO_STARTUP: first frame ts=%llu ms, tc=%lld ms",
-						obs_source_name,
-						(unsigned long long)(video_ts / 1000000),
+						obs_source_name, (unsigned long long)(video_ts / 1000000),
 						(long long)(video_frame.timecode * 100 / 1000000));
 				}
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
@@ -991,12 +980,11 @@ void *ndi_source_thread(void *data)
 					s->av_offset_ns = (int64_t)s->first_audio_ts - (int64_t)s->first_video_ts;
 					s->av_calibrated = true;
 					int64_t av_offset_ms = s->av_offset_ns / 1000000;
-					obs_log(LOG_INFO, "'%s' AV_CALIBRATED: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (will correct audio by %+lld ms)",
-						obs_source_name,
-						(unsigned long long)(s->first_audio_ts / 1000000),
+					obs_log(LOG_INFO,
+						"'%s' AV_CALIBRATED: audio_ts=%llu ms, video_ts=%llu ms, offset=%lld ms (will correct audio by %+lld ms)",
+						obs_source_name, (unsigned long long)(s->first_audio_ts / 1000000),
 						(unsigned long long)(s->first_video_ts / 1000000),
-						(long long)av_offset_ms,
-						(long long)(-av_offset_ms));
+						(long long)av_offset_ms, (long long)(-av_offset_ms));
 				}
 
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
@@ -1059,7 +1047,7 @@ void ndi_source_thread_process_audio3(ndi_source_t *source, NDIlib_audio_frame_v
 		int64_t buffer_offset_ns = (int64_t)config->buffer_offset_ms * 1000000LL;
 		// Add GPU latency compensation: delay audio to account for video render time
 		// This shifts audio to play later, matching video's GPU-delayed output
-		int64_t gpu_latency_compensation_ns = 35 * 1000000LL;  // ~35ms to match video render
+		int64_t gpu_latency_compensation_ns = 35 * 1000000LL; // ~35ms to match video render
 		obs_audio_frame->timestamp = (uint64_t)(audio_tc_ns + buffer_offset_ns + gpu_latency_compensation_ns);
 	} else if (source->wall_clock_mode_active) {
 		// OBS wall-clock API available: pass NDI timecodes directly
@@ -1168,14 +1156,14 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 	// Emit ndi_timing signal for external monitoring (e.g., sync-dock)
 	{
 		source->video_frame_count++;
-		int64_t ndi_tc_ns = ndi_video_frame->timecode * 100;  // Convert 100ns to ns
+		int64_t ndi_tc_ns = ndi_video_frame->timecode * 100; // Convert 100ns to ns
 		int64_t wall_now = get_wall_clock_ns();
 		uint64_t obs_now = os_gettime_ns();
 		int64_t buffer_offset_ns = (int64_t)source->config.buffer_offset_ms * 1000000LL;
 
 		ndi_timing_info_t timing = {};
 		timing.ndi_timecode_ns = ndi_tc_ns;
-		timing.clock_offset_ns = wall_now - (int64_t)obs_now;  // Approximate clock offset
+		timing.clock_offset_ns = wall_now - (int64_t)obs_now; // Approximate clock offset
 		timing.buffer_ns = source->scheduled_mode_active ? buffer_offset_ns : 0;
 		timing.presentation_ns = obs_video_frame->timestamp;
 		timing.obs_now_ns = obs_now;
@@ -1407,10 +1395,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.buffer_offset_ms = (int)obs_data_get_int(settings, PROP_BUFFER_OFFSET);
 	s->config.gpu_advance_frames = (int)obs_data_get_int(settings, PROP_GPU_ADVANCE);
 	obs_log(LOG_INFO, "'%s' Sync Lock: %s, Buffer Offset: %d ms, GPU Advance: %d frames",
-		obs_source_get_name(obs_source),
-		s->config.sync_lock_enabled ? "enabled" : "disabled",
-		s->config.buffer_offset_ms,
-		s->config.gpu_advance_frames);
+		obs_source_get_name(obs_source), s->config.sync_lock_enabled ? "enabled" : "disabled",
+		s->config.buffer_offset_ms, s->config.gpu_advance_frames);
 
 	// Enable scheduled-playback or wall-clock frame selection when sync_lock is enabled
 	// Scheduled mode provides deterministic timing: frame renders when wall_clock >= timestamp
@@ -1419,15 +1405,16 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		// Prefer scheduled mode for deterministic timing
 		obs_source_set_async_scheduled_func(obs_source, true);
 		s->scheduled_mode_active = true;
-		s->wall_clock_mode_active = true;  // Scheduled mode implies wall-clock
+		s->wall_clock_mode_active = true; // Scheduled mode implies wall-clock
 
 		// Configure GPU pipeline look-ahead compensation
 		// Each frame is gpu_advance_frames * vsync interval (~16.67ms for 60Hz)
 		if (obs_source_set_scheduled_look_ahead_ns_func) {
-			int64_t vsync_ns = 16666666LL;  // ~16.67ms at 60Hz (TODO: query actual from OBS)
+			int64_t vsync_ns = 16666666LL; // ~16.67ms at 60Hz (TODO: query actual from OBS)
 			int64_t look_ahead_ns = (int64_t)s->config.gpu_advance_frames * vsync_ns;
 			obs_source_set_scheduled_look_ahead_ns_func(obs_source, look_ahead_ns);
-			obs_log(LOG_INFO, "'%s' Scheduled playback mode enabled (buffer offset: %d ms, GPU advance: %d frames = %lld ms)",
+			obs_log(LOG_INFO,
+				"'%s' Scheduled playback mode enabled (buffer offset: %d ms, GPU advance: %d frames = %lld ms)",
 				obs_source_get_name(obs_source), s->config.buffer_offset_ms,
 				s->config.gpu_advance_frames, (long long)(look_ahead_ns / 1000000));
 		} else {

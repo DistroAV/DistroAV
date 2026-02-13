@@ -156,7 +156,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		video_frame.frame_rate_D = f->ovi.fps_den;
 		video_frame.picture_aspect_ratio = 0; // square pixels
 		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-		video_frame.timecode = get_wall_clock_timecode();  // Use real wall clock time
+		video_frame.timecode = get_wall_clock_timecode(); // Use real wall clock time
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
@@ -437,7 +437,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
-	audio_frame.timecode = get_wall_clock_timecode();  // Use real wall clock time
+	audio_frame.timecode = get_wall_clock_timecode(); // Use real wall clock time
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.channel_stride_in_bytes =
 		audio_frame.no_samples *

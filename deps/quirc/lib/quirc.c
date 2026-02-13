@@ -47,8 +47,8 @@ void quirc_destroy(struct quirc *q)
 
 int quirc_resize(struct quirc *q, int w, int h)
 {
-	uint8_t		*image  = NULL;
-	quirc_pixel_t	*pixels = NULL;
+	uint8_t *image = NULL;
+	quirc_pixel_t *pixels = NULL;
 	size_t num_vars;
 	size_t vars_byte_size;
 	struct quirc_flood_fill_vars *vars = NULL;
@@ -145,16 +145,14 @@ int quirc_count(const struct quirc *q)
 	return q->num_grids;
 }
 
-static const char *const error_table[] = {
-	[QUIRC_SUCCESS] = "Success",
-	[QUIRC_ERROR_INVALID_GRID_SIZE] = "Invalid grid size",
-	[QUIRC_ERROR_INVALID_VERSION] = "Invalid version",
-	[QUIRC_ERROR_FORMAT_ECC] = "Format data ECC failure",
-	[QUIRC_ERROR_DATA_ECC] = "ECC failure",
-	[QUIRC_ERROR_UNKNOWN_DATA_TYPE] = "Unknown data type",
-	[QUIRC_ERROR_DATA_OVERFLOW] = "Data overflow",
-	[QUIRC_ERROR_DATA_UNDERFLOW] = "Data underflow"
-};
+static const char *const error_table[] = {[QUIRC_SUCCESS] = "Success",
+					  [QUIRC_ERROR_INVALID_GRID_SIZE] = "Invalid grid size",
+					  [QUIRC_ERROR_INVALID_VERSION] = "Invalid version",
+					  [QUIRC_ERROR_FORMAT_ECC] = "Format data ECC failure",
+					  [QUIRC_ERROR_DATA_ECC] = "ECC failure",
+					  [QUIRC_ERROR_UNKNOWN_DATA_TYPE] = "Unknown data type",
+					  [QUIRC_ERROR_DATA_OVERFLOW] = "Data overflow",
+					  [QUIRC_ERROR_DATA_UNDERFLOW] = "Data underflow"};
 
 const char *quirc_strerror(quirc_decode_error_t err)
 {

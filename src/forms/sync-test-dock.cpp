@@ -32,7 +32,8 @@ static QString format_time_ns(int64_t ns)
 {
 	int64_t total_ms = ns / 1000000;
 	int64_t tod_ms = total_ms % 86400000LL;
-	if (tod_ms < 0) tod_ms += 86400000LL;
+	if (tod_ms < 0)
+		tod_ms += 86400000LL;
 
 	int64_t ms = tod_ms % 1000;
 	int64_t total_sec = tod_ms / 1000;
@@ -64,8 +65,8 @@ SyncTestDock::SyncTestDock(QWidget *parent) : QFrame(parent)
 	sourceLayout->addWidget(ndiSourceCombo);
 	mainLayout->addLayout(sourceLayout);
 
-	connect(ndiSourceCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-		this, &SyncTestDock::onSourceSelectionChanged);
+	connect(ndiSourceCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+		&SyncTestDock::onSourceSelectionChanged);
 
 	// Reset button
 	resetButton = new QPushButton(obs_module_text("NDIPlugin.SyncDock.Reset"), this);
@@ -291,7 +292,8 @@ void SyncTestDock::cb_render_timing(void *param, calldata_t *cd)
 	if (!calldata_get_int(cd, "rendered_ns", &rendered_ns))
 		return;
 
-	QMetaObject::invokeMethod(dock, [dock, frame_ts, rendered_ns]() { dock->on_render_timing(frame_ts, rendered_ns); });
+	QMetaObject::invokeMethod(dock,
+				  [dock, frame_ts, rendered_ns]() { dock->on_render_timing(frame_ts, rendered_ns); });
 }
 
 void SyncTestDock::cb_obs_frame_output(void *param, calldata_t *cd)
@@ -411,9 +413,8 @@ void SyncTestDock::on_ndi_timing(ndi_timing_info_t timing)
 	// Present time: when OBS is scheduled to render this frame (wall clock)
 	// In wall-clock mode, presentation_ns is already wall-clock (NTP timestamp)
 	// Otherwise, it's OBS monotonic time that needs clock_offset conversion
-	int64_t present_wall_clock_ns = timing.wall_clock_mode
-		? timing.presentation_ns
-		: timing.presentation_ns + timing.clock_offset_ns;
+	int64_t present_wall_clock_ns = timing.wall_clock_mode ? timing.presentation_ns
+							       : timing.presentation_ns + timing.clock_offset_ns;
 
 	// Update NDI-side timestamps immediately (always visible, even when not in program)
 	creationTimeDisplay->setText(format_time_ns(creation_ns));
@@ -498,7 +499,8 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 
 	for (auto it = pending_frames.begin(); it != pending_frames.end(); ++it) {
 		int64_t diff = it->presentation_obs_ns - source_frame_ts;
-		if (diff < 0) diff = -diff;
+		if (diff < 0)
+			diff = -diff;
 		if (diff < best_diff && diff <= tolerance_ns) {
 			best_diff = diff;
 			best_it = it;
@@ -509,8 +511,10 @@ void SyncTestDock::on_obs_frame_output(int64_t render_wall_clock_ns, int64_t sou
 		// No match found within tolerance
 		if (!pending_frames.empty()) {
 			int64_t first_ts = pending_frames.front().presentation_obs_ns;
-			blog(LOG_DEBUG, "[distroav] OBS_RENDER_MATCH_FAIL: source_frame_ts=%" PRId64 " first_pending=%" PRId64 " diff=%" PRId64 " queue_size=%zu",
-				source_frame_ts, first_ts, first_ts - source_frame_ts, pending_frames.size());
+			blog(LOG_DEBUG,
+			     "[distroav] OBS_RENDER_MATCH_FAIL: source_frame_ts=%" PRId64 " first_pending=%" PRId64
+			     " diff=%" PRId64 " queue_size=%zu",
+			     source_frame_ts, first_ts, first_ts - source_frame_ts, pending_frames.size());
 		}
 		return;
 	}
@@ -571,9 +575,7 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 		return;
 
 	// Calculate average latency
-	double avg_latency = sync_count_since_log > 0
-		? latency_sum_since_log / sync_count_since_log
-		: last_latency_ms;
+	double avg_latency = sync_count_since_log > 0 ? latency_sum_since_log / sync_count_since_log : last_latency_ms;
 
 	// Calculate drop rate
 	int64_t total = total_frames_seen + total_frame_drops;
@@ -589,7 +591,8 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	// Format creation time as HH:MM:SS.mmm
 	auto format_tod = [](int64_t ns) -> std::string {
 		int64_t tod_ms = (ns / 1000000) % 86400000LL;
-		if (tod_ms < 0) tod_ms += 86400000LL;
+		if (tod_ms < 0)
+			tod_ms += 86400000LL;
 		int h = (int)(tod_ms / 3600000);
 		int m = (int)((tod_ms % 3600000) / 60000);
 		int s = (int)((tod_ms % 60000) / 1000);
@@ -604,14 +607,12 @@ void SyncTestDock::log_consolidated_status(uint64_t now_ts)
 	std::string release_str = format_tod(last_release_ns);
 	std::string render_str = format_tod(last_render_wall_clock_ns);
 
-	blog(LOG_INFO, "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
-		"creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(rel) release=%s +%" PRId64 "ms(obs) render=%s total=%" PRId64 "ms",
-		avg_latency,
-		total_frame_drops, drop_rate,
-		creation_str.c_str(), network_ms,
-		receive_str.c_str(), release_ms,
-		release_str.c_str(), obs_delay_ms,
-		render_str.c_str(), total_delay_ms);
+	blog(LOG_INFO,
+	     "[distroav] SYNC: av=%.1fms drops=%" PRId64 "(%.1f%%) "
+	     "creation=%s +%" PRId64 "ms(net) receive=%s +%" PRId64 "ms(rel) release=%s +%" PRId64
+	     "ms(obs) render=%s total=%" PRId64 "ms",
+	     avg_latency, total_frame_drops, drop_rate, creation_str.c_str(), network_ms, receive_str.c_str(),
+	     release_ms, release_str.c_str(), obs_delay_ms, render_str.c_str(), total_delay_ms);
 
 	// Reset counters
 	sync_count_since_log = 0;
@@ -635,16 +636,18 @@ void SyncTestDock::populateNdiSourceList()
 		QStringList names;
 	} enumData;
 
-	obs_enum_sources([](void *param, obs_source_t *source) {
-		auto *data = (EnumData *)param;
-		const char *source_id = obs_source_get_id(source);
-		if (source_id && strcmp(source_id, "ndi_source") == 0) {
-			const char *name = obs_source_get_name(source);
-			if (name)
-				data->names.append(QString::fromUtf8(name));
-		}
-		return true;
-	}, &enumData);
+	obs_enum_sources(
+		[](void *param, obs_source_t *source) {
+			auto *data = (EnumData *)param;
+			const char *source_id = obs_source_get_id(source);
+			if (source_id && strcmp(source_id, "ndi_source") == 0) {
+				const char *name = obs_source_get_name(source);
+				if (name)
+					data->names.append(QString::fromUtf8(name));
+			}
+			return true;
+		},
+		&enumData);
 
 	// Sort alphabetically
 	enumData.names.sort(Qt::CaseInsensitive);
@@ -684,7 +687,7 @@ void SyncTestDock::onSourceSelectionChanged(int index)
 
 	QString newSourceName = ndiSourceCombo->itemText(index);
 	if (newSourceName == selectedSourceName && ndi_source_ref)
-		return;  // Already connected to this source
+		return; // Already connected to this source
 
 	selectedSourceName = newSourceName;
 
@@ -708,27 +711,31 @@ void SyncTestDock::connect_to_ndi_source()
 		return;
 	}
 
-	obs_enum_sources([](void *param, obs_source_t *source) {
-		auto *dock = (SyncTestDock *)param;
+	obs_enum_sources(
+		[](void *param, obs_source_t *source) {
+			auto *dock = (SyncTestDock *)param;
 
-		const char *source_id = obs_source_get_id(source);
-		if (source_id && strcmp(source_id, "ndi_source") == 0) {
-			const char *name = obs_source_get_name(source);
-			if (name && dock->selectedSourceName == QString::fromUtf8(name)) {
-				auto *sh = obs_source_get_signal_handler(source);
-				signal_handler_connect(sh, "ndi_timing", cb_ndi_timing, dock);
-				dock->ndi_source_ref = obs_source_get_weak_source(source);
+			const char *source_id = obs_source_get_id(source);
+			if (source_id && strcmp(source_id, "ndi_source") == 0) {
+				const char *name = obs_source_get_name(source);
+				if (name && dock->selectedSourceName == QString::fromUtf8(name)) {
+					auto *sh = obs_source_get_signal_handler(source);
+					signal_handler_connect(sh, "ndi_timing", cb_ndi_timing, dock);
+					dock->ndi_source_ref = obs_source_get_weak_source(source);
 
-				blog(LOG_INFO, "[distroav] SyncDock: Connected to NDI source '%s' for timing signals", name);
-				return false;
+					blog(LOG_INFO,
+					     "[distroav] SyncDock: Connected to NDI source '%s' for timing signals",
+					     name);
+					return false;
+				}
 			}
-		}
-		return true;
-	}, this);
+			return true;
+		},
+		this);
 
 	if (!ndi_source_ref) {
 		blog(LOG_WARNING, "[distroav] SyncDock: Could not find NDI source '%s'",
-			selectedSourceName.toUtf8().constData());
+		     selectedSourceName.toUtf8().constData());
 	}
 }
 
@@ -756,9 +763,7 @@ void SyncTestDock::cb_source_created(void *param, calldata_t *cd)
 
 	const char *source_id = obs_source_get_id(source);
 	if (source_id && strcmp(source_id, "ndi_source") == 0) {
-		QMetaObject::invokeMethod(dock, [dock]() {
-			dock->populateNdiSourceList();
-		});
+		QMetaObject::invokeMethod(dock, [dock]() { dock->populateNdiSourceList(); });
 	}
 }
 
@@ -771,9 +776,7 @@ void SyncTestDock::cb_source_destroyed(void *param, calldata_t *cd)
 
 	const char *source_id = obs_source_get_id(source);
 	if (source_id && strcmp(source_id, "ndi_source") == 0) {
-		QMetaObject::invokeMethod(dock, [dock]() {
-			dock->populateNdiSourceList();
-		});
+		QMetaObject::invokeMethod(dock, [dock]() { dock->populateNdiSourceList(); });
 	}
 }
 

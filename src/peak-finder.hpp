@@ -20,8 +20,7 @@
 
 #include <inttypes.h>
 
-struct peak_finder
-{
+struct peak_finder {
 	uint64_t cand_ts = 0;
 	uint64_t last_ts = 0;
 

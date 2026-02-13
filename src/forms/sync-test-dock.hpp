@@ -36,11 +36,11 @@ typedef struct ndi_timing_info_t {
 	int64_t obs_now_ns;
 	int64_t ts_ahead_ns;
 	int64_t pipeline_latency_ns;
-	int64_t release_wall_clock_ns;  // Wall clock time when frame released to OBS
+	int64_t release_wall_clock_ns; // Wall clock time when frame released to OBS
 	uint64_t frame_number;
-	bool wall_clock_mode;           // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
-	bool scheduled_mode;            // True when scheduled-playback mode is active (buffer_ns is applied)
-	int buffer_offset_ms;           // Configured buffer offset in milliseconds
+	bool wall_clock_mode; // True when OBS wall-clock API is active (presentation_ns is already wall-clock)
+	bool scheduled_mode;  // True when scheduled-playback mode is active (buffer_ns is applied)
+	int buffer_offset_ms; // Configured buffer offset in milliseconds
 } ndi_timing_info_t;
 
 class SyncTestDock : public QFrame {
@@ -58,15 +58,15 @@ private:
 	// Top metrics
 	QLabel *latencyDisplay = nullptr;
 	QLabel *frameDropDisplay = nullptr;
-	QLabel *indexDisplay = nullptr;  // Shows A(id) V(id)
+	QLabel *indexDisplay = nullptr; // Shows A(id) V(id)
 
 	// Pipeline displays
 	QLabel *creationTimeDisplay = nullptr;
 	QLabel *networkDelayDisplay = nullptr;
 	QLabel *receiveTimeDisplay = nullptr;
-	QLabel *releaseDelayDisplay = nullptr;       // Delay: receive → release
-	QLabel *releaseTimeDisplay = nullptr;        // Release timestamp
-	QLabel *obsDelayDisplay = nullptr;           // Delay: release → render (OBS processing)
+	QLabel *releaseDelayDisplay = nullptr; // Delay: receive → release
+	QLabel *releaseTimeDisplay = nullptr;  // Release timestamp
+	QLabel *obsDelayDisplay = nullptr;     // Delay: release → render (OBS processing)
 	QLabel *renderTimeDisplay = nullptr;
 
 	// Total
@@ -104,16 +104,16 @@ private:
 
 	// FIFO queue for exact frame matching (NDI frames -> OBS output in order)
 	struct PendingFrameTiming {
-		uint64_t frame_number;        // NDI frame number for debugging
-		int64_t creation_ns;          // Wall clock creation time
-		int64_t presentation_obs_ns;  // OBS monotonic presentation time (or wall-clock in wall_clock_mode)
-		int64_t network_ns;           // Network delay
-		int64_t release_ns;           // Wall clock release time
-		int64_t release_delay_ns;     // Receive to release delay
+		uint64_t frame_number;         // NDI frame number for debugging
+		int64_t creation_ns;           // Wall clock creation time
+		int64_t presentation_obs_ns;   // OBS monotonic presentation time (or wall-clock in wall_clock_mode)
+		int64_t network_ns;            // Network delay
+		int64_t release_ns;            // Wall clock release time
+		int64_t release_delay_ns;      // Receive to release delay
 		int64_t present_wall_clock_ns; // Wall clock scheduled present time
-		int64_t clock_offset_ns;      // OBS monotonic → wall clock offset
-		bool wall_clock_mode;         // True when OBS wall-clock API is active
-		bool scheduled_mode;          // True when scheduled-playback mode is active
+		int64_t clock_offset_ns;       // OBS monotonic → wall clock offset
+		bool wall_clock_mode;          // True when OBS wall-clock API is active
+		bool scheduled_mode;           // True when scheduled-playback mode is active
 	};
 	std::deque<PendingFrameTiming> pending_frames;
 

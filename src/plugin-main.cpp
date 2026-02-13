@@ -351,9 +351,8 @@ bool obs_module_load(void)
 
 	if (main_window) {
 		// Register sync test dock
-		obs_frontend_add_dock_by_id("distroav-sync-dock",
-			obs_module_text("NDIPlugin.SyncDock.Title"),
-			create_sync_test_dock());
+		obs_frontend_add_dock_by_id("distroav-sync-dock", obs_module_text("NDIPlugin.SyncDock.Title"),
+					    create_sync_test_dock());
 		auto menu_action = static_cast<QAction *>(
 			obs_frontend_add_tools_menu_qaction(obs_module_text("NDIPlugin.Menu.OutputSettings")));
 

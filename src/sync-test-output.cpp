@@ -42,8 +42,7 @@
  *   */
 #define MAX_WIDTH_HEIGHT 87378u
 
-struct st_audio_buffer
-{
+struct st_audio_buffer {
 	std::deque<std::pair<int32_t, int32_t>> buffer;
 
 	void push_back(int16_t xr, int16_t xi, size_t length)
@@ -81,14 +80,12 @@ std::complex<float> int16_to_complex(std::pair<int32_t, int32_t> x)
 	return std::complex<float>((float)x.first / 32768.0f, (float)x.second / 32768.0f);
 }
 
-struct corner_type
-{
+struct corner_type {
 	uint32_t x, y;
 	uint32_t r = 0;
 };
 
-struct sync_test_output
-{
+struct sync_test_output {
 	obs_output_t *context;
 
 	/* Configuration from OBS output context */
@@ -376,8 +373,7 @@ static void st_raw_video_qrcode_decode(struct sync_test_output *st, struct video
 				*ptr++ = *data;
 				data += pixelsize;
 			}
-		}
-		else {
+		} else {
 			for (int x = 0; x < w; x++) {
 				*ptr++ = st->video_get_intensity(data);
 				data += pixelsize;
@@ -458,8 +454,7 @@ static void st_raw_video_qrcode_decode(struct sync_test_output *st, struct video
 						auto *sh = obs_output_get_signal_handler(st->context);
 						calldata_set_ptr(&cd, "data", &drop_data);
 						signal_handler_signal(sh, "frame_drop_detected", &cd);
-
-	}
+					}
 				}
 			}
 			st->last_qr_index = cur_index;
@@ -514,8 +509,7 @@ static void st_raw_video_find_marker(struct sync_test_output *st, struct video_d
 					line_sum += *data;
 					data += pixelsize;
 				}
-			}
-			else {
+			} else {
 				for (uint32_t x = x0; x < x1; x++) {
 					line_sum += st->video_get_intensity(data);
 					data += pixelsize;

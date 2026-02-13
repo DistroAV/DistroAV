@@ -58,8 +58,8 @@ void quirc_end(struct quirc *q);
 
 /* This structure describes a location in the input image buffer. */
 struct quirc_point {
-	int	x;
-	int	y;
+	int x;
+	int y;
 };
 
 /* This enum describes the various decoder errors which may occur. */
@@ -78,46 +78,46 @@ typedef enum {
 const char *quirc_strerror(quirc_decode_error_t err);
 
 /* Limits on the maximum size of QR-codes and their content. */
-#define QUIRC_MAX_VERSION	40
-#define QUIRC_MAX_GRID_SIZE	(QUIRC_MAX_VERSION * 4 + 17)
-#define QUIRC_MAX_BITMAP	(((QUIRC_MAX_GRID_SIZE * QUIRC_MAX_GRID_SIZE) + 7) / 8)
-#define QUIRC_MAX_PAYLOAD	8896
+#define QUIRC_MAX_VERSION 40
+#define QUIRC_MAX_GRID_SIZE (QUIRC_MAX_VERSION * 4 + 17)
+#define QUIRC_MAX_BITMAP (((QUIRC_MAX_GRID_SIZE * QUIRC_MAX_GRID_SIZE) + 7) / 8)
+#define QUIRC_MAX_PAYLOAD 8896
 
 /* QR-code ECC types. */
-#define QUIRC_ECC_LEVEL_M     0
-#define QUIRC_ECC_LEVEL_L     1
-#define QUIRC_ECC_LEVEL_H     2
-#define QUIRC_ECC_LEVEL_Q     3
+#define QUIRC_ECC_LEVEL_M 0
+#define QUIRC_ECC_LEVEL_L 1
+#define QUIRC_ECC_LEVEL_H 2
+#define QUIRC_ECC_LEVEL_Q 3
 
 /* QR-code data types. */
-#define QUIRC_DATA_TYPE_NUMERIC       1
-#define QUIRC_DATA_TYPE_ALPHA         2
-#define QUIRC_DATA_TYPE_BYTE          4
-#define QUIRC_DATA_TYPE_KANJI         8
+#define QUIRC_DATA_TYPE_NUMERIC 1
+#define QUIRC_DATA_TYPE_ALPHA 2
+#define QUIRC_DATA_TYPE_BYTE 4
+#define QUIRC_DATA_TYPE_KANJI 8
 
 /* Common character encodings */
-#define QUIRC_ECI_ISO_8859_1		1
-#define QUIRC_ECI_IBM437		2
-#define QUIRC_ECI_ISO_8859_2		4
-#define QUIRC_ECI_ISO_8859_3		5
-#define QUIRC_ECI_ISO_8859_4		6
-#define QUIRC_ECI_ISO_8859_5		7
-#define QUIRC_ECI_ISO_8859_6		8
-#define QUIRC_ECI_ISO_8859_7		9
-#define QUIRC_ECI_ISO_8859_8		10
-#define QUIRC_ECI_ISO_8859_9		11
-#define QUIRC_ECI_WINDOWS_874		13
-#define QUIRC_ECI_ISO_8859_13		15
-#define QUIRC_ECI_ISO_8859_15		17
-#define QUIRC_ECI_SHIFT_JIS		20
-#define QUIRC_ECI_UTF_8			26
+#define QUIRC_ECI_ISO_8859_1 1
+#define QUIRC_ECI_IBM437 2
+#define QUIRC_ECI_ISO_8859_2 4
+#define QUIRC_ECI_ISO_8859_3 5
+#define QUIRC_ECI_ISO_8859_4 6
+#define QUIRC_ECI_ISO_8859_5 7
+#define QUIRC_ECI_ISO_8859_6 8
+#define QUIRC_ECI_ISO_8859_7 9
+#define QUIRC_ECI_ISO_8859_8 10
+#define QUIRC_ECI_ISO_8859_9 11
+#define QUIRC_ECI_WINDOWS_874 13
+#define QUIRC_ECI_ISO_8859_13 15
+#define QUIRC_ECI_ISO_8859_15 17
+#define QUIRC_ECI_SHIFT_JIS 20
+#define QUIRC_ECI_UTF_8 26
 
 /* This structure is used to return information about detected QR codes
  * in the input image.
  */
 struct quirc_code {
 	/* The four corners of the QR-code, from top left, clockwise */
-	struct quirc_point	corners[4];
+	struct quirc_point corners[4];
 
 	/* The number of cells across in the QR-code. The cell bitmap
 	 * is a bitmask giving the actual values of cells. If the cell
@@ -127,8 +127,8 @@ struct quirc_code {
 	 *
 	 * where i = (y * size) + x.
 	 */
-	int			size;
-	uint8_t			cell_bitmap[QUIRC_MAX_BITMAP];
+	int size;
+	uint8_t cell_bitmap[QUIRC_MAX_BITMAP];
 };
 
 /* This structure holds the decoded QR-code data */
@@ -136,23 +136,23 @@ struct quirc_data {
 	/* Various parameters of the QR-code. These can mostly be
 	 * ignored if you only care about the data.
 	 */
-	int			version;
-	int			ecc_level;
-	int			mask;
+	int version;
+	int ecc_level;
+	int mask;
 
 	/* This field is the highest-valued data type found in the QR
 	 * code.
 	 */
-	int			data_type;
+	int data_type;
 
 	/* Data payload. For the Kanji datatype, payload is encoded as
 	 * Shift-JIS. For all other datatypes, payload is ASCII text.
 	 */
-	uint8_t			payload[QUIRC_MAX_PAYLOAD];
-	int			payload_len;
+	uint8_t payload[QUIRC_MAX_PAYLOAD];
+	int payload_len;
 
 	/* ECI assignment number */
-	uint32_t		eci;
+	uint32_t eci;
 };
 
 /* Return the number of QR-codes identified in the last processed
@@ -161,12 +161,10 @@ struct quirc_data {
 int quirc_count(const struct quirc *q);
 
 /* Extract the QR-code specified by the given index. */
-void quirc_extract(const struct quirc *q, int index,
-		   struct quirc_code *code);
+void quirc_extract(const struct quirc *q, int index, struct quirc_code *code);
 
 /* Decode a QR-code, returning the payload data. */
-quirc_decode_error_t quirc_decode(const struct quirc_code *code,
-				  struct quirc_data *data);
+quirc_decode_error_t quirc_decode(const struct quirc_code *code, struct quirc_data *data);
 
 /* Flip a QR-code according to optional mirror feature of ISO 18004:2015 */
 void quirc_flip(struct quirc_code *code);
