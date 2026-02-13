@@ -22,6 +22,9 @@ jobs:
     needs: build-project
     runs-on: [self-hosted, linux, deployer]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -89,6 +92,11 @@ jobs:
               Sort-Object LastWriteTime -Descending | Select-Object -First 1;
             Get-Content \$log.FullName | Select-String \"\\[distroav\\]\" | Select-Object -Last 5
           "'
+
+      - name: SYNC log regression test
+        run: |
+          chmod +x .github/scripts/sync-log-regression-test.sh
+          .github/scripts/sync-log-regression-test.sh
 
       - name: Cleanup
         if: always()
