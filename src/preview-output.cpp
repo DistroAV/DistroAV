@@ -115,7 +115,7 @@ void preview_output_start()
 		const audio_output_info *mainAOI = audio_output_get_info(obs_get_audio());
 
 		video_output_info voi = {0};
-		voi.name = QT_TO_UTF8(context.ndi_name);
+		voi.name = bstrdup(QT_TO_UTF8(context.ndi_name));
 		voi.format = VIDEO_FORMAT_BGRA;
 		voi.width = width;
 		voi.height = height;
@@ -128,7 +128,7 @@ void preview_output_start()
 		video_output_open(&context.video_queue, &voi);
 
 		audio_output_info aoi = {0};
-		aoi.name = QT_TO_UTF8(context.ndi_name);
+		aoi.name = bstrdup(QT_TO_UTF8(context.ndi_name));
 		aoi.format = mainAOI->format;
 		aoi.samples_per_sec = mainAOI->samples_per_sec;
 		aoi.speakers = mainAOI->speakers;
