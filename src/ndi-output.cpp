@@ -82,7 +82,7 @@ typedef struct {
 
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
-	int8_t no_connections;
+	int32_t no_connections;
 	std::chrono::time_point<std::chrono::steady_clock> last_conn_check;
 } ndi_output_t;
 
@@ -221,7 +221,7 @@ bool ndi_output_start(void *data)
 		flags |= OBS_OUTPUT_AUDIO;
 	}
 
-	NDIlib_send_create_t send_desc;
+	NDIlib_send_create_t send_desc{};
 	send_desc.p_ndi_name = name;
 	if (groups && groups[0])
 		send_desc.p_groups = groups;
@@ -313,6 +313,9 @@ void ndi_output_destroy(void *data)
 	auto o = (ndi_output_t *)data;
 	auto name = o->ndi_name;
 	auto groups = o->ndi_groups;
+
+	pthread_mutex_destroy(&o->ndi_sender_mutex);
+
 	obs_log(LOG_DEBUG, "+ndi_output_destroy(name='%s', groups='%s', ...)", name, groups);
 
 	if (o->audio_conv_buffer) {
@@ -353,9 +356,11 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 			o->no_connections = nc;
 		}
 	}
+
+	int no_connections = o->no_connections;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
-	if (o->no_connections <= 0)
+	if (no_connections <= 0)
 		return;
 
 	uint32_t width = o->frame_width;
@@ -415,9 +420,11 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 			o->no_connections = nc;
 		}
 	}
+
+	int no_connections = o->no_connections;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
-	if (o->no_connections <= 0)
+	if (no_connections <= 0)
 		return;
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
