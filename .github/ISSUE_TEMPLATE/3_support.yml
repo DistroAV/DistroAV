@@ -61,7 +61,7 @@ body:
         required: false
       - label: "A working NDI feed can be received in OBS"
         required: false
-      - label: "A human have reviewed this support request to the best of my ability to ensure it's accurate."
+      - label: "A human has reviewed this support request to the best of my ability to ensure it's accurate."
         required: true
       - label: "This support request is submitted by an AI/Agent"
         required: false

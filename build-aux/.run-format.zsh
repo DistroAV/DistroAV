@@ -45,7 +45,7 @@ invoke_formatter() {
       local -a formatter_version=($(${formatter} --version))
 
       if ! is-at-least 19.1.1 ${formatter_version[-1]}; then
-        log_error "clang-format is not version 19.1.1 or above (found ${formatter_version[-1]}."
+        log_error "clang-format is not version 19.1.1 or above (found ${formatter_version[-1]})."
         exit 2
       fi
 
@@ -95,7 +95,7 @@ invoke_formatter() {
         local gersemi_version=($(gersemi --version))
 
         if ! is-at-least 0.12.0 ${gersemi_version[2]}; then
-          log_error "gersemi is not version 0.12.0 or above (found ${gersemi_version[2]}."
+          log_error "gersemi is not version 0.12.0 or above (found ${gersemi_version[2]})."
           exit 2
         fi
       }

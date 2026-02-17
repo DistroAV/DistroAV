@@ -17,7 +17,7 @@ body:
       label: "This bug exists on the latest available release of DistroAV and supported environment?"
       description: "Please fill the environment area as well."
       options:
-      - label: "I have checked this bug still exist on the latest available version of DistroAV."
+      - label: "I have checked this bug still exists on the latest available version of DistroAV."
         required: true
       - label: "I have checked that my OS / OBS / NDI versions are supported & up-to-date."
         required: true
