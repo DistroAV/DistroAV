@@ -31,8 +31,6 @@ body:
       options:
       - label: "I have checked this is not an existing active bug/feature request"
         required: true
-      - label: "I have checked that my OS / OBS / NDI versions are supported"
-        required: true
       - label: "I have followed the NDI Runtime installation steps as described in the Wiki"
         required: true
       - label: "I have followed the DistroAV installation steps as described in the Wiki"
@@ -43,7 +41,7 @@ body:
         required: true
       - label: "My version of OBS is up-to-date"
         required: true
-      - label: "My version of NDI Runtime is up-to date"
+      - label: "My version of NDI Runtime is up-to-date"
         required: true
       - label: "OBS launch without error message (User Interface/popup)"
         required: false
@@ -62,6 +60,10 @@ body:
       - label: "A working NDI feed can be received in 'NDI Studio Monitor'"
         required: false
       - label: "A working NDI feed can be received in OBS"
+        required: false
+      - label: "A human have reviewed this support request to the best of my ability to ensure it's accurate."
+        required: true
+      - label: "This support request is submitted by an AI/Agent"
         required: false
   - type: input
     id: obs-log

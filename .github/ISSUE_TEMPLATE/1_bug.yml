@@ -17,10 +17,10 @@ body:
       label: "This bug exists on the latest available release of DistroAV and supported environment?"
       description: "Please fill the environment area as well."
       options:
-      - label: "I have checked this bug still exist on the latest available version of DistroAV"
-        required: false
-      - label: "I have checked that my OS / OBS / NDI versions are supported"
-        required: false
+      - label: "I have checked this bug still exist on the latest available version of DistroAV."
+        required: true
+      - label: "I have checked that my OS / OBS / NDI versions are supported & up-to-date."
+        required: true
   - type: input
     id: obs-log
     attributes:
@@ -62,7 +62,7 @@ body:
       description: |
         examples:
           - **OS**: [Ubuntu 22.04, MacOS 15.1, Windows 10 22H2, Win 11 24H2, ...]
-          - **OBS**: [28.0, 29.0.2, 30.2.3 ...] installed from [.exe, .dep, apt, brew, PPA, Flatpak, Snap, winget, ...]
+          - **OBS**: [30.2.3, 31.1, 32.0 ...] installed from [.exe, .dep, apt, brew, PPA, Flatpak, Snap, winget, ...]
           - **DistroAV**: [6.0.0, 6.1 ...] installed from [.exe, .pkg, brew, Flatpak, winget, ...]
           - **NDI**: [5.60, 6.0.1 ...]
       value: |
@@ -86,3 +86,6 @@ body:
         required: false
       - label: "I have tested on a 'clean' OBS installation (aka with no other scripts or plugin installed)"
         required: false
+      - label: "I am filing this bug report as a Human and have reviewed its content to the best of my ability to ensure it's accurate."
+        required: false
+
