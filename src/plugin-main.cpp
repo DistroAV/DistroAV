@@ -52,6 +52,9 @@ const NDIlib_v6 *ndiLib = nullptr;
 extern struct obs_source_info create_ndi_source_info();
 struct obs_source_info ndi_source_info;
 
+extern struct obs_source_info create_whip_source_info();
+struct obs_source_info whip_source_info;
+
 extern struct obs_output_info create_ndi_output_info();
 struct obs_output_info ndi_output_info;
 
@@ -343,6 +346,9 @@ bool obs_module_load(void)
 
 	alpha_filter_info = create_alpha_filter_info();
 	obs_register_source(&alpha_filter_info);
+
+	whip_source_info = create_whip_source_info();
+	obs_register_source(&whip_source_info);
 
 	if (main_window) {
 		auto menu_action = static_cast<QAction *>(
