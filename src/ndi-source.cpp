@@ -642,14 +642,6 @@ void *ndi_source_thread(void *data)
 			ndiLib->recv_set_tally(ndi_receiver, &tally);
 		}
 
-		//
-		// If this source isn't showing in OBS then don't receive any frames from NDI. This occurs when multiple
-		// scenes have NDI sources that are not being shown and behavior is set to Keep Active. Without this check,
-		// the fps of OBS can decrease dramaticallu especially with multiple 4K 60 sources.
-		//
-		if (!obs_source_showing(s->obs_source))
-			continue;
-
 		if (ndi_frame_sync) {
 			//
 			// ndi_frame_sync
@@ -1062,7 +1054,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	// Update tally status
 	auto config = Config::Current();
-	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_showing(obs_source);
+	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_showing(obs_source) &&
+				     !obs_source_active(obs_source);
 	s->config.tally.on_program = config->TallyProgramEnabled && obs_source_active(obs_source);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
