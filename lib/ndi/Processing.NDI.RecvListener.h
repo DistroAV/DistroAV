@@ -122,7 +122,7 @@ typedef struct NDIlib_receiver_t {
 	// How many elements are in the p_commands array, excluding the NDIlib_receiver_command_none entry.
 	uint32_t num_commands;
 
-	// Are we currently subscribed for receive events?
+	// Are we currently subscribed for receiver events?
 	bool events_subscribed;
 
 #if NDILIB_CPP_DEFAULT_CONSTRUCTORS
@@ -139,3 +139,35 @@ const NDIlib_receiver_t* NDIlib_recv_listener_get_receivers(NDIlib_recv_listener
 // This will allow you to wait until the number of online receivers has changed.
 PROCESSINGNDILIB_API
 bool NDIlib_recv_listener_wait_for_receivers(NDIlib_recv_listener_instance_t p_instance, uint32_t timeout_in_ms);
+
+// This will subscribe this listener instance to begin receiving events from the specified receiver.
+PROCESSINGNDILIB_API
+void NDIlib_recv_listener_subscribe_events(NDIlib_recv_listener_instance_t p_instance, const char* p_receiver_uuid);
+
+// This will unsubscribe this listener instance from receiving events from the specified receiver.
+PROCESSINGNDILIB_API
+void NDIlib_recv_listener_unsubscribe_events(NDIlib_recv_listener_instance_t p_instance, const char* p_receiver_uuid);
+
+// For backwards compatibility.
+typedef NDIlib_listener_event NDIlib_recv_listener_event;
+
+// Returns a list of the currently pending events for the listener. The events are returned in the order that
+// they were received. The timeout value is the amount of time in milliseconds that the function will wait
+// for events to be received. If the timeout is 0, then the function will return immediately with any events
+// that are currently pending. If the timeout is -1, then the function will wait indefinitely for events to
+// be received. The function will return NULL if no events were received within the timeout period. The
+// returned events should be freed using NDIlib_recv_listener_free_events().
+PROCESSINGNDILIB_API
+const NDIlib_recv_listener_event* NDIlib_recv_listener_get_events(NDIlib_recv_listener_instance_t p_instance, uint32_t* p_num_events, uint32_t timeout_in_ms);
+
+// Frees the memory allocated for the events returned by NDIlib_recv_listener_get_events().
+PROCESSINGNDILIB_API
+void NDIlib_recv_listener_free_events(NDIlib_recv_listener_instance_t p_instance, const NDIlib_recv_listener_event* p_events);
+
+// Trigger the "connect" command to be sent from the listener to the receiver. This will return false if the
+// command could not be sent, receiver is unknown, or some other error occurred. If p_source_name is NULL,
+// then this would indicate that the receiver should disconnect from its current source. Note that this
+// should only be called for a receiver that has NDIlib_receiver_command_connect in its list of commands that
+// it can respond to.
+PROCESSINGNDILIB_API
+bool NDIlib_recv_listener_send_connect(NDIlib_recv_listener_instance_t p_instance, const char* p_receiver_uuid, const char* p_source_name);

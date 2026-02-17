@@ -6,7 +6,7 @@
 
 set -e
 
-LIBNDI_VERSION="6.2.0"
+LIBNDI_VERSION="6.3.0.3"
 
 SCRIPT_DIR=$(dirname "$0")
 
