@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2026 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -27,7 +27,7 @@
 //
 //***********************************************************************************************************
 
-typedef struct NDIlib_v6 {
+typedef struct NDIlib_v6_3 {
 	// v1.5
 	union {
 		bool (*initialize)(void);
@@ -602,13 +602,31 @@ typedef struct NDIlib_v6 {
 	const char* (*recv_listener_get_server_url)(NDIlib_recv_listener_instance_t p_instance);
 	const NDIlib_receiver_t* (*recv_listener_get_receivers)(NDIlib_recv_listener_instance_t p_instance, uint32_t* p_num_receivers);
 	bool (*recv_listener_wait_for_receivers)(NDIlib_recv_listener_instance_t p_instance, uint32_t timeout_in_ms);
-} NDIlib_v6;
 
-typedef struct NDIlib_v6 NDIlib_v5;
-typedef struct NDIlib_v6 NDIlib_v4_5;
-typedef struct NDIlib_v6 NDIlib_v4;
-typedef struct NDIlib_v6 NDIlib_v3;
-typedef struct NDIlib_v6 NDIlib_v2;
+	// v6.3
+	NDIlib_send_advertiser_instance_t(*send_advertiser_create)(const NDIlib_send_advertiser_create_t* p_create_settings);
+	void (*send_advertiser_destroy)(NDIlib_send_advertiser_instance_t p_instance);
+	bool (*send_advertiser_add_sender)(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender, bool allow_monitoring);
+	bool (*send_advertiser_del_sender)(NDIlib_send_advertiser_instance_t p_instance, NDIlib_send_instance_t p_sender);
+
+	NDIlib_send_listener_instance_t (*send_listener_create)(const NDIlib_send_listener_create_t* p_create_settings);
+	void (*send_listener_destroy)(NDIlib_send_listener_instance_t p_instance);
+	bool (*send_listener_is_connected)(NDIlib_send_listener_instance_t p_instance);
+	const char* (*send_listener_get_server_url)(NDIlib_send_listener_instance_t p_instance);
+	const NDIlib_sender_t* (*send_listener_get_senders)(NDIlib_send_listener_instance_t p_instance, uint32_t* p_num_senders);
+	bool (*send_listener_wait_for_senders)(NDIlib_send_listener_instance_t p_instance, uint32_t timeout_in_ms);
+} NDIlib_v6_3;
+
+typedef struct NDIlib_v6_3 NDIlib_v6;
+typedef struct NDIlib_v6_3 NDIlib_v5;
+typedef struct NDIlib_v6_3 NDIlib_v4_5;
+typedef struct NDIlib_v6_3 NDIlib_v4;
+typedef struct NDIlib_v6_3 NDIlib_v3;
+typedef struct NDIlib_v6_3 NDIlib_v2;
+
+// Load the library.
+PROCESSINGNDILIB_API
+const NDIlib_v6_3* NDIlib_v6_3_load(void);
 
 // Load the library.
 PROCESSINGNDILIB_API
