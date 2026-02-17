@@ -23,7 +23,6 @@
 #include <media-io/video-frame.h>
 
 struct preview_output {
-	bool is_running;
 	QString ndi_name;
 	QString ndi_groups;
 
@@ -62,7 +61,7 @@ void on_preview_output_stopped(void *, calldata_t *)
 void preview_output_stop()
 {
 	obs_log(LOG_DEBUG, "+preview_output_stop()");
-	if (context.is_running) {
+	if (context.output) {
 		obs_log(LOG_DEBUG, "preview_output_stop: stopping NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
@@ -82,8 +81,6 @@ void preview_output_stop()
 		video_output_close(context.video_queue);
 		audio_output_close(context.dummy_audio_queue);
 
-		context.is_running = false;
-
 		obs_log(LOG_DEBUG, "preview_output_stop: successfully stopped NDI preview output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	} else {
@@ -97,7 +94,7 @@ void preview_output_start()
 {
 	obs_log(LOG_DEBUG, "+preview_output_start()");
 	if (context.output) {
-		if (context.is_running) {
+		if (obs_output_active(context.output)) {
 			preview_output_stop();
 		}
 
@@ -118,7 +115,7 @@ void preview_output_start()
 		const audio_output_info *mainAOI = audio_output_get_info(obs_get_audio());
 
 		video_output_info voi = {0};
-		voi.name = QT_TO_UTF8(context.ndi_name);
+		voi.name = bstrdup(QT_TO_UTF8(context.ndi_name));
 		voi.format = VIDEO_FORMAT_BGRA;
 		voi.width = width;
 		voi.height = height;
@@ -131,7 +128,7 @@ void preview_output_start()
 		video_output_open(&context.video_queue, &voi);
 
 		audio_output_info aoi = {0};
-		aoi.name = QT_TO_UTF8(context.ndi_name);
+		aoi.name = bstrdup(QT_TO_UTF8(context.ndi_name));
 		aoi.format = mainAOI->format;
 		aoi.samples_per_sec = mainAOI->samples_per_sec;
 		aoi.speakers = mainAOI->speakers;
@@ -158,8 +155,8 @@ void preview_output_start()
 
 		obs_output_set_media(context.output, context.video_queue, context.dummy_audio_queue);
 
-		context.is_running = obs_output_start(context.output);
-		if (context.is_running) {
+		obs_output_start(context.output);
+		if (obs_output_active(context.output)) {
 			obs_log(LOG_DEBUG, "preview_output_start: successfully started NDI preview output '%s'",
 				QT_TO_UTF8(context.ndi_name));
 		} else {
@@ -167,6 +164,10 @@ void preview_output_start()
 			obs_log(LOG_WARNING,
 				"preview_output_start: failed to start NDI preview output '%s'; error='%s'",
 				QT_TO_UTF8(context.ndi_name), error);
+			obs_log(LOG_ERROR, "ERR-400 - Failed to start NDI preview output '%s'",
+				QT_TO_UTF8(context.ndi_name));
+			// Could not start Output, still trigger it to stop.
+			obs_output_stop(context.output);
 		}
 	} else {
 		obs_log(LOG_WARNING,

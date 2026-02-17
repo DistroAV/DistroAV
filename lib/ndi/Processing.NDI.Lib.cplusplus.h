@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2026 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -77,6 +77,9 @@ inline NDIlib_metadata_frame_t::NDIlib_metadata_frame_t(int length_, int64_t tim
 inline NDIlib_tally_t::NDIlib_tally_t(bool on_program_, bool on_preview_)
 	: on_program(on_program_), on_preview(on_preview_) {}
 
+inline NDIlib_listener_event::NDIlib_listener_event(void)
+	: p_uuid(NULL), p_name(NULL), p_value(NULL) {}
+
 inline NDIlib_routing_create_t::NDIlib_routing_create_t(const char* p_ndi_name_, const char* p_groups_)
 	: p_ndi_name(p_ndi_name_), p_groups(p_groups_) {}
 
@@ -123,6 +126,15 @@ inline NDIlib_recv_listener_create_t::NDIlib_recv_listener_create_t(const char* 
 inline NDIlib_receiver_t::NDIlib_receiver_t(void)
 	: p_uuid(NULL), p_name(NULL), p_input_uuid(NULL), p_input_name(NULL), p_address(NULL),
 	  p_streams(NULL), num_streams(0), p_commands(NULL), num_commands(0), events_subscribed(false) {}
+
+inline NDIlib_send_advertiser_create_t::NDIlib_send_advertiser_create_t(const char* p_url_address)
+	: p_url_address(p_url_address) {}
+
+inline NDIlib_send_listener_create_t::NDIlib_send_listener_create_t(const char* p_url_address)
+	: p_url_address(p_url_address) {}
+
+inline NDIlib_sender_t::NDIlib_sender_t(void)
+	: p_uuid(NULL), p_name(NULL), p_metadata(NULL), p_address(NULL), port(0), p_groups(NULL), num_groups(0), events_subscribed(false) {}
 
 #ifdef __clang__
 #pragma clang diagnostic pop
