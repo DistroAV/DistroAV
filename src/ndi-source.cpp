@@ -649,7 +649,7 @@ void *ndi_source_thread(void *data)
 		//
 		if (!obs_source_showing(s->obs_source)) {
 			// Avoid busy-waiting when the source is hidden but kept active.
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			continue;
 		}
 
