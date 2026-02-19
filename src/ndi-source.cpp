@@ -397,6 +397,11 @@ void *ndi_source_thread(void *data)
 	NDIlib_recv_create_v3_t recv_desc;
 	recv_desc.allow_video_fields = true;
 
+	NDIlib_recv_create_v3_t meta_recv_desc{};
+	meta_recv_desc.bandwidth = NDIlib_recv_bandwidth_metadata_only; // no decode cost
+	meta_recv_desc.allow_video_fields = false;
+	bool last_showing = true;
+
 	NDIlib_recv_instance_t ndi_receiver = nullptr;
 	NDIlib_video_frame_v2_t video_frame;
 
@@ -588,7 +593,8 @@ void *ndi_source_thread(void *data)
 		// check if there are any connections.
 		// If not then micro-pause and restart the loop.
 		//
-		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
+		if ((ndiLib->recv_get_no_connections(ndi_receiver) == 0) &&
+		    (s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE)) {
 #if 0
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
@@ -645,12 +651,28 @@ void *ndi_source_thread(void *data)
 		//
 		// If this source isn't showing in OBS then don't receive any frames from NDI. This occurs when multiple
 		// scenes have NDI sources that are not being shown and behavior is set to Keep Active. Without this check,
-		// the fps of OBS can decrease dramatically, especially with multiple 4K 60 sources.
+		// the fps of OBS can decrease dramatically, especially with multiple 4K 60 sources. Also, change bandwidth
+		// to metadata so NDI does not process video which is not used.
 		//
 		if (!obs_source_showing(s->obs_source)) {
+			if (last_showing) {
+				ndiLib->recv_destroy(ndi_receiver);
+				// Create a metadata only receiver to avoid processing of data not shown
+				ndi_receiver = ndiLib->recv_create_v3(&meta_recv_desc);
+				last_showing = false;
+			}
 			// Avoid busy-waiting when the source is hidden but kept active.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			continue;
+		} else if (!last_showing) {
+			ndiLib->recv_destroy(ndi_receiver);
+			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
+			// Flush stale frames after recreating as active
+			NDIlib_video_frame_v2_t flush_frame;
+			while (ndiLib->recv_capture_v3(ndi_receiver, &flush_frame, nullptr, nullptr, 0) ==
+			       NDIlib_frame_type_video)
+				ndiLib->recv_free_video_v2(ndi_receiver, &flush_frame);
+			last_showing = true;
 		}
 
 		if (ndi_frame_sync) {
