@@ -17,11 +17,8 @@ set(CPACK_PACKAGE_VERSION "${CMAKE_PROJECT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_C_LIBRARY_ARCHITECTURE}")
 
 set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
-set(
-  CPACK_DEBIAN_PACKAGE_DEPENDS
-  "libc6 (>= 2.34), libcurl4t64 (>= 7.16.2) | libcurl4 (>= 7.16.2), libgcc-s1 (>= 3.0), libqt6core6t64 (>= 6.4.0) | libqt6core6 (>= 6.4.0), libqt6gui6t64 (>= 6.1.2) | libqt6gui6 (>=6.1.2), libqt6widgets6t64 (>= 6.1.2) | libqt6widgets6 (>= 6.1.2), libstdc++6 (>= 11), obs-studio"
-)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${shlibs:Depends}, libqt6core6t64 (>= 6.4.0) | libqt6core6 (>= 6.4.0), libqt6gui6t64 (>= 6.4.0) | libqt6gui6 (>= 6.4.0), libqt6widgets6t64 (>= 6.4.0) | libqt6widgets6 (>= 6.4.0), obs-studio")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${PLUGIN_EMAIL}")
 set(CPACK_SET_DESTDIR ON)
 
