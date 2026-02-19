@@ -69,6 +69,18 @@ void ndi_filter_update(void *data, obs_data_t *settings);
 void ndi_sender_destroy(ndi_filter_t *filter);
 void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings);
 
+// Callback fired when the parent source is renamed. Recreate the NDI sender to pick up the new name.
+void on_renamed(void *data, calldata_t *)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f)
+		return;
+	obs_log(LOG_DEBUG, "on_parent_renamed: parent source renamed; recreating NDI sender for filter '%s'",
+		obs_source_get_name(f->obs_source));
+	// Recreate sender using current settings
+	ndi_sender_create(f, nullptr);
+}
+
 obs_properties_t *ndi_filter_getproperties(void *)
 {
 	obs_log(LOG_DEBUG, "+ndi_filter_getproperties(...)");
@@ -115,7 +127,7 @@ bool is_filter_valid(ndi_filter_t *filter)
 
 	// Valid if parent width/height are nonzero, source is enabled, and parent is showing somewhere in OBS's windows
 	bool is_valid = (width != 0) && (height != 0) && obs_source_enabled(filter->obs_source) &&
-			obs_source_showing(parent);
+				obs_source_showing(parent);
 
 	return is_valid;
 }
@@ -265,8 +277,42 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 		settings = obs_source_get_settings(obs_source);
 	}
 
-	NDIlib_send_create_t send_desc;
-	send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
+	auto parent_source = obs_filter_get_parent(filter->obs_source);
+
+	if (!parent_source) {
+		// Don't create sender if the parent source is not available
+		// It will be created in filter_tick
+		return;
+	}
+
+	QString ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
+
+	// If the name contains <source> then replace <source> with the source name.
+	// This is to make sure the name is not a duplicate of an existing NDI name.
+	if (ndi_name.contains("<source>")) {
+		auto parent_name = obs_source_get_name(parent_source);
+		ndi_name.replace("<source>", QString(parent_name));
+		signal_handler_t *sh = obs_source_get_signal_handler(parent_source);
+		if (sh) {
+			signal_handler_connect(sh, "rename", on_renamed, filter);
+		}
+	}
+
+	// If the name contains <filter> then replace <filter> with the filter name.
+	// This is to make sure the name is not a duplicate of an existing NDI name.
+	if (ndi_name.contains("<filter>")) {
+		auto filter_name = obs_source_get_name(filter->obs_source);
+		ndi_name.replace("<filter>", QString(filter_name));
+		signal_handler_t *sh = obs_source_get_signal_handler(filter->obs_source);
+		if (sh) {
+			signal_handler_connect(sh, "rename", on_renamed, filter);
+		}
+	}
+
+	QByteArray ndi_name_utf8 = ndi_name.toUtf8();
+
+	NDIlib_send_create_t send_desc{};
+	send_desc.p_ndi_name = ndi_name_utf8.constData();
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 	if (groups && groups[0])
 		send_desc.p_groups = groups;
@@ -352,6 +398,21 @@ void ndi_filter_destroy(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
+	// Disconnect parent rename handler if connected
+	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+	if (parent) {
+		signal_handler_t *sh = obs_source_get_signal_handler(parent);
+		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, f);
+		}
+	}
+
+    // Disconnect filter rename handler if connected
+	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
+	if (sh) {
+		signal_handler_disconnect(sh, "rename", on_renamed, f);
+	}
+
 	video_output_close(f->video_output);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
@@ -382,6 +443,21 @@ void ndi_filter_destroy_audioonly(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy_audioonly('%s'...)", name);
 
+	// Disconnect parent rename handler if connected
+	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+	if (parent) {
+		signal_handler_t *sh = obs_source_get_signal_handler(parent);
+		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, f);
+		}
+	}
+
+	// Disconnect filter rename handler if connected
+	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
+	if (sh) {
+		signal_handler_disconnect(sh, "rename", on_renamed, f);
+	}
+
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(f->ndi_sender);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
@@ -400,6 +476,10 @@ void ndi_filter_destroy_audioonly(void *data)
 void ndi_filter_tick(void *data, float)
 {
 	auto f = (ndi_filter_t *)data;
+
+	if (!f->ndi_sender) {
+		ndi_sender_create(f, nullptr);
+	}
 	obs_get_video_info(&f->ovi);
 
 	f->rendered = false;
