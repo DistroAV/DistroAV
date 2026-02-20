@@ -127,7 +127,7 @@ bool is_filter_valid(ndi_filter_t *filter)
 
 	// Valid if parent width/height are nonzero, source is enabled, and parent is showing somewhere in OBS's windows
 	bool is_valid = (width != 0) && (height != 0) && obs_source_enabled(filter->obs_source) &&
-				obs_source_showing(parent);
+			obs_source_showing(parent);
 
 	return is_valid;
 }
@@ -407,7 +407,7 @@ void ndi_filter_destroy(void *data)
 		}
 	}
 
-    // Disconnect filter rename handler if connected
+	// Disconnect filter rename handler if connected
 	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
 	if (sh) {
 		signal_handler_disconnect(sh, "rename", on_renamed, f);
