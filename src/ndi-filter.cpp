@@ -268,6 +268,8 @@ void ndi_sender_destroy(ndi_filter_t *filter)
 
 void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 {
+	bool allocating_settings = false;
+
 	if (!filter || !filter->obs_source) {
 		return;
 	}
@@ -275,6 +277,7 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	auto obs_source = filter->obs_source;
 	if (!settings) {
 		settings = obs_source_get_settings(obs_source);
+		allocating_settings = true;
 	}
 
 	auto parent_source = obs_filter_get_parent(filter->obs_source);
@@ -282,6 +285,8 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	if (!parent_source) {
 		// Don't create sender if the parent source is not available
 		// It will be created in filter_tick
+		if (allocating_settings)
+			obs_data_release(settings);
 		return;
 	}
 
@@ -294,6 +299,7 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 		ndi_name.replace("<source>", QString(parent_name));
 		signal_handler_t *sh = obs_source_get_signal_handler(parent_source);
 		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, filter);
 			signal_handler_connect(sh, "rename", on_renamed, filter);
 		}
 	}
@@ -305,6 +311,7 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 		ndi_name.replace("<filter>", QString(filter_name));
 		signal_handler_t *sh = obs_source_get_signal_handler(filter->obs_source);
 		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, filter);
 			signal_handler_connect(sh, "rename", on_renamed, filter);
 		}
 	}
@@ -332,6 +339,10 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 	if (!filter->is_audioonly) {
 		pthread_mutex_unlock(&filter->ndi_sender_video_mutex);
+	}
+
+	if (allocating_settings) {
+		obs_data_release(settings);
 	}
 }
 
@@ -478,7 +489,10 @@ void ndi_filter_tick(void *data, float)
 	auto f = (ndi_filter_t *)data;
 
 	if (!f->ndi_sender) {
-		ndi_sender_create(f, nullptr);
+		obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+		if (parent) {
+			ndi_sender_create(f, nullptr);
+		}
 	}
 	obs_get_video_info(&f->ovi);
 
