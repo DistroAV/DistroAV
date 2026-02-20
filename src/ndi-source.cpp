@@ -645,10 +645,13 @@ void *ndi_source_thread(void *data)
 		//
 		// If this source isn't showing in OBS then don't receive any frames from NDI. This occurs when multiple
 		// scenes have NDI sources that are not being shown and behavior is set to Keep Active. Without this check,
-		// the fps of OBS can decrease dramaticallu especially with multiple 4K 60 sources.
+		// the fps of OBS can decrease dramatically, especially with multiple 4K 60 sources.
 		//
-		if (!obs_source_showing(s->obs_source))
+		if (!obs_source_showing(s->obs_source)) {
+			// Avoid busy-waiting when the source is hidden but kept active.
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			continue;
+		}
 
 		if (ndi_frame_sync) {
 			//
