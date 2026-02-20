@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2026 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -143,6 +143,12 @@ bool NDIlib_is_supported_CPU(void);
 
 // The sending video API.
 #include "Processing.NDI.Send.h"
+
+// The sender advertiser API.
+#include "Processing.NDI.SendAdvertiser.h"
+
+// The sender listener API.
+#include "Processing.NDI.SendListener.h"
 
 // The routing of inputs API.
 #include "Processing.NDI.Routing.h"

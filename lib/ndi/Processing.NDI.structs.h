@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2026 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -385,3 +385,19 @@ typedef struct NDIlib_tally_t {
 	NDIlib_tally_t(bool on_program_ = false, bool on_preview_ = false);
 #endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
 } NDIlib_tally_t;
+
+// This represents the base type of an event received from a sender or receiver listener.
+typedef struct NDIlib_listener_event {
+	// The unique identifier for the receiver/sender that triggered the event.
+	const char* p_uuid;
+
+	// The name of the event that was triggered.
+	const char* p_name;
+
+	// The value of the event that was triggered.
+	const char* p_value;
+
+#if NDILIB_CPP_DEFAULT_CONSTRUCTORS
+	NDIlib_listener_event(void);
+#endif // NDILIB_CPP_DEFAULT_CONSTRUCTORS
+} NDIlib_listener_event;

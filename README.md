@@ -60,8 +60,8 @@ Any other options, or errors: See [release page](https://distroav.org/download) 
 
 ## Requirements
 
-* [OBS v31.0 or higher](https://github.com/obsproject/obs-studio/releases) (Qt6, x64/ARM64/AppleSilicon)
-* [NDI Runtime v6.0 or higher](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)
+* [OBS v31.1.1 or higher](https://github.com/obsproject/obs-studio/releases) (Qt6, x64/ARM64/AppleSilicon)
+* [NDI Runtime v6.3 or higher](https://github.com/DistroAV/DistroAV/wiki/1.-Installation#required---ndi-runtime)
 
 # Troubleshooting
 

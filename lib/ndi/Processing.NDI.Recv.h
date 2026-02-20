@@ -8,7 +8,7 @@
 //
 //***********************************************************************************************************
 //
-// Copyright (C) 2023-2025 Vizrt NDI AB. All rights reserved.
+// Copyright (C) 2023-2026 Vizrt NDI AB. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 // associated documentation files(the "Software"), to deal in the Software without restriction, including
@@ -51,7 +51,7 @@ typedef enum NDIlib_recv_color_format_e {
 	// When there is an alpha channel, this mode delivers BGRA.
 	NDIlib_recv_color_format_UYVY_BGRA = 1,
 
-	// When there is no alpha channel, this mode delivers BGRX.
+	// When there is no alpha channel, this mode delivers RGBX.
 	// When there is an alpha channel, this mode delivers RGBA.
 	NDIlib_recv_color_format_RGBX_RGBA = 2,
 

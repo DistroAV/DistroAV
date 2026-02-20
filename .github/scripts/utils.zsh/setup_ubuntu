@@ -39,9 +39,9 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
   sudo apt update
 
   sudo apt-get install ${apt_args} \
-    libsimde-dev \
     build-essential \
     libgles2-mesa-dev \
+    libsimde-dev \
     libcurl4-openssl-dev \
     obs-studio
 
