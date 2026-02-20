@@ -884,6 +884,16 @@ int safe_strcmp(const char *str1, const char *str2)
 	return strcmp(str1, str2);
 }
 
+bool tally_on_preview(obs_source_t *source)
+{
+	return (Config::Current())->TallyPreviewEnabled && obs_source_showing(source) && !obs_source_active(source);
+}
+
+bool tally_on_program(obs_source_t *source)
+{
+	return (Config::Current())->TallyProgramEnabled && obs_source_active(source);
+}
+
 void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = (ndi_source_t *)data;
@@ -1064,10 +1074,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 
 	// Update tally status
-	auto config = Config::Current();
-	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_showing(obs_source) &&
-				     !obs_source_active(obs_source);
-	s->config.tally.on_program = config->TallyProgramEnabled && obs_source_active(obs_source);
+	s->config.tally.on_preview = tally_on_preview(obs_source);
+	s->config.tally.on_program = tally_on_program(obs_source);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
@@ -1112,7 +1120,7 @@ void ndi_source_shown(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_shown(…)", obs_source_name);
-	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled && !obs_source_active(s->obs_source);
+	s->config.tally.on_preview = tally_on_preview(s->obs_source);
 	if (!s->running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_shown: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
@@ -1139,8 +1147,8 @@ void ndi_source_activated(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_activated(…)", obs_source_name);
-	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled && !obs_source_active(s->obs_source);
-	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
+	s->config.tally.on_preview = tally_on_preview(s->obs_source);
+	s->config.tally.on_program = tally_on_program(s->obs_source);
 	if (!s->running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_activated: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
@@ -1151,9 +1159,8 @@ void ndi_source_deactivated(void *data)
 {
 	auto s = (ndi_source_t *)data;
 	obs_log(LOG_DEBUG, "'%s' ndi_source_deactivated(…)", obs_source_get_name(s->obs_source));
+	s->config.tally.on_preview = tally_on_preview(s->obs_source);
 	s->config.tally.on_program = false;
-	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled && obs_source_showing(s->obs_source) &&
-				     !obs_source_active(s->obs_source);
 }
 
 void new_ndi_receiver_name(const char *obs_source_name, char **ndi_receiver_name)
