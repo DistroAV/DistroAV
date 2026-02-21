@@ -681,7 +681,7 @@ void *ndi_source_thread(void *data)
 			//
 			video_frame = {};
 			s->ndiLib->framesync_capture_video(ndi_frame_sync, &video_frame,
-							NDIlib_frame_format_type_progressive);
+							   NDIlib_frame_format_type_progressive);
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
