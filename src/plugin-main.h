@@ -30,7 +30,7 @@
 #define PLUGIN_MIN_NDI_VERSION "6.3.0"
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
-
+extern const NDIlib_v6 *load_ndilib();
 extern const NDIlib_v6 *ndiLib;
 
 /*
