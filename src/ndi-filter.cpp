@@ -151,7 +151,6 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		}
 	}
 
-	int no_connections = f->no_video_connections;
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 
 	NDIlib_video_frame_v2_t video_frame = {0};
@@ -478,7 +477,6 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 		}
 	}
 
-	int current_no_connections = f->no_audio_connections;
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	obs_get_audio_info(&f->oai);

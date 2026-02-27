@@ -356,7 +356,6 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		}
 	}
 
-	int no_connections = o->no_connections;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
 	uint32_t width = o->frame_width;
@@ -416,7 +415,6 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 		}
 	}
 
-	int no_connections = o->no_connections;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
