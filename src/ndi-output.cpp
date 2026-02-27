@@ -348,11 +348,10 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		if (nc != o->no_connections) {
 			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
 			if (nc <= 0)
-				obs_log(LOG_DEBUG, "NDI Output video '%s' has no connections.",
-					ndi_source->p_ndi_name);
+				obs_log(LOG_DEBUG, "NDI Output video '%s' has no connections.", ndi_source->p_ndi_name);
 			else if (o->no_connections == 0)
-				obs_log(LOG_DEBUG, "NDI Output video '%s' has %d connections.",
-					ndi_source->p_ndi_name, nc);
+				obs_log(LOG_DEBUG, "NDI Output video '%s' has %d connections.", ndi_source->p_ndi_name,
+					nc);
 			o->no_connections = nc;
 		}
 	}
@@ -409,11 +408,10 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 		if (nc != o->no_connections) {
 			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
 			if (nc <= 0)
-				obs_log(LOG_DEBUG, "NDI Output audio '%s' has no connections.",
-					ndi_source->p_ndi_name);
+				obs_log(LOG_DEBUG, "NDI Output audio '%s' has no connections.", ndi_source->p_ndi_name);
 			else if (o->no_connections == 0)
-				obs_log(LOG_DEBUG, "NDI Output audio '%s' has %d connections.",
-					ndi_source->p_ndi_name, nc);
+				obs_log(LOG_DEBUG, "NDI Output audio '%s' has %d connections.", ndi_source->p_ndi_name,
+					nc);
 			o->no_connections = nc;
 		}
 	}

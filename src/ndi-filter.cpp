@@ -473,7 +473,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 					ndi_source->p_ndi_name);
 			else if (f->no_audio_connections == 0)
 				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has %d connections.",
-					ndi_source->p_ndi_name,nc);
+					ndi_source->p_ndi_name, nc);
 			f->no_audio_connections = nc;
 		}
 	}
