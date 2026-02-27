@@ -25,6 +25,14 @@ set(CMAKE_XCODE_ATTRIBUTE_MARKETING_VERSION ${PLUGIN_VERSION})
 
 # Set deployment target
 set(CMAKE_XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET})
+# Xcode 26+ may inject deployment target environment variables for non-macOS
+# platforms during macOS builds, which triggers clang conflicting deployment
+# target errors during CMake AutoMoc predefines probes.
+set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "")
+set(CMAKE_XCODE_ATTRIBUTE_TVOS_DEPLOYMENT_TARGET "")
+set(CMAKE_XCODE_ATTRIBUTE_WATCHOS_DEPLOYMENT_TARGET "")
+set(CMAKE_XCODE_ATTRIBUTE_XROS_DEPLOYMENT_TARGET "")
+set(CMAKE_XCODE_ATTRIBUTE_DRIVERKIT_DEPLOYMENT_TARGET "")
 
 if(NOT CODESIGN_TEAM)
   # Switch to manual codesigning if no codesigning team is provided
