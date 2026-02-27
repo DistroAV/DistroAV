@@ -348,20 +348,17 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		if (nc != o->no_connections) {
 			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
 			if (nc <= 0)
-				obs_log(LOG_INFO, "NDI Output video '%s' has no connections, sender paused.",
+				obs_log(LOG_DEBUG, "NDI Output video '%s' has no connections.",
 					ndi_source->p_ndi_name);
 			else if (o->no_connections == 0)
-				obs_log(LOG_INFO, "NDI Output video '%s' has connections, sender started.",
-					ndi_source->p_ndi_name);
+				obs_log(LOG_DEBUG, "NDI Output video '%s' has %d connections.",
+					ndi_source->p_ndi_name, nc);
 			o->no_connections = nc;
 		}
 	}
 
 	int no_connections = o->no_connections;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
-
-	if (no_connections <= 0)
-		return;
 
 	uint32_t width = o->frame_width;
 	uint32_t height = o->frame_height;
@@ -412,20 +409,17 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 		if (nc != o->no_connections) {
 			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
 			if (nc <= 0)
-				obs_log(LOG_INFO, "NDI Output audio '%s' has no connections, sender paused.",
+				obs_log(LOG_DEBUG, "NDI Output audio '%s' has no connections.",
 					ndi_source->p_ndi_name);
 			else if (o->no_connections == 0)
-				obs_log(LOG_INFO, "NDI Output audio '%s' has connections, sender started.",
-					ndi_source->p_ndi_name);
+				obs_log(LOG_DEBUG, "NDI Output audio '%s' has %d connections.",
+					ndi_source->p_ndi_name, nc);
 			o->no_connections = nc;
 		}
 	}
 
 	int no_connections = o->no_connections;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
-
-	if (no_connections <= 0)
-		return;
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
