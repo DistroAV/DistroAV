@@ -56,6 +56,7 @@ target_sources(
     src/ndi-finder.cpp
     src/ndi-output.cpp
     src/ndi-source.cpp
+    src/ndi-shared.h
     src/plugin-main.cpp
     src/plugin-main.h
     src/premultiplied-alpha-filter.cpp
@@ -75,3 +76,37 @@ configure_file(
 )
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
+
+# -----------------------------------------------------------------------------
+# Helper executable: ndi-server
+# Build a small helper exe from src/ndi-server.cpp and place the resulting
+# executable next to the plugin DLL so it's easy to locate and spawn.
+# -----------------------------------------------------------------------------
+add_executable(ndi-server
+  src/ndi-server.cpp
+)
+install(TARGETS ndi-server
+        RUNTIME DESTINATION distroav/bin/64bit)  # put executables under <prefix>/bin
+
+# Use the same include paths required by the plugin (NDI headers and project src)
+target_include_directories(ndi-server PRIVATE
+  ${CMAKE_SOURCE_DIR}/lib/ndi
+  ${CMAKE_SOURCE_DIR}/src
+)
+
+# Require C++14 for this target as well
+set_target_properties(ndi-server PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
+# Apply MSVC-only optimization flags for Release/RelWithDebInfo builds
+target_compile_options(ndi-server PRIVATE
+  $<$<AND:$<C_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>>:/O2 /Oi /Ot /GL>
+)
+
+# If the NDI SDK provides a static library to link, you can link it here. For now
+# the helper loads the NDI runtime dynamically, so no additional link libraries are required.
+
+# End of ndi-server helper configuration
