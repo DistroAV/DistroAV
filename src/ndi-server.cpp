@@ -94,7 +94,7 @@ static void ClientMonitorThread(DWORD clientPid)
 
 int main(int argc, char *argv[])
 {
-	 if (false) {
+	if (false) {
 	//if (!IsDebuggerPresent()) {
 		// Avoid using DebugBreak() unconditionally - if JIT dialog is dismissed the process can be
 		// terminated. Instead, print PID and wait for a debugger to attach.
