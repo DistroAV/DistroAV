@@ -971,12 +971,13 @@ void *ndi_source_thread(void *data)
 				// Request a frame from the ndi-server
 				ndi_server.pReq->command = NDI_CAPTURE_FRAME;
 				SetEvent(ndi_server.hEvtCmd);
-				WaitForSingleObject(ndi_server.hEvtRsp, 5000);
+				WaitForSingleObject(ndi_server.hEvtRsp, 30000);
 				deserialize_frame((const void *)&ndi_server.pRsp->payload,
 						  sizeof(ndi_server.pRsp->payload), frame_received, &video_frame,
 						  &audio_frame);
 			} else
-				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
+				frame_received =
+					ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
 			if (frame_received == NDIlib_frame_type_audio) {
 				//

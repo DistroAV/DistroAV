@@ -19,18 +19,18 @@
 #define NDI_CAPTURE_FRAME         200
 #define NDI_SHUTDOWN              300
 
-//                                                                              
+//
 //  Buffer sizes
-//                                                                              
+//
 static const DWORD REQUEST_SIZE = 4096u;
 static const DWORD RESPONSE_SIZE = 4000u * 3000u * 4u; // 48 000 000 bytes
 
-//                                                                              
+//
 //  Shared-memory layouts
 //  NOTE: both structures are exactly REQUEST_SIZE / RESPONSE_SIZE bytes.
 //        The spec says the first 32 bits carry the command; everything else is
 //        free payload that real code would fill in.
-//                                                                              
+//
 #pragma pack(push, 1)
 
 struct RequestBlock {
@@ -70,9 +70,9 @@ static void PrefaultRegion(void *addr, SIZE_T bytes)
 		p[i] = 0;
 }
 
-//                                                                              
+//
 //  Pre-fault a memory region by touching every page (read-only version).
-//                                                                              
+//
 static void PrefaultRegionRead(const void *addr, SIZE_T bytes)
 {
 	volatile const char *p = static_cast<volatile const char *>(addr);
@@ -194,7 +194,7 @@ static bool deserialize_recv_desc(const void *buf, size_t buf_len, NDIlib_recv_c
 	uint32_t recv_name_len = 0;
 	uint32_t src_name_len = 0;
 	uint32_t src_url_len = 0;
-	
+
 	if (!read_u32(cf_u32))
 		return false;
 	if (!read_u32(bandwidth))
@@ -246,11 +246,11 @@ static bool deserialize_recv_desc(const void *buf, size_t buf_len, NDIlib_recv_c
 	remaining -= src_url_len;
 
 	// Fill out_desc
-	memset(&out_desc,0, sizeof(out_desc));
+	memset(&out_desc, 0, sizeof(out_desc));
 	// NOTE: Do not assign color_format here to avoid cross-library enum type mismatches.
 	// The structure was zero-initialized above; callers can set color_format if required.
 	out_desc.bandwidth = static_cast<NDIlib_recv_bandwidth_e>(bandwidth);
-	out_desc.allow_video_fields = (allow_video_fields !=0);
+	out_desc.allow_video_fields = (allow_video_fields != 0);
 
 	// Set pointers into the strings stored in out_strings; ensure c_str() remains valid by keeping out_strings alive.
 	out_desc.p_ndi_recv_name = out_strings[0].empty() ? nullptr : out_strings[0].c_str();
@@ -333,10 +333,8 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 		size_t struct_sz = sizeof(NDIlib_audio_frame_v3_t);
 
 		int data_size = 0;
-		if (af->data_size_in_bytes > 0)
-			data_size = af->data_size_in_bytes;
-		else
-			data_size = af->channel_stride_in_bytes * af->no_channels * af->no_samples; // best-effort
+
+		data_size = af->channel_stride_in_bytes * af->no_channels;
 
 		int meta_len = af->p_metadata ? static_cast<int>(strlen(af->p_metadata)) + 1 : 1;
 

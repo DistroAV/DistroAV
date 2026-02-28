@@ -17,14 +17,14 @@ static const NDIlib_v6 *load_ndi_runtime()
 	// First, check NDILIB_REDIST_FOLDER environment variable for a redistributable folder path
 	char redistFolder[MAX_PATH] = {0};
 	DWORD ret = GetEnvironmentVariableA("NDI_RUNTIME_DIR_V6", redistFolder, MAX_PATH);
-	if (ret >0 && ret < MAX_PATH) {
+	if (ret > 0 && ret < MAX_PATH) {
 		// Build full path: <folder>\NDILIB_LIBRARY_NAME
 		char fullPath[MAX_PATH] = {0};
 		snprintf(fullPath, MAX_PATH, "%s\\%s", redistFolder, NDILIB_LIBRARY_NAME);
 		hLib = LoadLibraryA(fullPath);
 		if (!hLib) {
-			printf("Failed to load NDI runtime from '%s' (LoadLibraryA error=%lu). Will try system path.\n", fullPath,
-			 GetLastError());
+			printf("Failed to load NDI runtime from '%s' (LoadLibraryA error=%lu). Will try system path.\n",
+			       fullPath, GetLastError());
 		} else {
 			printf("Loaded NDI runtime from '%s'\n", fullPath);
 		}
@@ -35,7 +35,7 @@ static const NDIlib_v6 *load_ndi_runtime()
 		hLib = LoadLibraryA(NDILIB_LIBRARY_NAME);
 		if (!hLib) {
 			printf("Failed to load NDI runtime '%s' (LoadLibraryA error=%lu)\n", NDILIB_LIBRARY_NAME,
-			 GetLastError());
+			       GetLastError());
 			return nullptr;
 		}
 	}
@@ -65,15 +65,15 @@ static const NDIlib_v6 *load_ndi_runtime()
 	return ndi;
 }
 
-//    globals shared between the main loop and the monitor thread               
+//    globals shared between the main loop and the monitor thread
 static std::atomic<bool> g_running{true};
 static HANDLE g_hShutdownEvt = nullptr; // local (unsignalled) event
 
-//                                                                              
+//
 //  Background thread: watches the client process.
 //  When the client exits (for any reason), we signal g_hShutdownEvt so that
 //  the main loop wakes up and exits cleanly.
-//                                                                              
+//
 static void ClientMonitorThread(DWORD clientPid)
 {
 	HANDLE hClient = OpenProcess(SYNCHRONIZE, FALSE, clientPid);
@@ -95,7 +95,7 @@ static void ClientMonitorThread(DWORD clientPid)
 int main(int argc, char *argv[])
 {
 	if (false) {
-	//if (!IsDebuggerPresent()) {
+		//if (!IsDebuggerPresent()) {
 		// Avoid using DebugBreak() unconditionally - if JIT dialog is dismissed the process can be
 		// terminated. Instead, print PID and wait for a debugger to attach.
 		DWORD pid = GetCurrentProcessId();
@@ -126,6 +126,7 @@ int main(int argc, char *argv[])
 	NDIlib_video_frame_v2_t video_frame;
 	NDIlib_metadata_frame_t metadata_frame;
 	NDIlib_audio_frame_v3_t audio_frame;
+	NDIlib_audio_frame_v3_t audio_frame_test;
 
 	// Attempt to load NDI runtime early so errors are visible in the helper.
 	const NDIlib_v6 *ndi = load_ndi_runtime();
@@ -157,13 +158,13 @@ int main(int argc, char *argv[])
 	swprintf_s(readyEventName, 256, L"%s%s", connectionName, NDI_READY_EVENT_SUFFIX);
 	swprintf_s(responseEventName, 256, L"%s%s", connectionName, NDI_RESPONSE_EVENT_SUFFIX);
 
- //    Boost process and thread priority                                     
+	//    Boost process and thread priority
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 	printf("[Server] Starting up...\n");
 
-	//    Open shared-memory regions (created by the client)                    
+	//    Open shared-memory regions (created by the client)
 	HANDLE hShmReq = OpenFileMapping(FILE_MAP_READ, FALSE, requestShmName);
 	if (!hShmReq)
 		fatal("OpenFileMapping(request)");
@@ -172,7 +173,7 @@ int main(int argc, char *argv[])
 	if (!hShmRsp)
 		fatal("OpenFileMapping(response)");
 
-	//    Open named events                                                     
+	//    Open named events
 	HANDLE hEvtCmd = OpenEvent(SYNCHRONIZE, FALSE, commandEventName);
 	if (!hEvtCmd)
 		fatal("OpenEvent(cmd)");
@@ -191,29 +192,30 @@ int main(int argc, char *argv[])
 	if (!pReq)
 		fatal("MapViewOfFile(request)");
 
-	ResponseBlock *pRsp = static_cast<ResponseBlock *>(MapViewOfFile(hShmRsp, FILE_MAP_WRITE, 0, 0, sizeof(ResponseBlock)));
+	ResponseBlock *pRsp =
+		static_cast<ResponseBlock *>(MapViewOfFile(hShmRsp, FILE_MAP_WRITE, 0, 0, sizeof(ResponseBlock)));
 	if (!pRsp)
 		fatal("MapViewOfFile(response)");
 
-	//    Pre-fault the 48 MB response buffer                                   
+	//    Pre-fault the 48 MB response buffer
 	PrefaultRegion(pRsp, sizeof(ResponseBlock));
 
-	//    Local (unnamed) shutdown event for the monitor thread                 
+	//    Local (unnamed) shutdown event for the monitor thread
 	g_hShutdownEvt = CreateEvent(nullptr, TRUE /*manual*/, FALSE, nullptr);
 	if (!g_hShutdownEvt)
 		fatal("CreateEvent(shutdown)");
 
-	//    Start the client-monitor thread   
-	// client PID is set by the client at startup and doesn't change, so it's safe to read it here before the loop starts.                                   
+	//    Start the client-monitor thread
+	// client PID is set by the client at startup and doesn't change, so it's safe to read it here before the loop starts.
 	DWORD clientPid = pReq->client_pid;
 	std::thread monitor(ClientMonitorThread, clientPid);
 	monitor.detach();
 
-	//    Signal the client that we are ready                                   
+	//    Signal the client that we are ready
 	SetEvent(hEvtReady);
 	printf("[Server] Ready and listening (client PID %u).\n", clientPid);
 
-	//    Main request/response loop                                             
+	//    Main request/response loop
 	// Wait on TWO handles simultaneously so we react instantly to either:
 	//   [0] = IPC_EVT_CMD      a new command from the client
 	//   [1] = g_hShutdownEvt   client process died
@@ -239,11 +241,10 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		//    hEvtCmd was signalled (auto-reset already cleared it)             
+		//    hEvtCmd was signalled (auto-reset already cleared it)
 		QueryPerformanceCounter(&t0);
 
-		switch (pReq->command)
-		{
+		switch (pReq->command) {
 		case NDI_CREATE_RECEIVER:
 			deserialize_recv_desc(&pReq->payload, sizeof(pReq->payload), recv_desc, strings);
 			if (ndi_receiver != nullptr) {
@@ -273,9 +274,9 @@ int main(int argc, char *argv[])
 						sizeof(pRsp->payload));
 				ndi->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				break;
-			default:				
+			default:
 				break;
-			}					
+			}
 			break;
 		}
 		case NDI_SHUTDOWN:
@@ -286,29 +287,32 @@ int main(int argc, char *argv[])
 			printf("Received unknown command code: %u\n", pReq->command);
 		}
 
-		//    Respond                                                           
+		//    Respond
 		SetEvent(hEvtRsp);
 
 		QueryPerformanceCounter(&t1);
-		double ms = (double)(t1.QuadPart - t0.QuadPart) * 1000.0 / (double)freq.QuadPart;
+		double ms = ((double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart) * 1000.0;
 		++frameCount;
 
 		if (frameCount % 60 == 0)
-			printf("[Server] frame %-8llu dispatch=%.3f ms\n",
-			       (unsigned long long)frameCount,  ms);
+			printf("[Server] frame %-8llu dispatch=%.3f ms\n", (unsigned long long)frameCount, ms);
 	}
 
-	//    Cleanup                                                                
+	//    Cleanup
 	printf("[Server] Cleaning up and exiting.\n");
 
-	if (pReq) UnmapViewOfFile(const_cast<RequestBlock *>(pReq));
-	if (pRsp) UnmapViewOfFile(pRsp);
+	if (pReq)
+		UnmapViewOfFile(const_cast<RequestBlock *>(pReq));
+	if (pRsp)
+		UnmapViewOfFile(pRsp);
 	CloseHandle(hShmReq);
 	CloseHandle(hShmRsp);
 	CloseHandle(hEvtCmd);
 	CloseHandle(hEvtRsp);
-	if (hEvtReady) CloseHandle(hEvtReady);
-	if (g_hShutdownEvt) CloseHandle(g_hShutdownEvt);
+	if (hEvtReady)
+		CloseHandle(hEvtReady);
+	if (g_hShutdownEvt)
+		CloseHandle(g_hShutdownEvt);
 
 	return 0;
 }
