@@ -18,6 +18,7 @@
 #define NDI_CREATE_RECEIVER       100
 #define NDI_CAPTURE_FRAME         200
 #define NDI_SHUTDOWN              300
+#define NDI_HARDWARE_ACCELERATION 400
 
 //
 //  Buffer sizes
@@ -265,7 +266,6 @@ static bool deserialize_recv_desc(const void *buf, size_t buf_len, NDIlib_recv_c
 // [uint32_t frame_type]
 // [struct bytes (NDIlib_video_frame_v2_t or NDIlib_audio_frame_v3_t)]
 // [data bytes (size determined by struct fields)]
-// [metadata bytes (NUL-terminated string) or single NUL if none]
 // Returns number of bytes written, or0 on error (insufficient space).
 static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame, void *out_buf, size_t max_size)
 {
@@ -315,16 +315,6 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 				return 0;
 		}
 
-		// append metadata (NUL-terminated). If null, write a single NUL byte.
-		if (vf->p_metadata) {
-			if (!write_bytes(vf->p_metadata, (size_t)meta_len))
-				return 0;
-		} else {
-			char zero = '\0';
-			if (!write_bytes(&zero, 1))
-				return 0;
-		}
-
 		return max_size - remaining;
 	}
 
@@ -336,9 +326,7 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 
 		data_size = af->channel_stride_in_bytes * af->no_channels;
 
-		int meta_len = af->p_metadata ? static_cast<int>(strlen(af->p_metadata)) + 1 : 1;
-
-		if (remaining < struct_sz + (size_t)data_size + (size_t)meta_len)
+		if (remaining < struct_sz + (size_t)data_size)
 			return 0;
 
 		// copy whole struct
@@ -348,16 +336,6 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 		// append audio data
 		if (data_size > 0) {
 			if (!write_bytes(af->p_data, (size_t)data_size))
-				return 0;
-		}
-
-		// append metadata
-		if (af->p_metadata) {
-			if (!write_bytes(af->p_metadata, (size_t)meta_len))
-				return 0;
-		} else {
-			char zero = '\0';
-			if (!write_bytes(&zero, 1))
 				return 0;
 		}
 
@@ -416,19 +394,7 @@ static bool deserialize_frame(const void *buf, size_t buf_len, NDIlib_frame_type
 			out_video->p_data = nullptr;
 		}
 
-		// Set p_metadata pointer into buffer if present (metadata is NUL-terminated)
-		if (remaining > 0) {
-			out_video->p_metadata = const_cast<char *>(reinterpret_cast<const char *>(p));
-			// Ensure there's a NUL within remaining; if not, fail
-			size_t len = strnlen(out_video->p_metadata, remaining);
-			if (len == remaining)
-				return false; // no terminating NUL found
-			// Advance p past metadata
-			p += (len + 1);
-			remaining -= (len + 1);
-		} else {
-			out_video->p_metadata = nullptr;
-		}
+		out_video->p_metadata = nullptr;
 
 		// Note: timestamp and timecode already copied from struct bytes
 		return true;
@@ -465,16 +431,7 @@ static bool deserialize_frame(const void *buf, size_t buf_len, NDIlib_frame_type
 			out_audio->data_size_in_bytes = 0;
 		}
 
-		if (remaining > 0) {
-			out_audio->p_metadata = const_cast<char *>(reinterpret_cast<const char *>(p));
-			size_t len = strnlen(out_audio->p_metadata, remaining);
-			if (len == remaining)
-				return false;
-			p += (len + 1);
-			remaining -= (len + 1);
-		} else {
-			out_audio->p_metadata = nullptr;
-		}
+		out_audio->p_metadata = nullptr;
 
 		return true;
 	}

@@ -120,6 +120,21 @@ typedef struct ndi_source_config_t {
 	NDIlib_tally_t tally;
 } ndi_source_config_t;
 
+typedef struct ndi_server_connection_t {
+	HANDLE hShmReq;
+	HANDLE hShmRsp;
+	HANDLE hEvtCmd;
+	HANDLE hEvtRsp;
+	HANDLE hEvtReady;
+	RequestBlock *pReq;
+	ResponseBlock *pRsp;
+	int error;
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	bool running;
+	bool receiver_created;
+} ndi_server_connection_t;
+
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
@@ -131,6 +146,7 @@ typedef struct ndi_source_t {
 	uint32_t height;
 
 	uint64_t last_frame_timestamp;
+	ndi_server_connection_t ndi_server;
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -386,21 +402,6 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 
 void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame);
-
-struct ndi_server_connection_t {
-	HANDLE hShmReq;
-	HANDLE hShmRsp;
-	HANDLE hEvtCmd;
-	HANDLE hEvtRsp;
-	HANDLE hEvtReady;
-	RequestBlock *pReq;
-	ResponseBlock *pRsp;
-	int error;
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	bool running;
-	bool receiver_created;
-};
 
 void destroy_ndi_server(ndi_server_connection_t &conn)
 {
@@ -665,7 +666,7 @@ void *ndi_source_thread(void *data)
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
 
-	ndi_server_connection_t ndi_server = create_ndi_server(); // Will set running = true;
+	s->ndi_server = create_ndi_server(); // Will set running = true;
 
 	// Main NDI receiver loop: BEGIN
 	//
@@ -760,12 +761,12 @@ void *ndi_source_thread(void *data)
 				recv_desc.p_ndi_recv_name, recv_desc.source_to_connect_to.p_ndi_name);
 
 			// Try to create an ndi-server to manage the recv in another process but only if not framesync
-			if (!ndi_frame_sync && ndi_server.running)
-				create_ndi_receiver(ndi_server, recv_desc);
+			if (!ndi_frame_sync && s->ndi_server.running)
+				create_ndi_receiver(s->ndi_server, recv_desc);
 
-			if (ndi_server.receiver_created) {
+			if (s->ndi_server.receiver_created) {
 				obs_log(LOG_DEBUG,
-					"'%s' ndi_source_thread: reset_ndi_receiver: create_ndi_receiver(ndi_server,resc_desc)",
+					"'%s' ndi_source_thread: reset_ndi_receiver: create_ndi_receiver(s->ndi_server,resc_desc)",
 					obs_source_name);
 				ndi_receiver = nullptr;
 			} else {
@@ -820,12 +821,19 @@ void *ndi_source_thread(void *data)
 				// Destroy that receiver instance and you also destroy the metadata and thus the hardware acceleration.
 				// There is no confirmation that this works as theorized.
 				//
-				NDIlib_metadata_frame_t hwAccelMetadata;
-				hwAccelMetadata.p_data = (char *)"<ndi_video_codec type=\"hardware\"/>";
-				obs_log(LOG_DEBUG,
-					"'%s' ndi_source_thread: reset_ndi_receiver; Sending NDI Hardware Acceleration metadata: '%s'",
-					obs_source_name, hwAccelMetadata.p_data);
-				ndiLib->recv_send_metadata(ndi_receiver, &hwAccelMetadata);
+				if (s->ndi_server.receiver_created) {
+					// Tell ndi-server to use hardware acceleration
+					s->ndi_server.pReq->command = NDI_HARDWARE_ACCELERATION;
+					SetEvent(s->ndi_server.hEvtCmd);
+					WaitForSingleObject(s->ndi_server.hEvtRsp, 30000);
+				} else {
+					NDIlib_metadata_frame_t hwAccelMetadata;
+					hwAccelMetadata.p_data = (char *)"<ndi_video_codec type=\"hardware\"/>";
+					obs_log(LOG_DEBUG,
+						"'%s' ndi_source_thread: reset_ndi_receiver; Sending NDI Hardware Acceleration metadata: '%s'",
+						obs_source_name, hwAccelMetadata.p_data);
+					ndiLib->recv_send_metadata(ndi_receiver, &hwAccelMetadata);
+				}
 			}
 
 			if (s->config.framesync_enabled) {
@@ -859,7 +867,7 @@ void *ndi_source_thread(void *data)
 		// check if there are any connections.
 		// If not then micro-pause and restart the loop.
 		//
-		if (!ndi_server.receiver_created && ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
+		if (!s->ndi_server.receiver_created && ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
 #if 0
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
@@ -919,8 +927,8 @@ void *ndi_source_thread(void *data)
 		// the fps of OBS can decrease dramatically, especially with multiple 4K 60 sources.
 		//
 		if (!obs_source_showing(s->obs_source)) {
-			// Avoid busy-waiting when the source is hidden but kept active.
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			// Avoid busy-waiting when the source is hidden but kept alive.
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
 		}
 
@@ -967,13 +975,13 @@ void *ndi_source_thread(void *data)
 			// !ndi_frame_sync
 			//
 			frame_received = NDIlib_frame_type_none;
-			if (ndi_server.receiver_created) {
+			if (s->ndi_server.receiver_created) {
 				// Request a frame from the ndi-server
-				ndi_server.pReq->command = NDI_CAPTURE_FRAME;
-				SetEvent(ndi_server.hEvtCmd);
-				WaitForSingleObject(ndi_server.hEvtRsp, 30000);
-				deserialize_frame((const void *)&ndi_server.pRsp->payload,
-						  sizeof(ndi_server.pRsp->payload), frame_received, &video_frame,
+				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME;
+				SetEvent(s->ndi_server.hEvtCmd);
+				WaitForSingleObject(s->ndi_server.hEvtRsp, 30000);
+				deserialize_frame((const void *)&s->ndi_server.pRsp->payload,
+						  sizeof(s->ndi_server.pRsp->payload), frame_received, &video_frame,
 						  &audio_frame);
 			} else
 				frame_received =
@@ -986,7 +994,7 @@ void *ndi_source_thread(void *data)
 				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
-				if (ndi_server.error > 0)
+				if (!s->ndi_server.receiver_created)
 					ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				continue;
 			}
@@ -997,7 +1005,7 @@ void *ndi_source_thread(void *data)
 				//
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
-				if (ndi_server.error > 0)
+				if (!s->ndi_server.receiver_created)
 					ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
 				continue;
 			}
@@ -1031,9 +1039,9 @@ void *ndi_source_thread(void *data)
 		ndi_receiver = nullptr;
 	}
 
-	if (ndi_server.running) {
+	if (s->ndi_server.running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_thread: destroy_ndi_server(ndi_server)", obs_source_name);
-		destroy_ndi_server(ndi_server);
+		destroy_ndi_server(s->ndi_server);
 	}
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_thread(…)", obs_source_name);

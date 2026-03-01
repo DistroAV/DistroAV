@@ -224,8 +224,6 @@ int main(int argc, char *argv[])
 	LARGE_INTEGER freq, t0, t1;
 	QueryPerformanceFrequency(&freq);
 	uint64_t frameCount = 0;
-	NDIlib_recv_create_v3_t recv_desc{};
-	std::vector<std::string> strings;
 
 	while (g_running) {
 		DWORD w = WaitForMultipleObjects(2, waitSet, FALSE, INFINITE);
@@ -245,7 +243,10 @@ int main(int argc, char *argv[])
 		QueryPerformanceCounter(&t0);
 
 		switch (pReq->command) {
-		case NDI_CREATE_RECEIVER:
+		case NDI_CREATE_RECEIVER: {
+			NDIlib_recv_create_v3_t recv_desc{};
+			std::vector<std::string> strings;
+
 			deserialize_recv_desc(&pReq->payload, sizeof(pReq->payload), recv_desc, strings);
 			if (ndi_receiver != nullptr) {
 				ndi->recv_destroy(ndi_receiver);
@@ -260,6 +261,7 @@ int main(int argc, char *argv[])
 				printf("Failed to create NDI Receiver.\n");
 			}
 			break;
+		}
 		case NDI_CAPTURE_FRAME: {
 			NDIlib_frame_type_e frame_received =
 				ndi->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
@@ -283,6 +285,12 @@ int main(int argc, char *argv[])
 			printf("Received shutdown command.\n");
 			g_running = false;
 			break;
+		case NDI_HARDWARE_ACCELERATION: {
+			NDIlib_metadata_frame_t hwAccelMetadata;
+			hwAccelMetadata.p_data = (char *)"<ndi_video_codec type=\"hardware\"/>";
+			ndi->recv_send_metadata(ndi_receiver, &hwAccelMetadata);
+			break;
+		}
 		default:
 			printf("Received unknown command code: %u\n", pReq->command);
 		}
