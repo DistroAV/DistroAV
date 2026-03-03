@@ -586,6 +586,8 @@ const NDIlib_v6 *load_ndilib()
 				obs_log(LOG_ERROR, "ERR-405 - Error loading the NDI Library from path: '%s'",
 					QT_TO_UTF8(QDir::toNativeSeparators(lib_path)));
 				obs_log(LOG_DEBUG, "load_ndilib: ERROR: NDIlib_v6_load not found in loaded library");
+				delete loaded_lib;
+				loaded_lib = nullptr;
 			}
 		} else {
 			obs_log(LOG_ERROR, "ERR-402 - Error loading QLibrary with error: '%s'",
