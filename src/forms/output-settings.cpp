@@ -171,20 +171,20 @@ If you are running a local build, don't forget to add your build info to the upd
 			progressDialog->deleteLater();
 		}
 	});
-	
+
 	// Auto re-install DistroAV Plugin Button
 	connect(ui->pushButtonInstallPlugin, &QPushButton::clicked, [this]() {
-	#if defined(Q_OS_MACOS)
-			const auto script = QString("tell application \"Terminal\"\n"
-							"activate\n"
-							"do script \"brew reinstall distroav && exit\"\n"
-							"end tell");
+#if defined(Q_OS_MACOS)
+		const auto script = QString("tell application \"Terminal\"\n"
+					    "activate\n"
+					    "do script \"brew reinstall distroav && exit\"\n"
+					    "end tell");
 
-			if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
-				QMessageBox::warning(this, "Unable to launch Terminal",
-							"Could not launch Terminal to run: brew reinstall distroav");
-			}
-	#elif defined(Q_OS_WIN)
+		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
+			QMessageBox::warning(this, "Unable to launch Terminal",
+					     "Could not launch Terminal to run: brew reinstall distroav");
+		}
+#elif defined(Q_OS_WIN)
 			if (!QProcess::startDetached(
 					"powershell.exe",
 					QStringList()
@@ -194,12 +194,11 @@ If you are running a local build, don't forget to add your build info to the upd
 				QMessageBox::warning(this, "Unable to launch PowerShell",
 							"Could not launch PowerShell to run: winget install -e DistroAV.DistroAV");
 			}
-	#else
+#else
 			QMessageBox::information(this, "Unsupported platform",
 						"Automatic NDI installation is currently only supported on macOS and Windows.");
-	#endif
-		});
-
+#endif
+	});
 
 	// NDI Library Section Logic
 	connect(ui->pushButtonGetNdi, &QPushButton::clicked,
