@@ -378,7 +378,7 @@
                 <item>
                     <widget class="QLabel" name="labelRequirements">
                         <property name="text">
-                            <string>NDIPlugin.Requirements</string>
+                            <string>NDIPlugin.OutputSettings.Requirements</string>
                         </property>
                         <property name="textInteractionFlags">
                             <set>Qt::LinksAccessibleByMouse</set>
@@ -394,16 +394,16 @@
                         <number>12</number>
                     </property>
                     <item row="0" column="0">
-                        <widget class="QLabel" name="labelReqNdiTitle">
+                        <widget class="QLabel" name="labelReqDistroTitle">
                             <property name="text">
-                                <string>NDI Library</string>
+                                <string>DistroAV</string>
                             </property>
                         </widget>
                     </item>
                     <item row="0" column="1">
-                        <widget class="QLabel" name="labelReqNdiStatus">
+                        <widget class="QLabel" name="labelReqDistroStatus">
                             <property name="text">
-                                <string>✗ Pending check</string>
+                                <string>✓ Pending check</string>
                             </property>
                             <property name="alignment">
                                 <set>Qt::AlignRight|Qt::AlignVCenter</set>
@@ -411,16 +411,16 @@
                         </widget>
                     </item>
                     <item row="1" column="0">
-                        <widget class="QLabel" name="labelReqDistroTitle">
+                        <widget class="QLabel" name="labelReqNdiTitle">
                             <property name="text">
-                                <string>DistroAV</string>
+                                <string>NDI Library</string>
                             </property>
                         </widget>
                     </item>
                     <item row="1" column="1">
-                        <widget class="QLabel" name="labelReqDistroStatus">
+                        <widget class="QLabel" name="labelReqNdiStatus">
                             <property name="text">
-                                <string>✓ Pending check</string>
+                                <string>✗ Pending check</string>
                             </property>
                             <property name="alignment">
                                 <set>Qt::AlignRight|Qt::AlignVCenter</set>

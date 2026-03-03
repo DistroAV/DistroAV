@@ -35,7 +35,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	ui->setupUi(this);
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
-
+/*
 	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
 	ui->labelDistroAvVersion->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
 	connect(ui->labelDistroAvVersion, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
@@ -43,6 +43,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
 					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
+	*/
 
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		// Whew! QProgressDialog is ugly on Windows!
@@ -132,7 +133,6 @@ If you are running a local build, don't forget to add your build info to the upd
 */
 
 	// If NDI library is detected, show the official NDI website button. Otherwise, show the Get NDI Library button that redirects to the NDI library download page.
-
 	ui->pushButtonGetNdi->setVisible(ndiLib == nullptr);
 	ui->pushButtonNdi->setVisible(false);
 	connect(ui->pushButtonGetNdi, &QPushButton::clicked,
@@ -168,16 +168,38 @@ If you are running a local build, don't forget to add your build info to the upd
 	connect(ui->pushButtonWiki, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
+	// Requirements checks and status display
+	// Global rules for color based on requirement checks: red for fail, green for pass. Text is set per check below.
 	auto applyStatus = [](QLabel *label, bool ok, const QString &message) {
 		label->setText(QString::fromUtf8("%1 %2").arg(ok ? "✓" : "✗", message));
 		label->setStyleSheet(ok ? "QWidget { color: #2e7d32; }" : "QWidget { color: #c62828; }");
 	};
 
+	// DistroAV Version Check
+	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
+	ui->labelReqDistroTitle->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	connect(ui->labelReqDistroTitle, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
+		QApplication::clipboard()->setText(pluginVersionText);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	});
+	applyStatus(ui->labelReqDistroStatus, true, QString("Loaded (%1)").arg(PLUGIN_VERSION));
+
+	// NDI Version Check
+	QString ndiVersionFull;
 	QString ndiVersionShort;
 	if (ndiLib) {
+		ndiVersionFull = QString(ndiLib->version());
 		ndiVersionShort =
 			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
 	}
+
+	connect(ui->labelReqNdiStatus, &QLabel::linkActivated, [this, ndiVersionFull](const QString &) {
+		QApplication::clipboard()->setText(ndiVersionFull);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	});
+
 	auto ndiVersionCheckResult = !ndiVersionShort.isEmpty() &&
 				     is_version_supported(QT_TO_UTF8(ndiVersionShort), PLUGIN_MIN_NDI_VERSION);
 	applyStatus(ui->labelReqNdiStatus, ndiVersionCheckResult,
@@ -187,14 +209,20 @@ If you are running a local build, don't forget to add your build info to the upd
 				       ? QString("Missing (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
 				       : QString("Too old (%1 < %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)));
 
+	// OBS Version Check
 	auto obsVersion = QString::fromUtf8(obs_get_version_string());
+	connect(ui->labelReqObsStatus, &QLabel::linkActivated, [this, obsVersion](const QString &) {
+		QApplication::clipboard()->setText(obsVersion);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	});
+
 	auto obsVersionCheckResult = is_version_supported(QT_TO_UTF8(obsVersion), PLUGIN_MIN_OBS_VERSION);
 	applyStatus(ui->labelReqObsStatus, obsVersionCheckResult,
 		    obsVersionCheckResult ? QString("OK (%1 ≥ %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION)
 					  : QString("Too old (%1 < %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION));
 
-	applyStatus(ui->labelReqDistroStatus, true, QString("Loaded (%1)").arg(PLUGIN_VERSION));
-
+	// Cosmetic display of NDI registered trademark info with link to NDI website
 	ui->labelNdiRegisteredTrademark->setTextFormat(Qt::RichText);
 	ui->labelNdiRegisteredTrademark->setTextInteractionFlags(Qt::TextBrowserInteraction);
 	ui->labelNdiRegisteredTrademark->setOpenExternalLinks(true);
