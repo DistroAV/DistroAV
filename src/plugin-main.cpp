@@ -154,6 +154,22 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title, const QString 
 		// Make title bar show text: https://stackoverflow.com/a/22187538/25683720
 		dlg->QDialog::setWindowTitle(newTitle);
 #endif
+		QObject::connect(dlg, &QMessageBox::finished, [](int result) {
+			if (result != QMessageBox::Ok) {
+				return;
+			}
+
+			if (output_settings) {
+				output_settings->show();
+				output_settings->raise();
+				output_settings->activateWindow();
+				obs_log(LOG_DEBUG,
+					"showCriticalUnloadingMessageBoxDelayed: opened DistroAV settings after OK click");
+			} else {
+				obs_log(LOG_DEBUG,
+					"showCriticalUnloadingMessageBoxDelayed: DistroAV settings are unavailable at OK click");
+			}
+		});
 		dlg->setAttribute(Qt::WA_DeleteOnClose, true);
 		dlg->setWindowFlags(dlg->windowFlags() | Qt::WindowStaysOnTopHint);
 		dlg->setWindowModality(Qt::NonModal);
@@ -295,7 +311,8 @@ bool obs_module_load(void)
 	// Plugin's minimum functional OBS version check
 	// The plugin cannot work if this minimum version requirement is not met.
 	// This is a different requirement than the minimum OBS version required for features access.
-	// TBC if this is still needed. This might actually not be needed anymore since OBS will not load plugin build with newer OBS API if the minimum API level is not met.
+	// Starting OBS 32+ this will not be required anymore. See PR : https://github.com/obsproject/obs-studio/pull/6916
+	// As soon as OBS 32 is used int he buildspec.json as the minimum OBS version, this check can be removed."
 	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
 		obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
 			PLUGIN_MIN_OBS_VERSION);
@@ -420,85 +437,6 @@ bool obs_module_load(void)
 		}
 	}
 	// SOFT requirement Check END
-
-	/*
-	// Check if the NDI SDK is installed & compatible
-#if 0
-	// For testing purposes only
-	ndiLib = nullptr;
-#else
-	ndiLib = load_ndilib();
-#endif
-	if (!ndiLib) {
-		auto title = Str("NDIPlugin.LibError.Title");
-		auto message = "Error-401: " + QTStr("NDIPlugin.LibError.Message") + "<br>";
-#ifdef NDI_OFFICIAL_REDIST_URL
-		message += makeLink(NDI_OFFICIAL_REDIST_URL);
-#else
-		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
-#endif
-		obs_log(LOG_ERROR, "ERR-401 - NDI library failed to load with message: '%s'", QT_TO_UTF8(message));
-		obs_log(LOG_DEBUG, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
-		showCriticalUnloadingMessageBoxDelayed(title, message);
-		return false;
-	}
-
-#if 0
-	// for testing purposes only
-	auto initialized = false;
-#else
-	auto initialized = ndiLib->initialize();
-#endif
-	if (!initialized) {
-		obs_log(LOG_ERROR, "ERR-406 - NDI library could not initialize due to unsupported CPU.");
-		obs_log(LOG_DEBUG,
-			"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library. Module won't load.");
-		return false;
-	}
-
-	obs_log(LOG_INFO, "obs_module_load: NDI library detected ('%s')", ndiLib->version());
-
-	// Check if the minimum NDI Runtime/SDK required by this plugin is used
-	QString ndi_version_short =
-		QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
-	obs_log(LOG_INFO, "NDI Version detected: %s", QT_TO_UTF8(ndi_version_short));
-
-	if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION)) {
-		obs_log(LOG_ERROR,
-			"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s. Plugin will unload.",
-			PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
-		obs_log(LOG_DEBUG, "obs_module_load: NDI minimum version not met (%s). NDI version detected: %s.",
-			PLUGIN_MIN_NDI_VERSION, ndiLib->version());
-
-		auto title = "NDI Library version not supported";
-		auto message = "Error-425: Plugin requires NDI " + QTStr(PLUGIN_MIN_NDI_VERSION) +
-			       " or higher <br> <br> Version detected: " + QT_TO_UTF8(ndi_version_short) +
-			       "<br> Get the latest NDI library at: <br>";
-		message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
-		showCriticalUnloadingMessageBoxDelayed(title, message);
-		return false;
-	}
-
-	obs_log(LOG_INFO, "obs_module_load: NDI library initialized successfully");
-	*/
-
-	/*
-	ndi_source_info = create_ndi_source_info();
-	obs_register_source(&ndi_source_info);
-
-	ndi_output_info = create_ndi_output_info();
-	obs_register_output(&ndi_output_info);
-
-	ndi_filter_info = create_ndi_filter_info();
-	obs_register_source(&ndi_filter_info);
-
-	ndi_audiofilter_info = create_ndi_audiofilter_info();
-	obs_register_source(&ndi_audiofilter_info);
-
-	alpha_filter_info = create_alpha_filter_info();
-	obs_register_source(&alpha_filter_info);
-	*/
-	// register_plugin_features();
 
 	if (main_window) {
 		auto menu_action = static_cast<QAction *>(
