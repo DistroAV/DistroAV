@@ -11,14 +11,15 @@
 
 #define NDI_MEM_NAME_PREFIX       L"Local\\NDI_"
 #define NDI_REQUEST_SHM_SUFFIX    L"_RequestShm"
-#define NDI_RESPONSE_SHM_SUFFIX    L"_ResponseShm"
-#define NDI_COMMAND_EVENT_SUFFIX    L"_CommandEvent"
+#define NDI_RESPONSE_SHM_SUFFIX   L"_ResponseShm"
+#define NDI_COMMAND_EVENT_SUFFIX  L"_CommandEvent"
 #define NDI_READY_EVENT_SUFFIX    L"_ReadyEvent"
-#define NDI_RESPONSE_EVENT_SUFFIX     L"_ResponseEvent"
+#define NDI_RESPONSE_EVENT_SUFFIX L"_ResponseEvent"
 #define NDI_CREATE_RECEIVER       100
 #define NDI_CAPTURE_FRAME         200
 #define NDI_SHUTDOWN              300
 #define NDI_HARDWARE_ACCELERATION 400
+#define NDI_CAPTURE_FRAME_SYNC    500
 
 //
 //  Buffer sizes
@@ -267,12 +268,12 @@ static bool deserialize_recv_desc(const void *buf, size_t buf_len, NDIlib_recv_c
 // [struct bytes (NDIlib_video_frame_v2_t or NDIlib_audio_frame_v3_t)]
 // [data bytes (size determined by struct fields)]
 // Returns number of bytes written, or0 on error (insufficient space).
-static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame, void *out_buf, size_t max_size)
+static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame, uint8_t *out_buf, size_t max_size)
 {
 	if (!out_buf || !frame || max_size < sizeof(uint32_t))
 		return 0;
 
-	uint8_t *p = static_cast<uint8_t *>(out_buf);
+	uint8_t *p = out_buf;
 	size_t remaining = max_size;
 
 	// write frame type (32-bit)
@@ -349,13 +350,13 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 // Deserialize a buffer produced by serialize_frame. Populates either out_video or out_audio depending on frame type.
 // The buffer memory must remain valid for the lifetime of the returned frame pointers.
 // Returns true on success, false on failure.
-static bool deserialize_frame(const void *buf, size_t buf_len, NDIlib_frame_type_e &out_type,
+static size_t deserialize_frame(const uint8_t *buf, size_t buf_len, NDIlib_frame_type_e &out_type,
 			      NDIlib_video_frame_v2_t *out_video, NDIlib_audio_frame_v3_t *out_audio)
 {
 	if (!buf || buf_len < sizeof(uint32_t))
-		return false;
+		return 0;
 
-	const uint8_t *p = static_cast<const uint8_t *>(buf);
+	const uint8_t *p = buf;
 	size_t remaining = buf_len;
 
 	// Read frame type
@@ -368,11 +369,11 @@ static bool deserialize_frame(const void *buf, size_t buf_len, NDIlib_frame_type
 
 	if (out_type == NDIlib_frame_type_video) {
 		if (!out_video)
-			return false;
+			return 0;
 
 		size_t struct_sz = sizeof(NDIlib_video_frame_v2_t);
 		if (remaining < struct_sz)
-			return false;
+			return 0;
 
 		// Copy entire struct from buffer into out_video
 		memcpy(out_video, p, struct_sz);
@@ -383,7 +384,7 @@ static bool deserialize_frame(const void *buf, size_t buf_len, NDIlib_frame_type
 		int data_size = out_video->data_size_in_bytes * out_video->yres;
 
 		if (remaining < (size_t)data_size + 1) // need at least data + one byte for metadata NUL
-			return false;
+			return 0;
 
 		// Set p_data pointer into buffer
 		if (data_size > 0) {
@@ -397,45 +398,39 @@ static bool deserialize_frame(const void *buf, size_t buf_len, NDIlib_frame_type
 		out_video->p_metadata = nullptr;
 
 		// Note: timestamp and timecode already copied from struct bytes
-		return true;
+		return buf_len - remaining;
 	}
 
 	if (out_type == NDIlib_frame_type_audio) {
 		if (!out_audio)
-			return false;
+			return 0;
 
 		size_t struct_sz = sizeof(NDIlib_audio_frame_v3_t);
 		if (remaining < struct_sz)
-			return false;
+			return 0;
 
 		memcpy(out_audio, p, struct_sz);
 		p += struct_sz;
 		remaining -= struct_sz;
 
-		int data_size = 0;
-		if (out_audio->data_size_in_bytes > 0)
-			data_size = out_audio->data_size_in_bytes;
-		else
-			data_size = out_audio->channel_stride_in_bytes * out_audio->no_channels * out_audio->no_samples;
+		int data_size = out_audio->channel_stride_in_bytes * out_audio->no_channels;
 
 		if (remaining < (size_t)data_size + 1)
-			return false;
+			return 0;
 
 		if (data_size > 0) {
 			out_audio->p_data = const_cast<uint8_t *>(p);
 			p += data_size;
 			remaining -= data_size;
-			out_audio->data_size_in_bytes = data_size;
 		} else {
 			out_audio->p_data = nullptr;
-			out_audio->data_size_in_bytes = 0;
 		}
 
 		out_audio->p_metadata = nullptr;
 
-		return true;
+		return buf_len - remaining;
 	}
 
 	// unsupported frame type
-	return false;
+	return 0;
 }

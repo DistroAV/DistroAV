@@ -95,7 +95,7 @@ static void ClientMonitorThread(DWORD clientPid)
 int main(int argc, char *argv[])
 {
 	if (false) {
-		//if (!IsDebuggerPresent()) {
+    //if (!IsDebuggerPresent()) {
 		// Avoid using DebugBreak() unconditionally - if JIT dialog is dismissed the process can be
 		// terminated. Instead, print PID and wait for a debugger to attach.
 		DWORD pid = GetCurrentProcessId();
@@ -124,9 +124,11 @@ int main(int argc, char *argv[])
 
 	NDIlib_recv_instance_t ndi_receiver = nullptr;
 	NDIlib_video_frame_v2_t video_frame;
+	NDIlib_video_frame_v2_t video_frame_test;
 	NDIlib_metadata_frame_t metadata_frame;
 	NDIlib_audio_frame_v3_t audio_frame;
 	NDIlib_audio_frame_v3_t audio_frame_test;
+	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
 
 	// Attempt to load NDI runtime early so errors are visible in the helper.
 	const NDIlib_v6 *ndi = load_ndi_runtime();
@@ -225,6 +227,9 @@ int main(int argc, char *argv[])
 	QueryPerformanceFrequency(&freq);
 	uint64_t frameCount = 0;
 
+	int videores = 0;
+	int audiosamples = 0;
+
 	while (g_running) {
 		DWORD w = WaitForMultipleObjects(2, waitSet, FALSE, INFINITE);
 
@@ -248,14 +253,17 @@ int main(int argc, char *argv[])
 			std::vector<std::string> strings;
 
 			deserialize_recv_desc(&pReq->payload, sizeof(pReq->payload), recv_desc, strings);
-			if (ndi_receiver != nullptr) {
+			if (ndi_receiver != nullptr) {				
+				ndi->framesync_destroy(ndi_frame_sync);
 				ndi->recv_destroy(ndi_receiver);
 				ndi_receiver = nullptr;
 			}
+
 			ndi_receiver = ndi->recv_create_v3(&recv_desc);
 
 			printf("Received ndi name: '%s'\n", recv_desc.source_to_connect_to.p_ndi_name);
-			if (ndi_receiver) {
+			if (ndi_receiver) {			
+				ndi_frame_sync = ndi->framesync_create(ndi_receiver);
 				printf("NDI Receiver created successfully!\n");
 			} else {
 				printf("Failed to create NDI Receiver.\n");
@@ -267,18 +275,79 @@ int main(int argc, char *argv[])
 				ndi->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 			switch (frame_received) {
 			case NDIlib_frame_type_video:
-				serialize_frame(frame_received, (const void *)&video_frame, &pRsp->payload,
+				serialize_frame(frame_received, (const void *)&video_frame, (uint8_t*)&pRsp->payload,
 						sizeof(pRsp->payload));
 				ndi->recv_free_video_v2(ndi_receiver, &video_frame);
 				break;
 			case NDIlib_frame_type_audio:
-				serialize_frame(frame_received, (const void *)&audio_frame, &pRsp->payload,
+				serialize_frame(frame_received, (const void *)&audio_frame, (uint8_t *)&pRsp->payload,
 						sizeof(pRsp->payload));
 				ndi->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				break;
 			default:
 				break;
 			}
+			break;
+		}
+		case NDI_CAPTURE_FRAME_SYNC: {
+			audio_frame = {};
+			ndi->framesync_capture_audio_v2(
+				ndi_frame_sync, &audio_frame,
+				0,     // "The desired sample rate. 0 to get the source value."
+				0,     // "The desired channel count. 0 to get the source value."
+				1024); // "The desired sample count. 0 to get the source value."
+			audiosamples = audio_frame.no_samples;
+
+			// Prepare output buffer pointer/size
+			uint8_t *out_buf = pRsp->payload;
+			size_t out_capacity = sizeof(pRsp->payload);
+
+			// Serialize audio into the start of the buffer
+			size_t audio_size = serialize_frame(NDIlib_frame_type_audio, (const void *)&audio_frame,
+							    out_buf, out_capacity);
+			ndi->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
+
+			if (audio_size == 0) {
+				// Serialization failed (insufficient space or error) — respond with empty payload
+				break;
+			}
+
+			// Capture video and serialize it immediately after the audio bytes
+			video_frame = {};
+			ndi->framesync_capture_video(ndi_frame_sync, &video_frame,
+						     NDIlib_frame_format_type_progressive);
+			videores = video_frame.xres * video_frame.yres;
+
+			size_t remaining = out_capacity - audio_size;
+			size_t video_size = 0;
+			if (remaining > 0) {
+				video_size = serialize_frame(NDIlib_frame_type_video, (const void *)&video_frame,
+							     out_buf + audio_size, remaining);
+			}
+
+			ndi->framesync_free_video(ndi_frame_sync, &video_frame);
+			
+			// verify serialization succeeded and we didn't exceed buffer capacity
+			/*
+			NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
+			uint8_t *in_buf = pRsp->payload;
+			size_t frame_len = deserialize_frame(in_buf, sizeof(pRsp->payload),
+							     frame_received, &video_frame_test, &audio_frame_test);
+			if (frame_received != NDIlib_frame_type_audio || frame_len != audio_size || audio_frame.timecode != audio_frame_test.timecode) {
+				printf("Audio deserialization failed or size mismatch (received type %d, size %zu, expected type %d, size %zu, )\n",
+					   frame_received, frame_len, NDIlib_frame_type_audio, audio_size);
+				break;
+			}
+			in_buf += frame_len;
+			frame_len = deserialize_frame(in_buf, sizeof(pRsp->payload) - frame_len, frame_received,
+					  &video_frame_test, &audio_frame_test);
+			if (frame_received != NDIlib_frame_type_video || video_size != frame_len ||
+			    video_frame_test.xres != video_frame.xres || video_frame_test.yres != video_frame.yres) {
+				printf("Video deserialization failed or resolution mismatch (received type %d, res %dx%d, expected type %d, res %dx%d)\n",
+				       frame_received, video_frame_test.xres, video_frame_test.yres,
+				       NDIlib_frame_type_video, video_frame.xres, video_frame.yres);
+			}
+			*/
 			break;
 		}
 		case NDI_SHUTDOWN:
@@ -299,11 +368,14 @@ int main(int argc, char *argv[])
 		SetEvent(hEvtRsp);
 
 		QueryPerformanceCounter(&t1);
-		double ms = ((double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart) * 1000.0;
+
 		++frameCount;
 
-		if (frameCount % 60 == 0)
-			printf("[Server] frame %-8llu dispatch=%.3f ms\n", (unsigned long long)frameCount, ms);
+		if (frameCount % 60 == 0) {
+			double ms = ((double)(t1.QuadPart - t0.QuadPart) / (double)freq.QuadPart) * 1000.0;
+			printf("[Server] frame %-8llu n_audio=%d vres=%d dispatch=%.3f ms\n",
+			       (unsigned long long)frameCount, audiosamples, videores, ms);
+		}
 	}
 
 	//    Cleanup
@@ -321,6 +393,16 @@ int main(int argc, char *argv[])
 		CloseHandle(hEvtReady);
 	if (g_hShutdownEvt)
 		CloseHandle(g_hShutdownEvt);
+
+	if (ndi_receiver != nullptr) {
+		ndi->framesync_destroy(ndi_frame_sync);
+		ndi->recv_destroy(ndi_receiver);
+		ndi_receiver = nullptr;
+	}
+
+	if (ndi && ndi->destroy) {
+		ndi->destroy();
+	}
 
 	return 0;
 }

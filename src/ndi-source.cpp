@@ -147,6 +147,14 @@ typedef struct ndi_source_t {
 
 	uint64_t last_frame_timestamp;
 	ndi_server_connection_t ndi_server;
+	uint64_t s1, n1, o1;
+	uint64_t frameCount = 0;
+	uint64_t frameTime = 0;	
+	uint64_t totalFrameTime = 0;
+	uint64_t minFrameTime = ULLONG_MAX;
+	uint64_t maxFrameTime = 0;
+
+
 } ndi_source_t;
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
@@ -462,8 +470,8 @@ ndi_server_connection_t create_ndi_server()
 	swprintf_s(responseEventName, 256, L"%s%s", connectionName, NDI_RESPONSE_EVENT_SUFFIX);
 
 	//    Boost priority
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+	//SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	//SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 	//
 	//  1.  Create shared-memory file mappings backed by the system pagefile.
@@ -580,13 +588,13 @@ ndi_server_connection_t create_ndi_server()
 	conn.pi = {};
 	ZeroMemory(&conn.si, sizeof(conn.si));
 	conn.si.cb = sizeof(conn.si);
-	//conn.si.dwFlags |= STARTF_USESHOWWINDOW;
-	//conn.si.wShowWindow = SW_HIDE;
+	conn.si.dwFlags |= STARTF_USESHOWWINDOW;
+	conn.si.wShowWindow = SW_HIDE;
 
 	ZeroMemory(&conn.pi, sizeof(conn.pi));
 	DWORD creationFlags = CREATE_NO_WINDOW;
-	creationFlags = CREATE_NEW_CONSOLE;
-	obs_log(LOG_INFO, "Spawning ndi-server with command line: %ls\n", cmdLine);
+	//creationFlags = CREATE_NEW_CONSOLE;
+	obs_log(LOG_INFO, "Spawning ndi-server with command line: %ls", cmdLine);
 
 	if (!CreateProcessW(exePath,          // application
 			    cmdLine,          // command line
@@ -601,21 +609,21 @@ ndi_server_connection_t create_ndi_server()
 	}
 
 	CloseHandle(conn.pi.hThread); // we don't need the thread handle
-	obs_log(LOG_INFO, "[Client] Server PID: %u.  Waiting for ready signal (up to 30 s)...\n", conn.pi.dwProcessId);
+	obs_log(LOG_INFO, "[Client] Server PID: %u.  Waiting for ready signal (up to 5 s)...", conn.pi.dwProcessId);
 
 	//    6.  Wait for the server to finish pre-faulting and signal ready
-	if (WaitForSingleObject(conn.hEvtReady, 30000) != WAIT_OBJECT_0) {
+	if (WaitForSingleObject(conn.hEvtReady, 5000) != WAIT_OBJECT_0) {
 		destroy_ndi_server(conn);
 		conn.error = 8;
-		obs_log(LOG_INFO, "[Client] Server did not signal ready within 30 s.\n");
+		obs_log(LOG_INFO, "[Client] ndi-server did not signal ready within 5 s.\n");
 		return conn;
 	}
-	obs_log(LOG_INFO, "[Client] Server is ready.\n");
+	obs_log(LOG_INFO, "[Client] ndi-server is ready.");
 
 	//    7.  Pre-fault our read view of the response buffer
-	obs_log(LOG_INFO, "[Client] Pre-faulting response view (%u MB)...\n", sizeof(ResponseBlock) / (1024u * 1024u));
+	obs_log(LOG_INFO, "[Client] Pre-faulting response view (%u MB)...", sizeof(ResponseBlock) / (1024u * 1024u));
 	PrefaultRegionRead(conn.pRsp, sizeof(ResponseBlock));
-	obs_log(LOG_INFO, "[Client] Pre-fault complete.\n\n");
+	obs_log(LOG_INFO, "[Client] Pre-fault complete.");
 
 	conn.running = true;
 	conn.receiver_created = false;
@@ -632,8 +640,13 @@ void create_ndi_receiver(ndi_server_connection_t &conn, NDIlib_recv_create_v3_t 
 	// Signal the consumer that new data is ready
 	conn.pReq->command = NDI_CREATE_RECEIVER;
 	SetEvent(conn.hEvtCmd);
-	WaitForSingleObject(conn.hEvtRsp, 5000);
-	obs_log(LOG_INFO, "NDI receiver creation command sent to server, out_written=%zu\n", out_written);
+	DWORD w = WaitForSingleObject(conn.hEvtRsp, 5000);
+	if (w != WAIT_OBJECT_0) {
+		obs_log(LOG_ERROR, "Timed out waiting for ndi-server create a receiverk");
+		destroy_ndi_server(conn);
+		return;
+	}
+	obs_log(LOG_INFO, "NDI receiver creation command sent to server, out_written=%zu", out_written);
 	conn.error = 0;
 	conn.receiver_created = true;
 	return;
@@ -662,15 +675,19 @@ void *ndi_source_thread(void *data)
 	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
 	NDIlib_audio_frame_v3_t audio_frame;
 	NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
+	bool use_framesync = false;
 
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
 
 	s->ndi_server = create_ndi_server(); // Will set running = true;
+	s->frameCount = 0;
 
 	// Main NDI receiver loop: BEGIN
 	//
 	while (s->running) {
+		s->s1 = os_gettime_ns();
+
 		//
 		// reset_ndi_receiver: BEGIN
 		//
@@ -760,13 +777,13 @@ void *ndi_source_thread(void *data)
 				obs_source_name, //
 				recv_desc.p_ndi_recv_name, recv_desc.source_to_connect_to.p_ndi_name);
 
-			// Try to create an ndi-server to manage the recv in another process but only if not framesync
-			if (!ndi_frame_sync && s->ndi_server.running)
+			// Try to create an ndi-server to manage the recv in another process
+			if (s->ndi_server.running)
 				create_ndi_receiver(s->ndi_server, recv_desc);
 
 			if (s->ndi_server.receiver_created) {
 				obs_log(LOG_DEBUG,
-					"'%s' ndi_source_thread: reset_ndi_receiver: create_ndi_receiver(s->ndi_server,resc_desc)",
+					"'%s' ndi_source_thread: reset_ndi_receiver: Created receiver on ndi-server",
 					obs_source_name);
 				ndi_receiver = nullptr;
 			} else {
@@ -825,7 +842,7 @@ void *ndi_source_thread(void *data)
 					// Tell ndi-server to use hardware acceleration
 					s->ndi_server.pReq->command = NDI_HARDWARE_ACCELERATION;
 					SetEvent(s->ndi_server.hEvtCmd);
-					WaitForSingleObject(s->ndi_server.hEvtRsp, 30000);
+					WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
 				} else {
 					NDIlib_metadata_frame_t hwAccelMetadata;
 					hwAccelMetadata.p_data = (char *)"<ndi_video_codec type=\"hardware\"/>";
@@ -836,7 +853,9 @@ void *ndi_source_thread(void *data)
 				}
 			}
 
-			if (s->config.framesync_enabled) {
+			use_framesync = s->config.framesync_enabled;
+
+			if (use_framesync && !s->ndi_server.receiver_created) {
 				timestamp_audio = 0;
 				timestamp_video = 0;
 				obs_log(LOG_DEBUG,
@@ -931,43 +950,77 @@ void *ndi_source_thread(void *data)
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
 		}
+		s->n1 = os_gettime_ns();
 
-		if (ndi_frame_sync) {
+		if (use_framesync) {
 			//
 			// ndi_frame_sync
 			//
+			if (!s->ndi_server.receiver_created) {
 
-			//
-			// AUDIO
-			//
-			audio_frame = {};
-			ndiLib->framesync_capture_audio_v2(
-				ndi_frame_sync, &audio_frame,
-				0,     // "The desired sample rate. 0 to get the source value."
-				0,     // "The desired channel count. 0 to get the source value."
-				1024); // "The desired sample count. 0 to get the source value."
-			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
-			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
-				timestamp_audio = audio_frame.timestamp;
-				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
-				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
-								 &obs_audio_frame);
+				//
+				// AUDIO
+				//
+				audio_frame = {};
+				ndiLib->framesync_capture_audio_v2(
+					ndi_frame_sync, &audio_frame,
+					0,     // "The desired sample rate. 0 to get the source value."
+					0,     // "The desired channel count. 0 to get the source value."
+					1024); // "The desired sample count. 0 to get the source value."
+				// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
+				if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
+					timestamp_audio = audio_frame.timestamp;
+					// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
+					ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
+									 &obs_audio_frame);
+				}
+				ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
+
+				//
+				// VIDEO
+				//
+				video_frame = {};
+				ndiLib->framesync_capture_video(ndi_frame_sync, &video_frame,
+								NDIlib_frame_format_type_progressive);
+				if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
+					timestamp_video = video_frame.timestamp;
+					// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
+					ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
+									 &obs_video_frame);
+				}
+				ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
+			} else {
+				// Request framesync audio and video frames from the ndi-server
+				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME_SYNC;
+				SetEvent(s->ndi_server.hEvtCmd);
+				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
+				if (w != WAIT_OBJECT_0) {
+					obs_log(LOG_ERROR, "Timed out waiting for ndi-server to return frame sync frame");
+					destroy_ndi_server(s->ndi_server);
+					s->config.reset_ndi_receiver = true;
+					continue;
+				}
+				uint8_t *in_buf = (uint8_t*)&s->ndi_server.pRsp->payload;
+				size_t frame_len = deserialize_frame(in_buf,
+						  sizeof(s->ndi_server.pRsp->payload), frame_received, &video_frame,
+						  &audio_frame);
+				in_buf += frame_len;
+				deserialize_frame(in_buf,
+								     sizeof(s->ndi_server.pRsp->payload)-frame_len,
+								     frame_received, &video_frame, &audio_frame);
+				if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
+					timestamp_audio = audio_frame.timestamp;
+					ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
+									 &obs_audio_frame);
+				}
+
+				if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
+					timestamp_video = video_frame.timestamp;
+					ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
+									 &obs_video_frame);
+				}
+
 			}
-			ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
-
-			//
-			// VIDEO
-			//
-			video_frame = {};
-			ndiLib->framesync_capture_video(ndi_frame_sync, &video_frame,
-							NDIlib_frame_format_type_progressive);
-			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
-				timestamp_video = video_frame.timestamp;
-				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
-				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
-			}
-			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
-
 			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		} else {
@@ -979,8 +1032,15 @@ void *ndi_source_thread(void *data)
 				// Request a frame from the ndi-server
 				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME;
 				SetEvent(s->ndi_server.hEvtCmd);
-				WaitForSingleObject(s->ndi_server.hEvtRsp, 30000);
-				deserialize_frame((const void *)&s->ndi_server.pRsp->payload,
+				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
+				if (w != WAIT_OBJECT_0) {
+					obs_log(LOG_ERROR,"Timed out waiting for ndi-server to return frame");
+					destroy_ndi_server(s->ndi_server);
+					s->config.reset_ndi_receiver = true;
+					continue;
+				}
+
+				deserialize_frame(s->ndi_server.pRsp->payload,
 						  sizeof(s->ndi_server.pRsp->payload), frame_received, &video_frame,
 						  &audio_frame);
 			} else
@@ -996,7 +1056,6 @@ void *ndi_source_thread(void *data)
 								 &obs_audio_frame);
 				if (!s->ndi_server.receiver_created)
 					ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
-				continue;
 			}
 
 			if (frame_received == NDIlib_frame_type_video) {
@@ -1007,12 +1066,28 @@ void *ndi_source_thread(void *data)
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 				if (!s->ndi_server.receiver_created)
 					ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
-				continue;
 			}
 
 			if (frame_received == NDIlib_frame_type_none) {
 				process_empty_frame(s);
 			}
+		}
+		s->o1 = os_gettime_ns();
+		s->frameTime = s->o1 - s->s1;
+		s->frameCount++;
+		s->totalFrameTime += s->frameTime;
+		s->maxFrameTime = s->frameTime > s->maxFrameTime ? s->frameTime : s->maxFrameTime;
+		s->minFrameTime = s->frameTime < s->minFrameTime ? s->frameTime : s->minFrameTime;
+
+		if (s->frameCount > 1000) {
+			obs_log(LOG_DEBUG,
+				"'%s' ndi_source_thread: frameCount=%d avg=%f ms, min=%f ms, max=%f ms",
+				obs_source_name, s->frameCount, (s->totalFrameTime / s->frameCount) / 1000000.0, s->minFrameTime / 1000000.0,
+				s->maxFrameTime / 1000000.0);
+			s->minFrameTime = ULLONG_MAX;
+			s->maxFrameTime = 0;
+			s->frameCount = 0;
+			s->totalFrameTime = 0;
 		}
 	}
 	//
