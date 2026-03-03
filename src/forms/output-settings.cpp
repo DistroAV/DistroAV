@@ -26,7 +26,9 @@
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QProcess>
 #include <QPointer>
+#include <QRegularExpression>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
@@ -119,17 +121,43 @@ If you are running a local build, don't forget to add your build info to the upd
 		}
 	});
 
-	auto ndiVersionText = QString(ndiLib->version());
+	/*
+	auto ndiVersionText = ndiLib ? QString(ndiLib->version()) : QString("NDI Library not found");
 	ui->labelNdiVersion->setText(makeLink("#", QT_TO_UTF8(ndiVersionText)));
 	connect(ui->labelNdiVersion, &QLabel::linkActivated, [this, ndiVersionText](const QString &) {
 		QApplication::clipboard()->setText(ndiVersionText);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
 					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
+*/
+
+	// If NDI library is detected, show the official NDI website button. Otherwise, show the Get NDI Library button that redirects to the NDI library download page.
+
+	ui->pushButtonGetNdi->setVisible(ndiLib == nullptr);
+	ui->pushButtonNdi->setVisible(false);
+	connect(ui->pushButtonGetNdi, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
+
+	connect(ui->pushButtonInstallNdi, &QPushButton::clicked, [this]() {
+#if defined(Q_OS_MACOS)
+		const auto script = QString("tell application \"Terminal\"\n"
+					    "activate\n"
+					    "do script \"brew reinstall libndi\"\n"
+					    "end tell");
+
+		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
+			QMessageBox::warning(this, "Unable to launch Terminal",
+					     "Could not launch Terminal to run: brew reinstall libndi");
+		}
+#else
+		QMessageBox::information(this, "Unsupported platform",
+					 "Automatic NDI installation is currently only supported on macOS.");
+#endif
+	});
 
 	// ui->pushButtonNdi->setText(QString("%1 %2").arg(ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
-	connect(ui->pushButtonNdi, &QPushButton::clicked,
-		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL))); });
+	// connect(ui->pushButtonNdi, &QPushButton::clicked,
+	// 	[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
 
 	connect(ui->pushButtonDiscord, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DISCORD_URL))); });
@@ -140,7 +168,38 @@ If you are running a local build, don't forget to add your build info to the upd
 	connect(ui->pushButtonWiki, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
-	ui->labelNdiRegisteredTrademark->setText(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+	auto applyStatus = [](QLabel *label, bool ok, const QString &message) {
+		label->setText(QString::fromUtf8("%1 %2").arg(ok ? "✓" : "✗", message));
+		label->setStyleSheet(ok ? "QWidget { color: #2e7d32; }" : "QWidget { color: #c62828; }");
+	};
+
+	QString ndiVersionShort;
+	if (ndiLib) {
+		ndiVersionShort =
+			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
+	}
+	auto ndiVersionCheckResult = !ndiVersionShort.isEmpty() &&
+				     is_version_supported(QT_TO_UTF8(ndiVersionShort), PLUGIN_MIN_NDI_VERSION);
+	applyStatus(ui->labelReqNdiStatus, ndiVersionCheckResult,
+		    ndiVersionCheckResult
+			    ? QString("OK (%1 ≥ %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)
+			    : (ndiVersionShort.isEmpty()
+				       ? QString("Missing (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
+				       : QString("Too old (%1 < %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)));
+
+	auto obsVersion = QString::fromUtf8(obs_get_version_string());
+	auto obsVersionCheckResult = is_version_supported(QT_TO_UTF8(obsVersion), PLUGIN_MIN_OBS_VERSION);
+	applyStatus(ui->labelReqObsStatus, obsVersionCheckResult,
+		    obsVersionCheckResult ? QString("OK (%1 ≥ %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION)
+					  : QString("Too old (%1 < %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION));
+
+	applyStatus(ui->labelReqDistroStatus, true, QString("Loaded (%1)").arg(PLUGIN_VERSION));
+
+	ui->labelNdiRegisteredTrademark->setTextFormat(Qt::RichText);
+	ui->labelNdiRegisteredTrademark->setTextInteractionFlags(Qt::TextBrowserInteraction);
+	ui->labelNdiRegisteredTrademark->setOpenExternalLinks(true);
+	ui->labelNdiRegisteredTrademark->setText(QString("%1 %2").arg(
+		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, QString(" - <a href=\"https://ndi.video\">ndi.video</a>")));
 }
 
 void OutputSettings::onFormAccepted()
@@ -202,8 +261,15 @@ void OutputSettings::showEvent(QShowEvent *)
 {
 	auto config = Config::Current();
 
-	// Set mainOutputGroupBox to enabled if main_output_is_supported()
-	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
+	// Enable Output (Main & Preview) settings as long as Main Output can be supported.
+
+	if (main_output_is_supported()) {
+		ui->mainOutputGroupBox->setEnabled(true);
+		ui->previewOutputGroupBox->setEnabled(true);
+	} else {
+		ui->mainOutputGroupBox->setEnabled(false);
+		ui->previewOutputGroupBox->setEnabled(false);
+	}
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
@@ -212,7 +278,7 @@ void OutputSettings::showEvent(QShowEvent *)
 	auto lastError = main_output_last_error();
 	ui->mainOutputLastError->setText(lastError);
 	if (lastError.isEmpty()) {
-		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space is error is no longer valid.
+		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space if error is no longer valid.
 	} else {
 		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());
 	}

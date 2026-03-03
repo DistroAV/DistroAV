@@ -487,11 +487,12 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	}
 
 	auto module_hash_sha256 = GetObsCurrentModuleSHA256();
+	auto ndiVersionForUserAgent = ndiLib ? QString(ndiLib->version()) : QString("NDI/Unavailable");
 	auto userAgent = QString("DistroAV/%1 (OBS/%2 %3; %4; %5; %6) %7")
 				 .arg(pluginVersion)
 				 .arg(obs_get_version_string())
 				 .arg(obsGuid)
-				 .arg(ndiLib->version())
+				 .arg(ndiVersionForUserAgent)
 				 .arg(QSysInfo::prettyProductName())
 				 .arg(QSysInfo::currentCpuArchitecture())
 				 .arg(module_hash_sha256);
