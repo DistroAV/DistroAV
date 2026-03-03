@@ -149,11 +149,10 @@ typedef struct ndi_source_t {
 	ndi_server_connection_t ndi_server;
 	uint64_t s1, n1, o1;
 	uint64_t frameCount = 0;
-	uint64_t frameTime = 0;	
+	uint64_t frameTime = 0;
 	uint64_t totalFrameTime = 0;
 	uint64_t minFrameTime = ULLONG_MAX;
 	uint64_t maxFrameTime = 0;
-
 
 } ndi_source_t;
 
@@ -995,19 +994,18 @@ void *ndi_source_thread(void *data)
 				SetEvent(s->ndi_server.hEvtCmd);
 				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
 				if (w != WAIT_OBJECT_0) {
-					obs_log(LOG_ERROR, "Timed out waiting for ndi-server to return frame sync frame");
+					obs_log(LOG_ERROR,
+						"Timed out waiting for ndi-server to return frame sync frame");
 					destroy_ndi_server(s->ndi_server);
 					s->config.reset_ndi_receiver = true;
 					continue;
 				}
-				uint8_t *in_buf = (uint8_t*)&s->ndi_server.pRsp->payload;
-				size_t frame_len = deserialize_frame(in_buf,
-						  sizeof(s->ndi_server.pRsp->payload), frame_received, &video_frame,
-						  &audio_frame);
-				in_buf += frame_len;
-				deserialize_frame(in_buf,
-								     sizeof(s->ndi_server.pRsp->payload)-frame_len,
+				uint8_t *in_buf = (uint8_t *)&s->ndi_server.pRsp->payload;
+				size_t frame_len = deserialize_frame(in_buf, sizeof(s->ndi_server.pRsp->payload),
 								     frame_received, &video_frame, &audio_frame);
+				in_buf += frame_len;
+				deserialize_frame(in_buf, sizeof(s->ndi_server.pRsp->payload) - frame_len,
+						  frame_received, &video_frame, &audio_frame);
 				if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 					timestamp_audio = audio_frame.timestamp;
 					ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
@@ -1019,7 +1017,6 @@ void *ndi_source_thread(void *data)
 					ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
 									 &obs_video_frame);
 				}
-
 			}
 			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -1034,15 +1031,14 @@ void *ndi_source_thread(void *data)
 				SetEvent(s->ndi_server.hEvtCmd);
 				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
 				if (w != WAIT_OBJECT_0) {
-					obs_log(LOG_ERROR,"Timed out waiting for ndi-server to return frame");
+					obs_log(LOG_ERROR, "Timed out waiting for ndi-server to return frame");
 					destroy_ndi_server(s->ndi_server);
 					s->config.reset_ndi_receiver = true;
 					continue;
 				}
 
-				deserialize_frame(s->ndi_server.pRsp->payload,
-						  sizeof(s->ndi_server.pRsp->payload), frame_received, &video_frame,
-						  &audio_frame);
+				deserialize_frame(s->ndi_server.pRsp->payload, sizeof(s->ndi_server.pRsp->payload),
+						  frame_received, &video_frame, &audio_frame);
 			} else
 				frame_received =
 					ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
@@ -1080,10 +1076,9 @@ void *ndi_source_thread(void *data)
 		s->minFrameTime = s->frameTime < s->minFrameTime ? s->frameTime : s->minFrameTime;
 
 		if (s->frameCount > 1000) {
-			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: frameCount=%d avg=%f ms, min=%f ms, max=%f ms",
-				obs_source_name, s->frameCount, (s->totalFrameTime / s->frameCount) / 1000000.0, s->minFrameTime / 1000000.0,
-				s->maxFrameTime / 1000000.0);
+			obs_log(LOG_DEBUG, "'%s' ndi_source_thread: frameCount=%d avg=%f ms, min=%f ms, max=%f ms",
+				obs_source_name, s->frameCount, (s->totalFrameTime / s->frameCount) / 1000000.0,
+				s->minFrameTime / 1000000.0, s->maxFrameTime / 1000000.0);
 			s->minFrameTime = ULLONG_MAX;
 			s->maxFrameTime = 0;
 			s->frameCount = 0;

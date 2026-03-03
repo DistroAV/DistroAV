@@ -351,7 +351,7 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 // The buffer memory must remain valid for the lifetime of the returned frame pointers.
 // Returns true on success, false on failure.
 static size_t deserialize_frame(const uint8_t *buf, size_t buf_len, NDIlib_frame_type_e &out_type,
-			      NDIlib_video_frame_v2_t *out_video, NDIlib_audio_frame_v3_t *out_audio)
+				NDIlib_video_frame_v2_t *out_video, NDIlib_audio_frame_v3_t *out_audio)
 {
 	if (!buf || buf_len < sizeof(uint32_t))
 		return 0;

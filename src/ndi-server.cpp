@@ -95,7 +95,7 @@ static void ClientMonitorThread(DWORD clientPid)
 int main(int argc, char *argv[])
 {
 	if (false) {
-    //if (!IsDebuggerPresent()) {
+		//if (!IsDebuggerPresent()) {
 		// Avoid using DebugBreak() unconditionally - if JIT dialog is dismissed the process can be
 		// terminated. Instead, print PID and wait for a debugger to attach.
 		DWORD pid = GetCurrentProcessId();
@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 			std::vector<std::string> strings;
 
 			deserialize_recv_desc(&pReq->payload, sizeof(pReq->payload), recv_desc, strings);
-			if (ndi_receiver != nullptr) {				
+			if (ndi_receiver != nullptr) {
 				ndi->framesync_destroy(ndi_frame_sync);
 				ndi->recv_destroy(ndi_receiver);
 				ndi_receiver = nullptr;
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 			ndi_receiver = ndi->recv_create_v3(&recv_desc);
 
 			printf("Received ndi name: '%s'\n", recv_desc.source_to_connect_to.p_ndi_name);
-			if (ndi_receiver) {			
+			if (ndi_receiver) {
 				ndi_frame_sync = ndi->framesync_create(ndi_receiver);
 				printf("NDI Receiver created successfully!\n");
 			} else {
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 				ndi->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 			switch (frame_received) {
 			case NDIlib_frame_type_video:
-				serialize_frame(frame_received, (const void *)&video_frame, (uint8_t*)&pRsp->payload,
+				serialize_frame(frame_received, (const void *)&video_frame, (uint8_t *)&pRsp->payload,
 						sizeof(pRsp->payload));
 				ndi->recv_free_video_v2(ndi_receiver, &video_frame);
 				break;
@@ -291,11 +291,10 @@ int main(int argc, char *argv[])
 		}
 		case NDI_CAPTURE_FRAME_SYNC: {
 			audio_frame = {};
-			ndi->framesync_capture_audio_v2(
-				ndi_frame_sync, &audio_frame,
-				0,     // "The desired sample rate. 0 to get the source value."
-				0,     // "The desired channel count. 0 to get the source value."
-				1024); // "The desired sample count. 0 to get the source value."
+			ndi->framesync_capture_audio_v2(ndi_frame_sync, &audio_frame,
+							0, // "The desired sample rate. 0 to get the source value."
+							0, // "The desired channel count. 0 to get the source value."
+							1024); // "The desired sample count. 0 to get the source value."
 			audiosamples = audio_frame.no_samples;
 
 			// Prepare output buffer pointer/size
@@ -326,7 +325,7 @@ int main(int argc, char *argv[])
 			}
 
 			ndi->framesync_free_video(ndi_frame_sync, &video_frame);
-			
+
 			// verify serialization succeeded and we didn't exceed buffer capacity
 			/*
 			NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
