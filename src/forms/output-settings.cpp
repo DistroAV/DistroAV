@@ -174,6 +174,7 @@ If you are running a local build, don't forget to add your build info to the upd
 
 	// Auto re-install DistroAV Plugin Button
 	connect(ui->pushButtonInstallPlugin, &QPushButton::clicked, [this]() {
+		obs_log(LOG_DEBUG, "Re-Install DistroAV Plugin button clicked");
 #if defined(Q_OS_MACOS)
 		const auto script = QString("tell application \"Terminal\"\n"
 					    "activate\n"
@@ -185,18 +186,21 @@ If you are running a local build, don't forget to add your build info to the upd
 					     "Could not launch Terminal to run: brew reinstall distroav");
 		}
 #elif defined(Q_OS_WIN)
-			if (!QProcess::startDetached(
-					"powershell.exe",
-					QStringList()
-						<< "-NoExit"
-						<< "-Command"
-						<< "winget install -e DistroAV.DistroAV; if ($LASTEXITCODE -eq 0) { exit }")) {
-				QMessageBox::warning(this, "Unable to launch PowerShell",
-							"Could not launch PowerShell to run: winget install -e DistroAV.DistroAV");
-			}
+		if (!QProcess::startDetached(
+				"cmd.exe",
+				QStringList()
+					<< "/c"
+					<< "start"
+					<< "cmd.exe"
+					<< "/c"
+					<< "winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements || pause")) {
+			QMessageBox::warning(this, "Unable to launch cmd.exe",
+					     "Could not launch cmd.exe to run: winget install -e --id DistroAV.DistroAV");
+			obs_log(LOG_DEBUG, "Install DistroAV button: something went wrong");
+		}
 #else
 			QMessageBox::information(this, "Unsupported platform",
-						"Automatic NDI installation is currently only supported on macOS and Windows.");
+						"Automatic DistroAV installation is currently only supported on macOS and Windows.");
 #endif
 	});
 
@@ -205,6 +209,7 @@ If you are running a local build, don't forget to add your build info to the upd
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
 
 	connect(ui->pushButtonInstallNdi, &QPushButton::clicked, [this]() {
+		obs_log(LOG_DEBUG, "Install NDI button clicked");
 #if defined(Q_OS_MACOS)
 		const auto script = QString("tell application \"Terminal\"\n"
 					    "activate\n"
@@ -217,13 +222,16 @@ If you are running a local build, don't forget to add your build info to the upd
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
-				"powershell.exe",
+				"cmd.exe",
 				QStringList()
-					<< "-NoExit"
-					<< "-Command"
-					<< "winget install -e NDI.NDIRuntime; if ($LASTEXITCODE -eq 0) { exit }")) {
-			QMessageBox::warning(this, "Unable to launch PowerShell",
-					     "Could not launch PowerShell to run: winget install -e NDI.NDIRuntime");
+					<< "/c"
+					<< "start"
+					<< "cmd.exe"
+					<< "/c"
+					<< "winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements || pause")) {
+			QMessageBox::warning(this, "Unable to launch cmd.exe",
+					     "Could not launch cmd.exe to run: winget install -e --id NDI.NDIRuntime");
+			obs_log(LOG_DEBUG, "Install NDI button: something went wrong");
 		}
 #else
 		QMessageBox::information(this, "Unsupported platform",
