@@ -11,8 +11,8 @@ on:
 #  schedule:
 #    - cron:  '0 3 * * *' # Scheduled to run daily at 03:00
 
-# concurrency:
-#  group: '${{ github.repository }} @ publish-winget'
+ concurrency:
+  group: '${{ github.repository }} @ publish-winget'
 
 jobs:
   publish-winget-package:
@@ -21,14 +21,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Use Winget-Releaser Action
-        uses: vedantmgoyal9/winget-releaser@main
+        uses: vedantmgoyal9/winget-releaser@v2
         with: 
           # identifier: DistroAV.DistroAV # The hardcoded identifier of the package to update
           identifier: ${{ join(split(github.repository, '/'), '.') }} # The dynamic identifier of the package to update. Will use Owner.Repo format.
           # release-repository: DistroAV/DistroAV # The hardcoded repository where the release is created, in the format owner/repo
           release-repository: ${{ github.repository }} # The dynamic repository where the release is created, in the format owner/repo
-          installers-regex: '.*windows-x64-Installer.exe$' # Tune for release assets matching - TO DO: update when we have more variants.
+          installers-regex: '\.*windows-x64-Installer\.exe$' # Tune for release assets matching - TO DO: update when we have more variants.
           max-versions-to-keep: 5 # Optional, defaults to 10
-          release-tag : ${{ inputs.versionTargeted }} # Custom release tag targeted for the release, defaults to the tag of the release that triggered the workflow
+          release-tag: ${{ inputs.versionTargeted || github.event.release.tag_name }} # Custom release tag targeted for the release. TBC if an empty string would cause issues
           # release-notes-url: https://example.com/release-notes/${{ github.event.release.tag_name }} # URL to package version's release notes. To update if we put the relase notes on the website one day. Optional, defaults to empty string.
           token: ${{ secrets.WINGET_UPDATER_TOKEN }}
