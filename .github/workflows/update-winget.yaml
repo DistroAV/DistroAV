@@ -16,6 +16,9 @@ on:
 concurrency:
   group: '${{ github.repository }} @ publish-winget'
 
+env:
+  PACKAGE_IDENTIFIER: ${{ format('{0}.{1}', github.repository_owner, github.event.repository.name) }}
+
 jobs:
   publish-winget-package:
     name: Publish WinGet Package Job
@@ -26,7 +29,7 @@ jobs:
         uses: vedantmgoyal9/winget-releaser@v2
         with: 
           # identifier: DistroAV.DistroAV # The hardcoded identifier of the package to update
-          identifier: ${{ join(split(github.repository, '/'), '.') }} # The dynamic identifier of the package to update. Will use Owner.Repo format.
+          identifier: ${{ env.PACKAGE_IDENTIFIER }} # The dynamic identifier of the package to update. Will use Owner.Repo format.
           # release-repository: DistroAV/DistroAV # The hardcoded repository where the release is created, in the format owner/repo
           release-repository: ${{ github.repository }} # The dynamic repository where the release is created, in the format owner/repo
           installers-regex: '.*windows-x64-Installer\.exe$' # Tune for release assets matching - TO DO: update when we have more variants.
