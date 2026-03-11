@@ -5,10 +5,6 @@ cmake --preset macos
 export CI=
 export GITHUB_EVENT_NAME=push
 
-echo "Setting up CXX/CC Env for Mac OS..."
-export CXX=/opt/homebrew/opt/llvm/bin/clang++
-export CC=/opt/homebrew/opt/llvm/bin/clang
-
 trap 'unset CI GITHUB_EVENT_NAME' EXIT
 
 echo "Building..."
