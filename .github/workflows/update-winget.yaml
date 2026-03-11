@@ -1,6 +1,4 @@
 name: Update WinGet Package Workflow
-# This Github Action uses https://github.com/vedantmgoyal9/winget-releaser & is based on additionnal work by https://github.com/michidk/winget-updater & https://github.com/russellbanks/Komac
-# Goal: Make a "ready-to-use" workflow for both automatic (on GitHub releases) and manual dispatches, with a focus on minimal maintenance and ease of use.
 on:
   release:
     types: [released]
