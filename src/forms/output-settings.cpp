@@ -176,14 +176,16 @@ If you are running a local build, don't forget to add your build info to the upd
 	connect(ui->pushButtonInstallPlugin, &QPushButton::clicked, [this]() {
 		obs_log(LOG_DEBUG, "Re-Install DistroAV Plugin button clicked");
 #if defined(Q_OS_MACOS)
-		const auto script = QString("tell application \"Terminal\"\n"
-					    "activate\n"
-					    "do script \"brew tap distroav/distroav && brew reinstall --cask distroav/distroav/distroav && exit\"\n"
-					    "end tell");
+		const auto script = QString(
+			"tell application \"Terminal\"\n"
+			"activate\n"
+			"do script \"brew tap distroav/distroav && brew reinstall --cask distroav/distroav/distroav && exit\"\n"
+			"end tell");
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
-			QMessageBox::warning(this, "Unable to launch Terminal",
-					     "Could not launch Terminal to run: brew reinstall --cask distroav/distroav/distroav");
+			QMessageBox::warning(
+				this, "Unable to launch Terminal",
+				"Could not launch Terminal to run: brew reinstall --cask distroav/distroav/distroav");
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
