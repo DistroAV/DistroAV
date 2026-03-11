@@ -45,16 +45,25 @@ Windows ![WinGet Package Version](https://img.shields.io/winget/v/DistroAV.Distr
 winget install --exact --id DistroAV.DistroAV
 ```
 
-MacOS ![Homebrew Cask Version](https://img.shields.io/homebrew/cask/v/distroav?link=https%3A%2F%2Fformulae.brew.sh%2Fcask%2Fdistroav)
+MacOS
 ```
-brew install --cask distroav
+brew install --cask distroav/distroav/distroav
 ```
+
 
 Linux ([Flatpak](https://flatpak.org/)) ![Flathub Version](https://img.shields.io/flathub/v/com.obsproject.Studio.Plugin.DistroAV?link=https%3A%2F%2Fflathub.org%2Fapps%2Fcom.obsproject.Studio.Plugin.DistroAV)
 ```
 flatpak install com.obsproject.Studio com.obsproject.Studio.Plugin.DistroAV
 sudo flatpak override com.obsproject.Studio --system-talk-name=org.freedesktop.Avahi
 ```
+Maintained by [tytan652](https://github.com/tytan652)
+
+
+Ubuntu ![Ubuntu Package Version](https://img.shields.io/ubuntu/v/distroav?link=https%3A%2F%2Fpackages.ubuntu.com%2Fsource%2Fresolute%2Fdistroav)
+```
+apt install distoav
+```
+Maintained by [eeickmeyer](https://github.com/eeickmeyer)
 
 Any other options, or errors: See [release page](https://distroav.org/download) and [installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
 
