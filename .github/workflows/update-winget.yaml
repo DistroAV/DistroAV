@@ -31,6 +31,7 @@ jobs:
           release-repository: ${{ github.repository }} # The dynamic repository where the release is created, in the format owner/repo
           installers-regex: '.*windows-x64-Installer\.exe$' # Tune for release assets matching - TO DO: update when we have more variants.
           max-versions-to-keep: 5 # Optional, defaults to 10
-          release-tag: ${{ inputs.versionTargeted || github.event.release.tag_name }} # Custom release tag targeted for the release. TBC if an empty string would cause issues
+          release-tag: ${{ inputs.versionTargeted || github.event.release.tag_name }} # Custom release tag targeted for the release. TBC if an empty string would cause issues - Optional
+          release-notes-url: https://github.com/${{ github.repository }}/releases/tag/${{ inputs.versionTargeted || github.event.release.tag_name }}
           # release-notes-url: https://example.com/release-notes/${{ github.event.release.tag_name }} # URL to package version's release notes. To update if we put the relase notes on the website one day. Optional, defaults to empty string.
           token: ${{ secrets.WINGET_UPDATER_TOKEN }}
