@@ -31,6 +31,10 @@
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
+extern void ndi_source_map_remove(obs_source_t *obs_source);
+extern void ndi_source_map_clear();
+extern void update_backups_sources();
+
 extern const NDIlib_v6 *ndiLib;
 
 /*

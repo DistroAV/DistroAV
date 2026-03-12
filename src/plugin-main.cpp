@@ -368,6 +368,7 @@ bool obs_module_load(void)
 							preview_output_init();
 						},
 						Qt::QueuedConnection);
+					ndi_source_map_clear();
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
 					main_output_deinit();
@@ -376,6 +377,10 @@ bool obs_module_load(void)
 					main_output_deinit();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 					main_output_init();
+				} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGING) {
+					ndi_source_map_clear();
+				} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {
+					update_backups_sources();
 				}
 			},
 			nullptr);

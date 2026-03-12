@@ -57,6 +57,7 @@
 #define PROP_BEHAVIOR_KEEP_ACTIVE 0
 #define PROP_BEHAVIOR_STOP_RESUME_BLANK 1
 #define PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME 2
+#define PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP 3
 
 #define PROP_TIMEOUT_CLEAR_CONTENT 0
 #define PROP_TIMEOUT_KEEP_CONTENT 1
@@ -141,21 +142,157 @@ typedef struct ndi_source_t {
 
 	bool running;
 	pthread_t av_thread;
+	std::mutex source_mutex;
+	bool visible;
 
 	uint32_t width;
 	uint32_t height;
 
 	uint64_t last_frame_timestamp;
 	ndi_server_connection_t ndi_server;
-	uint64_t s1, n1, o1;
-	uint64_t frameCount = 0;
-	uint64_t frameTime = 0;
-	uint64_t totalFrameTime = 0;
-	uint64_t minFrameTime = ULLONG_MAX;
-	uint64_t maxFrameTime = 0;
+	void *backup;
 
 } ndi_source_t;
+static std::map<obs_source_t *, ndi_source_t *> source_ndi_map;
+static std::mutex source_ndi_map_mutex;
+void ndi_source_map_add(obs_source_t *obs_source, ndi_source_t *ndi_source)
+{
+	std::lock_guard<std::mutex> lock(source_ndi_map_mutex);
+	source_ndi_map[obs_source] = ndi_source;
+}
+void ndi_source_map_remove(obs_source_t *obs_source)
+{
+	std::lock_guard<std::mutex> lock(source_ndi_map_mutex);
+	source_ndi_map.erase(obs_source);
+}
+void ndi_source_map_clear()
+{
+	std::lock_guard<std::mutex> lock(source_ndi_map_mutex);
+	source_ndi_map.clear();
+}
+ndi_source_t *ndi_source_map_get(obs_source_t *obs_source)
+{
+	std::lock_guard<std::mutex> lock(source_ndi_map_mutex);
+	auto it = source_ndi_map.find(obs_source);
+	if (it != source_ndi_map.end()) {
+		return it->second;
+	}
+	return nullptr;
+}
 
+/**
+ * Returns a list of all obs_source_t* in the same scene as the given source.
+ * The passed-in source itself is excluded from the results.
+ *
+ * @param target  An obs_source_t* that is a scene item within a scene.
+ * @return        A vector of obs_source_t* (non-owning, do not release).
+ *                Returns empty if the source is not found in any scene.
+ */
+std::vector<obs_source_t *> GetSourcesInSameScene(obs_source_t *target)
+{
+	std::vector<obs_source_t *> result;
+
+	if (!target)
+		return result;
+
+	// --- 1. Find which scene contains 'target' ---
+
+	struct FindContext {
+		obs_source_t *target;
+		obs_scene_t *foundScene = nullptr;
+	};
+
+	FindContext findCtx{target};
+
+	// Enumerate every source; check whether it is a scene that contains target.
+	obs_enum_scenes(
+		[](void *param, obs_source_t *sceneSource) -> bool {
+			auto *ctx = static_cast<FindContext *>(param);
+			obs_scene_t *scene = obs_scene_from_source(sceneSource);
+			if (!scene)
+				return true; // keep searching
+
+			// Check whether target lives in this scene.
+			obs_scene_item *item = obs_scene_find_source(scene, obs_source_get_name(ctx->target));
+			if (item) {
+				ctx->foundScene = scene;
+				return false; // stop enumeration
+			}
+			return true;
+		},
+		&findCtx);
+
+	if (!findCtx.foundScene)
+		return result; // target not found in any scene
+
+	// --- 2. Collect every *other* source in that scene ---
+
+	struct CollectContext {
+		obs_source_t *target;
+		std::vector<obs_source_t *> *out;
+	};
+
+	CollectContext collectCtx{target, &result};
+
+	obs_scene_enum_items(
+		findCtx.foundScene,
+		[](obs_scene_t *, obs_scene_item *item, void *param) -> bool {
+			auto *ctx = static_cast<CollectContext *>(param);
+			obs_source_t *src = obs_sceneitem_get_source(item);
+
+			if (src && src != ctx->target)
+				ctx->out->push_back(src);
+
+			return true; // continue enumeration
+		},
+		&collectCtx);
+
+	return result;
+}
+
+// Update all of the main ndi sources in the ndi_source_map with any backup sources
+void update_backups_sources()
+{
+	std::map<obs_source_t *, ndi_source_t *> map = {};
+
+	{
+		std::lock_guard<std::mutex> lock(source_ndi_map_mutex);
+		map = source_ndi_map;
+	}
+
+	for (auto &[obs_source, ndi_source] : map) {
+		if (ndi_source->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE) {
+			auto scene_sources = GetSourcesInSameScene(obs_source);
+			{
+				std::lock_guard<std::mutex> lock(ndi_source->source_mutex);
+				ndi_source->visible = true;
+			}
+			for (auto &backup_source : scene_sources) {
+				auto backup_ndi_source = ndi_source_map_get(backup_source);
+				if (backup_ndi_source) {						
+					if (backup_ndi_source->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP) {
+						obs_log(LOG_DEBUG, "Updated source '%s' to have '%s' as a backup",
+							obs_source_get_name(obs_source),
+								obs_source_get_name(backup_source));
+						auto bs = ndi_source_map_get(backup_source);
+						{
+							std::lock_guard<std::mutex> lock(bs->source_mutex);
+							bs->visible = false;
+						}
+						{
+							std::lock_guard<std::mutex> lock(ndi_source->source_mutex);
+							ndi_source->backup = bs;
+						}
+						
+					} else {
+						std::lock_guard<std::mutex> lock(ndi_source->source_mutex);	
+						ndi_source->backup = nullptr;
+					}
+				}
+			}
+		}
+	}
+}
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 {
 	if (!context)
@@ -265,14 +402,18 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	}
 
 	obs_property_t *behavior_list = obs_properties_add_list(props, PROP_BEHAVIOR,
-								obs_module_text("NDIPlugin.SourceProps.Behavior"),
-								OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+						obs_module_text("NDIPlugin.SourceProps.Behavior"),
+						OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+ 
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.KeepActive"),
-				  PROP_BEHAVIOR_KEEP_ACTIVE);
+ 				 PROP_BEHAVIOR_KEEP_ACTIVE);
+	// Low-impact keep-active option
+	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.KeepActiveBackup"),
+ 			         PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP);
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeBlank"),
-				  PROP_BEHAVIOR_STOP_RESUME_BLANK);
+ 				 PROP_BEHAVIOR_STOP_RESUME_BLANK);
 	obs_property_list_add_int(behavior_list, obs_module_text("NDIPlugin.SourceProps.Behavior.StopResumeLastFrame"),
-				  PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
+ 				 PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 
 	obs_property_t *timeout_list = obs_properties_add_list(props, PROP_TIMEOUT,
 							       obs_module_text("NDIPlugin.SourceProps.Timeout"),
@@ -387,9 +528,25 @@ void deactivate_source_output_video_texture(ndi_source_t *source)
 	obs_source_output_video(source->obs_source, NULL);
 }
 
-void process_empty_frame(ndi_source_t *source)
+void process_empty_frame(ndi_source_t *s)
 {
-	if (source->config.timeout_action == PROP_TIMEOUT_KEEP_CONTENT)
+	// If the source is configured to keep the source active with a backup, then stop showing the main source
+	// start showing the backup source if it exists
+	{
+		std::lock_guard<std::mutex> lock(s->source_mutex);
+		if (s->visible && s->backup) {
+			obs_log(LOG_DEBUG, "%s source no longer receiving, turning on backup source '%s'",
+				obs_source_get_name(s->obs_source), obs_source_get_name(((ndi_source_t *)s->backup)->obs_source));
+			{
+				std::lock_guard<std::mutex> lock(((ndi_source_t *)s->backup)->source_mutex);
+				((ndi_source_t *)s->backup)->visible = true; // Turn the backup on
+			}
+			s->visible = false;
+			deactivate_source_output_video_texture(s); // black out primary immediately
+			return;
+		}
+	}
+	if (s->config.timeout_action == PROP_TIMEOUT_KEEP_CONTENT)
 		return;
 
 	uint64_t now = os_gettime_ns();
@@ -397,10 +554,10 @@ void process_empty_frame(ndi_source_t *source)
 	// 3 second timeout on no new data received for the source
 	uint64_t source_timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(3)).count();
 
-	uint64_t target_timestamp = source->last_frame_timestamp + source_timeout;
+	uint64_t target_timestamp = s->last_frame_timestamp + source_timeout;
 
 	if (now > target_timestamp) {
-		deactivate_source_output_video_texture(source);
+		deactivate_source_output_video_texture(s);
 	}
 }
 
@@ -417,7 +574,7 @@ void destroy_ndi_server(ndi_server_connection_t &conn)
 	if (conn.running) {
 		conn.pReq->command = NDI_SHUTDOWN;
 		SetEvent(conn.hEvtCmd);
-		WaitForSingleObject(conn.hEvtRsp, 5000);
+		WaitForSingleObject(conn.hEvtRsp, NDI_SERVER_WAIT);
 	}
 
 	if (conn.pReq)
@@ -587,12 +744,14 @@ ndi_server_connection_t create_ndi_server()
 	conn.pi = {};
 	ZeroMemory(&conn.si, sizeof(conn.si));
 	conn.si.cb = sizeof(conn.si);
-	conn.si.dwFlags |= STARTF_USESHOWWINDOW;
-	conn.si.wShowWindow = SW_HIDE;
+	if (!NDI_SERVER_DEBUG) {
+		conn.si.dwFlags |= STARTF_USESHOWWINDOW;
+		conn.si.wShowWindow = SW_HIDE;
+	}
 
 	ZeroMemory(&conn.pi, sizeof(conn.pi));
 	DWORD creationFlags = CREATE_NO_WINDOW;
-	//creationFlags = CREATE_NEW_CONSOLE;
+	if (NDI_SERVER_DEBUG) creationFlags = CREATE_NEW_CONSOLE;
 	obs_log(LOG_INFO, "Spawning ndi-server with command line: %ls", cmdLine);
 
 	if (!CreateProcessW(exePath,          // application
@@ -611,7 +770,7 @@ ndi_server_connection_t create_ndi_server()
 	obs_log(LOG_INFO, "[Client] Server PID: %u.  Waiting for ready signal (up to 5 s)...", conn.pi.dwProcessId);
 
 	//    6.  Wait for the server to finish pre-faulting and signal ready
-	if (WaitForSingleObject(conn.hEvtReady, 5000) != WAIT_OBJECT_0) {
+	if (WaitForSingleObject(conn.hEvtReady, NDI_SERVER_WAIT) != WAIT_OBJECT_0) {
 		destroy_ndi_server(conn);
 		conn.error = 8;
 		obs_log(LOG_INFO, "[Client] ndi-server did not signal ready within 5 s.\n");
@@ -639,7 +798,7 @@ void create_ndi_receiver(ndi_server_connection_t &conn, NDIlib_recv_create_v3_t 
 	// Signal the consumer that new data is ready
 	conn.pReq->command = NDI_CREATE_RECEIVER;
 	SetEvent(conn.hEvtCmd);
-	DWORD w = WaitForSingleObject(conn.hEvtRsp, 5000);
+	DWORD w = WaitForSingleObject(conn.hEvtRsp, NDI_SERVER_WAIT);
 	if (w != WAIT_OBJECT_0) {
 		obs_log(LOG_ERROR, "Timed out waiting for ndi-server create a receiverk");
 		destroy_ndi_server(conn);
@@ -680,12 +839,10 @@ void *ndi_source_thread(void *data)
 	int64_t timestamp_video = 0;
 
 	s->ndi_server = create_ndi_server(); // Will set running = true;
-	s->frameCount = 0;
 
 	// Main NDI receiver loop: BEGIN
 	//
 	while (s->running) {
-		s->s1 = os_gettime_ns();
 
 		//
 		// reset_ndi_receiver: BEGIN
@@ -841,7 +998,7 @@ void *ndi_source_thread(void *data)
 					// Tell ndi-server to use hardware acceleration
 					s->ndi_server.pReq->command = NDI_HARDWARE_ACCELERATION;
 					SetEvent(s->ndi_server.hEvtCmd);
-					WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
+					WaitForSingleObject(s->ndi_server.hEvtRsp, NDI_SERVER_WAIT);
 				} else {
 					NDIlib_metadata_frame_t hwAccelMetadata;
 					hwAccelMetadata.p_data = (char *)"<ndi_video_codec type=\"hardware\"/>";
@@ -886,16 +1043,23 @@ void *ndi_source_thread(void *data)
 		// If not then micro-pause and restart the loop.
 		//
 		if (!s->ndi_server.receiver_created && ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
-#if 0
-			obs_log(LOG_DEBUG,
-				"'%s' ndi_source_thread: No connection; sleep and restart loop",
-				obs_source_name);
-#endif
 			process_empty_frame(s);
 
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
+		}
+		
+		// If we are here then we have a connection. If we are not visible and have a backup showing, then 
+		// turn off the backup and turn this this source on.
+		if (!s->ndi_server.receiver_created && !s->visible && s->backup &&
+		    ((ndi_source_t *)s->backup)->visible)
+		{
+			obs_log(LOG_DEBUG, "%s source receiving now, turning off backup source '%s'",
+				obs_source_name, obs_source_get_name(((ndi_source_t *)s->backup)->obs_source));
+			((ndi_source_t *)s->backup)->visible = false; // Turn the backup off
+			s->visible = true; 
+			deactivate_source_output_video_texture((ndi_source_t *)s->backup); // blank out backup immediately
 		}
 
 		//
@@ -940,16 +1104,16 @@ void *ndi_source_thread(void *data)
 		}
 
 		//
-		// If this source isn't showing in OBS then don't receive any frames from NDI. This occurs when multiple
-		// scenes have NDI sources that are not being shown and behavior is set to Keep Active. Without this check,
-		// the fps of OBS can decrease dramatically, especially with multiple 4K 60 sources.
+		// If this source isn't showing in OBS or is not visible, then don't receive any frames from NDI. Not showing 
+		// occurs when multiple scenes have NDI sources that are not being shown and behavior is set to KeepAlive. 
+		// Not being visble can happen when a KeepAlive backup is not needed (primary is receiving frames) or when the backup 
+		// is needed because the primary is not receiving frames.
 		//
-		if (!obs_source_showing(s->obs_source)) {
+		if (!s->ndi_server.receiver_created && (!obs_source_showing(s->obs_source) || !s->visible)) {
 			// Avoid busy-waiting when the source is hidden but kept alive.
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
 		}
-		s->n1 = os_gettime_ns();
 
 		if (use_framesync) {
 			//
@@ -992,13 +1156,31 @@ void *ndi_source_thread(void *data)
 				// Request framesync audio and video frames from the ndi-server
 				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME_SYNC;
 				SetEvent(s->ndi_server.hEvtCmd);
-				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
+				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, NDI_SERVER_WAIT);
 				if (w != WAIT_OBJECT_0) {
 					obs_log(LOG_ERROR,
 						"Timed out waiting for ndi-server to return frame sync frame");
 					destroy_ndi_server(s->ndi_server);
 					s->config.reset_ndi_receiver = true;
 					continue;
+				}
+				if (s->ndi_server.pRsp->payload_type == NDI_NO_FRAME) {
+					if (s->visible) 
+						process_empty_frame(s);
+
+					// This will also slow down the shutdown of OBS when no NDI feed is received.
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+					continue;
+				}
+				// We have data, so turn off backup and turn on this
+				if (!s->visible && s->backup && ((ndi_source_t *)s->backup)->visible) {
+					obs_log(LOG_DEBUG, "%s source receiving now, turning off backup source '%s'",
+						obs_source_name,
+						obs_source_get_name(((ndi_source_t *)s->backup)->obs_source));
+					((ndi_source_t *)s->backup)->visible = false; // Turn the backup off
+					s->visible = true;
+					deactivate_source_output_video_texture(
+						(ndi_source_t *)s->backup); // blank out backup immediately
 				}
 				uint8_t *in_buf = (uint8_t *)&s->ndi_server.pRsp->payload;
 				size_t frame_len = deserialize_frame(in_buf, sizeof(s->ndi_server.pRsp->payload),
@@ -1029,14 +1211,20 @@ void *ndi_source_thread(void *data)
 				// Request a frame from the ndi-server
 				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME;
 				SetEvent(s->ndi_server.hEvtCmd);
-				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, 500);
+				DWORD w = WaitForSingleObject(s->ndi_server.hEvtRsp, NDI_SERVER_WAIT);
 				if (w != WAIT_OBJECT_0) {
 					obs_log(LOG_ERROR, "Timed out waiting for ndi-server to return frame");
 					destroy_ndi_server(s->ndi_server);
 					s->config.reset_ndi_receiver = true;
 					continue;
 				}
+				if (s->ndi_server.pRsp->payload_type == NDI_NO_FRAME) {
+					process_empty_frame(s);
 
+					// This will also slow down the shutdown of OBS when no NDI feed is received.
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+					continue;
+				}
 				deserialize_frame(s->ndi_server.pRsp->payload, sizeof(s->ndi_server.pRsp->payload),
 						  frame_received, &video_frame, &audio_frame);
 			} else
@@ -1067,22 +1255,6 @@ void *ndi_source_thread(void *data)
 			if (frame_received == NDIlib_frame_type_none) {
 				process_empty_frame(s);
 			}
-		}
-		s->o1 = os_gettime_ns();
-		s->frameTime = s->o1 - s->s1;
-		s->frameCount++;
-		s->totalFrameTime += s->frameTime;
-		s->maxFrameTime = s->frameTime > s->maxFrameTime ? s->frameTime : s->maxFrameTime;
-		s->minFrameTime = s->frameTime < s->minFrameTime ? s->frameTime : s->minFrameTime;
-
-		if (s->frameCount > 1000) {
-			obs_log(LOG_DEBUG, "'%s' ndi_source_thread: frameCount=%d avg=%f ms, min=%f ms, max=%f ms",
-				obs_source_name, s->frameCount, (s->totalFrameTime / s->frameCount) / 1000000.0,
-				s->minFrameTime / 1000000.0, s->maxFrameTime / 1000000.0);
-			s->minFrameTime = ULLONG_MAX;
-			s->maxFrameTime = 0;
-			s->frameCount = 0;
-			s->totalFrameTime = 0;
 		}
 	}
 	//
@@ -1254,6 +1426,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "'%s' +ndi_source_update(…)", obs_source_name);
 
+	ndi_source_map_add(obs_source, s);
+
 	//
 	// reset_ndi_receiver: BEGIN
 	//
@@ -1355,6 +1529,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		// Keep connection active.
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
 
+	} else if (behavior == PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP) {
+		// Keep connection active, but only show it when a higher priority source in the same scene is not receiving frames
+		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP;
+
 	} else if (behavior == PROP_BEHAVIOR_STOP_RESUME_BLANK) {
 		// Stop the connection and resume it with a clean frame.
 		s->config.behavior = PROP_BEHAVIOR_STOP_RESUME_BLANK;
@@ -1373,6 +1551,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_data_set_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_KEEP_ACTIVE);
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
 	}
+
+	update_backups_sources();
 
 	s->config.timeout_action = obs_data_get_int(settings, PROP_TIMEOUT);
 
@@ -1450,7 +1630,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			//    -or-
 			// 2. the behavior property is set to keep the NDI receiver running
 			//
-			if (obs_source_active(obs_source) || s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE) {
+			if (obs_source_active(obs_source) || s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE ||
+			 s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP) {
 				obs_log(LOG_DEBUG, "'%s' ndi_source_update: Requesting Source Thread Start.",
 					obs_source_name);
 				ndi_source_thread_start(s);
@@ -1488,7 +1669,8 @@ void ndi_source_hidden(void *data)
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_hidden(…)", obs_source_name);
 	s->config.tally.on_preview = false;
-	if (s->running && s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE) {
+	if (s->running && s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE &&
+		s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_hidden: Requesting Source Thread Stop.", obs_source_name);
 		// Stopping the thread may result in `on_preview=false` not getting sent,
 		// but the thread's `ndiLib->recv_destroy` results in an implicit tally off.
@@ -1550,6 +1732,8 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
 
 	ndi_source_update(s, settings);
+	ndi_source_map_add(obs_source,s);
+	update_backups_sources();
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
 
@@ -1576,6 +1760,7 @@ void ndi_source_destroy(void *data)
 		bfree(s->config.ndi_source_name);
 		s->config.ndi_source_name = nullptr;
 	}
+	ndi_source_map_remove(s->obs_source);
 
 	bfree(s);
 

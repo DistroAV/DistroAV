@@ -20,6 +20,17 @@
 #define NDI_SHUTDOWN              300
 #define NDI_HARDWARE_ACCELERATION 400
 #define NDI_CAPTURE_FRAME_SYNC    500
+#define NDI_AUDIO_FRAME          1000
+#define NDI_VIDEO_FRAME          2000
+#define NDI_MULTI_FRAME          3000
+#define NDI_NO_FRAME             9999
+
+#define NDI_SERVER_DEBUG          false
+#if NDI_SERVER_DEBUG
+#define NDI_SERVER_WAIT           3000
+#else
+#define NDI_SERVER_WAIT           500
+#endif
 
 //
 //  Buffer sizes
@@ -42,7 +53,7 @@ struct RequestBlock {
 };
 
 struct ResponseBlock {
-	uint32_t command;                   // bytes  0-3  : = request.command + 1
+	uint32_t payload_type; // bytes  0-3  : Content type of the payload (e.g. NDI_AUDIO_FRAME...)
 	uint8_t payload[RESPONSE_SIZE - 4]; // bytes  4-47 999 999
 };
 

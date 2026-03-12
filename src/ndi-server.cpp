@@ -94,8 +94,7 @@ static void ClientMonitorThread(DWORD clientPid)
 
 int main(int argc, char *argv[])
 {
-	if (false) {
-		//if (!IsDebuggerPresent()) {
+    if (NDI_SERVER_DEBUG && !IsDebuggerPresent()) {
 		// Avoid using DebugBreak() unconditionally - if JIT dialog is dismissed the process can be
 		// terminated. Instead, print PID and wait for a debugger to attach.
 		DWORD pid = GetCurrentProcessId();
@@ -271,6 +270,10 @@ int main(int argc, char *argv[])
 			break;
 		}
 		case NDI_CAPTURE_FRAME: {
+			if (ndi->recv_get_no_connections(ndi_receiver) == 0) {
+				pRsp->payload_type = NDI_NO_FRAME;
+				break;
+			}
 			NDIlib_frame_type_e frame_received =
 				ndi->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 			switch (frame_received) {
@@ -278,11 +281,13 @@ int main(int argc, char *argv[])
 				serialize_frame(frame_received, (const void *)&video_frame, (uint8_t *)&pRsp->payload,
 						sizeof(pRsp->payload));
 				ndi->recv_free_video_v2(ndi_receiver, &video_frame);
+				pRsp->payload_type = NDI_VIDEO_FRAME;
 				break;
 			case NDIlib_frame_type_audio:
 				serialize_frame(frame_received, (const void *)&audio_frame, (uint8_t *)&pRsp->payload,
 						sizeof(pRsp->payload));
 				ndi->recv_free_audio_v3(ndi_receiver, &audio_frame);
+				pRsp->payload_type = NDI_AUDIO_FRAME;
 				break;
 			default:
 				break;
@@ -290,6 +295,11 @@ int main(int argc, char *argv[])
 			break;
 		}
 		case NDI_CAPTURE_FRAME_SYNC: {
+			if (ndi->recv_get_no_connections(ndi_receiver) == 0)
+			{
+				pRsp->payload_type = NDI_NO_FRAME;
+				break;
+			}
 			audio_frame = {};
 			ndi->framesync_capture_audio_v2(ndi_frame_sync, &audio_frame,
 							0, // "The desired sample rate. 0 to get the source value."
@@ -325,6 +335,7 @@ int main(int argc, char *argv[])
 			}
 
 			ndi->framesync_free_video(ndi_frame_sync, &video_frame);
+			pRsp->payload_type = NDI_MULTI_FRAME;
 
 			// verify serialization succeeded and we didn't exceed buffer capacity
 			/*
