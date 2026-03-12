@@ -1109,7 +1109,8 @@ void *ndi_source_thread(void *data)
 		// Not being visble can happen when a KeepAlive backup is not needed (primary is receiving frames) or when the backup 
 		// is needed because the primary is not receiving frames.
 		//
-		if (!s->ndi_server.receiver_created && (!obs_source_showing(s->obs_source) || !s->visible)) {
+		if (!obs_source_showing(s->obs_source) || 
+			(!s->visible && (s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP))) {
 			// Avoid busy-waiting when the source is hidden but kept alive.
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
