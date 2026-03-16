@@ -143,10 +143,11 @@ void showCriticalMessageBoxDelayed(const QString &title, const QString &message,
 	newMessage.remove(QRegularExpression("(\r?\n?<br>\r?\n?)+$"));
 	auto newMessageFormat = QRegularExpression("(</ol>|</ul>)$").match(newMessage).hasMatch() ? "%1%2"
 												  : "%1<br><br>%2";
-	newMessage =
-		QString(newMessageFormat)
-			.arg(newMessage, QTStr("NDIPlugin.PluginLimitedFeatures")
-						 .arg(PLUGIN_DISPLAY_NAME, rehostUrl(PLUGIN_REDIRECT_TROUBLESHOOTING_URL), rehostUrl(PLUGIN_REDIRECT_REPORT_BUG_URL)));
+	newMessage = QString(newMessageFormat)
+			     .arg(newMessage,
+				  QTStr("NDIPlugin.PluginLimitedFeatures")
+					  .arg(PLUGIN_DISPLAY_NAME, rehostUrl(PLUGIN_REDIRECT_TROUBLESHOOTING_URL),
+					       rehostUrl(PLUGIN_REDIRECT_REPORT_BUG_URL)));
 	QTimer::singleShot(milliseconds, [newTitle, newMessage] {
 		auto dlg = new QMessageBox(QMessageBox::Critical, newTitle, newMessage, QMessageBox::Ok);
 #if defined(Q_OS_MACOS)
@@ -301,8 +302,8 @@ bool obs_module_load(void)
 			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
 			PLUGIN_DISPLAY_NAME);
 		showCriticalMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
-						       QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
-							       .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
+					      QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
+						      .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
 		return false;
 	}
 	obs_log(LOG_DEBUG, "obs_module_load: OBS-NDI leftover check complete. Continuing...");
@@ -328,7 +329,6 @@ bool obs_module_load(void)
 	obs_log(LOG_DEBUG, "obs_module_load: Minimum API-level OBS version check complete. Continuing...");
 
 	// HARD requirement Check END
-
 
 	// Obtain OBS main window pointer for later use (error popup).
 	auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
@@ -417,8 +417,7 @@ bool obs_module_load(void)
 				message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 				showCriticalMessageBoxDelayed(title, message);
 			} else {
-				obs_log(LOG_INFO,
-					"obs_module_load: NDI library version detected (%s) is compatible",
+				obs_log(LOG_INFO, "obs_module_load: NDI library version detected (%s) is compatible",
 					ndiLib->version());
 				obs_log(LOG_DEBUG,
 					"obs_module_load: NDI minimum version required (%s). NDI version detected: %s.",
