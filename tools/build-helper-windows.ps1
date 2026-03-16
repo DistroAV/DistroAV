@@ -14,6 +14,15 @@ if (-not (Test-Path $buildScriptPath)) {
 
 try {
     Write-Host "Starting Windows build process..." -ForegroundColor Cyan
+
+    # Ensure required CI-related environment variables are set for local runs
+    if (-not $env:CI) {
+        $env:CI = "true"
+    }
+    if (-not $env:GITHUB_EVENT_NAME) {
+        $env:GITHUB_EVENT_NAME = "workflow_dispatch"
+    }
+
     & $buildScriptPath @PSBoundParameters
     
     if ($LASTEXITCODE -ne 0) {
