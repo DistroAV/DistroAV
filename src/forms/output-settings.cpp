@@ -184,8 +184,8 @@ If you are running a local build, don't forget to add your build info to the upd
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
 			QMessageBox::warning(
-				this, "Unable to launch Terminal",
-				"Could not launch Terminal to run: brew reinstall --cask distroav/distroav/distroav");
+				this, Str("NDIPlugin.OneclickInstallError.Title"),
+					     Str("NDIPlugin.OneclickInstallError.Message") + "brew reinstall --cask distroav/distroav/distroav");
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -196,8 +196,8 @@ If you are running a local build, don't forget to add your build info to the upd
 					<< "cmd.exe"
 					<< "/c"
 					<< "winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements || pause")) {
-			QMessageBox::warning(this, "Unable to launch cmd.exe",
-					     "Could not launch cmd.exe to run: winget install -e --id DistroAV.DistroAV");
+			QMessageBox::warning(this, Str("NDIPlugin.OneclickInstallError.Title"),
+					     Str("NDIPlugin.OneclickInstallError.Message") + "winget install -e --id DistroAV.DistroAV");
 			obs_log(LOG_DEBUG, "Install DistroAV button: something went wrong");
 		}
 #else
@@ -219,8 +219,8 @@ If you are running a local build, don't forget to add your build info to the upd
 					    "end tell");
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
-			QMessageBox::warning(this, "Unable to launch Terminal",
-					     "Could not launch Terminal to run: brew reinstall libndi");
+			QMessageBox::warning(this, Str("NDIPlugin.OneclickInstallError.Title"),
+					     Str("NDIPlugin.OneclickInstallError.Message") + "brew reinstall libndi");
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -231,8 +231,8 @@ If you are running a local build, don't forget to add your build info to the upd
 					<< "cmd.exe"
 					<< "/c"
 					<< "winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements || pause")) {
-			QMessageBox::warning(this, "Unable to launch cmd.exe",
-					     "Could not launch cmd.exe to run: winget install -e --id NDI.NDIRuntime");
+			QMessageBox::warning(this, Str("NDIPlugin.OneclickInstallError.Title"),
+					     Str("NDIPlugin.OneclickInstallError.Message") + "winget install -e --id NDI.NDIRuntime");
 			obs_log(LOG_DEBUG, "Install NDI button: something went wrong");
 		}
 #else
