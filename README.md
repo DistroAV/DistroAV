@@ -61,7 +61,7 @@ Maintained by [tytan652](https://github.com/tytan652)
 
 Ubuntu ![Ubuntu Package Version](https://img.shields.io/ubuntu/v/distroav?link=https%3A%2F%2Fpackages.ubuntu.com%2Fsource%2Fresolute%2Fdistroav)
 ```
-apt install distoav
+apt install distroav
 ```
 Maintained by [eeickmeyer](https://github.com/eeickmeyer)
 

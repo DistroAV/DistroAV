@@ -312,7 +312,7 @@ bool obs_module_load(void)
 	// The plugin cannot work if this minimum version requirement is not met.
 	// This is a different requirement than the minimum OBS version required for features access.
 	// Starting OBS 32+ this will not be required anymore. See PR : https://github.com/obsproject/obs-studio/pull/6916
-	// As soon as OBS 32 is used int he buildspec.json as the minimum OBS version, this check can be removed."
+	// As soon as OBS 32 is used in the buildspec.json as the minimum OBS version, this check can be removed."
 	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
 		obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
 			PLUGIN_MIN_OBS_VERSION);
