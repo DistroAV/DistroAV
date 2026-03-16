@@ -58,7 +58,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 					  : QString("Too old (%1 < %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION));
 
 	// DistroAV Version Check
-	auto pluginVersionText = QString(PLUGIN_DISPLAY_NAME);
+	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
 	ui->labelReqDistroTitle->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
 	connect(ui->labelReqDistroTitle, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
 		QApplication::clipboard()->setText(pluginVersionText);
