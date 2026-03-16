@@ -477,7 +477,11 @@ bool obs_module_load(void)
 			},
 			nullptr);
 	}
-	obs_log(LOG_INFO, "plugin loaded (UI-only) (version %s)", PLUGIN_VERSION);
+	if (plugin_features_registered) {
+		obs_log(LOG_INFO, "plugin loaded (full NDI features) (version %s)", PLUGIN_VERSION);
+	} else {
+		obs_log(LOG_INFO, "plugin loaded (UI-only) (version %s)", PLUGIN_VERSION);
+	}
 	obs_log(LOG_DEBUG, "-obs_module_load()");
 	return true;
 }
