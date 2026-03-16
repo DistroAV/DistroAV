@@ -403,7 +403,7 @@ bool obs_module_load(void)
 
 			if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION)) {
 				obs_log(LOG_ERROR,
-					"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s. Plugin will unload.",
+					"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s.",
 					PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
 				obs_log(LOG_DEBUG,
 					"obs_module_load: NDI minimum version not met (%s). NDI version detected: %s.",
@@ -416,7 +416,6 @@ bool obs_module_load(void)
 					"<br> Get the latest NDI library at: <br>";
 				message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 				showCriticalMessageBoxDelayed(title, message);
-				//return false;
 			} else {
 				obs_log(LOG_INFO,
 					"obs_module_load: NDI library version detected (%s) is compatible",
