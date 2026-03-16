@@ -8,5 +8,4 @@ rm -rf release
 echo "Removing obs-deps..."
 rm -rf obs-deps
 
-
 echo "Done."
