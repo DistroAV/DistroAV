@@ -270,7 +270,7 @@ static void register_plugin_features()
 
 	obs_log(LOG_DEBUG, "Plugin features registered: NDI source, NDI output, NDI filter, NDI audio filter");
 
-	// The plugin features below do not require the NDI library. They can still be registered even if the NDI library fails to load or initialize.
+	// The plugin features below do not require the NDI library. They can still be registered even if the NDI library fails to load or initialize. We do not leverage this split loading yet.
 	alpha_filter_info = create_alpha_filter_info();
 	obs_register_source(&alpha_filter_info);
 
