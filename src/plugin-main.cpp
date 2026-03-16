@@ -373,7 +373,7 @@ bool obs_module_load(void)
 		obs_log(LOG_DEBUG, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
 		showCriticalMessageBoxDelayed(title, message);
 	} else {
-		obs_log(LOG_INFO, "obs_module_post_load: NDI library detected");
+		obs_log(LOG_INFO, "obs_module_load: NDI library detected");
 
 		// NDI Library Initialization check
 		// The Library is found but might fail to load on unsupported hardware.
@@ -388,15 +388,13 @@ bool obs_module_load(void)
 			obs_log(LOG_ERROR,
 				"ERR-406 - NDI library could not initialize. Usually due to unsupported CPU.");
 			obs_log(LOG_DEBUG,
-				"obs_module_post_load: ndiLib->initialize() failed; CPU unsupported by NDI library.");
+				"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library.");
 			// return false;
-		}
+		} else {
+			obs_log(LOG_INFO, "obs_module_load: NDI library initialized ('%s')", ndiLib->version());
 
-		obs_log(LOG_INFO, "obs_module_post_load: NDI library initialized ('%s')", ndiLib->version());
-
-		// NDI Library Minimum Version check
-		// Check if the minimum NDI Runtime/SDK required by this plugin is used
-		if (initialized) {
+			// NDI Library Minimum Version check
+			// Check if the minimum NDI Runtime/SDK required by this plugin is used
 			// Alternative Regex : R"((\d+\.\d+(?:\.\d+)?(?:\.\d+)?$))" (untested)
 			QString ndi_version_short = QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))")
 							    .match(ndiLib->version())
@@ -408,7 +406,7 @@ bool obs_module_load(void)
 					"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s. Plugin will unload.",
 					PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
 				obs_log(LOG_DEBUG,
-					"obs_module_post_load: NDI minimum version not met (%s). NDI version detected: %s.",
+					"obs_module_load: NDI minimum version not met (%s). NDI version detected: %s.",
 					PLUGIN_MIN_NDI_VERSION, ndiLib->version());
 
 				auto title = "NDI Library version not supported";
@@ -421,10 +419,10 @@ bool obs_module_load(void)
 				//return false;
 			} else {
 				obs_log(LOG_INFO,
-					"obs_module_post_load: NDI library version detected (%s) is compatible",
+					"obs_module_load: NDI library version detected (%s) is compatible",
 					ndiLib->version());
 				obs_log(LOG_DEBUG,
-					"obs_module_post_load: NDI minimum version required (%s). NDI version detected: %s.",
+					"obs_module_load: NDI minimum version required (%s). NDI version detected: %s.",
 					PLUGIN_MIN_NDI_VERSION, ndiLib->version());
 
 				// All seems compatible, proceed to register plugin features.
