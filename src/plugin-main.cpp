@@ -135,7 +135,7 @@ QString makeLink(const char *url, const char *text)
  * @param message The message to display in the message box
  * @param milliseconds The delay in milliseconds before the message box is shown
  */
-void showCriticalUnloadingMessageBoxDelayed(const QString &title, const QString &message, int milliseconds = 2000)
+void showCriticalMessageBoxDelayed(const QString &title, const QString &message, int milliseconds = 2000)
 {
 	auto newTitle = QString("%1 : %2").arg(PLUGIN_DISPLAY_NAME, title);
 
@@ -145,9 +145,8 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title, const QString 
 												  : "%1<br><br>%2";
 	newMessage =
 		QString(newMessageFormat)
-			.arg(newMessage, QTStr("NDIPlugin.PluginCannotContinueAndWillBeUnloaded")
-						 .arg(PLUGIN_DISPLAY_NAME, rehostUrl(PLUGIN_REDIRECT_REPORT_BUG_URL),
-						      rehostUrl(PLUGIN_REDIRECT_UNINSTALL_URL)));
+			.arg(newMessage, QTStr("NDIPlugin.PluginLimitedFeatures")
+						 .arg(PLUGIN_DISPLAY_NAME, rehostUrl(PLUGIN_REDIRECT_TROUBLESHOOTING_URL), rehostUrl(PLUGIN_REDIRECT_REPORT_BUG_URL)));
 	QTimer::singleShot(milliseconds, [newTitle, newMessage] {
 		auto dlg = new QMessageBox(QMessageBox::Critical, newTitle, newMessage, QMessageBox::Ok);
 #if defined(Q_OS_MACOS)
@@ -164,10 +163,10 @@ void showCriticalUnloadingMessageBoxDelayed(const QString &title, const QString 
 				output_settings->raise();
 				output_settings->activateWindow();
 				obs_log(LOG_DEBUG,
-					"showCriticalUnloadingMessageBoxDelayed: opened DistroAV settings after OK click");
+					"showCriticalMessageBoxDelayed: opened DistroAV settings after OK click");
 			} else {
 				obs_log(LOG_DEBUG,
-					"showCriticalUnloadingMessageBoxDelayed: DistroAV settings are unavailable at OK click");
+					"showCriticalMessageBoxDelayed: DistroAV settings are unavailable at OK click");
 			}
 		});
 		dlg->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -301,7 +300,7 @@ bool obs_module_load(void)
 		obs_log(LOG_DEBUG,
 			"obs_module_load: OBS-NDI is detected and needs to be uninstalled before %s will load.",
 			PLUGIN_DISPLAY_NAME);
-		showCriticalUnloadingMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
+		showCriticalMessageBoxDelayed(QTStr("NDIPlugin.ErrorObsNdiDetected.Title"),
 						       QTStr("NDIPlugin.ErrorObsNdiDetected.Message")
 							       .arg(rehostUrl(PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL)));
 		return false;
@@ -312,7 +311,7 @@ bool obs_module_load(void)
 	// The plugin cannot work if this minimum version requirement is not met.
 	// This is a different requirement than the minimum OBS version required for features access.
 	// Starting OBS 32+ this will not be required anymore. See PR : https://github.com/obsproject/obs-studio/pull/6916
-	// As soon as OBS 32 is used in the buildspec.json as the minimum OBS version, this check can be removed."
+	// TO DO : As soon as OBS 32 is used in the buildspec.json as the minimum OBS version, this check can be removed."
 	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
 		obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
 			PLUGIN_MIN_OBS_VERSION);
@@ -322,13 +321,14 @@ bool obs_module_load(void)
 
 		auto title = "OBS version not supported";
 		auto message = "Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
-		showCriticalUnloadingMessageBoxDelayed(title, message);
+		showCriticalMessageBoxDelayed(title, message);
 
 		return false;
 	}
 	obs_log(LOG_DEBUG, "obs_module_load: Minimum API-level OBS version check complete. Continuing...");
 
 	// HARD requirement Check END
+
 
 	// Obtain OBS main window pointer for later use (error popup).
 	auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
@@ -346,11 +346,9 @@ bool obs_module_load(void)
 			"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
 			obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
 
-		auto title = "OBS version not supported";
+		auto title = "OBS version is too old for some features";
 		auto message = "Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
-		showCriticalUnloadingMessageBoxDelayed(title, message);
-
-		// return false;
+		showCriticalMessageBoxDelayed(title, message);
 	}
 	obs_log(LOG_DEBUG, "obs_module_load: Minimum Feature-level OBS version met. Continuing...");
 
@@ -373,10 +371,8 @@ bool obs_module_load(void)
 
 		obs_log(LOG_ERROR, "ERR-401 - NDI library failed to load with message: '%s'", QT_TO_UTF8(message));
 		obs_log(LOG_DEBUG, "obs_module_load: ERROR - load_ndilib() failed; message=%s", QT_TO_UTF8(message));
-		showCriticalUnloadingMessageBoxDelayed(title, message);
-		// return false;
+		showCriticalMessageBoxDelayed(title, message);
 	} else {
-
 		obs_log(LOG_INFO, "obs_module_post_load: NDI library detected");
 
 		// NDI Library Initialization check
@@ -421,7 +417,7 @@ bool obs_module_load(void)
 					" or higher <br> <br> Version detected: " + QT_TO_UTF8(ndi_version_short) +
 					"<br> Get the latest NDI library at: <br>";
 				message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
-				showCriticalUnloadingMessageBoxDelayed(title, message);
+				showCriticalMessageBoxDelayed(title, message);
 				//return false;
 			} else {
 				obs_log(LOG_INFO,
