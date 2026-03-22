@@ -5,8 +5,153 @@
 #include <thread>
 #include "..\src\ndi-shared.h"
 
-// Include NDI SDK headers from lib/ndi
-#include "..\lib\ndi\Processing.NDI.Lib.h"
+// Container for advanced NDI function pointers (receiver-focused)
+struct NDIAdvancedlib_t {
+	NDIlib_frame_type_e (*recv_capture_v3)(NDIlib_recv_instance_t p_instance,
+					 NDIlib_video_frame_v2_t* p_video_data,
+					 NDIlib_audio_frame_v3_t* p_audio_data,
+					 NDIlib_metadata_frame_t* p_metadata,
+					 uint32_t timeout_in_ms);
+
+	// Add recv_create_v3 and framesync_create
+	NDIlib_recv_instance_t (*recv_create_v3)(const NDIlib_recv_create_v3_t* p_create_settings);
+	NDIlib_framesync_instance_t (*framesync_create)(NDIlib_recv_instance_t p_receiver);
+
+	void (*recv_free_video_v2)(NDIlib_recv_instance_t p_instance, const NDIlib_video_frame_v2_t* p_video_data);
+	void (*recv_free_audio_v3)(NDIlib_recv_instance_t p_instance, const NDIlib_audio_frame_v3_t* p_audio_data);
+
+	int (*recv_get_no_connections)(NDIlib_recv_instance_t p_instance);
+
+	void (*framesync_capture_audio_v2)(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v3_t* p_audio_data,
+					   int sample_rate, int no_channels, int no_samples);
+	void (*framesync_free_audio_v2)(NDIlib_framesync_instance_t p_instance, NDIlib_audio_frame_v3_t* p_audio_data);
+
+	void (*framesync_capture_video)(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data,
+					NDIlib_frame_format_type_e field_type);
+	void (*framesync_free_video)(NDIlib_framesync_instance_t p_instance, NDIlib_video_frame_v2_t* p_video_data);
+
+	bool (*recv_send_metadata)(NDIlib_recv_instance_t p_instance, const NDIlib_metadata_frame_t* p_metadata);
+
+	void (*framesync_destroy)(NDIlib_framesync_instance_t p_instance);
+	void (*recv_destroy)(NDIlib_recv_instance_t p_instance);
+
+	bool (*initialize)(void);
+	void (*destroy)(void);
+};
+
+// Global pointer accessible by other modules: call like NDIAdvlib->recv_capture_v3(...)
+NDIAdvancedlib_t *NDIAdvlib = nullptr;
+NDIAdvancedlib_t *load_advanced_ndilib()
+{
+	NDIAdvancedlib_t *ndi_advanced_lib = nullptr;
+
+	// Use WinAPI to load the Processing NDI library directly so we don't depend on Qt here.
+	HMODULE hLib = NULL;
+
+	// First, check NDILIB_REDIST_FOLDER environment variable for a redistributable folder path
+	char redistFolder[MAX_PATH] = {0};
+	DWORD ret = GetEnvironmentVariableA("NDI_RUNTIME_DIR_V6", redistFolder, MAX_PATH);
+	if (ret >0 && ret < MAX_PATH) {
+		char fullPath[MAX_PATH] = {0};
+		snprintf(fullPath, MAX_PATH, "%s\\%s", redistFolder, NDILIB_LIBRARY_NAME);
+		hLib = LoadLibraryA(fullPath);
+		if (!hLib) {
+			printf("Failed to load advanced NDI library from '%s' (LoadLibraryA error=%lu). Will try system path.\n",
+			       fullPath, GetLastError());
+		} else {
+			printf("Loaded advanced NDI library from '%s'\n", fullPath);
+		}
+	}
+
+	// Fallback: try loading by library name (system path)
+	if (!hLib) {
+		hLib = LoadLibraryA(NDILIB_LIBRARY_NAME);
+		if (!hLib) {
+			printf("Failed to load advanced NDI library '%s' (LoadLibraryA error=%lu)\n", NDILIB_LIBRARY_NAME,
+			       GetLastError());
+			return nullptr;
+		}
+	}
+
+	// Resolve receiver & framesync related functions from the DLL
+	auto resolved_recv_capture_v3 = reinterpret_cast<NDIlib_frame_type_e (*)(NDIlib_recv_instance_t, NDIlib_video_frame_v2_t*, NDIlib_audio_frame_v3_t*, NDIlib_metadata_frame_t*, uint32_t)>(
+		GetProcAddress(hLib, "NDIlib_recv_capture_v3"));
+
+	// Resolve recv_create_v3 and framesync_create
+	auto resolved_recv_create_v3 = reinterpret_cast<NDIlib_recv_instance_t (*)(const NDIlib_recv_create_v3_t*)>(
+		GetProcAddress(hLib, "NDIlib_recv_create_v3"));
+	
+auto resolved_framesync_create = reinterpret_cast<NDIlib_framesync_instance_t (*)(NDIlib_recv_instance_t)>(
+		GetProcAddress(hLib, "NDIlib_framesync_create"));
+
+	auto resolved_recv_free_video_v2 = reinterpret_cast<void (*)(NDIlib_recv_instance_t, const NDIlib_video_frame_v2_t*)>(
+		GetProcAddress(hLib, "NDIlib_recv_free_video_v2"));
+
+	auto resolved_recv_free_audio_v3 = reinterpret_cast<void (*)(NDIlib_recv_instance_t, const NDIlib_audio_frame_v3_t*)>(
+		GetProcAddress(hLib, "NDIlib_recv_free_audio_v3"));
+
+	auto resolved_recv_get_no_connections = reinterpret_cast<int (*)(NDIlib_recv_instance_t)>(
+		GetProcAddress(hLib, "NDIlib_recv_get_no_connections"));
+
+	auto resolved_framesync_capture_audio_v2 = reinterpret_cast<void (*)(NDIlib_framesync_instance_t, NDIlib_audio_frame_v3_t*, int, int, int)>(
+		GetProcAddress(hLib, "NDIlib_framesync_capture_audio_v2"));
+
+	auto resolved_framesync_free_audio_v2 = reinterpret_cast<void (*)(NDIlib_framesync_instance_t, NDIlib_audio_frame_v3_t*)>(
+		GetProcAddress(hLib, "NDIlib_framesync_free_audio_v2"));
+
+	auto resolved_framesync_capture_video = reinterpret_cast<void (*)(NDIlib_framesync_instance_t, NDIlib_video_frame_v2_t*, NDIlib_frame_format_type_e)>(
+		GetProcAddress(hLib, "NDIlib_framesync_capture_video"));
+
+	auto resolved_framesync_free_video = reinterpret_cast<void (*)(NDIlib_framesync_instance_t, NDIlib_video_frame_v2_t*)>(
+		GetProcAddress(hLib, "NDIlib_framesync_free_video"));
+
+	auto resolved_recv_send_metadata = reinterpret_cast<bool (*)(NDIlib_recv_instance_t, const NDIlib_metadata_frame_t*)>(
+		GetProcAddress(hLib, "NDIlib_recv_send_metadata"));
+
+	auto resolved_framesync_destroy = reinterpret_cast<void (*)(NDIlib_framesync_instance_t)>(
+		GetProcAddress(hLib, "NDIlib_framesync_destroy"));
+
+	auto resolved_recv_destroy = reinterpret_cast<void (*)(NDIlib_recv_instance_t)>(
+		GetProcAddress(hLib, "NDIlib_recv_destroy"));
+
+	auto resolved_initialize = reinterpret_cast<bool (*)(void)>(
+		GetProcAddress(hLib, "NDIlib_initialize"));
+
+	auto resolved_destroy = reinterpret_cast<void (*)(void)>(
+		GetProcAddress(hLib, "NDIlib_destroy"));
+
+	if (resolved_recv_capture_v3 && resolved_recv_free_video_v2 && resolved_recv_free_audio_v3 &&
+	    resolved_recv_get_no_connections && resolved_framesync_capture_audio_v2 && resolved_framesync_free_audio_v2 &&
+	    resolved_framesync_capture_video && resolved_framesync_free_video && resolved_recv_send_metadata &&
+	    resolved_framesync_destroy && resolved_recv_destroy && resolved_initialize && resolved_destroy &&
+	    resolved_recv_create_v3 && resolved_framesync_create) {
+
+		ndi_advanced_lib = new NDIAdvancedlib_t();
+		ndi_advanced_lib->recv_capture_v3 = resolved_recv_capture_v3;
+		ndi_advanced_lib->recv_create_v3 = resolved_recv_create_v3;
+		ndi_advanced_lib->framesync_create = resolved_framesync_create;
+		ndi_advanced_lib->recv_free_video_v2 = resolved_recv_free_video_v2;
+		ndi_advanced_lib->recv_free_audio_v3 = resolved_recv_free_audio_v3;
+		ndi_advanced_lib->recv_get_no_connections = resolved_recv_get_no_connections;
+		ndi_advanced_lib->framesync_capture_audio_v2 = resolved_framesync_capture_audio_v2;
+		ndi_advanced_lib->framesync_free_audio_v2 = resolved_framesync_free_audio_v2;
+		ndi_advanced_lib->framesync_capture_video = resolved_framesync_capture_video;
+		ndi_advanced_lib->framesync_free_video = resolved_framesync_free_video;
+		ndi_advanced_lib->recv_send_metadata = resolved_recv_send_metadata;
+		ndi_advanced_lib->framesync_destroy = resolved_framesync_destroy;
+		ndi_advanced_lib->recv_destroy = resolved_recv_destroy;
+		ndi_advanced_lib->initialize = resolved_initialize;
+		ndi_advanced_lib->destroy = resolved_destroy;
+
+		// Keep the library loaded intentionally for process lifetime.
+		NDIAdvlib = ndi_advanced_lib;
+		return ndi_advanced_lib;
+	} else {
+		printf("Failed to resolve one or more advanced NDI functions in '%s'\n", NDILIB_LIBRARY_NAME);
+		FreeLibrary(hLib);
+		return nullptr;
+	}
+}
 
 // Helper to load and initialize the NDI runtime. Returns pointer to NDIlib_v6 or nullptr on failure.
 static const NDIlib_v6 *load_ndi_runtime()
@@ -130,7 +275,7 @@ int main(int argc, char *argv[])
 	NDIlib_framesync_instance_t ndi_frame_sync = nullptr;
 
 	// Attempt to load NDI runtime early so errors are visible in the helper.
-	const NDIlib_v6 *ndi = load_ndi_runtime();
+	const NDIAdvancedlib_t *ndi = load_advanced_ndilib(); // load_ndi_runtime();
 	if (!ndi) {
 		printf("Warning: Could not load or initialize NDI runtime. ndi-server may not function correctly.\n");
 		// continue anyway the shared-memory signalling portion can still be used without NDI.

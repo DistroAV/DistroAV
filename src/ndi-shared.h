@@ -7,7 +7,7 @@
 #include <string>
 
 // Include NDI SDK definitions required for recv descriptor types
-#include "..\lib\ndi\Processing.NDI.Lib.h"
+#include "..\lib\ndi\Processing.NDI.Advanced.h"
 
 #define NDI_MEM_NAME_PREFIX       L"Local\\NDI_"
 #define NDI_REQUEST_SHM_SUFFIX    L"_RequestShm"
