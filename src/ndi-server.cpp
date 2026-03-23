@@ -35,8 +35,19 @@ struct NDIAdvancedlib_t {
 	void (*framesync_destroy)(NDIlib_framesync_instance_t p_instance);
 	void (*recv_destroy)(NDIlib_recv_instance_t p_instance);
 
+	void (*recv_connect)(NDIlib_recv_instance_t p_instance, const NDIlib_source_t* p_src);
+
 	bool (*initialize)(void);
 	void (*destroy)(void);
+
+	// Custom allocator setters (Processing.NDI.Advanced.h)
+	void (*recv_set_video_allocator)(NDIlib_recv_instance_t p_instance, void* p_opaque,
+					bool (*p_allocator)(void* p_opaque, NDIlib_video_frame_v2_t* p_video_data),
+					bool (*p_deallocator)(void* p_opaque, const NDIlib_video_frame_v2_t* p_video_data));
+
+	void (*recv_set_audio_allocator)(NDIlib_recv_instance_t p_instance, void* p_opaque,
+					bool (*p_allocator)(void* p_opaque, NDIlib_audio_frame_v3_t* p_audio_data),
+					bool (*p_deallocator)(void* p_opaque, const NDIlib_audio_frame_v3_t* p_audio_data));
 };
 
 // Global pointer accessible by other modules: call like NDIAdvlib->recv_capture_v3(...)
@@ -57,7 +68,7 @@ NDIAdvancedlib_t *load_advanced_ndilib()
 		hLib = LoadLibraryA(fullPath);
 		if (!hLib) {
 			printf("Failed to load advanced NDI library from '%s' (LoadLibraryA error=%lu). Will try system path.\n",
-			       fullPath, GetLastError());
+			 fullPath, GetLastError());
 		} else {
 			printf("Loaded advanced NDI library from '%s'\n", fullPath);
 		}
@@ -68,7 +79,7 @@ NDIAdvancedlib_t *load_advanced_ndilib()
 		hLib = LoadLibraryA(NDILIB_LIBRARY_NAME);
 		if (!hLib) {
 			printf("Failed to load advanced NDI library '%s' (LoadLibraryA error=%lu)\n", NDILIB_LIBRARY_NAME,
-			       GetLastError());
+			 GetLastError());
 			return nullptr;
 		}
 	}
@@ -81,7 +92,7 @@ NDIAdvancedlib_t *load_advanced_ndilib()
 	auto resolved_recv_create_v3 = reinterpret_cast<NDIlib_recv_instance_t (*)(const NDIlib_recv_create_v3_t*)>(
 		GetProcAddress(hLib, "NDIlib_recv_create_v3"));
 	
-auto resolved_framesync_create = reinterpret_cast<NDIlib_framesync_instance_t (*)(NDIlib_recv_instance_t)>(
+	auto resolved_framesync_create = reinterpret_cast<NDIlib_framesync_instance_t (*)(NDIlib_recv_instance_t)>(
 		GetProcAddress(hLib, "NDIlib_framesync_create"));
 
 	auto resolved_recv_free_video_v2 = reinterpret_cast<void (*)(NDIlib_recv_instance_t, const NDIlib_video_frame_v2_t*)>(
@@ -114,17 +125,28 @@ auto resolved_framesync_create = reinterpret_cast<NDIlib_framesync_instance_t (*
 	auto resolved_recv_destroy = reinterpret_cast<void (*)(NDIlib_recv_instance_t)>(
 		GetProcAddress(hLib, "NDIlib_recv_destroy"));
 
+	// Resolve recv_connect
+	auto resolved_recv_connect = reinterpret_cast<void (*)(NDIlib_recv_instance_t, const NDIlib_source_t*)>(
+		GetProcAddress(hLib, "NDIlib_recv_connect"));
+
 	auto resolved_initialize = reinterpret_cast<bool (*)(void)>(
 		GetProcAddress(hLib, "NDIlib_initialize"));
 
 	auto resolved_destroy = reinterpret_cast<void (*)(void)>(
 		GetProcAddress(hLib, "NDIlib_destroy"));
 
+	// Resolve new allocator setters using explicit function pointer types
+	auto resolved_recv_set_video_allocator = reinterpret_cast<void (*)(NDIlib_recv_instance_t, void*, bool (*)(void*, NDIlib_video_frame_v2_t*), bool (*)(void*, const NDIlib_video_frame_v2_t*))>(
+		GetProcAddress(hLib, "NDIlib_recv_set_video_allocator"));
+
+	auto resolved_recv_set_audio_allocator = reinterpret_cast<void (*)(NDIlib_recv_instance_t, void*, bool (*)(void*, NDIlib_audio_frame_v3_t*), bool (*)(void*, const NDIlib_audio_frame_v3_t*))>(
+		GetProcAddress(hLib, "NDIlib_recv_set_audio_allocator"));
+
 	if (resolved_recv_capture_v3 && resolved_recv_free_video_v2 && resolved_recv_free_audio_v3 &&
 	    resolved_recv_get_no_connections && resolved_framesync_capture_audio_v2 && resolved_framesync_free_audio_v2 &&
 	    resolved_framesync_capture_video && resolved_framesync_free_video && resolved_recv_send_metadata &&
 	    resolved_framesync_destroy && resolved_recv_destroy && resolved_initialize && resolved_destroy &&
-	    resolved_recv_create_v3 && resolved_framesync_create) {
+	    resolved_recv_create_v3 && resolved_framesync_create && resolved_recv_set_video_allocator && resolved_recv_set_audio_allocator && resolved_recv_connect) {
 
 		ndi_advanced_lib = new NDIAdvancedlib_t();
 		ndi_advanced_lib->recv_capture_v3 = resolved_recv_capture_v3;
@@ -140,8 +162,14 @@ auto resolved_framesync_create = reinterpret_cast<NDIlib_framesync_instance_t (*
 		ndi_advanced_lib->recv_send_metadata = resolved_recv_send_metadata;
 		ndi_advanced_lib->framesync_destroy = resolved_framesync_destroy;
 		ndi_advanced_lib->recv_destroy = resolved_recv_destroy;
+		// Assign recv_connect
+		ndi_advanced_lib->recv_connect = resolved_recv_connect;
 		ndi_advanced_lib->initialize = resolved_initialize;
 		ndi_advanced_lib->destroy = resolved_destroy;
+
+		// Set allocator function pointers
+		ndi_advanced_lib->recv_set_video_allocator = reinterpret_cast<void (*)(NDIlib_recv_instance_t, void*, bool (*)(void*, NDIlib_video_frame_v2_t*), bool (*)(void*, const NDIlib_video_frame_v2_t*))>(resolved_recv_set_video_allocator);
+		ndi_advanced_lib->recv_set_audio_allocator = reinterpret_cast<void (*)(NDIlib_recv_instance_t, void*, bool (*)(void*, NDIlib_audio_frame_v3_t*), bool (*)(void*, const NDIlib_audio_frame_v3_t*))>(resolved_recv_set_audio_allocator);
 
 		// Keep the library loaded intentionally for process lifetime.
 		NDIAdvlib = ndi_advanced_lib;
@@ -235,6 +263,134 @@ static void ClientMonitorThread(DWORD clientPid)
 	printf("[Server] Client process (PID %u) has exited � signalling shutdown.\n", clientPid);
 	g_running = false;
 	SetEvent(g_hShutdownEvt);
+}
+struct memory_block_t {
+	void *video_ptr;
+	size_t video_size;
+	void *audio_ptr;
+	size_t audio_size;
+};
+
+// Assign p_data and line_stride_in_bytes for the given video frame based on its FourCC. Use the shared memory allocated by the client and 
+// passed through the p_opaque pointer.
+// Returns true on success, false on unsupported FourCC.
+bool video_custom_allocator(void *p_opaque, NDIlib_video_frame_v2_t *p_video_data)
+{
+	auto mem_block = reinterpret_cast<memory_block_t *>(p_opaque);
+
+	switch (p_video_data->FourCC) {
+	case NDIlib_FourCC_video_type_UYVY:		
+		p_video_data->line_stride_in_bytes = p_video_data->xres * 2;
+		if (p_video_data->line_stride_in_bytes * p_video_data->yres < mem_block->video_size)
+		{
+			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
+			p_video_data->line_stride_in_bytes = 0;
+			p_video_data->p_data = nullptr;
+			return false;
+		}
+		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
+		break;
+
+	case NDIlib_FourCC_video_type_UYVA:
+		p_video_data->line_stride_in_bytes = p_video_data->xres * 2;
+		if (p_video_data->line_stride_in_bytes * p_video_data->yres +
+			    /* Alpha */ p_video_data->line_stride_in_bytes / 2 * p_video_data->yres <
+		    mem_block->video_size) {
+			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
+			p_video_data->line_stride_in_bytes = 0;
+			p_video_data->p_data = nullptr;
+			return false;
+		}
+		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
+		break;
+
+	case NDIlib_FourCC_video_type_P216:
+		p_video_data->line_stride_in_bytes = p_video_data->xres * 2 * sizeof(int16_t);
+		if (p_video_data->line_stride_in_bytes * p_video_data->yres < mem_block->video_size) {
+			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
+			p_video_data->line_stride_in_bytes = 0;
+			p_video_data->p_data = nullptr;
+			return false;
+		}
+		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
+		break;
+
+	case NDIlib_FourCC_video_type_PA16:
+		p_video_data->line_stride_in_bytes = p_video_data->xres * 2 * sizeof(int16_t);
+		if (p_video_data->line_stride_in_bytes * p_video_data->yres +
+				/* Alpha */ p_video_data->line_stride_in_bytes / 2 * p_video_data->yres <
+			mem_block->video_size) {
+			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
+			p_video_data->line_stride_in_bytes = 0;
+			p_video_data->p_data = nullptr;
+			return false;
+		}	
+		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
+		break;
+
+	case NDIlib_FourCC_video_type_BGRA:
+	case NDIlib_FourCC_video_type_BGRX:
+	case NDIlib_FourCC_video_type_RGBA:
+	case NDIlib_FourCC_video_type_RGBX:
+		p_video_data->line_stride_in_bytes = p_video_data->xres * 4;
+		if (p_video_data->line_stride_in_bytes * p_video_data->yres < mem_block->video_size) {
+			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
+			p_video_data->line_stride_in_bytes = 0;
+			p_video_data->p_data = nullptr;
+			return false;
+		}
+		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
+		break;
+
+	default:
+		// Error, not a supported FourCC
+		p_video_data->line_stride_in_bytes = 0;
+		p_video_data->p_data = nullptr;
+		return false;
+	}
+
+	// Success
+	return true;
+}
+
+bool video_custom_deallocator(void *p_opaque, const NDIlib_video_frame_v2_t *p_video_data)
+{
+	// Success
+	return true;
+}
+
+bool audio_custom_allocator(void *p_opaque, NDIlib_audio_frame_v3_t *p_audio_data)
+{
+	auto mem_block = reinterpret_cast<memory_block_t *>(p_opaque);
+
+	// Allocate uncompressed audio
+	switch (p_audio_data->FourCC) {
+	case NDIlib_FourCC_audio_type_FLTP:
+		p_audio_data->channel_stride_in_bytes = sizeof(float) * p_audio_data->no_samples;
+		if (p_audio_data->channel_stride_in_bytes * p_audio_data->no_channels < mem_block->audio_size) {
+			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller sample count, channel count, or a different audio format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
+			p_audio_data->channel_stride_in_bytes = 0;
+			p_audio_data->p_data = nullptr;
+			return false;
+		}
+		p_audio_data->p_data =
+			(uint8_t *)mem_block->audio_ptr;
+		break;
+
+	default:
+		p_audio_data->channel_stride_in_bytes = 0;
+		p_audio_data->p_data = nullptr;
+		return false;
+	}
+
+	// Success
+	return true;
+}
+
+bool audio_custom_deallocator(void *p_opaque, const NDIlib_audio_frame_v3_t *p_audio_data)
+{
+	// Success
+	return true;
 }
 
 int main(int argc, char *argv[])
@@ -373,6 +529,13 @@ int main(int argc, char *argv[])
 
 	int videores = 0;
 	int audiosamples = 0;
+	
+	memory_block_t *mem_block = (memory_block_t *)std::malloc(sizeof(memory_block_t));
+
+	mem_block->video_ptr = pRsp->payload + sizeof(NDIlib_video_frame_v2_t);
+	mem_block->video_size = VIDEO_FRAME_MAX_SIZE;
+	mem_block->audio_ptr = pRsp->payload + sizeof(NDIlib_video_frame_v2_t) + VIDEO_FRAME_MAX_SIZE;
+	mem_block->audio_size = AUDIO_FRAME_MAX_SIZE;
 
 	while (g_running) {
 		DWORD w = WaitForMultipleObjects(2, waitSet, FALSE, INFINITE);
@@ -412,6 +575,15 @@ int main(int argc, char *argv[])
 			} else {
 				printf("Failed to create NDI Receiver.\n");
 			}
+
+			ndi->recv_set_video_allocator(ndi_receiver, (void*)mem_block,
+							video_custom_allocator, video_custom_deallocator);
+			ndi->recv_set_audio_allocator(ndi_receiver, (void *)mem_block,
+							audio_custom_allocator, audio_custom_deallocator);
+
+			// Connect to our source
+			ndi->recv_connect(ndi_receiver, &recv_desc.source_to_connect_to);
+
 			break;
 		}
 		case NDI_CAPTURE_FRAME: {

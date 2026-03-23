@@ -25,7 +25,7 @@
 #define NDI_MULTI_FRAME          3000
 #define NDI_NO_FRAME             9999
 
-#define NDI_SERVER_DEBUG          false
+#define NDI_SERVER_DEBUG          true
 #if NDI_SERVER_DEBUG
 #define NDI_SERVER_WAIT           3000
 #else
@@ -36,7 +36,13 @@
 //  Buffer sizes
 //
 static const DWORD REQUEST_SIZE = 4096u;
-static const DWORD RESPONSE_SIZE = 4000u * 3000u * 4u; // 48 000 000 bytes
+static const DWORD AUDIO_FRAME_MAX_SIZE = 192000 * 4;  // 4 seconds of stereo audio at 48kHz with 32 bits per sample
+static const DWORD VIDEO_FRAME_MAX_SIZE =
+	4000u * 3000u * 4u;                            // 48 000 000 bytes (enough for a single uncompressed 4K frame)
+static const DWORD RESPONSE_SIZE = sizeof(NDIlib_video_frame_v2_t) + 
+								VIDEO_FRAME_MAX_SIZE + 
+								sizeof(NDIlib_audio_frame_v3_t) + 
+								AUDIO_FRAME_MAX_SIZE; // Large enough to hold either a single video frame, a single audio frame, or both together for framesync.	
 
 //
 //  Shared-memory layouts
@@ -320,13 +326,13 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 		// memcpy entire struct representation
 		if (!write_bytes(vf, struct_sz))
 			return 0;
-
+		/*
 		// append frame data
 		if (data_size > 0) {
 			if (!write_bytes(vf->p_data, (size_t)data_size))
 				return 0;
 		}
-
+		*/
 		return max_size - remaining;
 	}
 
@@ -345,12 +351,13 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 		if (!write_bytes(af, struct_sz))
 			return 0;
 
+		/*
 		// append audio data
 		if (data_size > 0) {
 			if (!write_bytes(af->p_data, (size_t)data_size))
 				return 0;
 		}
-
+		*/ 
 		return max_size - remaining;
 	}
 
@@ -397,6 +404,7 @@ static size_t deserialize_frame(const uint8_t *buf, size_t buf_len, NDIlib_frame
 		if (remaining < (size_t)data_size + 1) // need at least data + one byte for metadata NUL
 			return 0;
 
+		/*
 		// Set p_data pointer into buffer
 		if (data_size > 0) {
 			out_video->p_data = const_cast<uint8_t *>(p);
@@ -405,6 +413,7 @@ static size_t deserialize_frame(const uint8_t *buf, size_t buf_len, NDIlib_frame
 		} else {
 			out_video->p_data = nullptr;
 		}
+		*/
 
 		out_video->p_metadata = nullptr;
 
@@ -429,6 +438,7 @@ static size_t deserialize_frame(const uint8_t *buf, size_t buf_len, NDIlib_frame
 		if (remaining < (size_t)data_size + 1)
 			return 0;
 
+		/*
 		if (data_size > 0) {
 			out_audio->p_data = const_cast<uint8_t *>(p);
 			p += data_size;
@@ -436,6 +446,7 @@ static size_t deserialize_frame(const uint8_t *buf, size_t buf_len, NDIlib_frame
 		} else {
 			out_audio->p_data = nullptr;
 		}
+		*/
 
 		out_audio->p_metadata = nullptr;
 
