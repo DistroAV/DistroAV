@@ -52,6 +52,10 @@ struct NDIAdvancedlib_t {
 
 // Global pointer accessible by other modules: call like NDIAdvlib->recv_capture_v3(...)
 NDIAdvancedlib_t *NDIAdvlib = nullptr;
+#ifdef NDILIB_LIBRARY_NAME
+#undef NDILIB_LIBRARY_NAME
+#endif
+#define NDILIB_LIBRARY_NAME "Processing.NDI.Lib.Advanced.x64.dll"
 NDIAdvancedlib_t *load_advanced_ndilib()
 {
 	NDIAdvancedlib_t *ndi_advanced_lib = nullptr;
@@ -265,6 +269,9 @@ static void ClientMonitorThread(DWORD clientPid)
 	SetEvent(g_hShutdownEvt);
 }
 struct memory_block_t {
+	int n_ptrs;   // how many pointers to cycle through in this block (e.g. for double buffering)
+	int next_video_ptr; // current pointer index to use for video (the allocator can update this as it cycles through buffers)  
+	int next_audio_ptr; // current pointer index to use for audio (the allocator can update this as it cycles through buffers)  
 	void *video_ptr;
 	size_t video_size;
 	void *audio_ptr;
@@ -281,51 +288,18 @@ bool video_custom_allocator(void *p_opaque, NDIlib_video_frame_v2_t *p_video_dat
 	switch (p_video_data->FourCC) {
 	case NDIlib_FourCC_video_type_UYVY:		
 		p_video_data->line_stride_in_bytes = p_video_data->xres * 2;
-		if (p_video_data->line_stride_in_bytes * p_video_data->yres < mem_block->video_size)
-		{
-			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
-			p_video_data->line_stride_in_bytes = 0;
-			p_video_data->p_data = nullptr;
-			return false;
-		}
-		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
 		break;
 
 	case NDIlib_FourCC_video_type_UYVA:
 		p_video_data->line_stride_in_bytes = p_video_data->xres * 2;
-		if (p_video_data->line_stride_in_bytes * p_video_data->yres +
-			    /* Alpha */ p_video_data->line_stride_in_bytes / 2 * p_video_data->yres <
-		    mem_block->video_size) {
-			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
-			p_video_data->line_stride_in_bytes = 0;
-			p_video_data->p_data = nullptr;
-			return false;
-		}
-		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
 		break;
 
 	case NDIlib_FourCC_video_type_P216:
 		p_video_data->line_stride_in_bytes = p_video_data->xres * 2 * sizeof(int16_t);
-		if (p_video_data->line_stride_in_bytes * p_video_data->yres < mem_block->video_size) {
-			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
-			p_video_data->line_stride_in_bytes = 0;
-			p_video_data->p_data = nullptr;
-			return false;
-		}
-		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
 		break;
 
 	case NDIlib_FourCC_video_type_PA16:
 		p_video_data->line_stride_in_bytes = p_video_data->xres * 2 * sizeof(int16_t);
-		if (p_video_data->line_stride_in_bytes * p_video_data->yres +
-				/* Alpha */ p_video_data->line_stride_in_bytes / 2 * p_video_data->yres <
-			mem_block->video_size) {
-			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
-			p_video_data->line_stride_in_bytes = 0;
-			p_video_data->p_data = nullptr;
-			return false;
-		}	
-		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
 		break;
 
 	case NDIlib_FourCC_video_type_BGRA:
@@ -333,21 +307,17 @@ bool video_custom_allocator(void *p_opaque, NDIlib_video_frame_v2_t *p_video_dat
 	case NDIlib_FourCC_video_type_RGBA:
 	case NDIlib_FourCC_video_type_RGBX:
 		p_video_data->line_stride_in_bytes = p_video_data->xres * 4;
-		if (p_video_data->line_stride_in_bytes * p_video_data->yres < mem_block->video_size) {
-			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller resolution or a different pixel format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
-			p_video_data->line_stride_in_bytes = 0;
-			p_video_data->p_data = nullptr;
-			return false;
-		}
-		p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
 		break;
 
 	default:
 		// Error, not a supported FourCC
+		printf("Unsupported video FourCC: 0x%08X\n", p_video_data->FourCC);
 		p_video_data->line_stride_in_bytes = 0;
 		p_video_data->p_data = nullptr;
 		return false;
 	}
+
+	p_video_data->p_data = (uint8_t *)mem_block->video_ptr;
 
 	// Success
 	return true;
@@ -367,14 +337,9 @@ bool audio_custom_allocator(void *p_opaque, NDIlib_audio_frame_v3_t *p_audio_dat
 	switch (p_audio_data->FourCC) {
 	case NDIlib_FourCC_audio_type_FLTP:
 		p_audio_data->channel_stride_in_bytes = sizeof(float) * p_audio_data->no_samples;
-		if (p_audio_data->channel_stride_in_bytes * p_audio_data->no_channels < mem_block->audio_size) {
-			// The client allocated shared memory is smaller than what we need for this frame. This can happen if the client allocated based on a smaller sample count, channel count, or a different audio format. In this case, we fail the allocation so that the caller can decide how to handle (e.g. drop frame, allocate its own memory, etc).
-			p_audio_data->channel_stride_in_bytes = 0;
-			p_audio_data->p_data = nullptr;
-			return false;
-		}
-		p_audio_data->p_data =
-			(uint8_t *)mem_block->audio_ptr;
+		p_audio_data->p_data = (uint8_t *)mem_block->audio_ptr;
+		mem_block->next_audio_ptr =
+			(mem_block->next_audio_ptr + 1) % mem_block->n_ptrs; // advance pointer index for next allocation
 		break;
 
 	default:
@@ -460,6 +425,54 @@ int main(int argc, char *argv[])
 	swprintf_s(readyEventName, 256, L"%s%s", connectionName, NDI_READY_EVENT_SUFFIX);
 	swprintf_s(responseEventName, 256, L"%s%s", connectionName, NDI_RESPONSE_EVENT_SUFFIX);
 
+		// If --log is present on command line, redirect stdout/stderr to a file named "<wclientid>.log"
+	bool log_to_file = false;
+	for (int i = 2; i < argc; ++i) {
+		if (strcmp(argv[i], "--log") == 0) {
+			log_to_file = true;
+			break;
+		}
+	}
+
+	if (log_to_file) {
+		// Build path: same folder as the running exe, filename = <wclientid>.log
+		WCHAR modulePath[MAX_PATH] = {0};
+		if (GetModuleFileNameW(NULL, modulePath, MAX_PATH) > 0) {
+			// Extract directory
+			WCHAR dirPath[MAX_PATH] = {0};
+			wcscpy_s(dirPath, modulePath);
+			WCHAR *lastSlash = wcsrchr(dirPath, L'\\');
+			if (lastSlash) {
+				*lastSlash = L'\0';
+			} else {
+				// fallback to current directory
+				wcscpy_s(dirPath, L".");
+			}
+
+			WCHAR logPath[MAX_PATH] = {0};
+			swprintf_s(logPath, MAX_PATH, L"%s\\%s.log", dirPath, wclientid);
+
+			FILE *dummyOut = nullptr;
+			errno_t ferr = _wfreopen_s(&dummyOut, logPath, L"w", stdout);
+			if (ferr != 0 || !dummyOut) {
+				// Unable to open log file; fall back to console.
+				fprintf(stderr, "[Server] Failed to open log file '%S' (errno=%d)\n", logPath,
+					(int)ferr);
+			} else {
+				// Redirect stderr to same file
+				FILE *dummyErr = nullptr;
+				_wfreopen_s(&dummyErr, logPath, L"w", stderr);
+				// Make stdout/stderr unbuffered to ensure logs are flushed immediately.
+				setvbuf(stdout, NULL, _IONBF, 0);
+				setvbuf(stderr, NULL, _IONBF, 0);
+				printf("[Server] Logging enabled; writing to '%S'\n", logPath);
+			}
+		} else {
+			fprintf(stderr, "[Server] Failed to get module path (error=%lu); logging disabled.\n",
+				GetLastError());
+		}
+	}
+
 	//    Boost process and thread priority
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
@@ -532,9 +545,9 @@ int main(int argc, char *argv[])
 	
 	memory_block_t *mem_block = (memory_block_t *)std::malloc(sizeof(memory_block_t));
 
-	mem_block->video_ptr = pRsp->payload + sizeof(NDIlib_video_frame_v2_t);
+	mem_block->video_ptr = pRsp->payload + VIDEO_FRAME_OFFSET;
 	mem_block->video_size = VIDEO_FRAME_MAX_SIZE;
-	mem_block->audio_ptr = pRsp->payload + sizeof(NDIlib_video_frame_v2_t) + VIDEO_FRAME_MAX_SIZE;
+	mem_block->audio_ptr = pRsp->payload + AUDIO_FRAME_OFFSET;
 	mem_block->audio_size = AUDIO_FRAME_MAX_SIZE;
 
 	while (g_running) {
@@ -575,14 +588,15 @@ int main(int argc, char *argv[])
 			} else {
 				printf("Failed to create NDI Receiver.\n");
 			}
-
+			
 			ndi->recv_set_video_allocator(ndi_receiver, (void*)mem_block,
 							video_custom_allocator, video_custom_deallocator);
 			ndi->recv_set_audio_allocator(ndi_receiver, (void *)mem_block,
 							audio_custom_allocator, audio_custom_deallocator);
+			printf("Custom allocators set for NDI Receiver.\n");
 
-			// Connect to our source
-			ndi->recv_connect(ndi_receiver, &recv_desc.source_to_connect_to);
+			// ndi->recv_connect(ndi_receiver, &recv_desc.source_to_connect_to);
+			// printf("NDI Receiver connected to source '%s'\n", recv_desc.source_to_connect_to.p_ndi_name);
 
 			break;
 		}
@@ -614,6 +628,7 @@ int main(int argc, char *argv[])
 		case NDI_CAPTURE_FRAME_SYNC: {
 			if (ndi->recv_get_no_connections(ndi_receiver) == 0)
 			{
+				printf("No NDI connections available; skipping frame capture.\n");
 				pRsp->payload_type = NDI_NO_FRAME;
 				break;
 			}
@@ -655,12 +670,12 @@ int main(int argc, char *argv[])
 			pRsp->payload_type = NDI_MULTI_FRAME;
 
 			// verify serialization succeeded and we didn't exceed buffer capacity
-			/*
+			
 			NDIlib_frame_type_e frame_received = NDIlib_frame_type_none;
 			uint8_t *in_buf = pRsp->payload;
 			size_t frame_len = deserialize_frame(in_buf, sizeof(pRsp->payload),
 							     frame_received, &video_frame_test, &audio_frame_test);
-			if (frame_received != NDIlib_frame_type_audio || frame_len != audio_size || audio_frame.timecode != audio_frame_test.timecode) {
+			if (frame_received != NDIlib_frame_type_audio || audio_frame.no_samples != audio_frame_test.no_samples || audio_frame.timecode != audio_frame_test.timecode) {
 				printf("Audio deserialization failed or size mismatch (received type %d, size %zu, expected type %d, size %zu, )\n",
 					   frame_received, frame_len, NDIlib_frame_type_audio, audio_size);
 				break;
@@ -674,7 +689,7 @@ int main(int argc, char *argv[])
 				       frame_received, video_frame_test.xres, video_frame_test.yres,
 				       NDIlib_frame_type_video, video_frame.xres, video_frame.yres);
 			}
-			*/
+			// printf("Deserialize test: video %dx%d audio %d samples\n", video_frame_test.xres, video_frame_test.yres, audio_frame_test.no_samples);
 			break;
 		}
 		case NDI_SHUTDOWN:

@@ -25,11 +25,11 @@
 #define NDI_MULTI_FRAME          3000
 #define NDI_NO_FRAME             9999
 
-#define NDI_SERVER_DEBUG          true
+#define NDI_SERVER_DEBUG          false
 #if NDI_SERVER_DEBUG
 #define NDI_SERVER_WAIT           3000
 #else
-#define NDI_SERVER_WAIT           500
+#define NDI_SERVER_WAIT           1000
 #endif
 
 //
@@ -38,11 +38,12 @@
 static const DWORD REQUEST_SIZE = 4096u;
 static const DWORD AUDIO_FRAME_MAX_SIZE = 192000 * 4;  // 4 seconds of stereo audio at 48kHz with 32 bits per sample
 static const DWORD VIDEO_FRAME_MAX_SIZE =
-	4000u * 3000u * 4u;                            // 48 000 000 bytes (enough for a single uncompressed 4K frame)
-static const DWORD RESPONSE_SIZE = sizeof(NDIlib_video_frame_v2_t) + 
-								VIDEO_FRAME_MAX_SIZE + 
-								sizeof(NDIlib_audio_frame_v3_t) + 
-								AUDIO_FRAME_MAX_SIZE; // Large enough to hold either a single video frame, a single audio frame, or both together for framesync.	
+	4000u * 3000u * 4u;    
+static const DWORD SHARED_MEM_SIZE = VIDEO_FRAME_MAX_SIZE + AUDIO_FRAME_MAX_SIZE;
+static const DWORD RESPONSE_FRAME_SIZE = sizeof(NDIlib_video_frame_v2_t) + +sizeof(NDIlib_audio_frame_v3_t);
+static const DWORD VIDEO_FRAME_OFFSET = RESPONSE_FRAME_SIZE;
+static const DWORD AUDIO_FRAME_OFFSET = VIDEO_FRAME_OFFSET + VIDEO_FRAME_MAX_SIZE;	
+static const DWORD RESPONSE_SIZE = sizeof(uint32_t) + RESPONSE_FRAME_SIZE + SHARED_MEM_SIZE;
 
 //
 //  Shared-memory layouts
@@ -60,7 +61,7 @@ struct RequestBlock {
 
 struct ResponseBlock {
 	uint32_t payload_type; // bytes  0-3  : Content type of the payload (e.g. NDI_AUDIO_FRAME...)
-	uint8_t payload[RESPONSE_SIZE - 4]; // bytes  4-47 999 999
+	uint8_t payload[RESPONSE_SIZE - sizeof(uint32_t)]; // bytes  4...
 };
 
 #pragma pack(pop)
@@ -317,7 +318,7 @@ static size_t serialize_frame(NDIlib_frame_type_e frame_type, const void *frame,
 		int data_size = vf->data_size_in_bytes * vf->yres;
 
 		// metadata length (count bytes including NUL)
-		int meta_len = vf->p_metadata ? static_cast<int>(strlen(vf->p_metadata)) + 1 : 1;
+		int meta_len = vf->p_metadata ? static_cast<int>(strlen(vf->p_metadata)) +1 :1;
 
 		// Check total space
 		if (remaining < struct_sz + (size_t)data_size + (size_t)meta_len)

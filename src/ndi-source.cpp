@@ -738,7 +738,8 @@ ndi_server_connection_t create_ndi_server()
 
 	// Build command line (quote path in case it contains spaces)
 	WCHAR cmdLine[512];
-	swprintf_s(cmdLine, 512, L"\"%s\" \"%s\"", exePath, ustr.c_str());
+
+	swprintf_s(cmdLine, 512, L"\"%s\" \"%s\" --log", exePath, ustr.c_str());
 
 	conn.si = {sizeof(conn.si)};
 	conn.pi = {};
@@ -800,7 +801,7 @@ void create_ndi_receiver(ndi_server_connection_t &conn, NDIlib_recv_create_v3_t 
 	SetEvent(conn.hEvtCmd);
 	DWORD w = WaitForSingleObject(conn.hEvtRsp, NDI_SERVER_WAIT);
 	if (w != WAIT_OBJECT_0) {
-		obs_log(LOG_ERROR, "Timed out waiting for ndi-server create a receiverk");
+		obs_log(LOG_ERROR, "Timed out waiting for ndi-server create a receiver");
 		destroy_ndi_server(conn);
 		return;
 	}
@@ -1186,9 +1187,14 @@ void *ndi_source_thread(void *data)
 				uint8_t *in_buf = (uint8_t *)&s->ndi_server.pRsp->payload;
 				size_t frame_len = deserialize_frame(in_buf, sizeof(s->ndi_server.pRsp->payload),
 								     frame_received, &video_frame, &audio_frame);
+				
 				in_buf += frame_len;
 				deserialize_frame(in_buf, sizeof(s->ndi_server.pRsp->payload) - frame_len,
 						  frame_received, &video_frame, &audio_frame);
+
+				audio_frame.p_data = s->ndi_server.pRsp->payload + AUDIO_FRAME_OFFSET;
+				video_frame.p_data = s->ndi_server.pRsp->payload + VIDEO_FRAME_OFFSET;
+
 				if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 					timestamp_audio = audio_frame.timestamp;
 					ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
@@ -1228,6 +1234,13 @@ void *ndi_source_thread(void *data)
 				}
 				deserialize_frame(s->ndi_server.pRsp->payload, sizeof(s->ndi_server.pRsp->payload),
 						  frame_received, &video_frame, &audio_frame);
+				
+				if (frame_received == NDIlib_frame_type_audio) {
+					audio_frame.p_data = s->ndi_server.pRsp->payload + AUDIO_FRAME_OFFSET;
+				} else if (frame_received == NDIlib_frame_type_video) {
+					video_frame.p_data = s->ndi_server.pRsp->payload + VIDEO_FRAME_OFFSET;
+				}
+
 			} else
 				frame_received =
 					ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
