@@ -739,8 +739,8 @@ ndi_server_connection_t create_ndi_server()
 	// Build command line (quote path in case it contains spaces)
 	WCHAR cmdLine[512];
 
-	swprintf_s(cmdLine, 512, L"\"%s\" \"%s\" --log", exePath, ustr.c_str());
-
+//	swprintf_s(cmdLine, 512, L"\"%s\" \"%s\" --log", exePath, ustr.c_str());
+	swprintf_s(cmdLine, 512, L"\"%s\" \"%s\"", exePath, ustr.c_str());
 	conn.si = {sizeof(conn.si)};
 	conn.pi = {};
 	ZeroMemory(&conn.si, sizeof(conn.si));
@@ -810,7 +810,67 @@ void create_ndi_receiver(ndi_server_connection_t &conn, NDIlib_recv_create_v3_t 
 	conn.receiver_created = true;
 	return;
 }
+class PerfTimer {
+ public:
+	explicit PerfTimer(const char *name)
+		: name_(name),
+		 frame_counter_(0),
+		 report_interval_(600),
+		 min_ns_(INT64_MAX),
+		 max_ns_(0),
+		 sum_ns_(0),
+		 frame_rate_(0.0)
+	{
+	}
 
+	void start(double frame_rate = 0.0)
+	{
+		frame_rate_ = frame_rate;
+		start_time_ = std::chrono::high_resolution_clock::now();
+	}
+
+	void end()
+	{
+		auto t1 = std::chrono::high_resolution_clock::now();
+		int64_t elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - start_time_).count();
+		++frame_counter_;
+		sum_ns_ += (uint64_t)elapsed;
+		if (elapsed < min_ns_)
+			min_ns_ = elapsed;
+		if (elapsed > max_ns_)
+			max_ns_ = elapsed;
+
+		if (frame_counter_ >= report_interval_) {
+			double avg = static_cast<double>(sum_ns_) / static_cast<double>(frame_counter_);
+			// convert nanoseconds to milliseconds with0.001 ms (1 microsecond) precision
+			double min_ms = static_cast<double>(min_ns_) /1e6;
+			double max_ms = static_cast<double>(max_ns_) /1e6;
+			double avg_ms = avg /1e6;
+			// Express times as percentage of one frame at the configured frame_rate (fps).
+			// percent = (time_ms / (1000 / fps)) *100 = time_ms * fps /10
+			double min_pct = (frame_rate_ >0.0) ? (min_ms * frame_rate_ /10.0) :0.0;
+			double max_pct = (frame_rate_ >0.0) ? (max_ms * frame_rate_ /10.0) :0.0;
+			double avg_pct = (frame_rate_ >0.0) ? (avg_ms * frame_rate_ /10.0) :0.0;
+			obs_log(LOG_DEBUG, "%s: Performance (last %llu frames): min=%.3f ms (%.2f%%), max=%.3f ms (%.2f%%), avg=%.3f ms (%.2f%%)",
+				name_.c_str(), frame_counter_, min_ms, min_pct, max_ms, max_pct, avg_ms, avg_pct);
+
+			frame_counter_ =0;
+			sum_ns_ =0;
+			min_ns_ = INT64_MAX;
+			max_ns_ =0;
+		}
+	}
+
+ private:
+	const std::string name_;
+	uint64_t frame_counter_;
+	const uint64_t report_interval_;
+	int64_t min_ns_;
+	int64_t max_ns_;
+	uint64_t sum_ns_;
+	double frame_rate_;
+	std::chrono::high_resolution_clock::time_point start_time_;
+};
 void *ndi_source_thread(void *data)
 {
 	auto s = (ndi_source_t *)data;
@@ -838,13 +898,22 @@ void *ndi_source_thread(void *data)
 
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
+	double frame_rate = 0.0;
 
 	s->ndi_server = create_ndi_server(); // Will set running = true;
+	obs_source_name = obs_source_get_name(s->obs_source);
+	std::string perf_name_prefix = obs_source_name ? std::string(obs_source_name) : std::string("<unknown>");
+	PerfTimer perfloop((perf_name_prefix + " ----------- main loop").c_str());
+	PerfTimer perfcafr((perf_name_prefix + " - capture audio frame").c_str());
+	PerfTimer perfcvfr((perf_name_prefix + " - capture VIDEO frame").c_str());
+	PerfTimer perfcffr((perf_name_prefix + " - capture FSAV server").c_str());
+	PerfTimer perfpvfr((perf_name_prefix + " - process VIDEO frame").c_str());
+	PerfTimer perfpafr((perf_name_prefix + " - process audio frame").c_str());
 
 	// Main NDI receiver loop: BEGIN
 	//
 	while (s->running) {
-
+		perfloop.start(frame_rate);
 		//
 		// reset_ndi_receiver: BEGIN
 		//
@@ -852,7 +921,7 @@ void *ndi_source_thread(void *data)
 			s->config.reset_ndi_receiver = false;
 
 			// If config.ndi_receiver_name changed, then so did obs_source_name
-			obs_source_name = obs_source_get_name(s->obs_source);
+			// obs_source_name = obs_source_get_name(s->obs_source);
 
 			//
 			// Update recv_desc.p_ndi_recv_name
@@ -1045,7 +1114,7 @@ void *ndi_source_thread(void *data)
 		//
 		if (!s->ndi_server.receiver_created && ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
 			process_empty_frame(s);
-
+			perfloop.end();
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
@@ -1112,6 +1181,7 @@ void *ndi_source_thread(void *data)
 		//
 		if (!obs_source_showing(s->obs_source) || 
 			(!s->visible && (s->config.behavior == PROP_BEHAVIOR_KEEP_ACTIVE_BACKUP))) {
+			perfloop.end();
 			// Avoid busy-waiting when the source is hidden but kept alive.
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			continue;
@@ -1122,7 +1192,7 @@ void *ndi_source_thread(void *data)
 			// ndi_frame_sync
 			//
 			if (!s->ndi_server.receiver_created) {
-
+				perfcafr.start(frame_rate);
 				//
 				// AUDIO
 				//
@@ -1133,6 +1203,9 @@ void *ndi_source_thread(void *data)
 					0,     // "The desired channel count. 0 to get the source value."
 					1024); // "The desired sample count. 0 to get the source value."
 				// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
+				perfcafr.end();
+
+				perfpafr.start(frame_rate);	
 				if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 					timestamp_audio = audio_frame.timestamp;
 					// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
@@ -1140,21 +1213,28 @@ void *ndi_source_thread(void *data)
 									 &obs_audio_frame);
 				}
 				ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
+				perfpafr.end();
 
 				//
 				// VIDEO
 				//
+				perfcvfr.start(frame_rate);
 				video_frame = {};
 				ndiLib->framesync_capture_video(ndi_frame_sync, &video_frame,
 								NDIlib_frame_format_type_progressive);
+				perfcvfr.end();
+				perfpvfr.start(frame_rate);
 				if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 					timestamp_video = video_frame.timestamp;
 					// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
 					ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
 									 &obs_video_frame);
 				}
+				frame_rate = video_frame.frame_rate_N / static_cast<double>(video_frame.frame_rate_D);
 				ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
+				perfpvfr.end();
 			} else {
+				perfcffr.start(frame_rate);
 				// Request framesync audio and video frames from the ndi-server
 				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME_SYNC;
 				SetEvent(s->ndi_server.hEvtCmd);
@@ -1164,12 +1244,16 @@ void *ndi_source_thread(void *data)
 						"Timed out waiting for ndi-server to return frame sync frame");
 					destroy_ndi_server(s->ndi_server);
 					s->config.reset_ndi_receiver = true;
+					perfloop.end();
+					perfcffr.end();
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 					continue;
 				}
 				if (s->ndi_server.pRsp->payload_type == NDI_NO_FRAME) {
 					if (s->visible) 
 						process_empty_frame(s);
-
+					perfloop.end();
+					perfcffr.end();
 					// This will also slow down the shutdown of OBS when no NDI feed is received.
 					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 					continue;
@@ -1194,18 +1278,28 @@ void *ndi_source_thread(void *data)
 
 				audio_frame.p_data = s->ndi_server.pRsp->payload + AUDIO_FRAME_OFFSET;
 				video_frame.p_data = s->ndi_server.pRsp->payload + VIDEO_FRAME_OFFSET;
+				perfcffr.end();
 
+				frame_rate = video_frame.frame_rate_N / static_cast<double>(video_frame.frame_rate_D);
+
+				perfpafr.start(frame_rate);	
 				if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 					timestamp_audio = audio_frame.timestamp;
+
 					ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 									 &obs_audio_frame);
 				}
+				perfpafr.end();
 
+				perfpvfr.start(frame_rate);
 				if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 					timestamp_video = video_frame.timestamp;
+
 					ndi_source_thread_process_video2(s, &video_frame, s->obs_source,
 									 &obs_video_frame);
-				}
+
+				}		
+				perfpvfr.end();
 			}
 			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -1215,6 +1309,9 @@ void *ndi_source_thread(void *data)
 			//
 			frame_received = NDIlib_frame_type_none;
 			if (s->ndi_server.receiver_created) {
+				perfcafr.start(frame_rate);
+				perfcvfr.start(frame_rate);
+
 				// Request a frame from the ndi-server
 				s->ndi_server.pReq->command = NDI_CAPTURE_FRAME;
 				SetEvent(s->ndi_server.hEvtCmd);
@@ -1223,11 +1320,17 @@ void *ndi_source_thread(void *data)
 					obs_log(LOG_ERROR, "Timed out waiting for ndi-server to return frame");
 					destroy_ndi_server(s->ndi_server);
 					s->config.reset_ndi_receiver = true;
+					perfcvfr.end();
+					perfcafr.end();
+					perfloop.end();
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 					continue;
 				}
 				if (s->ndi_server.pRsp->payload_type == NDI_NO_FRAME) {
 					process_empty_frame(s);
-
+					perfcafr.end();
+					perfcvfr.end();
+					perfloop.end();
 					// This will also slow down the shutdown of OBS when no NDI feed is received.
 					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 					continue;
@@ -1240,12 +1343,17 @@ void *ndi_source_thread(void *data)
 				} else if (frame_received == NDIlib_frame_type_video) {
 					video_frame.p_data = s->ndi_server.pRsp->payload + VIDEO_FRAME_OFFSET;
 				}
-
-			} else
+			} else {
+				perfcafr.start(frame_rate);
+				perfcvfr.start(frame_rate);
 				frame_received =
 					ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
+				perfcvfr.end();
+			}
 
 			if (frame_received == NDIlib_frame_type_audio) {
+				perfcafr.end();
+				perfpafr.start(frame_rate);
 				//
 				// AUDIO
 				//
@@ -1254,9 +1362,12 @@ void *ndi_source_thread(void *data)
 								 &obs_audio_frame);
 				if (!s->ndi_server.receiver_created)
 					ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
+				perfpafr.end();
 			}
 
 			if (frame_received == NDIlib_frame_type_video) {
+				perfcvfr.end();
+				perfpvfr.start(frame_rate);	
 				//
 				// VIDEO
 				//
@@ -1264,12 +1375,14 @@ void *ndi_source_thread(void *data)
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
 				if (!s->ndi_server.receiver_created)
 					ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
+				perfpvfr.end();
 			}
 
 			if (frame_received == NDIlib_frame_type_none) {
 				process_empty_frame(s);
 			}
 		}
+		perfloop.end();
 	}
 	//
 	// Main NDI receiver loop: END

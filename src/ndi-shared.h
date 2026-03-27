@@ -5,6 +5,9 @@
 #include <cstring>
 #include <vector>
 #include <string>
+#include <chrono>
+#include <iostream>
+#include <iomanip>
 
 // Include NDI SDK definitions required for recv descriptor types
 #include "..\lib\ndi\Processing.NDI.Advanced.h"

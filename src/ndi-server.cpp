@@ -723,6 +723,16 @@ int main(int argc, char *argv[])
 	//    Cleanup
 	printf("[Server] Cleaning up and exiting.\n");
 
+	if (ndi_receiver != nullptr) {
+		ndi->framesync_destroy(ndi_frame_sync);
+		ndi->recv_destroy(ndi_receiver);
+		ndi_receiver = nullptr;
+	}
+
+	if (ndi && ndi->destroy) {
+		ndi->destroy();
+	}
+
 	if (pReq)
 		UnmapViewOfFile(const_cast<RequestBlock *>(pReq));
 	if (pRsp)
@@ -735,16 +745,6 @@ int main(int argc, char *argv[])
 		CloseHandle(hEvtReady);
 	if (g_hShutdownEvt)
 		CloseHandle(g_hShutdownEvt);
-
-	if (ndi_receiver != nullptr) {
-		ndi->framesync_destroy(ndi_frame_sync);
-		ndi->recv_destroy(ndi_receiver);
-		ndi_receiver = nullptr;
-	}
-
-	if (ndi && ndi->destroy) {
-		ndi->destroy();
-	}
 
 	return 0;
 }
