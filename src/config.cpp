@@ -47,6 +47,10 @@ Config *Config::_instance = nullptr;
 int Config::UpdateForce = 0;
 int Config::UpdateLocalPort = 0;
 bool Config::UpdateLastCheckIgnore = false;
+bool Config::CheckNdiLibForceFail = false;
+bool Config::CheckObsForceFail = false;
+bool Config::CheckNdiLibBypass = false;
+bool Config::CheckObsBypass = false;
 int Config::DetectObsNdiForce = 0;
 
 enum ObsConfigType { OBS_CONFIG_STRING, OBS_CONFIG_BOOL };
@@ -133,6 +137,34 @@ void ProcessCommandLine()
 				obs_log(LOG_INFO, "config: DistroAV update port using default %d",
 					Config::UpdateLocalPort);
 			}
+			continue;
+		}
+
+		//
+		// Plugin's Requirement Checks - Force-fail (for automated testing)
+		//
+		if (argument == "--distroav-check-ndilib-forcefail") {
+			obs_log(LOG_INFO, "config: Force DistroAV requirement check for NDI library version to fail");
+			Config::CheckNdiLibForceFail = true;
+			continue;
+		}
+		if (argument == "--distroav-check-obs-forcefail") {
+			obs_log(LOG_INFO, "config: Force DistroAV requirement check for OBS version to fail");
+			Config::CheckObsForceFail = true;
+			continue;
+		}
+
+		//
+		// Plugin's Requirement Checks Bypass (for advanced users only - not recommended)
+		//
+		if (argument == "--distroav-check-ndilib-ignore") {
+			obs_log(LOG_INFO, "config: Ignore DistroAV requirement check for NDI library version");
+			Config::CheckNdiLibBypass = true;
+			continue;
+		}
+		if (argument == "--distroav-check-obs-ignore") {
+			obs_log(LOG_INFO, "config: Ignore DistroAV requirement check for OBS version");
+			Config::CheckObsBypass = true;
 			continue;
 		}
 

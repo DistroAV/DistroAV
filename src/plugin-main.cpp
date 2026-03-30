@@ -314,17 +314,27 @@ bool obs_module_load(void)
 	// Starting OBS 32+ this will not be required anymore. See PR : https://github.com/obsproject/obs-studio/pull/6916
 	// TO DO : As soon as OBS 32 is used in the buildspec.json as the minimum OBS version, this check can be removed."
 	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
-		obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
-			PLUGIN_MIN_OBS_VERSION);
-		obs_log(LOG_DEBUG,
-			"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
-			obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
 
-		auto title = "OBS version not supported";
-		auto message = "Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
-		showCriticalMessageBoxDelayed(title, message);
+		// Bypass this check. Only for advanced users (not recommended)
+		if (Config::CheckObsBypass) {
+			obs_log(LOG_WARNING,
+				"OBS version check ignore enabled - Continuing to load plugin even though OBS version detected (%s) is below the minimum required version (%s). This may lead to instability or crashes.",
+				obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
+		} else {
+			// Default Beahvior
+			obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
+				PLUGIN_MIN_OBS_VERSION);
+			obs_log(LOG_DEBUG,
+				"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
+				obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
 
-		return false;
+			auto title = "OBS version not supported";
+			auto message =
+				"Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
+			showCriticalMessageBoxDelayed(title, message);
+
+			return false;
+		}
 	}
 	obs_log(LOG_DEBUG, "obs_module_load: Minimum API-level OBS version check complete. Continuing...");
 
@@ -336,32 +346,39 @@ bool obs_module_load(void)
 	// SOFT requirement Check START
 	// Process plugin's SOFT requirements that would limit functionality of the plugin but not fail the whole plugin.
 
+	// OBS Version check (SOFT)
 	// Plugin's minimum OBS version for feature access check
 	// The minimum OBS version required to access all the features of the plugin.
 	// TO DO : Leverage this to condionally enable/disable features based on the OBS version detected.
-	if (!is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
-		obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
-			PLUGIN_MIN_OBS_VERSION);
-		obs_log(LOG_DEBUG,
-			"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
-			obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
+	if (Config::CheckObsForceFail || !is_version_supported(obs_get_version_string(), PLUGIN_MIN_OBS_VERSION)) {
 
-		auto title = "OBS version is too old for some features";
-		auto message = "Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
-		showCriticalMessageBoxDelayed(title, message);
+		// Bypass this check. Only for advanced users (not recommended)
+		if (Config::CheckObsBypass) {
+			obs_log(LOG_WARNING,
+				"OBS version requirement check for features ignore enabled - Continuing to load plugin with limited features even though OBS version detected (%s) is below the minimum required version (%s). This may lead to instability or crashes.",
+				obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
+		} else {
+			// Default Beahvior
+			obs_log(LOG_ERROR, "ERR-424 - %s requires at least OBS version %s.", PLUGIN_DISPLAY_NAME,
+				PLUGIN_MIN_OBS_VERSION);
+			obs_log(LOG_DEBUG,
+				"obs_module_load: OBS version detected is not compatible. OBS version detected: %s. OBS version required: %s",
+				obs_get_version_string(), PLUGIN_MIN_OBS_VERSION);
+
+			auto title = "OBS version is too old for some features";
+			auto message =
+				"Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
+			showCriticalMessageBoxDelayed(title, message);
+		}
 	}
-	obs_log(LOG_DEBUG, "obs_module_load: Minimum Feature-level OBS version met. Continuing...");
+	obs_log(LOG_DEBUG, "obs_module_load: Minimum Feature-level OBS version check complete. Continuing...");
 
-	// NDI Library installed requirement check
+	// NDI Library version Check (SOFT)
 	// The plugin will be severely limited in functionality if the NDI library is not installed.
 	// TO DO TBC Load library from a custom path defined by the user in the plugin settings.
 
-#if defined(DISTROAV_TEST_NDILIB_MISSING)
-	// Prepare for automated tests. Force the NDI library to be undetected to test the plugin's behavior in this scenario.
-	ndiLib = nullptr;
-#else
-	ndiLib = load_ndilib();
-#endif
+	// This will force fail the lib load (for automated testing).
+	ndiLib = Config::CheckNdiLibForceFail ? nullptr : load_ndilib();
 
 	if (!ndiLib) {
 		auto title = Str("NDIPlugin.LibError.Title");
@@ -377,13 +394,7 @@ bool obs_module_load(void)
 
 		// NDI Library Initialization check
 		// The Library is found but might fail to load on unsupported hardware.
-
-#if defined(DISTROAV_TEST_NDILIB_INIT_FAILURE)
-		// Prepare for automated tests. Force the NDI library to be undetected to test the plugin's behavior in this scenario.
-		auto initialized = false;
-#else
 		auto initialized = ndiLib->initialize();
-#endif
 		if (!initialized) {
 			obs_log(LOG_ERROR,
 				"ERR-406 - NDI library could not initialize. Usually due to unsupported CPU.");
@@ -401,7 +412,8 @@ bool obs_module_load(void)
 							    .captured(1);
 			obs_log(LOG_INFO, "NDI Library Version detected: %s", QT_TO_UTF8(ndi_version_short));
 
-			if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION)) {
+			if (!is_version_supported(QT_TO_UTF8(ndi_version_short), PLUGIN_MIN_NDI_VERSION) &&
+			    !Config::CheckNdiLibBypass) {
 				obs_log(LOG_ERROR,
 					"ERR-425 - %s requires at least NDI version %s. NDI Version detected: %s.",
 					PLUGIN_DISPLAY_NAME, PLUGIN_MIN_NDI_VERSION, QT_TO_UTF8(ndi_version_short));
@@ -417,11 +429,18 @@ bool obs_module_load(void)
 				message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
 				showCriticalMessageBoxDelayed(title, message);
 			} else {
-				obs_log(LOG_INFO, "obs_module_load: NDI library version detected (%s) is compatible",
-					ndiLib->version());
-				obs_log(LOG_DEBUG,
-					"obs_module_load: NDI minimum version required (%s). NDI version detected: %s.",
-					PLUGIN_MIN_NDI_VERSION, ndiLib->version());
+				// Clearly inform that this check has been ignoreed. Only for advanced users (not recommended)
+				if (Config::CheckNdiLibBypass) {
+					obs_log(LOG_WARNING,
+						"NDI Library version requirement check has been ignoreed - Continuing to load plugin. This may lead to instability or crashes.");
+				} else {
+					obs_log(LOG_INFO,
+						"obs_module_load: NDI library version detected (%s) is compatible",
+						ndiLib->version());
+					obs_log(LOG_DEBUG,
+						"obs_module_load: NDI minimum version required (%s). NDI version detected: %s.",
+						PLUGIN_MIN_NDI_VERSION, ndiLib->version());
+				}
 
 				// All seems compatible, proceed to register plugin features.
 				register_plugin_features();
