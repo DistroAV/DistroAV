@@ -203,7 +203,7 @@ If you are running a local build, don't forget to add your build info to the upd
 		}
 #else
 			QMessageBox::information(this, "Unsupported platform",
-						"Automatic DistroAV installation is currently only supported on macOS and Windows.");
+						"Automatic DistroAV installation is currently only supported on Windows and macOS using the default installation methods.");
 #endif
 	});
 
@@ -239,7 +239,7 @@ If you are running a local build, don't forget to add your build info to the upd
 		}
 #else
 		QMessageBox::information(this, "Unsupported platform",
-					 "Automatic NDI installation is currently only supported on macOS and Windows.");
+					 "Automatic NDI installation is currently only supported on Windows and macOS using the default installation methods.");
 #endif
 	});
 
@@ -252,12 +252,9 @@ If you are running a local build, don't forget to add your build info to the upd
 	connect(ui->pushButtonWiki, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
-	// Cosmetic display of NDI registered trademark info with link to NDI website
-	ui->labelNdiRegisteredTrademark->setTextFormat(Qt::RichText);
-	ui->labelNdiRegisteredTrademark->setTextInteractionFlags(Qt::TextBrowserInteraction);
-	ui->labelNdiRegisteredTrademark->setOpenExternalLinks(true);
-	ui->labelNdiRegisteredTrademark->setText(QString("%1 %2").arg(
-		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, QString(" - <a href=\"https://ndi.video\">ndi.video</a>")));
+	//Display of NDI registered trademark info with link to NDI website
+	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
+		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, makeLink(PLUGIN_REDIRECT_NDI_WEB_URL, NDI_OFFICIAL_WEB_URL)));
 }
 
 void OutputSettings::onFormAccepted()

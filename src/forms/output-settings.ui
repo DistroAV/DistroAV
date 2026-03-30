@@ -268,11 +268,13 @@
                     <property name="text">
                         <string>NDIPlugin.OutputSettings.Requirements</string>
                     </property>
-                    <property name="textInteractionFlags">
-                        <set>Qt::LinksAccessibleByMouse</set>
-                    </property>
                     <property name="alignment">
                         <set>Qt::AlignCenter</set>
+                    </property>
+                    <property name="font">
+                        <font>
+                            <bold>true</bold>
+                        </font>
                     </property>
                 </widget>
             </item>
@@ -285,6 +287,12 @@
                         <widget class="QLabel" name="labelReqDistroTitle">
                             <property name="text">
                                 <string>DistroAV</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
                             </property>
                         </widget>
                     </item>
@@ -303,6 +311,12 @@
                             <property name="text">
                                 <string>NDI Library</string>
                             </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
                         </widget>
                     </item>
                     <item row="1" column="1">
@@ -319,6 +333,12 @@
                         <widget class="QLabel" name="labelReqObsTitle">
                             <property name="text">
                                 <string>OBS</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
                             </property>
                         </widget>
                     </item>
@@ -417,6 +437,15 @@
                             </property>
                             <property name="alignment">
                                 <set>Qt::AlignCenter</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::TextBrowserInteraction</set>
+                            </property>
+                            <property name="openExternalLinks">
+                                <bool>true</bool>
                             </property>
                         </widget>
                     </item>
