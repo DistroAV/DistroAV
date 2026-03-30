@@ -45,9 +45,10 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 
 	// OBS Version Check
 	auto obsVersion = QString::fromUtf8(obs_get_version_string());
-	ui->labelReqObsTitle->setText(makeLink("#", QT_TO_UTF8(ui->labelReqObsTitle->text())));
-	connect(ui->labelReqObsTitle, &QLabel::linkActivated, [this, obsVersion](const QString &) {
-		QApplication::clipboard()->setText(obsVersion);
+	auto obsVersionDisplay = QString("%1 %2").arg("OBS", QString::fromUtf8(obs_get_version_string()));
+	ui->labelReqObsTitle->setText(makeLink("#", QT_TO_UTF8(obsVersionDisplay)));
+	connect(ui->labelReqObsTitle, &QLabel::linkActivated, [this, obsVersionDisplay](const QString &) {
+		QApplication::clipboard()->setText(obsVersionDisplay);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
 					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
@@ -77,7 +78,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
 	}
 
-	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ui->labelReqNdiTitle->text())));
+	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionFull)));
 	connect(ui->labelReqNdiTitle, &QLabel::linkActivated, [this, ndiVersionFull](const QString &) {
 		QApplication::clipboard()->setText(ndiVersionFull);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
