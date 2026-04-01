@@ -76,6 +76,8 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		ndiVersionFull = QString(ndiLib->version());
 		ndiVersionShort =
 			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
+	} else {
+		ndiVersionFull = "NDI Library not loaded";
 	}
 
 	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionFull)));
