@@ -352,8 +352,6 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 
-	NDIlib_send_create_t send_desc;
-
 	if (groups && groups[0])
 		send_desc.p_groups = groups;
 	else
@@ -370,11 +368,12 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	filter->ndi_sender = ndiLib->send_create(&send_desc);
 
 	if (filter->ndi_sender) {
-		obs_log(LOG_INFO, "Dedicated NDI Output sender created: '%s'", name);
-		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi output started", name);
+		obs_log(LOG_INFO, "Dedicated NDI Output sender created: '%s'", send_desc.p_ndi_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi output started", send_desc.p_ndi_name);
 	} else {
-		obs_log(LOG_WARNING, "WARN-416 - Dedicated NDI Output sender initialisation failed. '%s'", name);
-		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi sender init failed", name);
+		obs_log(LOG_WARNING, "WARN-416 - Dedicated NDI Output sender initialisation failed. '%s'",
+			send_desc.p_ndi_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi sender init failed", send_desc.p_ndi_name);
 	}
 
 	filter->no_audio_connections = -1;
