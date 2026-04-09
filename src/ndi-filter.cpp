@@ -352,8 +352,6 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 
-	NDIlib_send_create_t send_desc;
-
 	if (groups && groups[0])
 		send_desc.p_groups = groups;
 	else
