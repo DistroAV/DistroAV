@@ -58,6 +58,7 @@ The following accomplishes two goals:
 
 QString rehostUrl(const char *url);
 QString makeLink(const char *url, const char *text = nullptr);
+bool is_version_supported(const char *version, const char *min_version);
 
 #define PLUGIN_UPDATE_URL "https://distroav.org/api/update"
 
@@ -83,8 +84,8 @@ QString makeLink(const char *url, const char *text = nullptr);
 #define PLUGIN_REDIRECT_NDI_WEB_URL "https://distroav.org/ndi/web"
 
 //
-// `NDI_OFFICIAL_*` urls that should always be displayed cosmetically/literally to the user.
-// The code will truly point to the `PLUGIN_*` urls above.
+// `NDI_OFFICIAL_*` urls that should be displayed cosmetically/literally to the user.
+// The code will truly point to the `PLUGIN_*` urls above to ensure redirection to latest valid URL.
 // If NDI ever changes any of these urls:
 // 	1. First update them in https://github.com/DistroAV/firebase/blob/main/firebase.json hosting;
 //	  	Clients will then auto-magically point to the new urls without needing to update the plugin,
@@ -94,15 +95,17 @@ QString makeLink(const char *url, const char *text = nullptr);
 //
 #if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
 #define NDI_OFFICIAL_REDIST_URL NDILIB_REDIST_URL
-#define NDI_OFFICIAL_TOOLS_URL "https://ndi.video/tools/download"
+#define NDI_OFFICIAL_TOOLS_URL "ndi.video/tools/download"
 #endif
-#define NDI_OFFICIAL_CPU_REQUIREMENTS_URL "https://docs.ndi.video/docs/sdk/cpu-requirements"
+
+#define NDI_OFFICIAL_CPU_REQUIREMENTS_URL "docs.ndi.video/docs/sdk/cpu-requirements"
 // Required by NDI license:
 // Per https://github.com/DistroAV/DistroAV/blob/master/lib/ndi/NDI%20SDK%20Documentation.pdf
 // "3 Licensing"
 // "Your application must provide a link to https://ndi.video/ in a location close to all locations
 // where NDI is used / selected within the product, on your web site, and in its documentation."
-#define NDI_OFFICIAL_WEB_URL "https://ndi.video"
+#define NDI_OFFICIAL_WEB_URL "ndi.video"
 // "Your application’s About Box and any other locations where trademark attribution is provided
 // should also specifically indicate that “NDI® is a registered trademark of Vizrt NDI AB”."
 #define NDI_IS_A_REGISTERED_TRADEMARK_TEXT "NDI® is a registered trademark of Vizrt NDI AB"
+// More on the NDI Licence requirements for the DistroAV project : https://github.com/DistroAV/DistroAV/pull/1353
