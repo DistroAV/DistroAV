@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 set -e
 echo "'Uninstalling' DistroAV from OBS..."

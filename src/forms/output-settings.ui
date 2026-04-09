@@ -262,24 +262,118 @@
                     </layout>
                 </widget>
             </item>
+
             <item>
-                <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
-                    <item>
-                        <widget class="QLabel" name="labelDistroAvVersion">
-                            <property name="font">
-                                <font>
-                                    <bold>true</bold>
-                                </font>
-                            </property>
+                <widget class="QLabel" name="labelRequirements">
+                    <property name="text">
+                        <string>NDIPlugin.OutputSettings.Requirements</string>
+                    </property>
+                    <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                    </property>
+                    <property name="font">
+                        <font>
+                            <bold>true</bold>
+                        </font>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <layout class="QGridLayout" name="gridLayoutRequirementsStatus">
+                    <property name="horizontalSpacing">
+                        <number>12</number>
+                    </property>
+                    <item row="0" column="0">
+                        <widget class="QLabel" name="labelReqDistroTitle">
                             <property name="text">
-                                <string>Unknown DistroAV version</string>
+                                <string>DistroAV</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
                             </property>
                         </widget>
                     </item>
+                    <item row="0" column="1">
+                        <widget class="QLabel" name="labelReqDistroStatus">
+                            <property name="text">
+                                <string>✓ Pending check</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="0">
+                        <widget class="QLabel" name="labelReqNdiTitle">
+                            <property name="text">
+                                <string>NDI Library</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="1">
+                        <widget class="QLabel" name="labelReqNdiStatus">
+                            <property name="text">
+                                <string>✗ Pending check</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="0">
+                        <widget class="QLabel" name="labelReqObsTitle">
+                            <property name="text">
+                                <string>OBS</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="1">
+                        <widget class="QLabel" name="labelReqObsStatus">
+                            <property name="text">
+                                <string>✗ Pending check</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </item>
+            <item>
+                <widget class="Line" name="line3">
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
                     <item>
                         <widget class="QPushButton" name="pushButtonCheckForUpdate">
                             <property name="text">
                                 <string>NDIPlugin.OutputSettings.CheckForUpdate</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QPushButton" name="pushButtonInstallPlugin">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.InstallPlugin</string>
                             </property>
                         </widget>
                     </item>
@@ -310,7 +404,7 @@
                 </layout>
             </item>
             <item>
-                <widget class="Line" name="line3">
+                <widget class="Line" name="line1">
                     <property name="orientation">
                         <enum>Qt::Horizontal</enum>
                     </property>
@@ -321,21 +415,16 @@
                     <item>
                         <layout class="QHBoxLayout" name="horizontalLayoutNdi">
                             <item>
-                                <widget class="QLabel" name="labelNdiVersion">
-                                    <property name="font">
-                                        <font>
-                                            <bold>true</bold>
-                                        </font>
-                                    </property>
+                                <widget class="QPushButton" name="pushButtonGetNdi">
                                     <property name="text">
-                                        <string>Unknown NDI version</string>
+                                        <string>NDIPlugin.OutputSettings.GetNDILibrary</string>
                                     </property>
                                 </widget>
                             </item>
                             <item>
-                                <widget class="QPushButton" name="pushButtonNdi">
+                                <widget class="QPushButton" name="pushButtonInstallNdi">
                                     <property name="text">
-                                        <string>ndi.video</string>
+                                        <string>NDIPlugin.OutputSettings.InstallNDILibrary</string>
                                     </property>
                                 </widget>
                             </item>
@@ -347,7 +436,16 @@
                                 <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
                             </property>
                             <property name="alignment">
-                                <set>Qt::AlignRight</set>
+                                <set>Qt::AlignCenter</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::TextBrowserInteraction</set>
+                            </property>
+                            <property name="openExternalLinks">
+                                <bool>true</bool>
                             </property>
                         </widget>
                     </item>
@@ -360,25 +458,11 @@
                     </property>
                 </widget>
             </item>
-                                <item>
-                        <widget class="QLabel" name="labelDonate">
-                            <property name="text">
-                                <string>NDIPlugin.Donate</string>
-                            </property>
-                            <property name="textInteractionFlags">
-                                <set>Qt::LinksAccessibleByMouse</set>
-                            </property>
-                            <property name="alignment">
-                                <set>Qt::AlignCenter</set>
-                            </property>
-                        </widget>
-                    </item>
             <item>
                 <layout class="QHBoxLayout" name="horizontalLayoutFooter">
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-
+                    <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                    </property>
                     <item>
                         <widget class="QPushButton" name="pushButtonWiki">
                             <property name="text">
@@ -403,6 +487,19 @@
                 </layout>
             </item>
             <item>
+                <widget class="QLabel" name="labelDonate">
+                    <property name="text">
+                        <string>NDIPlugin.Donate</string>
+                    </property>
+                    <property name="textInteractionFlags">
+                        <set>Qt::LinksAccessibleByMouse</set>
+                    </property>
+                    <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                    </property>
+                </widget>
+            </item>
+            <item>
                 <spacer>
                     <property name="orientation">
                         <enum>Qt::Horizontal</enum>
@@ -410,7 +507,7 @@
                     <property name="sizeHint" stdset="0">
                         <size>
                             <width>40</width>
-                            <height>20</height>
+                            <height>10</height>
                         </size>
                     </property>
                 </spacer>
