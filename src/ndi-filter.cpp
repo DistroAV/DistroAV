@@ -350,7 +350,6 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	NDIlib_send_create_t send_desc{};
 	send_desc.p_ndi_name = ndi_name_utf8.constData();
 
-  
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 
 	NDIlib_send_create_t send_desc;
