@@ -330,7 +330,21 @@ void OutputSettings::showEvent(QShowEvent *)
 	}
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
-	ui->mainOutputName->setText(config->OutputName);
+
+	// Get the actual NDI output name from the output context
+	QString mainOutputName = config->OutputName;
+	obs_output_t *mainOutput = obs_get_output_by_name("NDI Main Output");
+	if (mainOutput) {
+		obs_data_t *settings = obs_output_get_settings(mainOutput);
+		const char *ndiName = obs_data_get_string(settings, "ndi_name");
+		if (ndiName && ndiName[0] != '\0') {
+			mainOutputName = QString::fromUtf8(ndiName);
+		}
+		obs_data_release(settings);
+		obs_output_release(mainOutput);
+	}
+	ui->mainOutputName->setText(mainOutputName);
+
 	ui->mainOutputGroups->setText(config->OutputGroups);
 
 	auto lastError = main_output_last_error();
@@ -342,7 +356,21 @@ void OutputSettings::showEvent(QShowEvent *)
 	}
 
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
-	ui->previewOutputName->setText(config->PreviewOutputName);
+
+	// Get the actual NDI preview output name from the output context
+	QString previewOutputName = config->PreviewOutputName;
+	obs_output_t *previewOutput = obs_get_output_by_name("NDI Preview Output");
+	if (previewOutput) {
+		obs_data_t *settings = obs_output_get_settings(previewOutput);
+		const char *ndiName = obs_data_get_string(settings, "ndi_name");
+		if (ndiName && ndiName[0] != '\0') {
+			previewOutputName = QString::fromUtf8(ndiName);
+		}
+		obs_data_release(settings);
+		obs_output_release(previewOutput);
+	}
+	ui->previewOutputName->setText(previewOutputName);
+
 	ui->previewOutputGroups->setText(config->PreviewOutputGroups);
 
 	ui->tallyProgramCheckBox->setChecked(config->TallyProgramEnabled);
