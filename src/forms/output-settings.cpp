@@ -286,7 +286,7 @@ void OutputSettings::onFormAccepted()
 	obs_log(LOG_INFO,
 		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
 		config->OutputEnabled, config->OutputName.toUtf8().constData(),
-		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->OutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
 		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
 
 	config->Save();
@@ -333,7 +333,7 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	// Get the actual NDI output name from the output context
 	QString mainOutputName = config->OutputName;
-	obs_output_t *mainOutput = obs_get_output_by_name("NDI Main Output");
+	obs_output_t *mainOutput = obs_get_output_by_name(MAIN_OUTPUT_NAME);
 	if (mainOutput) {
 		obs_data_t *settings = obs_output_get_settings(mainOutput);
 		const char *ndiName = obs_data_get_string(settings, "ndi_name");
@@ -359,7 +359,7 @@ void OutputSettings::showEvent(QShowEvent *)
 
 	// Get the actual NDI preview output name from the output context
 	QString previewOutputName = config->PreviewOutputName;
-	obs_output_t *previewOutput = obs_get_output_by_name("NDI Preview Output");
+	obs_output_t *previewOutput = obs_get_output_by_name(PREVIEW_OUTPUT_NAME);
 	if (previewOutput) {
 		obs_data_t *settings = obs_output_get_settings(previewOutput);
 		const char *ndiName = obs_data_get_string(settings, "ndi_name");

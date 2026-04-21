@@ -21,3 +21,5 @@ void main_output_deinit();
 void main_output_init();
 QString main_output_last_error();
 bool main_output_is_supported();
+
+#define MAIN_OUTPUT_NAME "NDI Main Output"

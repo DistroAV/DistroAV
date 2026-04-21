@@ -40,7 +40,7 @@ void on_main_output_started(void *, calldata_t *)
 	obs_log(LOG_DEBUG, "+on_main_output_started()");
 	Config::Current()->OutputEnabled = true;
 	obs_log(LOG_DEBUG, "-on_main_output_started()");
-	obs_log(LOG_INFO, "NDI Main Output started");
+	obs_log(LOG_INFO, "NDI Main Output ('%s') started", QT_TO_UTF8(context.ndi_name));
 }
 
 void on_main_output_stopped(void *, calldata_t *)
@@ -48,7 +48,7 @@ void on_main_output_stopped(void *, calldata_t *)
 	obs_log(LOG_DEBUG, "+on_main_output_stopped()");
 	Config::Current()->OutputEnabled = false;
 	obs_log(LOG_DEBUG, "-on_main_output_stopped()");
-	obs_log(LOG_INFO, "NDI Main Output stopped");
+	obs_log(LOG_INFO, "NDI Main Output ('%s') stopped", QT_TO_UTF8(context.ndi_name));
 }
 
 void main_output_stop()
@@ -122,7 +122,7 @@ bool main_output_is_supported()
 	bool is_supported = false;
 	context.last_error = QString("");
 
-	auto output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+	auto output = obs_output_create("ndi_output", MAIN_OUTPUT_NAME, output_settings, nullptr);
 	obs_data_release(output_settings);
 
 	if (output != nullptr) {
@@ -194,7 +194,7 @@ void main_output_init()
 		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
 		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
 
-		context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+		context.output = obs_output_create("ndi_output", MAIN_OUTPUT_NAME, output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
 			obs_log(LOG_DEBUG, "main_output_init: created NDI Main Output '%s'", QT_TO_UTF8(output_name));
