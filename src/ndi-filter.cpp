@@ -321,14 +321,11 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 	QString ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
 
-	// If the name contains $source (supports ${source} and legacy <source>) then replace it with the source name.
+	// If the name contains ${source} (or legacy <source>) then replace it with the source name.
 	// This is to make sure the name is not a duplicate of an existing NDI name.
-	// Note: checking $source is sufficient since ${source} contains $source as a substring.
-	if (ndi_name.contains("$source") || ndi_name.contains("<source>")) {
+	if (ndi_name.contains("${source}") || ndi_name.contains("<source>")) {
 		auto parent_name = obs_source_get_name(parent_source);
-		// Replace ${source} before $source to avoid partial substitution of the braced form.
 		ndi_name.replace("${source}", QString(parent_name));
-		ndi_name.replace("$source", QString(parent_name));
 		ndi_name.replace("<source>", QString(parent_name));
 		signal_handler_t *sh = obs_source_get_signal_handler(parent_source);
 		if (sh) {
@@ -337,14 +334,11 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 		}
 	}
 
-	// If the name contains $filter (supports ${filter} and legacy <filter>) then replace it with the filter name.
+	// If the name contains ${filter} (or legacy <filter>) then replace it with the filter name.
 	// This is to make sure the name is not a duplicate of an existing NDI name.
-	// Note: checking $filter is sufficient since ${filter} contains $filter as a substring.
-	if (ndi_name.contains("$filter") || ndi_name.contains("<filter>")) {
+	if (ndi_name.contains("${filter}") || ndi_name.contains("<filter>")) {
 		auto filter_name = obs_source_get_name(filter->obs_source);
-		// Replace ${filter} before $filter to avoid partial substitution of the braced form.
 		ndi_name.replace("${filter}", QString(filter_name));
-		ndi_name.replace("$filter", QString(filter_name));
 		ndi_name.replace("<filter>", QString(filter_name));
 		signal_handler_t *sh = obs_source_get_signal_handler(filter->obs_source);
 		if (sh) {
