@@ -164,7 +164,7 @@ public:
 		ui->labelReleaseDate->setText(textTemp);
 		ui->textReleaseDate->setText(formattedUtcDateTime);
 
-		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes);
+		ui->textReleaseNotes->setMarkdown(pluginUpdateInfo.releaseNotes.toHtmlEscaped());
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
 #if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
