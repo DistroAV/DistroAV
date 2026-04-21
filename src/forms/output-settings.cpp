@@ -336,11 +336,13 @@ void OutputSettings::showEvent(QShowEvent *)
 	obs_output_t *mainOutput = obs_get_output_by_name(MAIN_OUTPUT_NAME);
 	if (mainOutput) {
 		obs_data_t *settings = obs_output_get_settings(mainOutput);
-		const char *ndiName = obs_data_get_string(settings, "ndi_name");
-		if (ndiName && ndiName[0] != '\0') {
-			mainOutputName = QString::fromUtf8(ndiName);
+		if (settings) {
+			const char *ndiName = obs_data_get_string(settings, "ndi_name");
+			if (ndiName && ndiName[0] != '\0') {
+				mainOutputName = QString::fromUtf8(ndiName);
+			}
+			obs_data_release(settings);
 		}
-		obs_data_release(settings);
 		obs_output_release(mainOutput);
 	}
 	ui->mainOutputName->setText(mainOutputName);
@@ -362,11 +364,13 @@ void OutputSettings::showEvent(QShowEvent *)
 	obs_output_t *previewOutput = obs_get_output_by_name(PREVIEW_OUTPUT_NAME);
 	if (previewOutput) {
 		obs_data_t *settings = obs_output_get_settings(previewOutput);
-		const char *ndiName = obs_data_get_string(settings, "ndi_name");
-		if (ndiName && ndiName[0] != '\0') {
-			previewOutputName = QString::fromUtf8(ndiName);
+		if (settings) {
+			const char *ndiName = obs_data_get_string(settings, "ndi_name");
+			if (ndiName && ndiName[0] != '\0') {
+				previewOutputName = QString::fromUtf8(ndiName);
+			}
+			obs_data_release(settings);
 		}
-		obs_data_release(settings);
 		obs_output_release(previewOutput);
 	}
 	ui->previewOutputName->setText(previewOutputName);
