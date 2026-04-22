@@ -115,7 +115,7 @@ begin
     begin
       if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if ( Pos('DistroAV', DisplayNameRegistry) > 0 ) then
+          if ( Pos('distroav', LowerCase(DisplayNameRegistry)) > 0 ) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end
@@ -124,7 +124,7 @@ begin
     begin
       if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if ( Pos('DistroAV', DisplayNameRegistry) > 0 ) then
+          if ( Pos('distroav', LowerCase(DisplayNameRegistry)) > 0 ) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end;
