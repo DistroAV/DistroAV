@@ -101,6 +101,15 @@ begin
       Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
+// Returns True if DisplayName matches a known DistroAV or OBS-NDI display name (case-insensitive)
+function IsDistroAVOrObsNdiDisplayName(DisplayName: String): Boolean;
+var
+  LowerDisplayName: String;
+begin
+  LowerDisplayName := LowerCase(DisplayName);
+  Result := (Pos('distroav', LowerDisplayName) > 0) or (Pos('obs-ndi', LowerDisplayName) > 0);
+end;
+
 // DistroAV 6.1.0 used an empty AppID installer and needs to be removed
 function Get610AppUninstallerPath(Param: String): String;
 var
@@ -115,7 +124,7 @@ begin
     begin
       if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if ( (Pos('distroav', LowerCase(DisplayNameRegistry)) > 0) or (Pos('obs-ndi', LowerCase(DisplayNameRegistry)) > 0) ) then
+          if IsDistroAVOrObsNdiDisplayName(DisplayNameRegistry) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end
@@ -124,7 +133,7 @@ begin
     begin
       if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if ( (Pos('distroav', LowerCase(DisplayNameRegistry)) > 0) or (Pos('obs-ndi', LowerCase(DisplayNameRegistry)) > 0) ) then
+          if IsDistroAVOrObsNdiDisplayName(DisplayNameRegistry) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end;
