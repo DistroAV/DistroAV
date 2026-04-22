@@ -321,11 +321,15 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 	QString ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
 
-	// If the name contains <source> then replace <source> with the source name.
-	// This is to make sure the name is not a duplicate of an existing NDI name.
-	if (ndi_name.contains("<source>")) {
+	// Check the original template for tokens before any replacements are made,
+	// so injected source/filter names cannot trigger unintended token expansion.
+	const bool has_source_token = ndi_name.contains("${source}");
+	const bool has_filter_token = ndi_name.contains("${filter}");
+
+	// If the name contains ${source} then replace it with the source name.
+	if (has_source_token) {
 		auto parent_name = obs_source_get_name(parent_source);
-		ndi_name.replace("<source>", QString(parent_name));
+		ndi_name.replace("${source}", QString(parent_name));
 		signal_handler_t *sh = obs_source_get_signal_handler(parent_source);
 		if (sh) {
 			signal_handler_disconnect(sh, "rename", on_renamed, filter);
@@ -333,11 +337,10 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 		}
 	}
 
-	// If the name contains <filter> then replace <filter> with the filter name.
-	// This is to make sure the name is not a duplicate of an existing NDI name.
-	if (ndi_name.contains("<filter>")) {
+	// If the name contains ${filter} then replace it with the filter name.
+	if (has_filter_token) {
 		auto filter_name = obs_source_get_name(filter->obs_source);
-		ndi_name.replace("<filter>", QString(filter_name));
+		ndi_name.replace("${filter}", QString(filter_name));
 		signal_handler_t *sh = obs_source_get_signal_handler(filter->obs_source);
 		if (sh) {
 			signal_handler_disconnect(sh, "rename", on_renamed, filter);
