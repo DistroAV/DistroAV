@@ -102,7 +102,7 @@ begin
 end;
 
 // Returns True if DisplayName matches a known DistroAV or OBS-NDI display name (case-insensitive)
-function IsDistroAVOrObsNdiDisplayName(DisplayName: String): Boolean;
+function IsDisplayNameDistroAvOrObsNdi(DisplayName: String): Boolean;
 var
   LowerDisplayName: String;
 begin
@@ -124,7 +124,7 @@ begin
     begin
       if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if IsDistroAVOrObsNdiDisplayName(DisplayNameRegistry) then
+          if IsDisplayNameDistroAvOrObsNdi(DisplayNameRegistry) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end
@@ -133,7 +133,7 @@ begin
     begin
       if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if IsDistroAVOrObsNdiDisplayName(DisplayNameRegistry) then
+          if IsDisplayNameDistroAvOrObsNdi(DisplayNameRegistry) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end;
