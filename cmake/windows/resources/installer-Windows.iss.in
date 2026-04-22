@@ -101,7 +101,7 @@ begin
       Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
-// Returns True if DisplayName matches a known DistroAV or OBS-NDI display name (case-insensitive)
+// Returns True if DisplayName contains a known DistroAV or OBS-NDI name fragment (case-insensitive)
 function IsDisplayNameDistroAvOrObsNdi(DisplayName: String): Boolean;
 var
   LowerDisplayName: String;
