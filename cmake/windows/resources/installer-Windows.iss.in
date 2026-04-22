@@ -110,12 +110,12 @@ var
 begin
   Result := '';
 // Check primary registry location DistroAV version 6.1.0
-// Only uninstall if DisplayName contains 'DistroAV' to avoid uninstalling other apps that also use {}_is1
+// Only uninstall if DisplayName contains 'DistroAV' or 'obs-ndi' to avoid uninstalling other apps that also use {}_is1
   if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'UninstallString', UninstallerPathRegistry) ) then
     begin
       if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if ( Pos('distroav', LowerCase(DisplayNameRegistry)) > 0 ) then
+          if ( (Pos('distroav', LowerCase(DisplayNameRegistry)) > 0) or (Pos('obs-ndi', LowerCase(DisplayNameRegistry)) > 0) ) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end
@@ -124,7 +124,7 @@ begin
     begin
       if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
         begin
-          if ( Pos('distroav', LowerCase(DisplayNameRegistry)) > 0 ) then
+          if ( (Pos('distroav', LowerCase(DisplayNameRegistry)) > 0) or (Pos('obs-ndi', LowerCase(DisplayNameRegistry)) > 0) ) then
             Result := RemoveQuotes(UninstallerPathRegistry);
         end;
     end;
