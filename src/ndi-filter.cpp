@@ -544,6 +544,30 @@ void ndi_filter_tick(void *data, float)
 	f->rendered = false;
 }
 
+// Called when this filter is attached to a source at runtime (via the UI).
+// OBS bypasses this during scene collection load (cold start), so sender
+// creation at cold start is handled instead by ndi_filter_tick and
+// ndi_filter_activate.
+void ndi_filter_filter_add(void *data, obs_source_t * /* parent */)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f->ndi_sender)
+		ndi_sender_create(f, nullptr);
+}
+
+// Called when the parent source enters the program output (activate_refs
+// transitions from 0 → 1).  This fires via obs_source_video_tick once OBS
+// has finished loading the scene collection and the source becomes active,
+// covering the cold-start case for sources in the currently-active scene as
+// well as the "user switches to a scene" case for sources that were inactive
+// at startup.
+void ndi_filter_activate(void *data)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f->ndi_sender)
+		ndi_sender_create(f, nullptr);
+}
+
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 {
 	// NOTE: The logic in this function should be similar to
@@ -635,6 +659,11 @@ obs_source_info create_ndi_filter_info()
 	ndi_filter_info.video_tick = ndi_filter_tick;
 	ndi_filter_info.video_render = ndi_filter_render_video;
 
+	// Eagerly create the NDI sender as soon as the filter is wired up, without
+	// waiting for the next tick.
+	ndi_filter_info.filter_add = ndi_filter_filter_add;
+	ndi_filter_info.activate = ndi_filter_activate;
+
 	// Audio is available only with async sources
 	ndi_filter_info.filter_audio = ndi_filter_asyncaudio;
 
@@ -655,6 +684,17 @@ obs_source_info create_ndi_audiofilter_info()
 	ndi_filter_info.create = ndi_filter_create_audioonly;
 	ndi_filter_info.update = ndi_filter_update;
 	ndi_filter_info.destroy = ndi_filter_destroy_audioonly;
+
+	// The audio-only filter has no video_render path, so the sender would
+	// never be retried after a failed cold-start creation without an explicit
+	// tick.  Register the same tick used by the video filter so the same
+	// retry logic applies.
+	ndi_filter_info.video_tick = ndi_filter_tick;
+
+	// Eagerly create the NDI sender as soon as the filter is wired up, without
+	// waiting for the next tick.
+	ndi_filter_info.filter_add = ndi_filter_filter_add;
+	ndi_filter_info.activate = ndi_filter_activate;
 
 	ndi_filter_info.filter_audio = ndi_filter_asyncaudio;
 
