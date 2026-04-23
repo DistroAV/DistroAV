@@ -39,6 +39,7 @@ Inspiration(s):
 #include <QMetaEnum>
 #include <QPointer>
 #include <QSslSocket>
+#include <QTextDocument>
 #include <QTimer>
 #include <QTimeZone>
 #include <QUrlQuery>
