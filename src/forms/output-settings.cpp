@@ -28,6 +28,7 @@
 #include <QProgressDialog>
 #include <QProcess>
 #include <QPointer>
+#include <QPushButton>
 #include <QRegularExpression>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
@@ -174,6 +175,19 @@ If you are running a local build, don't forget to add your build info to the upd
 			progressDialog->deleteLater();
 		}
 	});
+
+	if (LOG_LEVEL >= LOG_DEBUG) {
+		// Debug-only: stray button that shows the update dialog with a hostile
+		// sample `releaseNotes` so the markdown-render HTML-escape in
+		// PluginUpdate (see src/forms/update.cpp) can be visually verified
+		// without waiting for a real release. Only added when log level is
+		// debug or verbose (e.g. `--distroav-debug`).
+		auto testButton = new QPushButton("Test Release Notes (debug)", this);
+		testButton->setToolTip("Debug: show the update dialog with sample hostile releaseNotes "
+				       "(HTML / script injection attempts) to verify the markdown escape.");
+		ui->horizontalLayoutDistroAv->addWidget(testButton);
+		connect(testButton, &QPushButton::clicked, [] { showSampleUpdateDialog(); });
+	}
 
 	// Auto re-install DistroAV Plugin Button
 	connect(ui->pushButtonInstallPlugin, &QPushButton::clicked, [this]() {

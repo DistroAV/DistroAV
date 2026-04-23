@@ -58,3 +58,14 @@ typedef std::function<bool(const PluginUpdateInfo &pluginUpdateInfo)> UserReques
 
 void updateCheckStop();
 bool updateCheckStart(UserRequestCallback userRequestCallback = nullptr);
+
+/**
+ * Dev-only: show the PluginUpdate dialog populated with a hostile sample
+ * `releaseNotes` string (raw HTML, script tags, javascript: links, etc.)
+ * so the markdown-render HTML-escape can be visually verified without
+ * waiting for a real release.
+ *
+ * Wired to a debug-only button in OutputSettings (see
+ * src/forms/output-settings.cpp); this function itself does no gating.
+ */
+void showSampleUpdateDialog();
