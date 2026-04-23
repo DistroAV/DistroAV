@@ -167,7 +167,8 @@ public:
 
 		ui->textReleaseNotes->document()->setMarkdown(
 			pluginUpdateInfo.releaseNotes,
-			QTextDocument::MarkdownDialectGitHub | QTextDocument::MarkdownNoHTML);
+			QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub |
+							QTextDocument::MarkdownNoHTML));
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
 #if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
