@@ -226,7 +226,7 @@ void preview_output_init()
 		obs_data_set_bool(output_settings, "uses_audio",
 				  false); // Preview has no audio
 
-		context.output = obs_output_create("ndi_output", "NDI Preview Output", output_settings, nullptr);
+		context.output = obs_output_create("ndi_output", PREVIEW_OUTPUT_NAME, output_settings, nullptr);
 		obs_data_release(output_settings);
 		if (context.output) {
 			obs_log(LOG_DEBUG, "preview_output_init: Successfully created NDI Preview Output '%s'",
