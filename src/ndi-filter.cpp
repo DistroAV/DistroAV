@@ -530,15 +530,16 @@ void ndi_filter_tick(void *data, float)
 {
 	auto f = (ndi_filter_t *)data;
 
-	if (!f->ndi_sender) {
-		obs_source_t *parent = obs_filter_get_parent(f->obs_source);
-		if (parent) {
-			ndi_sender_create(f, nullptr);
-		}
-	}
 	obs_get_video_info(&f->ovi);
 
 	f->rendered = false;
+}
+
+void ndi_filter_add(void *data, obs_source_t * /* parent */)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f->ndi_sender)
+		ndi_sender_create(f, nullptr);
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
@@ -626,6 +627,7 @@ obs_source_info create_ndi_filter_info()
 	ndi_filter_info.get_defaults = ndi_filter_getdefaults;
 
 	ndi_filter_info.create = ndi_filter_create;
+	ndi_filter_info.filter_add = ndi_filter_add;
 	ndi_filter_info.destroy = ndi_filter_destroy;
 	ndi_filter_info.update = ndi_filter_update;
 
@@ -650,6 +652,7 @@ obs_source_info create_ndi_audiofilter_info()
 	ndi_filter_info.get_defaults = ndi_filter_getdefaults;
 
 	ndi_filter_info.create = ndi_filter_create_audioonly;
+	ndi_filter_info.filter_add = ndi_filter_add;
 	ndi_filter_info.update = ndi_filter_update;
 	ndi_filter_info.destroy = ndi_filter_destroy_audioonly;
 
