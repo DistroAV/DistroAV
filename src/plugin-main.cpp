@@ -74,6 +74,9 @@ QLibrary *loaded_lib = nullptr;
 
 OutputSettings *output_settings = nullptr;
 
+static constexpr const char *NDI_FILTER_ID = "ndi_filter";
+static constexpr const char *NDI_AUDIOFILTER_ID = "ndi_audiofilter";
+
 //
 //
 //
@@ -85,7 +88,7 @@ static bool is_ndi_filter_source(obs_source_t *source)
 	}
 
 	const char *source_id = obs_source_get_id(source);
-	return source_id && (strcmp(source_id, "ndi_filter") == 0 || strcmp(source_id, "ndi_audiofilter") == 0);
+	return source_id && (strcmp(source_id, NDI_FILTER_ID) == 0 || strcmp(source_id, NDI_AUDIOFILTER_ID) == 0);
 }
 
 static void ensure_ndi_filters_started()
@@ -98,7 +101,7 @@ static void ensure_ndi_filters_started()
 				return true;
 			}
 
-			auto refreshed_filter_count_ptr = static_cast<size_t *>(data);
+			auto count_ptr = static_cast<size_t *>(data);
 
 			obs_source_enum_filters(
 				source,
@@ -119,10 +122,10 @@ static void ensure_ndi_filters_started()
 					obs_source_update(filter, settings);
 					obs_data_release(settings);
 
-					auto count = static_cast<size_t *>(param);
-					(*count)++;
+					auto filter_count_ptr = static_cast<size_t *>(param);
+					(*filter_count_ptr)++;
 				},
-				refreshed_filter_count_ptr);
+				count_ptr);
 
 			return true;
 		},
