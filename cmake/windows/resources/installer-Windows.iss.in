@@ -23,6 +23,8 @@ DefaultDirName={commonappdata}\obs-studio\plugins\{#MyProjectName}
 UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Windows-Installer
+SetupIconFile=distroav.ico
+UninstallDisplayIcon={app}\distroav.ico
 Compression=lzma
 SolidCompression=yes
 DirExistsWarning=no
@@ -37,6 +39,7 @@ Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall (re
 
 [Files]
 Source: "..\release\Package\{#MyProjectName}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "distroav.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Do not use "Flags: ignoreversion" on any shared system files
 
 [Icons]
