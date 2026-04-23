@@ -111,6 +111,7 @@ static void ensure_ndi_filters_started()
 					}
 
 					if (!obs_filter_get_parent(filter)) {
+						// This can still happen transiently during startup ordering; skip until parent exists.
 						return;
 					}
 
@@ -131,7 +132,7 @@ static void ensure_ndi_filters_started()
 		},
 		&refreshed_filter_count);
 
-	obs_log(LOG_DEBUG, "obs_module_load: refreshed %zu NDI filter sender(s) after finished loading.",
+	obs_log(LOG_DEBUG, "OBS frontend finished loading: refreshed %zu NDI filter sender(s).",
 		refreshed_filter_count);
 }
 
