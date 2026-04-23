@@ -44,8 +44,8 @@ Source: "distroav.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
-Name: "{group}\{#MyAppName} (Launch OBS)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; Comment: "Launch OBS Studio with {#MyAppName}"
-Name: "{group}\Debug {#MyAppName} (OBS verbose log)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; Parameters: "--distroav-debug"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; Comment: "Launch OBS Studio with debug logging for {#MyAppName} debugging"
+Name: "{group}\{#MyAppName} (Launch OBS)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; AppUserModelID: "{#MyProjectName}.LaunchOBS"; Comment: "Launch OBS Studio with {#MyAppName}"
+Name: "{group}\Debug {#MyAppName} (OBS verbose log)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; Parameters: "--distroav-debug"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; AppUserModelID: "{#MyProjectName}.DebugOBS"; Comment: "Launch OBS Studio with debug logging for {#MyAppName} debugging"
 
 [Code]
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
