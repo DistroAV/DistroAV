@@ -201,16 +201,13 @@ void ndi_filter_render_video(void *data, gs_effect_t *)
 		return;
 	}
 
-	if (!is_filter_valid(f)) {
-		// Send over an empty frame to indicate that the filter is invalid
-		ndi_filter_raw_video(data, nullptr);
-		return;
-	}
-
 	uint32_t width = obs_source_get_width(f->obs_source);
 	uint32_t height = obs_source_get_height(f->obs_source);
 
-	if (f->known_width != width || f->known_height != height) {
+	// Set up the video pipeline whenever dimensions change, independent of
+	// whether the source is currently "showing" in any OBS window.  The
+	// showing check below only gates frame delivery.
+	if (width != 0 && height != 0 && (f->known_width != width || f->known_height != height)) {
 		gs_stagesurface_destroy(f->stagesurface);
 		f->stagesurface = gs_stagesurface_create(width, height, TEXFORMAT);
 
@@ -231,6 +228,12 @@ void ndi_filter_render_video(void *data, gs_effect_t *)
 
 		f->known_width = width;
 		f->known_height = height;
+	}
+
+	if (!is_filter_valid(f)) {
+		// Send over an empty frame to indicate that the filter is invalid
+		ndi_filter_raw_video(data, nullptr);
+		return;
 	}
 
 	gs_texrender_reset(f->texrender);
