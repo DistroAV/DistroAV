@@ -36,6 +36,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: RemoveOBSNDI; Description: "Remove OBS-NDI plugin"; GroupDescription: "Clean-up";
 Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall (requires admin privileges)"; GroupDescription: "Post-Install Actions";
+Name: AddDebugShortcut; Description: "Add Start Menu shortcut to launch OBS with DistroAV verbose debug logging"; GroupDescription: "Developer Tools"; Flags: unchecked
 
 [Files]
 Source: "..\release\Package\{#MyProjectName}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -44,6 +45,7 @@ Source: "distroav.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
+Name: "{group}\Debug {#MyAppName} (OBS verbose log)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; Parameters: "--distroav-debug"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; Comment: "Launch OBS Studio with debug logging for {#MyAppName} debugging"; Tasks: AddDebugShortcut
 
 [Code]
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
