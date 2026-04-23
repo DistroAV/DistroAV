@@ -34,6 +34,8 @@
 #include <QRegularExpression>
 #include <QTimer>
 
+#include <cstring>
+
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
@@ -75,6 +77,60 @@ OutputSettings *output_settings = nullptr;
 //
 //
 //
+
+static bool is_ndi_filter_source(obs_source_t *source)
+{
+	if (!source) {
+		return false;
+	}
+
+	const char *source_id = obs_source_get_id(source);
+	return source_id && (strcmp(source_id, "ndi_filter") == 0 || strcmp(source_id, "ndi_audiofilter") == 0);
+}
+
+static void ensure_ndi_filters_started()
+{
+	size_t refreshed_filter_count = 0;
+
+	obs_enum_sources(
+		[](void *data, obs_source_t *source) {
+			if (obs_source_removed(source)) {
+				return true;
+			}
+
+			auto refreshed_filter_count_ptr = static_cast<size_t *>(data);
+
+			obs_source_enum_filters(
+				source,
+				[](obs_source_t *, obs_source_t *filter, void *param) {
+					if (obs_source_removed(filter) || !is_ndi_filter_source(filter)) {
+						return;
+					}
+
+					if (!obs_filter_get_parent(filter)) {
+						return;
+					}
+
+					auto settings = obs_source_get_settings(filter);
+					if (!settings) {
+						return;
+					}
+
+					obs_source_update(filter, settings);
+					obs_data_release(settings);
+
+					auto count = static_cast<size_t *>(param);
+					(*count)++;
+				},
+				refreshed_filter_count_ptr);
+
+			return true;
+		},
+		&refreshed_filter_count);
+
+	obs_log(LOG_DEBUG, "obs_module_load: refreshed %zu NDI filter sender(s) after finished loading.",
+		refreshed_filter_count);
+}
 
 /**
  * @param url The url to rehost
@@ -477,6 +533,7 @@ bool obs_module_load(void)
 						[] {
 							main_output_init();
 							preview_output_init();
+							ensure_ndi_filters_started();
 						},
 						Qt::QueuedConnection);
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
