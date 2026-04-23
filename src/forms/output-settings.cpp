@@ -26,7 +26,10 @@
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QProcess>
 #include <QPointer>
+#include <QPushButton>
+#include <QRegularExpression>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
@@ -34,14 +37,68 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
 
-	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME).arg(PLUGIN_VERSION);
-	ui->labelDistroAvVersion->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
-	connect(ui->labelDistroAvVersion, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
+	// Requirements checks and status display
+	// Global rules for color based on requirement checks: red for fail, green for pass. Text is set per check below.
+	auto applyStatus = [](QLabel *label, bool ok, const QString &message) {
+		label->setText(QString::fromUtf8("%1 %2").arg(ok ? "✓" : "✗", message));
+		label->setStyleSheet(ok ? "QWidget { color: #2e7d32; }" : "QWidget { color: #c62828; }");
+	};
+
+	// OBS Version Check
+	auto obsVersion = QString::fromUtf8(obs_get_version_string());
+	auto obsVersionDisplay = QString("%1 %2").arg("OBS", QString::fromUtf8(obs_get_version_string()));
+	ui->labelReqObsTitle->setText(makeLink("#", QT_TO_UTF8(obsVersionDisplay)));
+	connect(ui->labelReqObsTitle, &QLabel::linkActivated, [this, obsVersionDisplay](const QString &) {
+		QApplication::clipboard()->setText(obsVersionDisplay);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	});
+
+	auto obsVersionCheckResult = is_version_supported(QT_TO_UTF8(obsVersion), PLUGIN_MIN_OBS_VERSION);
+	applyStatus(ui->labelReqObsStatus, obsVersionCheckResult,
+		    obsVersionCheckResult ? QString("OK (%1 ≥ %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION)
+					  : QString("Too old (%1 < %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION));
+
+	// DistroAV Version Check
+	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
+	ui->labelReqDistroTitle->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	connect(ui->labelReqDistroTitle, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
 		QApplication::clipboard()->setText(pluginVersionText);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
 					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
 
+	applyStatus(ui->labelReqDistroStatus, true, QString("Loaded (%1)").arg(PLUGIN_VERSION));
+
+	// NDI Version Check
+	QString ndiVersionFull;
+	QString ndiVersionShort;
+	if (ndiLib) {
+		ndiVersionFull = QString(ndiLib->version());
+		ndiVersionShort =
+			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
+	} else {
+		ndiVersionFull = "NDI Library not loaded";
+	}
+
+	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionFull)));
+	connect(ui->labelReqNdiTitle, &QLabel::linkActivated, [this, ndiVersionFull](const QString &) {
+		QApplication::clipboard()->setText(ndiVersionFull);
+		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
+					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	});
+
+	auto ndiVersionCheckResult = !ndiVersionShort.isEmpty() &&
+				     is_version_supported(QT_TO_UTF8(ndiVersionShort), PLUGIN_MIN_NDI_VERSION);
+	applyStatus(ui->labelReqNdiStatus, ndiVersionCheckResult,
+		    ndiVersionCheckResult
+			    ? QString("OK (%1 ≥ %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)
+			    : (ndiVersionShort.isEmpty()
+				       ? QString("Missing (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
+				       : QString("Too old (%1 < %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)));
+
+	// DistroAV Section Logic
+	// Check For Update Button
 	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
 		// Whew! QProgressDialog is ugly on Windows!
 		// TODO: Write our own.
@@ -119,17 +176,89 @@ If you are running a local build, don't forget to add your build info to the upd
 		}
 	});
 
-	auto ndiVersionText = QString(ndiLib->version());
-	ui->labelNdiVersion->setText(makeLink("#", QT_TO_UTF8(ndiVersionText)));
-	connect(ui->labelNdiVersion, &QLabel::linkActivated, [this, ndiVersionText](const QString &) {
-		QApplication::clipboard()->setText(ndiVersionText);
-		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
-					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
+	if (LOG_LEVEL >= LOG_DEBUG) {
+		// Debug-only: stray button that shows the update dialog with a hostile
+		// sample `releaseNotes` so the markdown-render HTML-escape in
+		// PluginUpdate (see src/forms/update.cpp) can be visually verified
+		// without waiting for a real release. Only added when log level is
+		// debug or verbose (e.g. `--distroav-debug`).
+		auto testButton = new QPushButton("Test Release Notes (debug)", this);
+		testButton->setToolTip("Debug: show the update dialog with sample hostile releaseNotes "
+				       "(HTML / script injection attempts) to verify the markdown escape.");
+		ui->horizontalLayoutDistroAv->addWidget(testButton);
+		connect(testButton, &QPushButton::clicked, [] { showSampleUpdateDialog(); });
+	}
+
+	// Auto re-install DistroAV Plugin Button
+	connect(ui->pushButtonInstallPlugin, &QPushButton::clicked, [this]() {
+		obs_log(LOG_DEBUG, "Re-Install DistroAV Plugin button clicked");
+#if defined(Q_OS_MACOS)
+		const auto script = QString(
+			"tell application \"Terminal\"\n"
+			"activate\n"
+			"do script \"brew tap distroav/distroav && brew reinstall --cask distroav/distroav/distroav && exit\"\n"
+			"end tell");
+
+		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
+			QMessageBox::warning(
+				this, QTStr("NDIPlugin.OneclickInstallError.Title"),
+				QTStr("NDIPlugin.OneclickInstallError.Message") +
+					QStringLiteral("brew reinstall --cask distroav/distroav/distroav"));
+		}
+#elif defined(Q_OS_WIN)
+		if (!QProcess::startDetached(
+				"cmd.exe",
+				QStringList()
+					<< "/c"
+					<< "start"
+					<< "cmd.exe"
+					<< "/c"
+					<< "winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements || pause")) {
+			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
+					     QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id DistroAV.DistroAV"));
+			obs_log(LOG_DEBUG, "Install DistroAV button: something went wrong");
+		}
+#else
+			QMessageBox::information(this, "Unsupported platform",
+						"Automatic DistroAV installation is currently only supported on Windows and macOS using the default installation methods.");
+#endif
 	});
 
-	// ui->pushButtonNdi->setText(QString("%1 %2").arg(ui->pushButtonNdi->text(), NDI_OFFICIAL_WEB_URL));
-	connect(ui->pushButtonNdi, &QPushButton::clicked,
-		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_WEB_URL))); });
+	// NDI Library Section Logic
+	connect(ui->pushButtonGetNdi, &QPushButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
+
+	connect(ui->pushButtonInstallNdi, &QPushButton::clicked, [this]() {
+		obs_log(LOG_DEBUG, "Install NDI button clicked");
+#if defined(Q_OS_MACOS)
+		const auto script = QString("tell application \"Terminal\"\n"
+					    "activate\n"
+					    "do script \"brew reinstall libndi && exit\"\n"
+					    "end tell");
+
+		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
+			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
+					     QTStr("NDIPlugin.OneclickInstallError.Message") +
+						     QStringLiteral("brew reinstall libndi"));
+		}
+#elif defined(Q_OS_WIN)
+		if (!QProcess::startDetached(
+				"cmd.exe",
+				QStringList()
+					<< "/c"
+					<< "start"
+					<< "cmd.exe"
+					<< "/c"
+					<< "winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements || pause")) {
+			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
+					     QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id NDI.NDIRuntime"));
+			obs_log(LOG_DEBUG, "Install NDI button: something went wrong");
+		}
+#else
+		QMessageBox::information(this, "Unsupported platform",
+					 "Automatic NDI installation is currently only supported on Windows and macOS using the default installation methods.");
+#endif
+	});
 
 	connect(ui->pushButtonDiscord, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DISCORD_URL))); });
@@ -140,7 +269,9 @@ If you are running a local build, don't forget to add your build info to the upd
 	connect(ui->pushButtonWiki, &QPushButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
-	ui->labelNdiRegisteredTrademark->setText(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+	//Display of NDI registered trademark info with link to NDI website
+	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
+		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, makeLink(PLUGIN_REDIRECT_NDI_WEB_URL, NDI_OFFICIAL_WEB_URL)));
 }
 
 void OutputSettings::onFormAccepted()
@@ -169,7 +300,7 @@ void OutputSettings::onFormAccepted()
 	obs_log(LOG_INFO,
 		"Output Settings set to MainEnabled='%d', MainName='%s', MainGroup='%s', PreviewEnabled='%d', PreviewName='%s', PreviewGroup='%s'",
 		config->OutputEnabled, config->OutputName.toUtf8().constData(),
-		config->PreviewOutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
+		config->OutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
 		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
 
 	config->Save();
@@ -202,8 +333,15 @@ void OutputSettings::showEvent(QShowEvent *)
 {
 	auto config = Config::Current();
 
-	// Set mainOutputGroupBox to enabled if main_output_is_supported()
-	ui->mainOutputGroupBox->setEnabled(main_output_is_supported());
+	// Enable Output (Main & Preview) settings as long as Main Output can be supported.
+
+	if (main_output_is_supported()) {
+		ui->mainOutputGroupBox->setEnabled(true);
+		ui->previewOutputGroupBox->setEnabled(true);
+	} else {
+		ui->mainOutputGroupBox->setEnabled(false);
+		ui->previewOutputGroupBox->setEnabled(false);
+	}
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
 	ui->mainOutputName->setText(config->OutputName);
@@ -212,7 +350,7 @@ void OutputSettings::showEvent(QShowEvent *)
 	auto lastError = main_output_last_error();
 	ui->mainOutputLastError->setText(lastError);
 	if (lastError.isEmpty()) {
-		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space is error is no longer valid.
+		ui->mainOutputLastError->setFixedHeight(0); // don't waste dialog space if error is no longer valid.
 	} else {
 		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());
 	}

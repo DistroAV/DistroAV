@@ -1012,10 +1012,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	} else {
 		// Fallback option. If the behavior is invalid, force it to "Keep Active" as it most likely came from the 4.14.x version.
-		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%d' forced to '%d'",
 			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_log(LOG_WARNING,
-			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%s' forced to '%d'",
+			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%d' forced to '%d'",
 			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_data_set_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_KEEP_ACTIVE);
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;

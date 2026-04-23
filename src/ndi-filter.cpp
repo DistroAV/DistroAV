@@ -53,6 +53,10 @@ typedef struct {
 
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
+	int32_t no_video_connections;
+	std::chrono::time_point<std::chrono::steady_clock> last_video_conn_check;
+	int32_t no_audio_connections;
+	std::chrono::time_point<std::chrono::steady_clock> last_audio_conn_check;
 } ndi_filter_t;
 
 const char *ndi_filter_getname(void *)
@@ -68,6 +72,18 @@ const char *ndi_audiofilter_getname(void *)
 void ndi_filter_update(void *data, obs_data_t *settings);
 void ndi_sender_destroy(ndi_filter_t *filter);
 void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings);
+
+// Callback fired when the parent source is renamed. Recreate the NDI sender to pick up the new name.
+void on_renamed(void *data, calldata_t *)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f)
+		return;
+	obs_log(LOG_DEBUG, "on_parent_renamed: parent source renamed; recreating NDI sender for filter '%s'",
+		obs_source_get_name(f->obs_source));
+	// Recreate sender using current settings
+	ndi_sender_create(f, nullptr);
+}
 
 obs_properties_t *ndi_filter_getproperties(void *)
 {
@@ -123,6 +139,31 @@ bool is_filter_valid(ndi_filter_t *filter)
 void ndi_filter_raw_video(void *data, video_data *frame)
 {
 	auto f = (ndi_filter_t *)data;
+
+	pthread_mutex_lock(&f->ndi_sender_video_mutex);
+
+	if (!f->ndi_sender) {
+		pthread_mutex_unlock(&f->ndi_sender_video_mutex);
+		return;
+	}
+
+	auto now = std::chrono::steady_clock::now();
+	if (now - f->last_video_conn_check >= std::chrono::seconds(1)) {
+		f->last_video_conn_check = now;
+		int nc = ndiLib->send_get_no_connections(f->ndi_sender, 10);
+		if (nc != f->no_video_connections) {
+			auto ndi_source = ndiLib->send_get_source_name(f->ndi_sender);
+			if (nc <= 0)
+				obs_log(LOG_DEBUG, "Dedicated NDI Output video '%s' has no connections",
+					ndi_source->p_ndi_name);
+			else if (f->no_video_connections == 0)
+				obs_log(LOG_DEBUG, "Dedicated NDI Output video '%s' has %d connections",
+					ndi_source->p_ndi_name, nc);
+			f->no_video_connections = nc;
+		}
+	}
+
+	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 
 	NDIlib_video_frame_v2_t video_frame = {0};
 
@@ -256,6 +297,8 @@ void ndi_sender_destroy(ndi_filter_t *filter)
 
 void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 {
+	bool allocating_settings = false;
+
 	if (!filter || !filter->obs_source) {
 		return;
 	}
@@ -263,11 +306,55 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	auto obs_source = filter->obs_source;
 	if (!settings) {
 		settings = obs_source_get_settings(obs_source);
+		allocating_settings = true;
 	}
 
-	NDIlib_send_create_t send_desc;
-	send_desc.p_ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
+	auto parent_source = obs_filter_get_parent(filter->obs_source);
+
+	if (!parent_source) {
+		// Don't create sender if the parent source is not available
+		// It will be created in filter_tick
+		if (allocating_settings)
+			obs_data_release(settings);
+		return;
+	}
+
+	QString ndi_name = obs_data_get_string(settings, FLT_PROP_NAME);
+
+	// Check the original template for tokens before any replacements are made,
+	// so injected source/filter names cannot trigger unintended token expansion.
+	const bool has_source_token = ndi_name.contains("${source}");
+	const bool has_filter_token = ndi_name.contains("${filter}");
+
+	// If the name contains ${source} then replace it with the source name.
+	if (has_source_token) {
+		auto parent_name = obs_source_get_name(parent_source);
+		ndi_name.replace("${source}", QString(parent_name));
+		signal_handler_t *sh = obs_source_get_signal_handler(parent_source);
+		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, filter);
+			signal_handler_connect(sh, "rename", on_renamed, filter);
+		}
+	}
+
+	// If the name contains ${filter} then replace it with the filter name.
+	if (has_filter_token) {
+		auto filter_name = obs_source_get_name(filter->obs_source);
+		ndi_name.replace("${filter}", QString(filter_name));
+		signal_handler_t *sh = obs_source_get_signal_handler(filter->obs_source);
+		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, filter);
+			signal_handler_connect(sh, "rename", on_renamed, filter);
+		}
+	}
+
+	QByteArray ndi_name_utf8 = ndi_name.toUtf8();
+
+	NDIlib_send_create_t send_desc{};
+	send_desc.p_ndi_name = ndi_name_utf8.constData();
+
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
+
 	if (groups && groups[0])
 		send_desc.p_groups = groups;
 	else
@@ -282,10 +369,25 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(filter->ndi_sender);
 	filter->ndi_sender = ndiLib->send_create(&send_desc);
+
+	if (filter->ndi_sender) {
+		obs_log(LOG_INFO, "Dedicated NDI Output sender created: '%s'", send_desc.p_ndi_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi output started", send_desc.p_ndi_name);
+	} else {
+		obs_log(LOG_WARNING, "WARN-416 - Dedicated NDI Output sender initialisation failed. '%s'",
+			send_desc.p_ndi_name);
+		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi sender init failed", send_desc.p_ndi_name);
+	}
+
+	filter->no_audio_connections = -1;
 	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
 
 	if (!filter->is_audioonly) {
 		pthread_mutex_unlock(&filter->ndi_sender_video_mutex);
+	}
+
+	if (allocating_settings) {
+		obs_data_release(settings);
 	}
 }
 
@@ -352,6 +454,21 @@ void ndi_filter_destroy(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
+	// Disconnect parent rename handler if connected
+	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+	if (parent) {
+		signal_handler_t *sh = obs_source_get_signal_handler(parent);
+		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, f);
+		}
+	}
+
+	// Disconnect filter rename handler if connected
+	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
+	if (sh) {
+		signal_handler_disconnect(sh, "rename", on_renamed, f);
+	}
+
 	video_output_close(f->video_output);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
@@ -382,6 +499,21 @@ void ndi_filter_destroy_audioonly(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy_audioonly('%s'...)", name);
 
+	// Disconnect parent rename handler if connected
+	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
+	if (parent) {
+		signal_handler_t *sh = obs_source_get_signal_handler(parent);
+		if (sh) {
+			signal_handler_disconnect(sh, "rename", on_renamed, f);
+		}
+	}
+
+	// Disconnect filter rename handler if connected
+	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
+	if (sh) {
+		signal_handler_disconnect(sh, "rename", on_renamed, f);
+	}
+
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(f->ndi_sender);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
@@ -400,9 +532,17 @@ void ndi_filter_destroy_audioonly(void *data)
 void ndi_filter_tick(void *data, float)
 {
 	auto f = (ndi_filter_t *)data;
+
 	obs_get_video_info(&f->ovi);
 
 	f->rendered = false;
+}
+
+void ndi_filter_add(void *data, obs_source_t * /* parent */)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f->ndi_sender)
+		ndi_sender_create(f, nullptr);
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
@@ -410,6 +550,31 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	// NOTE: The logic in this function should be similar to
 	// ndi-output.cpp/ndi_output_raw_audio(...)
 	auto f = (ndi_filter_t *)data;
+
+	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
+
+	if (!f->ndi_sender) {
+		pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
+		return audio_data;
+	}
+
+	auto now = std::chrono::steady_clock::now();
+	if (now - f->last_audio_conn_check >= std::chrono::seconds(1)) {
+		f->last_audio_conn_check = now;
+		int nc = ndiLib->send_get_no_connections(f->ndi_sender, 10);
+		if (nc != f->no_audio_connections) {
+			auto ndi_source = ndiLib->send_get_source_name(f->ndi_sender);
+			if (nc <= 0)
+				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has no connections.",
+					ndi_source->p_ndi_name);
+			else if (f->no_audio_connections == 0)
+				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has %d connections.",
+					ndi_source->p_ndi_name, nc);
+			f->no_audio_connections = nc;
+		}
+	}
+
+	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	obs_get_audio_info(&f->oai);
 
@@ -465,6 +630,7 @@ obs_source_info create_ndi_filter_info()
 	ndi_filter_info.get_defaults = ndi_filter_getdefaults;
 
 	ndi_filter_info.create = ndi_filter_create;
+	ndi_filter_info.filter_add = ndi_filter_add;
 	ndi_filter_info.destroy = ndi_filter_destroy;
 	ndi_filter_info.update = ndi_filter_update;
 
@@ -489,6 +655,7 @@ obs_source_info create_ndi_audiofilter_info()
 	ndi_filter_info.get_defaults = ndi_filter_getdefaults;
 
 	ndi_filter_info.create = ndi_filter_create_audioonly;
+	ndi_filter_info.filter_add = ndi_filter_add;
 	ndi_filter_info.update = ndi_filter_update;
 	ndi_filter_info.destroy = ndi_filter_destroy_audioonly;
 
