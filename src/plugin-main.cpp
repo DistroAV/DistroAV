@@ -112,11 +112,17 @@ static void ensure_ndi_filters_started()
 
 					if (!obs_filter_get_parent(filter)) {
 						// This can still happen transiently during startup ordering; skip until parent exists.
+						obs_log(LOG_DEBUG,
+							"OBS frontend finished loading: skipping NDI filter '%s' (parent not ready).",
+							obs_source_get_name(filter));
 						return;
 					}
 
 					auto settings = obs_source_get_settings(filter);
 					if (!settings) {
+						obs_log(LOG_DEBUG,
+							"OBS frontend finished loading: skipping NDI filter '%s' (missing settings).",
+							obs_source_get_name(filter));
 						return;
 					}
 
