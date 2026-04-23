@@ -94,7 +94,7 @@ obs_properties_t *ndi_filter_getproperties(void *)
 	obs_property_t *ndi_name_property = obs_properties_add_text(
 		props, FLT_PROP_NAME, obs_module_text("NDIPlugin.FilterProps.NDIName"), OBS_TEXT_DEFAULT);
 	obs_property_set_long_description(ndi_name_property,
-					  "Dynamic naming is support with the ${source} and ${filter} tokens");
+					  obs_module_text("NDIPlugin.FilterProps.NDIName.Description"));
 
 	obs_properties_add_text(props, FLT_PROP_GROUPS, obs_module_text("NDIPlugin.FilterProps.NDIGroups"),
 				OBS_TEXT_DEFAULT);
