@@ -609,3 +609,108 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 	obs_log(LOG_DEBUG, "-%s", QT_TO_UTF8(methodSignature));
 	return true;
 }
+
+void showSampleUpdateDialog()
+{
+	obs_log(LOG_DEBUG, "+showSampleUpdateDialog()");
+
+	if (isUpdatePendingOrShowing()) {
+		if (update_dialog) {
+			update_dialog->raise();
+		}
+		obs_log(LOG_DEBUG, "showSampleUpdateDialog: update pending or showing; ignoring");
+		return;
+	}
+
+	// Deliberately hostile content exercising every shape that could slip
+	// past setMarkdown() if releaseNotes weren't HTML-escaped first:
+	// raw tags, event-handler attributes, javascript: URLs, ampersand /
+	// quote edge cases, angle brackets inside code, plus benign markdown
+	// so we can confirm ordinary formatting still renders.
+	QString sampleNotes = QStringLiteral(
+		"# Sample release notes (HOSTILE INPUT)\n"
+		"\n"
+		"This dialog is shown only when OBS is launched with\n"
+		"`--distroav-debug`.\n"
+		"\n"
+		"## Script injection attempts\n"
+		"\n"
+		"- `<script>alert('xss-script')</script>`\n"
+		"- `<img src=x onerror=\"alert('xss-img')\">`\n"
+		"- `<h1 onclick=\"alert('xss-onclick')\">click me</h1>`\n"
+		"- `<iframe src=\"javascript:alert('xss-iframe')\"></iframe>`\n"
+		"- `<style>body{background:red}</style>`\n"
+		"- `<a href=\"javascript:alert('xss-link')\">inline js link</a>`\n"
+		"\n"
+		"And the same *unfenced* (they should all appear as literal text,\n"
+		"not executed / not rendered as HTML):\n"
+		"\n"
+		"<script>alert('xss-script-raw')</script>\n"
+		"<img src=x onerror=\"alert('xss-img-raw')\">\n"
+		"<h1 onclick=\"alert('xss-onclick-raw')\">raw-h1</h1>\n"
+		"<iframe src=\"javascript:alert('xss-iframe-raw')\"></iframe>\n"
+		"\n"
+		"## Markdown with hostile URLs\n"
+		"\n"
+		"- [javascript link](javascript:alert('xss-md-link'))\n"
+		"- [data-uri link](data:text/html,<script>alert(1)</script>)\n"
+		"- Autolink: <javascript:alert('xss-autolink')>\n"
+		"\n"
+		"## Character edge cases\n"
+		"\n"
+		"Ampersands and entities: `&` `&amp;` `&lt;` `&gt;` `&quot;` `&#x27;`\n"
+		"Quotes: `\"` `'` `` ` `` Angle brackets: `<` `>` Backslashes: `\\` `\\\\`\n"
+		"Unicode/emoji sanity: \xc3\xa9 \xc3\xb1 \xe4\xb8\xad\xe6\x96\x87 \xf0\x9f\x9a\x80 \xf0\x9f\x94\xa5\n"
+		"\n"
+		"## Benign markdown (should still format normally)\n"
+		"\n"
+		"1. Ordered item\n"
+		"2. **Bold** and *italic* and `code`\n"
+		"3. A [safe link](https://distroav.org)\n"
+		"\n"
+		"> Blockquote with a raw tag inside: <b>bold-via-html</b>\n"
+		"\n"
+		"```\n"
+		"code fence with <div> tags and & entities\n"
+		"```\n"
+		"\n"
+		"A long line to check wrapping: "
+		"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+		"eiusmod tempor incididunt ut labore et dolore magna aliqua.\n");
+
+	QJsonObject obj;
+	obj["v"] = 1;
+	// 99.99.99 guarantees versionLatest > versionCurrent so the dialog's
+	// "new version available" header reads sensibly.
+	obj["releaseTag"] = "99.99.99";
+	obj["releaseName"] = "Sample Release (test-sample-notes)";
+	obj["releaseUrl"] = "https://distroav.org";
+	obj["releaseDate"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+	obj["releaseNotes"] = sampleNotes;
+	obj["uiDelayMillis"] = 0;
+
+	auto responseData = QString::fromUtf8(QJsonDocument(obj).toJson());
+	PluginUpdateInfo info(200, responseData, QString());
+	if (!info.errorData.isEmpty()) {
+		obs_log(LOG_ERROR, "showSampleUpdateDialog: synthetic PluginUpdateInfo failed to parse: '%s'",
+			QT_TO_UTF8(info.errorData));
+		return;
+	}
+
+	auto main_window = static_cast<QMainWindow *>(obs_frontend_get_main_window());
+	if (main_window == nullptr) {
+		obs_log(LOG_ERROR, "showSampleUpdateDialog: Cannot get the main OBS window");
+		return;
+	}
+
+	obs_frontend_push_ui_translation(obs_module_get_string);
+	update_dialog = new PluginUpdate(info, main_window);
+	obs_frontend_pop_ui_translation();
+	QObject::connect(update_dialog, &QDialog::finished, [](int) {
+		update_dialog->deleteLater();
+		update_dialog = nullptr;
+	});
+	update_dialog->show();
+
+	obs_log(LOG_DEBUG, "-showSampleUpdateDialog()");
+}
