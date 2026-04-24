@@ -85,6 +85,26 @@ void on_renamed(void *data, calldata_t *)
 	ndi_sender_create(f, nullptr);
 }
 
+static void ndi_filter_disconnect_rename_handlers(ndi_filter_t *filter)
+{
+	if (!filter || !filter->obs_source) {
+		return;
+	}
+
+	obs_source_t *parent = obs_filter_get_parent(filter->obs_source);
+	if (parent) {
+		signal_handler_t *parent_sh = obs_source_get_signal_handler(parent);
+		if (parent_sh) {
+			signal_handler_disconnect(parent_sh, "rename", on_renamed, filter);
+		}
+	}
+
+	signal_handler_t *filter_sh = obs_source_get_signal_handler(filter->obs_source);
+	if (filter_sh) {
+		signal_handler_disconnect(filter_sh, "rename", on_renamed, filter);
+	}
+}
+
 obs_properties_t *ndi_filter_getproperties(void *)
 {
 	obs_log(LOG_DEBUG, "+ndi_filter_getproperties(...)");
@@ -184,7 +204,8 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	}
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
-	ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
+	if (f->ndi_sender)
+		ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
@@ -456,28 +477,11 @@ void ndi_filter_destroy(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
-	// Disconnect parent rename handler if connected
-	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
-	if (parent) {
-		signal_handler_t *sh = obs_source_get_signal_handler(parent);
-		if (sh) {
-			signal_handler_disconnect(sh, "rename", on_renamed, f);
-		}
-	}
-
-	// Disconnect filter rename handler if connected
-	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
-	if (sh) {
-		signal_handler_disconnect(sh, "rename", on_renamed, f);
-	}
+	ndi_filter_disconnect_rename_handlers(f);
 
 	video_output_close(f->video_output);
 
-	pthread_mutex_lock(&f->ndi_sender_video_mutex);
-	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-	ndiLib->send_destroy(f->ndi_sender);
-	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
-	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
+	ndi_sender_destroy(f);
 
 	gs_stagesurface_unmap(f->stagesurface);
 	gs_stagesurface_destroy(f->stagesurface);
@@ -501,24 +505,8 @@ void ndi_filter_destroy_audioonly(void *data)
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy_audioonly('%s'...)", name);
 
-	// Disconnect parent rename handler if connected
-	obs_source_t *parent = obs_filter_get_parent(f->obs_source);
-	if (parent) {
-		signal_handler_t *sh = obs_source_get_signal_handler(parent);
-		if (sh) {
-			signal_handler_disconnect(sh, "rename", on_renamed, f);
-		}
-	}
-
-	// Disconnect filter rename handler if connected
-	signal_handler_t *sh = obs_source_get_signal_handler(f->obs_source);
-	if (sh) {
-		signal_handler_disconnect(sh, "rename", on_renamed, f);
-	}
-
-	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-	ndiLib->send_destroy(f->ndi_sender);
-	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
+	ndi_filter_disconnect_rename_handlers(f);
+	ndi_sender_destroy(f);
 
 	if (f->audio_conv_buffer) {
 		bfree(f->audio_conv_buffer);
@@ -545,6 +533,16 @@ void ndi_filter_add(void *data, obs_source_t * /* parent */)
 	auto f = (ndi_filter_t *)data;
 	if (!f->ndi_sender)
 		ndi_sender_create(f, nullptr);
+}
+
+void ndi_filter_remove(void *data, obs_source_t * /* parent */)
+{
+	auto f = (ndi_filter_t *)data;
+	if (!f)
+		return;
+
+	ndi_filter_disconnect_rename_handlers(f);
+	ndi_sender_destroy(f);
 }
 
 obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
@@ -614,7 +612,8 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-	ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
+	if (f->ndi_sender)
+		ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	return audio_data;
@@ -633,6 +632,7 @@ obs_source_info create_ndi_filter_info()
 
 	ndi_filter_info.create = ndi_filter_create;
 	ndi_filter_info.filter_add = ndi_filter_add;
+	ndi_filter_info.filter_remove = ndi_filter_remove;
 	ndi_filter_info.destroy = ndi_filter_destroy;
 	ndi_filter_info.update = ndi_filter_update;
 
@@ -658,6 +658,7 @@ obs_source_info create_ndi_audiofilter_info()
 
 	ndi_filter_info.create = ndi_filter_create_audioonly;
 	ndi_filter_info.filter_add = ndi_filter_add;
+	ndi_filter_info.filter_remove = ndi_filter_remove;
 	ndi_filter_info.update = ndi_filter_update;
 	ndi_filter_info.destroy = ndi_filter_destroy_audioonly;
 
