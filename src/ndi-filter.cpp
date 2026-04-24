@@ -204,7 +204,8 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	}
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
-	ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
+	if (f->ndi_sender)
+		ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
@@ -611,7 +612,8 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-	ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
+	if (f->ndi_sender)
+		ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
 	return audio_data;
