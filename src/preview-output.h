@@ -19,3 +19,5 @@
 
 void preview_output_deinit();
 void preview_output_init();
+
+#define PREVIEW_OUTPUT_NAME "NDI Preview Output"
