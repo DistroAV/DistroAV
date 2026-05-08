@@ -313,6 +313,8 @@ obs_properties_t *ndi_source_getproperties(void *data)
 
 	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
 
+	obs_properties_add_text(props, "ndi_web_control_url", "Web Control URL", OBS_TEXT_INFO);
+
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
 					0.001);
@@ -339,6 +341,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
+	obs_data_set_default_string(settings, "web_control_url", "Unknown");
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -698,6 +701,27 @@ void *ndi_source_thread(void *data)
 			frame_received =
 				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
+			if (frame_received == NDIlib_frame_type_status_change) {
+				const char *p_url = ndiLib->recv_get_web_control(ndi_receiver);
+				if (p_url) {
+					// You now have a URL that you can embed in your user interface if you want!
+					// Do what you want with it here and when done, call:
+					obs_log(LOG_INFO,
+						"'%s' - This NDI source supports the NDI Web Control protocol! Web Control URL: %s",
+						obs_source_name, p_url);
+					obs_data_t *data = obs_source_get_settings(s->obs_source);
+					obs_data_set_string(data, "web_control_url", p_url);
+					obs_data_release(data);
+					ndiLib->recv_free_string(ndi_receiver, p_url);
+				} else {
+					obs_log(LOG_INFO,
+						"'%s' - This NDI source does not support the NDI Web Control protocol.",
+						obs_source_name);
+					// This device does not currently support a configuration user interface.
+				}
+
+				continue;
+			}
 			if (frame_received == NDIlib_frame_type_audio) {
 				//
 				// AUDIO
