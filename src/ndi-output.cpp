@@ -454,7 +454,7 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	}
 
 	audio_frame.p_data = o->audio_conv_buffer;
-	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name, frame->timestamp * 100,
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name, audio_frame.timestamp * 100,
 				      (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
