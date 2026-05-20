@@ -1,5 +1,7 @@
 #include "obs-support/sync-debug.h"
 #include <util/platform.h>
+#include <mutex>
+#include <utility>
 
 std::map<std::string, bool> audio_on_map;
 std::map<std::string, int64_t> audio_on_time_map;
@@ -9,6 +11,11 @@ std::map<std::string, bool> white_on_map;
 std::map<std::string, int64_t> white_on_time_map;
 std::map<std::string, int64_t> white_off_time_map;
 std::map<std::string, int> video_sync_count_map;
+
+// Per-key mutexes to protect access to the maps for each source/key
+static std::map<std::string, std::mutex> sync_mutex_map;
+// Guard to protect creation of per-key mutex entries
+static std::mutex sync_mutex_map_guard;
 
 int64_t obs_sync_white_time(int64_t time, uint8_t *p_data)
 {
@@ -97,6 +104,16 @@ void obs_sync_debug_log_video_time(const char *message, const char *source_ndi_n
 {
 	std::string key = std::string(message) + " [" + std::string(source_ndi_name) + "]";
 
+	// Ensure a mutex exists for this key
+	{
+		std::lock_guard<std::mutex> g(sync_mutex_map_guard);
+		if (sync_mutex_map.find(key) == sync_mutex_map.end())
+			sync_mutex_map.try_emplace(key);
+	}
+
+	// Lock the per-key mutex for the remainder of the function
+	std::unique_lock<std::mutex> key_lock(sync_mutex_map[key]);
+
 	bool *white_on = nullptr;
 	int64_t *white_on_time = nullptr;
 	int64_t *white_off_time = nullptr;
@@ -147,13 +164,25 @@ void obs_sync_debug_log_video_time(const char *message, const char *source_ndi_n
 	} else if (*white_on_time == -1)
 		*white_on_time = 0;
 
+	// Call obs_sync_debug_log while holding the per-key lock to ensure consistent reads/writes
 	obs_sync_debug_log(key.c_str(), timestamp, audio_on_time, audio_off_time, *audio_sync_count, white_on_time,
 			   white_off_time, *video_sync_count);
 }
+
 void obs_sync_debug_log_audio_time(const char *message, const char *source_ndi_name, uint64_t timestamp, float *data,
 				   int no_samples, int sample_rate)
 {
 	std::string key = std::string(message) + " [" + std::string(source_ndi_name) + "]";
+
+	// Ensure a mutex exists for this key
+	{
+		std::lock_guard<std::mutex> g(sync_mutex_map_guard);
+		if (sync_mutex_map.find(key) == sync_mutex_map.end())
+			sync_mutex_map.try_emplace(key);
+	}
+
+	// Lock the per-key mutex for the remainder of the function
+	std::unique_lock<std::mutex> key_lock(sync_mutex_map[key]);
 
 	bool *white_on = nullptr;
 	int64_t *white_on_time = nullptr;
@@ -208,6 +237,7 @@ void obs_sync_debug_log_audio_time(const char *message, const char *source_ndi_n
 	} else if (*audio_on_time == -1)
 		*audio_on_time = 0;
 
+	// Call obs_sync_debug_log while holding the per-key lock to ensure consistent reads/writes
 	obs_sync_debug_log(key.c_str(), timestamp, audio_on_time, audio_off_time, *audio_sync_count, white_on_time,
 			   white_off_time, *video_sync_count);
 }
