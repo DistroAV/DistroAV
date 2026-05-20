@@ -71,6 +71,8 @@ target_sources(
     src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
     src/obs-support/remote-text.hpp
+    src/obs-support/sync-debug.cpp
+    src/obs-support/sync-debug.h
     src/config.cpp
     src/config.h
     src/main-output.cpp
