@@ -370,7 +370,9 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.frame_rate_D =
 		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+#ifdef SYNC_DEBUG
 	video_frame.timestamp = frame->timestamp / 100;
+#endif
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.FourCC = o->frame_fourcc;
 
@@ -423,7 +425,9 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
+#ifdef SYNC_DEBUG
 	audio_frame.timestamp = frame->timestamp / 100;
+#endif
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;

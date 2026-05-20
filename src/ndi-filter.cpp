@@ -47,7 +47,10 @@ typedef struct {
 	gs_stagesurf_t *stagesurface;
 	uint8_t *video_data;
 	uint32_t video_linesize;
+#ifdef SYNC_DEBUG
+	// Time offset to apply to OBS timestamps to synchronize with NDI timestamps
 	uint64_t obs_to_ndi_time_offset;
+#endif
 	video_t *video_output;
 	bool is_audioonly;
 
@@ -69,12 +72,14 @@ const char *ndi_audiofilter_getname(void *)
 	return obs_module_text("NDIPlugin.AudioFilterName");
 }
 
+#ifdef SYNC_DEBUG
 uint64_t now_ns()
 {
 	return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
 					     std::chrono::system_clock::now().time_since_epoch())
 					     .count());
 }
+#endif
 
 void ndi_filter_update(void *data, obs_data_t *settings);
 void ndi_sender_destroy(ndi_filter_t *filter);
@@ -205,9 +210,11 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		video_frame.frame_rate_D = f->ovi.fps_den;
 		video_frame.picture_aspect_ratio = 0; // square pixels
 		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+#ifdef SYNC_DEBUG
 		// Convert OBS timestamp in nanoseconds to NDI timestamp in 100-nanosecond intervals, 
 		// applying offset to synchronize with audio frames
 		video_frame.timestamp = (frame->timestamp + f->obs_to_ndi_time_offset) / 100;
+#endif
 		video_frame.timecode = NDIlib_send_timecode_synthesize;
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
@@ -416,10 +423,12 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 	filter->no_audio_connections = -1;
 	
+#ifdef SYNC_DEBUG
 	// Video timestamps are in OBS time, so calculate offset to convert to NDI timestamps
 	filter->obs_to_ndi_time_offset =
 		now_ns() -
 		os_gettime_ns(); 
+#endif
 
 	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
 
@@ -599,7 +608,9 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = f->oai.samples_per_sec;
 	audio_frame.no_channels = f->oai.speakers;
+#ifdef SYNC_DEBUG
 	audio_frame.timestamp = audio_data->timestamp / 100;
+#endif
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = audio_data->frames;
 	audio_frame.channel_stride_in_bytes =
