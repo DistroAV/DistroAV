@@ -211,7 +211,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		video_frame.picture_aspect_ratio = 0; // square pixels
 		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 #ifdef SYNC_DEBUG
-		// Convert OBS timestamp in nanoseconds to NDI timestamp in 100-nanosecond intervals, 
+		// Convert OBS timestamp in nanoseconds to NDI timestamp in 100-nanosecond intervals,
 		// applying offset to synchronize with audio frames
 		video_frame.timestamp = (frame->timestamp + f->obs_to_ndi_time_offset) / 100;
 #endif
@@ -221,8 +221,8 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	}
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
-	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source), video_frame.timestamp * 100,
-				      (uint8_t *)video_frame.p_data);
+	OBS_SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source),
+				      video_frame.timestamp * 100, (uint8_t *)video_frame.p_data);
 	if (f->ndi_sender)
 		ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
@@ -422,12 +422,10 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	}
 
 	filter->no_audio_connections = -1;
-	
+
 #ifdef SYNC_DEBUG
 	// Video timestamps are in OBS time, so calculate offset to convert to NDI timestamps
-	filter->obs_to_ndi_time_offset =
-		now_ns() -
-		os_gettime_ns(); 
+	filter->obs_to_ndi_time_offset = now_ns() - os_gettime_ns();
 #endif
 
 	pthread_mutex_unlock(&filter->ndi_sender_audio_mutex);
@@ -642,9 +640,9 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	audio_frame.p_data = f->audio_conv_buffer;
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
-    OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source),
-					      audio_frame.timestamp * 100,
-				      (float*)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
+	OBS_SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source),
+				      audio_frame.timestamp * 100, (float *)audio_frame.p_data, audio_frame.no_samples,
+				      audio_frame.sample_rate);
 	if (f->ndi_sender)
 		ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
