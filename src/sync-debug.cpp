@@ -1,4 +1,4 @@
-#include "obs-support/sync-debug.h"
+#include "sync-debug.h"
 #include <util/platform.h>
 #include <mutex>
 #include <utility>
@@ -17,7 +17,7 @@ static std::map<std::string, std::mutex> sync_mutex_map;
 // Guard to protect creation of per-key mutex entries
 static std::mutex sync_mutex_map_guard;
 
-int64_t obs_sync_white_time(int64_t time, uint8_t *p_data)
+int64_t sync_white_time(int64_t time, uint8_t *p_data)
 {
 	uint8_t pixel0 = p_data[0];
 	uint8_t pixel1 = p_data[1];
@@ -25,7 +25,7 @@ int64_t obs_sync_white_time(int64_t time, uint8_t *p_data)
 	return white ? time : 0;
 }
 
-int64_t obs_sync_audio_on_time(int64_t time, float *p_data, int nsamples, int samplerate)
+int64_t sync_audio_on_time(int64_t time, float *p_data, int nsamples, int samplerate)
 {
 	int64_t return_time = -1;
 	int64_t sample = 0;
@@ -42,7 +42,7 @@ int64_t obs_sync_audio_on_time(int64_t time, float *p_data, int nsamples, int sa
 	return return_time;
 }
 
-int64_t obs_sync_audio_off_time(int64_t time, float *p_data, int nsamples, int samplerate)
+int64_t sync_audio_off_time(int64_t time, float *p_data, int nsamples, int samplerate)
 {
 	int64_t return_time = -1;
 	int64_t sample = 0;
@@ -60,8 +60,8 @@ int64_t obs_sync_audio_off_time(int64_t time, float *p_data, int nsamples, int s
 }
 const int64_t max_offset = 2000000000LL; //2 seconds
 
-void obs_sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_on_time, int64_t *audio_off_time,
-			int audio_sync_count, int64_t *white_on_time, int64_t *white_off_time, int video_sync_count)
+void sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_on_time, int64_t *audio_off_time,
+		    int audio_sync_count, int64_t *white_on_time, int64_t *white_off_time, int video_sync_count)
 {
 	if (timestamp > std::max<int64_t>(*audio_on_time, *white_on_time) + max_offset) {
 		if (*white_on_time > 0 && *audio_on_time > 0 && audio_sync_count > 0 && video_sync_count > 0) {
@@ -100,7 +100,7 @@ void obs_sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_o
 	}
 }
 
-void obs_sync_debug_log_video_time(const char *message, const char *source_ndi_name, uint64_t timestamp, uint8_t *data)
+void sync_debug_log_video_time(const char *message, const char *source_ndi_name, uint64_t timestamp, uint8_t *data)
 {
 	std::string key = std::string(message) + " [" + std::string(source_ndi_name) + "]";
 
@@ -149,7 +149,7 @@ void obs_sync_debug_log_video_time(const char *message, const char *source_ndi_n
 	audio_on_time = &audio_on_time_map[key];
 	audio_off_time = &audio_off_time_map[key];
 	audio_sync_count = &audio_sync_count_map[key];
-	int64_t white_time = obs_sync_white_time(timestamp, data);
+	int64_t white_time = sync_white_time(timestamp, data);
 
 	if (!*white_on && (white_time > 0)) {
 		*white_on = true;
@@ -164,13 +164,13 @@ void obs_sync_debug_log_video_time(const char *message, const char *source_ndi_n
 	} else if (*white_on_time == -1)
 		*white_on_time = 0;
 
-	// Call obs_sync_debug_log while holding the per-key lock to ensure consistent reads/writes
-	obs_sync_debug_log(key.c_str(), timestamp, audio_on_time, audio_off_time, *audio_sync_count, white_on_time,
-			   white_off_time, *video_sync_count);
+	// Call sync_debug_log while holding the per-key lock to ensure consistent reads/writes
+	sync_debug_log(key.c_str(), timestamp, audio_on_time, audio_off_time, *audio_sync_count, white_on_time,
+		       white_off_time, *video_sync_count);
 }
 
-void obs_sync_debug_log_audio_time(const char *message, const char *source_ndi_name, uint64_t timestamp, float *data,
-				   int no_samples, int sample_rate)
+void sync_debug_log_audio_time(const char *message, const char *source_ndi_name, uint64_t timestamp, float *data,
+			       int no_samples, int sample_rate)
 {
 	std::string key = std::string(message) + " [" + std::string(source_ndi_name) + "]";
 
@@ -219,7 +219,7 @@ void obs_sync_debug_log_audio_time(const char *message, const char *source_ndi_n
 	audio_on_time = &audio_on_time_map[key];
 	audio_off_time = &audio_off_time_map[key];
 	audio_sync_count = &audio_sync_count_map[key];
-	int64_t audio_time = obs_sync_audio_on_time(timestamp, data, no_samples, sample_rate);
+	int64_t audio_time = sync_audio_on_time(timestamp, data, no_samples, sample_rate);
 
 	if (!*audio_on && (audio_time > 0)) {
 		*audio_on = true;
@@ -228,7 +228,7 @@ void obs_sync_debug_log_audio_time(const char *message, const char *source_ndi_n
 		*audio_on_time = audio_time;
 		//obs_log(LOG_DEBUG, "%s Audio on at %lld", key.c_str(), audio_on_time);
 	} else if (*audio_on) {
-		audio_time = obs_sync_audio_off_time(timestamp, data, no_samples, sample_rate);
+		audio_time = sync_audio_off_time(timestamp, data, no_samples, sample_rate);
 		if (audio_time > 0) {
 			*audio_off_time = audio_time;
 			*audio_on = false;
@@ -237,7 +237,7 @@ void obs_sync_debug_log_audio_time(const char *message, const char *source_ndi_n
 	} else if (*audio_on_time == -1)
 		*audio_on_time = 0;
 
-	// Call obs_sync_debug_log while holding the per-key lock to ensure consistent reads/writes
-	obs_sync_debug_log(key.c_str(), timestamp, audio_on_time, audio_off_time, *audio_sync_count, white_on_time,
-			   white_off_time, *video_sync_count);
+	// Call sync_debug_log while holding the per-key lock to ensure consistent reads/writes
+	sync_debug_log(key.c_str(), timestamp, audio_on_time, audio_off_time, *audio_sync_count, white_on_time,
+		       white_off_time, *video_sync_count);
 }
