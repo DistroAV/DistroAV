@@ -86,6 +86,9 @@
                         </item>
                         <item row="0" column="1">
                             <widget class="QLineEdit" name="mainOutputName">
+                                <property name="toolTip">
+                                    <string>NDIPlugin.OutputSettings.Main.Name.Tooltip</string>
+                                </property>
                                 <property name="styleSheet">
                                     <string notr="true">QWidget { padding: 0; }</string>
                                 </property>
@@ -203,6 +206,9 @@
                                 </property>
                                 <property name="text">
                                     <string>previewOutputName</string>
+                                </property>
+                                <property name="toolTip">
+                                    <string>NDIPlugin.OutputSettings.Preview.Name.Tooltip</string>
                                 </property>
                             </widget>
                         </item>

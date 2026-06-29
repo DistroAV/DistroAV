@@ -102,33 +102,13 @@ void main_output_start()
 bool main_output_is_supported()
 {
 	obs_log(LOG_DEBUG, "+main_output_is_supported()");
-	auto config = Config::Current();
-	auto output_name = config->OutputName;
-	auto output_groups = config->OutputGroups;
-
 	obs_data_t *output_settings = obs_data_create();
-
-	// Append a random number to the test NDI name to avoid
-	// conflicts with existing outputs
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(10000, 99999);
-
-	QString output_support_test_name = "NDI Output Support Test " + QString::number(dis(gen));
-
-	obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_support_test_name));
-	obs_data_set_string(output_settings, "ndi_groups", "DistroAV Config");
-
+	auto output = obs_output_create("test_ndi_output", "Test NDI Output", output_settings, nullptr);
 	bool is_supported = false;
 	context.last_error = QString("");
 
-	auto output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
-	obs_data_release(output_settings);
-
 	if (output != nullptr) {
-		obs_output_start(output);
-
-		if (!obs_output_active(output)) {
+		if (!obs_output_start(output)) {
 			is_supported = false;
 			context.last_error = obs_output_get_last_error(output);
 			obs_log(LOG_DEBUG, "main_output_is_supported: '%s'", QT_TO_UTF8(context.last_error));

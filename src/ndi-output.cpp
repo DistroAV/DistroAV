@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "sync-debug.h"
 #include <util/threading.h>
 #include <chrono>
 
@@ -369,6 +370,9 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.frame_rate_D =
 		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+#ifdef SYNC_DEBUG
+	video_frame.timestamp = frame->timestamp / 100;
+#endif
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.FourCC = o->frame_fourcc;
 
@@ -380,7 +384,8 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
-
+	SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name, video_frame.timestamp * 100,
+				  (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
@@ -420,12 +425,15 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
+#ifdef SYNC_DEBUG
+	audio_frame.timestamp = frame->timestamp / 100;
+#endif
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
-	const size_t data_size = audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
+	const size_t data_size = (size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
 
 	if (data_size > o->audio_conv_buffer_size) {
 		obs_log(LOG_DEBUG, "ndi_output_rawaudio('%s'): growing audio_conv_buffer from %zu to %zu bytes",
@@ -446,7 +454,8 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	}
 
 	audio_frame.p_data = o->audio_conv_buffer;
-
+	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name, audio_frame.timestamp * 100,
+				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
 
