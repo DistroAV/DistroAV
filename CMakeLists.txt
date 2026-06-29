@@ -71,6 +71,8 @@ target_sources(
     src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
     src/obs-support/remote-text.hpp
+    src/sync-debug.cpp
+    src/sync-debug.h
     src/config.cpp
     src/config.h
     src/main-output.cpp
@@ -79,6 +81,7 @@ target_sources(
     src/ndi-finder.h
     src/ndi-finder.cpp
     src/ndi-output.cpp
+    src/test-output.cpp
     src/ndi-source.cpp
     src/plugin-main.cpp
     src/plugin-main.h
@@ -97,5 +100,6 @@ configure_file(
   cmake/windows/resources/installer-Windows.iss.in
   "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
 )
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/distroav.ico" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

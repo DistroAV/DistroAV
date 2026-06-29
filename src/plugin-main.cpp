@@ -56,6 +56,9 @@ struct obs_source_info ndi_source_info;
 extern struct obs_output_info create_ndi_output_info();
 struct obs_output_info ndi_output_info;
 
+extern struct obs_output_info create_test_output_info();
+struct obs_output_info test_output_info;
+
 extern struct obs_source_info create_ndi_filter_info();
 struct obs_source_info ndi_filter_info;
 
@@ -262,6 +265,9 @@ static void register_plugin_features()
 
 	ndi_output_info = create_ndi_output_info();
 	obs_register_output(&ndi_output_info);
+
+	test_output_info = create_test_output_info();
+	obs_register_output(&test_output_info);
 
 	ndi_filter_info = create_ndi_filter_info();
 	obs_register_source(&ndi_filter_info);

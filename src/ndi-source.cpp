@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "sync-debug.h"
 #include "ndi-finder.h"
 
 #include <util/platform.h>
@@ -784,7 +785,9 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 		obs_audio_frame->data[i] =
 			(uint8_t *)ndi_audio_frame->p_data + (i * ndi_audio_frame->channel_stride_in_bytes);
 	}
-
+	SYNC_DEBUG_LOG_AUDIO_TIME("OBS <- ndi_source_thread", obs_source_get_name(obs_source),
+				  obs_audio_frame->timestamp, (float *)obs_audio_frame->data[0],
+				  obs_audio_frame->frames, obs_audio_frame->samples_per_sec);
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
@@ -846,7 +849,8 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 	obs_video_frame->height = ndi_video_frame->yres;
 	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
-
+	SYNC_DEBUG_LOG_VIDEO_TIME("OBS <- ndi_source_thread", obs_source_get_name(obs_source),
+				  (int64_t)obs_video_frame->timestamp, obs_video_frame->data[0]);
 	obs_source_output_video(obs_source, obs_video_frame);
 }
 
@@ -1230,18 +1234,6 @@ void ndi_source_destroy(void *data)
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
 }
 
-uint32_t ndi_source_get_width(void *data)
-{
-	auto s = (ndi_source_t *)data;
-	return s->width;
-}
-
-uint32_t ndi_source_get_height(void *data)
-{
-	auto s = (ndi_source_t *)data;
-	return s->height;
-}
-
 obs_source_info create_ndi_source_info()
 {
 	// https://docs.obsproject.com/reference-sources#source-definition-structure-obs-source-info
@@ -1262,9 +1254,6 @@ obs_source_info create_ndi_source_info()
 	ndi_source_info.hide = ndi_source_hidden;
 	ndi_source_info.deactivate = ndi_source_deactivated;
 	ndi_source_info.destroy = ndi_source_destroy;
-
-	ndi_source_info.get_width = ndi_source_get_width;
-	ndi_source_info.get_height = ndi_source_get_height;
 
 	return ndi_source_info;
 }
