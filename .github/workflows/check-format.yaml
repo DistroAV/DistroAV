@@ -1,6 +1,8 @@
 name: Check Code Formatting 🛠️
 on:
   workflow_call:
+permissions:
+  contents: read
 jobs:
   clang-format:
     runs-on: ubuntu-24.04

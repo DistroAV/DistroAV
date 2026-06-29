@@ -273,7 +273,16 @@ If you are running a local build, don't forget to add your build info to the upd
 	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
 		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, makeLink(PLUGIN_REDIRECT_NDI_WEB_URL, NDI_OFFICIAL_WEB_URL)));
 }
-
+void replace_invalid_filename_chars(QString *s)
+{
+	if (!s)
+		return;
+	const QString forbidden = "\\/:*?\"<>|";
+	for (QChar &ch : *s) {
+		if (forbidden.contains(ch))
+			ch = ' ';
+	}
+}
 void OutputSettings::onFormAccepted()
 {
 	auto config = Config::Current();
@@ -281,10 +290,12 @@ void OutputSettings::onFormAccepted()
 
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
+	replace_invalid_filename_chars(&config->OutputName);
 	config->OutputGroups = ui->mainOutputGroups->text();
 
 	config->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	config->PreviewOutputName = ui->previewOutputName->text();
+	replace_invalid_filename_chars(&config->PreviewOutputName);
 	config->PreviewOutputGroups = ui->previewOutputGroups->text();
 
 	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
