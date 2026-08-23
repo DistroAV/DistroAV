@@ -16,6 +16,8 @@
 ******************************************************************************/
 
 #pragma once
-
-void preview_output_deinit();
+#include "obs-frontend-api.h"
+void preview_output_close();
 void preview_output_init();
+void preview_output_stop();
+void preview_output_get_settings(obs_data_t *settings);

@@ -487,11 +487,11 @@ bool obs_module_load(void)
 						Qt::QueuedConnection);
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
-					main_output_deinit();
-					preview_output_deinit();
+					main_output_close();
+					preview_output_close();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
-					main_output_deinit();
-					preview_output_deinit();
+					main_output_close();
+					preview_output_close();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 					if (plugin_features_registered) {
 						main_output_init();

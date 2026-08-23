@@ -17,7 +17,10 @@
 
 #pragma once
 #include <QString>
-void main_output_deinit();
+#include "obs-frontend-api.h"
+void main_output_close();
 void main_output_init();
+void main_output_stop();
 QString main_output_last_error();
 bool main_output_is_supported();
+void main_output_get_settings(obs_data_t *settings);
