@@ -406,6 +406,15 @@ bool obs_module_load(void)
 				"ERR-406 - NDI library could not initialize. Usually due to unsupported CPU.");
 			obs_log(LOG_DEBUG,
 				"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library.");
+			QString title = "NDI library could not initialize";
+			QString message =
+				"ERR-406: NDI library was detected but could not initialize. "
+				"This is usually due to unsupported CPU instructions.<br><br>";
+			message += "See NDI CPU requirements: <br>";
+			message += makeLink(PLUGIN_REDIRECT_NDI_SDK_CPU_REQUIREMENTS_URL);
+			showCriticalMessageBoxDelayed(title, message);
+			ndiLib->destroy();
+			ndiLib = nullptr;
 			// return false;
 		} else {
 			obs_log(LOG_INFO, "obs_module_load: NDI library initialized ('%s')", ndiLib->version());
