@@ -462,10 +462,12 @@ void *ndi_source_thread(void *data)
 			//
 			// Update recv_desc.latency
 			//
-			if (s->config.latency == PROP_LATENCY_NORMAL)
-				recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
-			else
-				recv_desc.color_format = NDIlib_recv_color_format_fastest;
+			// "fastest" decodes alpha-carrying sources to UYVA,
+			// whose separate alpha plane is then dropped when
+			// mapped to VIDEO_FORMAT_UYVY in process_video2().
+			// Use UYVY_BGRA for all latency modes: non-alpha
+			// sources still decode to UYVY (zero-copy). #937
+			recv_desc.color_format = NDIlib_recv_color_format_UYVY_BGRA;
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.color_format=%d",
 				obs_source_name, //
