@@ -1,0 +1,38 @@
+name: Update WinGet Package Workflow
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      versionTargeted:
+        description: "Package version (Auto-detect for GitHub releases, or specify custom tag for manual dispatch)"
+        required: false
+        type: string
+#  schedule:
+#    - cron:  '0 3 * * *' # Scheduled to run daily at 03:00
+
+concurrency:
+  group: '${{ github.repository }} @ publish-winget'
+
+env:
+  PACKAGE_IDENTIFIER: ${{ format('{0}.{1}', github.repository_owner, github.event.repository.name) }}
+
+jobs:
+  publish-winget-package:
+    name: Publish WinGet Package Job
+    # if: github.repository == 'DistroAV/DistroAV' # Avoid forks to push non-approved versions.
+    runs-on: windows-latest
+    steps:
+      - name: Use Winget-Releaser Action
+        uses: vedantmgoyal9/winget-releaser@v2
+        with: 
+          # identifier: DistroAV.DistroAV # The hardcoded identifier of the package to update
+          identifier: ${{ env.PACKAGE_IDENTIFIER }} # The dynamic identifier of the package to update. Will use Owner.Repo format.
+          # release-repository: DistroAV/DistroAV # The hardcoded repository where the release is created, in the format owner/repo
+          release-repository: ${{ github.repository }} # The dynamic repository where the release is created, in the format owner/repo
+          installers-regex: '.*windows-x64-Installer\.exe$' # Tune for release assets matching - TO DO: update when we have more variants.
+          max-versions-to-keep: 5 # Optional, defaults to 10
+          release-tag: ${{ inputs.versionTargeted || github.event.release.tag_name }} # Custom release tag targeted for the release. TBC if an empty string would cause issues - Optional
+          release-notes-url: https://github.com/${{ github.repository }}/releases/tag/${{ inputs.versionTargeted || github.event.release.tag_name }}
+          # release-notes-url: https://example.com/release-notes/${{ github.event.release.tag_name }} # URL to package version's release notes. To update if we put the relase notes on the website one day. Optional, defaults to empty string.
+          token: ${{ secrets.WINGET_UPDATER_TOKEN }}
