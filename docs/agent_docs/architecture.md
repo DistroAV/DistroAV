@@ -55,3 +55,52 @@ block on NDI I/O. Recent commit history (search log for "Lock keys", "mutex",
 "queued on the UI thread") shows this has been an active source of real bugs —
 treat any new cross-thread state as something to explicitly synchronize, not an
 oversight to fix later.
+
+## Error codes
+
+`obs_log(LOG_ERROR, "ERR-4xx - ...")` calls use a stable numeric convention,
+catalogued for end users on the
+[Troubleshooting wiki page](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting#error--warning-code---obs-log).
+If you add a new hard/soft-requirement failure path, pick an unused number
+(grep `src -r -oE '"?ERR-[0-9]+'` first) and tell the user the wiki catalog
+needs a matching entry — it can't be edited from this repo.
+
+**Verified against current code**: codes actually in use are `400`–`412`,
+`424`, `425`, `430`. The wiki catalog additionally lists `413`–`423` and
+`426` (update-check failures in `src/forms/update.cpp`, output-filter
+failures, a config-validation error) and marks `424`/`425` "reserved for
+future use" — but those two are already implemented in `plugin-main.cpp`
+(OBS/NDI minimum-version checks), and the other wiki-only codes don't
+appear anywhere in `src/`. Treat the wiki catalog as informative, not
+ground truth; verify against `src/` when it matters for a specific code.
+
+## CLI test flags
+
+`Config::ParseCommandLineArgs` (`src/config.cpp`) reads `--distroav-*` OBS
+launch flags, useful for exercising failure/edge paths without faking real
+state:
+
+| Flag | Effect |
+|---|---|
+| `--distroav-debug` / `--distroav-verbose` | Debug / verbose logging. |
+| `--distroav-log[=error\|warning\|info\|debug\|verbose]` | Set log level explicitly. |
+| `--distroav-update-force[=0\|1]` | Force/skip the update-available state. |
+| `--distroav-update-last-check-ignore` | Ignore the last-checked timestamp throttle. |
+| `--distroav-update-local[=port]` | Point update checks at a local emulator (wiki: "Update Testing"). |
+| `--distroav-check-ndilib-forcefail` / `--distroav-check-obs-forcefail` | Force the NDI-lib / OBS-version hard-requirement check to fail (simulates `ERR-401`/`ERR-424`). |
+| `--distroav-check-ndilib-ignore` / `--distroav-check-obs-ignore` | Bypass those same requirement checks (`Config::Check*Bypass`). |
+| `--distroav-detect-obsndi-force[=off\|on]` | Force old-`obs-ndi`-installed detection on/off. |
+
+## Manual acceptance test
+
+No automated suite exists (see `docs/agent_docs/build-system.md`), so the
+wiki defines a manual checklist instead — the closest thing this project
+has to "tests passing." For each platform: install the plugin, launch OBS,
+confirm the "NDI Output Settings" Tools-menu entry appears; enable NDI
+Output (Main + Preview); add an NDI Source with an "NDI Audio Output"
+filter and loop back local OBS output/audio; close OBS and check the log
+ends with `Number of memory leaks: 0` (this reportedly differs by platform
+historically — verify rather than assume); uninstall. Log locations: Linux
+`~/.config/obs-studio` (Flatpak: `~/.var/app/com.obsproject.Studio/config/obs-studio`),
+macOS `~/Library/Application Support/obs-studio`, Windows
+`%APPDATA%\obs-studio\logs`.

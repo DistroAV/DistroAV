@@ -2,6 +2,13 @@
 
 Background for the commands summarized in [AGENTS.md](../../AGENTS.md).
 
+This project is based on [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate)
+and periodically pulls in upstream template changes by hand (it's not a pure
+fork, so this can't be a merge/rebase — see the wiki's "Updating
+obs-plugintemplate" section). That's why most of `.github/`, `cmake/`, and the
+top-level build files read as generic OBS-plugin boilerplate rather than
+DistroAV-specific code.
+
 ## How dependencies are fetched
 
 There is no vendored/prebuilt SDK checked into git for OBS or Qt. `buildspec.json`
@@ -41,13 +48,17 @@ can still fail CI.
    `.clang-format`) and `gersemi` (`pip install gersemi`, see `.gersemirc`, or run
    them under WSL) yourself.
 2. `build-project.yaml` — builds Windows x64, macOS universal, and Ubuntu x86_64
-   in parallel using the `-ci` presets above.
+   in parallel using the `-ci` presets above. A PR labeled `Seeking Testers`
+   additionally gets a signed, packaged installer built (`codesign:true`,
+   `package:true` in the `check-event` job) — mention this label if a user
+   wants outside testers to try a branch build before merge.
 
 There is no unit/integration test suite in this repo — "testing" a change means
 building the plugin and exercising it manually inside OBS (see the Run/Debug
-section of AGENTS.md), because the surface area (frame callbacks, Qt UI, NDI
-network I/O) isn't practically unit-testable without OBS + real/simulated NDI
-sources.
+section of AGENTS.md, and `docs/agent_docs/architecture.md`'s "Manual
+acceptance test" for the project's documented QA checklist), because the
+surface area (frame callbacks, Qt UI, NDI network I/O) isn't practically
+unit-testable without OBS + real/simulated NDI sources.
 
 ## Version bump
 

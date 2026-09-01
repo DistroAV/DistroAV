@@ -47,14 +47,26 @@ will self-elevate via a UAC prompt. Run each step separately when iterating rath
 than the chained one-liner, so a build failure doesn't fall through to installing
 stale output.
 
-## Lint / format (CI-enforced, Linux/macOS runners only)
+## Lint / format (CI-enforced on Linux/macOS runners; scripted locally on any OS)
 
-`clang-format` (C/C++/ObjC, config in [`.clang-format`](.clang-format), v16+) and
-`gersemi` (CMake files, config in [`.gersemirc`](.gersemirc)) run in CI on every
-PR via `check-format.yaml`. Neither tool is installed in this Windows checkout —
-there is no local way to run them here short of WSL or a Linux/macOS machine. Match
-the style visible in surrounding code (tabs, brace placement, existing CMake
-formatting) and expect CI to be the actual gate.
+`clang-format` (C/C++/ObjC, config in [`.clang-format`](.clang-format) — the file
+says v16+, but CI/`build-aux` pin exactly 19.1.1) and `gersemi` (CMake files,
+config in [`.gersemirc`](.gersemirc)) run in CI on every PR via
+`check-format.yaml`, on `ubuntu-24.04` runners only.
+
+```powershell
+.github\scripts\run-clang-format.ps1       # Windows
+```
+```bash
+.github/scripts/run-clang-format.sh        # Linux/macOS
+```
+
+These auto-install clang-format 19.x (via pip) if missing, format only
+changed/new/staged files (or `--base <ref>` for a whole branch), and fix a
+missing trailing EOF newline; add `--check` to verify without modifying. No
+equivalent wrapper exists yet for `gersemi` — install it (`pip install
+gersemi`) and run it directly, or use `build-aux/.run-format.zsh` (zsh; also
+covers clang-format) on Linux/macOS/WSL.
 
 ## Architecture (see [docs/agent_docs/architecture.md](docs/agent_docs/architecture.md) for detail)
 
@@ -73,9 +85,13 @@ formatting) and expect CI to be the actual gate.
 
 ## Conventions (not enforced by clang-format/gersemi)
 
-- Naming: `snake_case` for C-style names, `CamelCase` for C++ class/method names
-  (mixed within the same file is normal — match whichever the surrounding code
-  already uses, not a global rule).
+- Naming: `.github/CONTRIBUTING.md` says `snake_case` for C-style names,
+  `CamelCase` for C++ class/method names; the wiki's [Code Style](https://github.com/DistroAV/DistroAV/wiki/3.-Development#code-styles)
+  page adds a role-based nuance — methods `camelCase`, variables
+  `snake_case`, and *defer to the third-party library's own convention*
+  when interfacing OBS/Qt/NDI/libcurl/stdlib code — and admits current code
+  is "somewhat scattered." Match whichever the surrounding code already
+  uses; don't invent a stricter rule than either source states.
 - Indentation: tabs, 8 columns wide; ~80 col soft line limit (per [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)).
 - Commit messages: 50-char title / blank line / 72-col-wrapped body, present
   tense, prefixed with a scope when there's an obvious one (`CI:`, `UI:`,
@@ -111,24 +127,34 @@ formatting) and expect CI to be the actual gate.
 
 ## Uncertain / please confirm
 
-- **`CLAUDE_HANDOFF.md`** at repo root describes an in-progress, non-compiling
-  feature (`networkmonitor` branch: `ndi-network-report.*`, per-adapter firewall
-  diagnostics) whose files don't exist anywhere in this `master` checkout's
-  `src/`. It's gitignored, so it isn't part of the tracked repo — I didn't fold
-  anything from it into this AGENTS.md. Is that branch still active, and should
-  its own AGENTS.md guidance live separately (e.g. on that branch) rather than here?
-- I could only verify the **Windows** build path end-to-end (ran the actual
-  `cmake --build` command in this checkout). The macOS/Ubuntu commands in
-  `docs/agent_docs/build-system.md` are transcribed from the CI scripts/presets,
-  not executed — worth a sanity check on those platforms if agents will build there.
-- Neither `clang-format` nor `gersemi` is installed in this environment, so I
-  couldn't confirm the exact invocation (flags, file selection) actually used —
-  only that CI runs them via the composite actions in `.github/actions/`.
-- Commit-scope prefixes (`CI:`, `UI:`, `Source:`, etc.) are documented in
-  `.github/CONTRIBUTING.md` but inconsistently used in real history — I described
-  it as a loose convention rather than a hard rule; let me know if it's actually
-  meant to be mandatory going forward.
-- I added `!AGENTS.md` and `!/docs` to `.gitignore` so this file and the new
-  `docs/agent_docs/` directory aren't silently excluded from commits (the repo's
-  `.gitignore` allowlists everything from `/*`). Flagging since it's a repo-wide
-  config file, even though the change is purely additive.
+- **`CLAUDE_HANDOFF.md`** etc.: checked this checkout — not present here,
+  confirming they were local/personal scratch files specific to whichever
+  working tree first wrote that note, not something every checkout has. The
+  **`networkmonitor` branch is real and actively developed**
+  (`origin/networkmonitor`, last commit 2026-08-27, newer than `master`'s),
+  so the underlying question stands: should that branch carry its own
+  AGENTS.md guidance for `ndi-network-report.*` once it lands, or fold in
+  here now?
+- I could only verify the **Windows** build path end-to-end. The
+  macOS/Ubuntu commands are corroborated by the project's own wiki
+  (Development page) in addition to the CI scripts, but still not executed
+  by me — a sanity check on those platforms is worth doing before trusting
+  them blindly.
+- `clang-format`/`gersemi` invocation is no longer a guess: I wrote and
+  tested `.github/scripts/run-clang-format.{ps1,sh}` (currently untracked —
+  add them to this branch if you want them kept) which install and run
+  clang-format 19.x cross-platform; see "Lint / format" above. `gersemi`
+  still has no wrapper script.
+- Commit-scope prefixes (`CI:`, `UI:`, `Source:`, etc.): confirmed accurate
+  against `.github/CONTRIBUTING.md`, but still inconsistently used in real
+  `git log` history — kept as a loose convention, not a hard rule, per the
+  file's own wording ("Typical scopes," not "required scopes").
+- The `!AGENTS.md` / `!/docs` `.gitignore` additions are confirmed present
+  in this branch's `.gitignore` already — no outstanding action there.
+- **New in this pass**: the `ERR-*` numbered error-code convention
+  (`obs_log(LOG_ERROR, "ERR-4xx - ...")`) and the `--distroav-*` CLI test
+  flags (`src/config.cpp`) were missing from this branch's docs entirely —
+  added both to `docs/agent_docs/architecture.md`, cross-checked against
+  current `src/` and the wiki's Troubleshooting page. Worth a skim since the
+  wiki's error-code catalog has drifted from code in a few places (noted
+  inline there).
