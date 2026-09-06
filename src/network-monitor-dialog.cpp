@@ -108,14 +108,35 @@ bool open_network_monitor_dialog()
 	NdiAdapterTableWidget *adapterTable = new NdiAdapterTableWidget(tabWidget);
 	adapterTable->setAdapters(report.adapters);
 	tabWidget->addTab(adapterTable, dialog->tr("Adapters"));
+	const QString savedAdapterColumns = Config::Current()->NetworkMonitorAdapterColumns();
+	if (!savedAdapterColumns.isEmpty())
+		adapterTable->restoreLayoutState(QByteArray::fromBase64(savedAdapterColumns.toLatin1()));
+	QObject::connect(adapterTable, &NdiAdapterTableWidget::layoutStateChanged, adapterTable, [adapterTable]() {
+		Config::Current()->NetworkMonitorAdapterColumns(
+			QString::fromLatin1(adapterTable->saveLayoutState().toBase64()));
+	});
 
 	NdiSenderTableWidget *senderTable = new NdiSenderTableWidget(tabWidget);
 	senderTable->setSenders(network_monitor->getAllSenderInfo());
 	tabWidget->addTab(senderTable, dialog->tr("Senders"));
+	const QString savedSenderColumns = Config::Current()->NetworkMonitorSenderColumns();
+	if (!savedSenderColumns.isEmpty())
+		senderTable->restoreLayoutState(QByteArray::fromBase64(savedSenderColumns.toLatin1()));
+	QObject::connect(senderTable, &NdiSenderTableWidget::layoutStateChanged, senderTable, [senderTable]() {
+		Config::Current()->NetworkMonitorSenderColumns(
+			QString::fromLatin1(senderTable->saveLayoutState().toBase64()));
+	});
 
 	NdiReceiverTableWidget *receiverTable = new NdiReceiverTableWidget(tabWidget);
 	receiverTable->setReceivers(network_monitor->getAllReceiverInfo());
 	tabWidget->addTab(receiverTable, dialog->tr("Receivers"));
+	const QString savedReceiverColumns = Config::Current()->NetworkMonitorReceiverColumns();
+	if (!savedReceiverColumns.isEmpty())
+		receiverTable->restoreLayoutState(QByteArray::fromBase64(savedReceiverColumns.toLatin1()));
+	QObject::connect(receiverTable, &NdiReceiverTableWidget::layoutStateChanged, receiverTable, [receiverTable]() {
+		Config::Current()->NetworkMonitorReceiverColumns(
+			QString::fromLatin1(receiverTable->saveLayoutState().toBase64()));
+	});
 
 	QString configPath;
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)

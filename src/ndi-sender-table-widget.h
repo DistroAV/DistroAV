@@ -79,6 +79,11 @@ public:
 	QByteArray saveLayoutState() const;
 	bool restoreLayoutState(const QByteArray &state);
 
+signals:
+	// Emitted whenever a column is resized, hidden/shown, sorted, or
+	// reordered, so a listener can persist saveLayoutState().
+	void layoutStateChanged();
+
 private slots:
 	void showHeaderContextMenu(const QPoint &pos);
 

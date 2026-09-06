@@ -111,8 +111,8 @@ public:
 	void send_audio_frame(uint64_t t0, uint64_t t1, uint64_t t2, NDIlib_audio_frame_v3_t &ndi_frame,
 			      uint64_t timestamp);
 
-	// Compute statistics and update the snapshot (implementation moved to .cpp
-	// because it needs access to global externs from plugin-main.h).
+	// Compute statistics and update the snapshot. Implemented in the .cpp file
+	// because it needs access to global externs from plugin-main.h.
 	void calculate_stats();
 
 private:

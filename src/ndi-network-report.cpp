@@ -1205,8 +1205,7 @@ static bool TestMulticastRoundTrip(int s, const std::string &adapterIp)
 // (luid.Value, ipv4Address) rather than just the LUID, matching
 // EnumerateAdapters()'s granularity of one NdiAdapterInfo per unicast
 // address - a multi-homed adapter with more than one IPv4 address gets
-// tracked (and joined) independently per address, same as before this
-// change.
+// tracked (and joined) independently per address.
 //
 // TestMdns()/DiagnoseNdiNetwork() normally only ever run on
 // NetworkMonitor's single background thread (monitorLoop()), but
@@ -1233,7 +1232,7 @@ static std::map<std::pair<uint64_t, std::string>, PersistedMulticastMembership> 
 // pair hasn't been seen before, and holding onto it in
 // g_multicastMemberships for every subsequent call rather than dropping
 // membership afterward. Returns INVALID_SOCKET/-1 on failure (caller
-// treats that as "join failed", same as before this change).
+// treats that as "join failed").
 #ifdef _WIN32
 static SOCKET EnsureMulticastMembership(const NdiAdapterInfo &a)
 #else
@@ -1343,21 +1342,19 @@ static void DropVanishedMulticastMemberships(const std::vector<NdiAdapterInfo> &
 
 // Binds a fresh, short-lived UDP socket to port 5353 on every call, purely
 // to answer "can we bind this port right now" (mdnsSocketBindOk /
-// mdnsPortInUse) - that part still needs to run every tick, since it's
-// just a local bind() call that doesn't touch the adapter/driver.
+// mdnsPortInUse) - a local bind() call that doesn't touch the
+// adapter/driver, so it runs every tick.
 //
-// Multicast group membership itself is different: it's joined ONCE per
-// (adapter, IP) pair and held open indefinitely (see
-// EnsureMulticastMembership()/g_multicastMemberships above), rather than
-// joined and dropped every tick the way this function used to work.
-// Cycling IP_ADD_MEMBERSHIP/IP_DROP_MEMBERSHIP on a live NIC once a
+// Multicast group membership is joined ONCE per (adapter, IP) pair and
+// held open indefinitely (see EnsureMulticastMembership()/
+// g_multicastMemberships above) rather than joined and dropped every
+// tick: cycling IP_ADD_MEMBERSHIP/IP_DROP_MEMBERSHIP on a live NIC once a
 // second, forever, sends a real IGMP join/leave onto the wire and
 // triggers an OID_802_3_MULTICAST_LIST update to the NIC driver every
-// time - on some chipsets this was observed to cause genuine periodic
-// drops in the adapter's actual throughput, visible in Windows' own Task
-// Manager graph (independent of anything this plugin itself measures or
-// displays). The round-trip probe below still runs every tick, same as
-// before - only the join/leave cycling changed.
+// time - on some chipsets this causes genuine periodic drops in the
+// adapter's actual throughput, visible in Windows' own Task Manager graph
+// (independent of anything this plugin itself measures or displays). The
+// round-trip probe below runs every tick regardless.
 static void TestMdns(NdiNetworkReport &report)
 {
 #ifdef _WIN32

@@ -451,11 +451,6 @@ NdiAdapterTableWidget::NdiAdapterTableWidget(QWidget *parent)
 	mdnsLayout->addWidget(m_avahiStatusLabel, 1, Qt::AlignCenter);
 	mdnsGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	// File & Printer Sharing and ICMP Echo used to have their own QGroupBox
-	// here (machine-wide checkboxes), but both moved to a per-adapter
-	// column (ColFilePrinterSharing) - see NdiAdapterInfo::filePrinterSharing
-	// for why the old machine-wide check was misleading on a multi-adapter
-	// machine.
 	QHBoxLayout *flagsLayout = new QHBoxLayout();
 	flagsLayout->setContentsMargins(0, 0, 0, 0);
 	flagsLayout->setSpacing(8);
@@ -488,6 +483,9 @@ NdiAdapterTableWidget::NdiAdapterTableWidget(QWidget *parent)
 	header->setSectionsClickable(true); // required for sort-on-click
 	header->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(header, &QHeaderView::customContextMenuRequested, this, &NdiAdapterTableWidget::showHeaderContextMenu);
+	connect(header, &QHeaderView::sectionResized, this, &NdiAdapterTableWidget::layoutStateChanged);
+	connect(header, &QHeaderView::sectionMoved, this, &NdiAdapterTableWidget::layoutStateChanged);
+	connect(header, &QHeaderView::sortIndicatorChanged, this, &NdiAdapterTableWidget::layoutStateChanged);
 
 	layout->setContentsMargins(0, 0, 0, 0);
 	// Let the table expand to take available space.
@@ -495,9 +493,6 @@ NdiAdapterTableWidget::NdiAdapterTableWidget(QWidget *parent)
 	layout->addWidget(m_tableView);
 	// Give the table stretch so it keeps space when the dialog lays out widgets.
 	layout->setStretch(0, 1);
-
-	// Copy moved to a single button in the dialog's own footer (copies whichever
-	// tab is currently active); see network-monitor-dialog.cpp.
 
 	setLayout(layout);
 	m_changeNotifier = new ChangeNotifier([this]() {
@@ -549,12 +544,6 @@ void NdiAdapterTableWidget::setAdapters(const std::vector<NdiAdapterInfo> &adapt
 
 		m_columnsAutoSized = true;
 	}
-
-	// Note: previously this forced the table's minimum size to fit every column/row
-	// so nothing ever needed scrolling. That's no longer wanted - the dialog itself
-	// must be shrinkable, so the table now relies on its default (small) minimum
-	// size hint and shows horizontal/vertical scrollbars (QTableView's default
-	// ScrollBarAsNeeded policy) whenever it's smaller than its contents.
 }
 
 void NdiAdapterTableWidget::showHeaderContextMenu(const QPoint &pos)
@@ -583,6 +572,7 @@ void NdiAdapterTableWidget::showHeaderContextMenu(const QPoint &pos)
 				}
 			}
 			header->setSectionHidden(logicalIndex, !visible);
+			emit layoutStateChanged();
 		});
 	}
 

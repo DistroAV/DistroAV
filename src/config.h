@@ -114,6 +114,19 @@ public:
 	int NetworkMonitorActiveTab();
 	void NetworkMonitorActiveTab(int index);
 
+	// Per-table column state (show/hide, sort column/direction, width - and
+	// order, since Qt bundles all of it into one QHeaderView::saveState()
+	// blob) for each of the Network Monitor's three tables, base64-encoded
+	// since the config file only stores strings/bools/ints/doubles. Empty
+	// string means "never saved" - callers should leave the header's default
+	// layout alone in that case.
+	QString NetworkMonitorAdapterColumns();
+	void NetworkMonitorAdapterColumns(const QString &value);
+	QString NetworkMonitorSenderColumns();
+	void NetworkMonitorSenderColumns(const QString &value);
+	QString NetworkMonitorReceiverColumns();
+	void NetworkMonitorReceiverColumns(const QString &value);
+
 	void Save();
 
 private:

@@ -242,15 +242,15 @@ NdiSenderTableWidget::NdiSenderTableWidget(QWidget *parent)
 	header->setSectionsClickable(true);
 	header->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(header, &QHeaderView::customContextMenuRequested, this, &NdiSenderTableWidget::showHeaderContextMenu);
+	connect(header, &QHeaderView::sectionResized, this, &NdiSenderTableWidget::layoutStateChanged);
+	connect(header, &QHeaderView::sectionMoved, this, &NdiSenderTableWidget::layoutStateChanged);
+	connect(header, &QHeaderView::sortIndicatorChanged, this, &NdiSenderTableWidget::layoutStateChanged);
 
 	auto *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	m_tableView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	layout->addWidget(m_tableView);
 	layout->setStretch(0, 1);
-
-	// Copy moved to a single button in the dialog's own footer (copies whichever
-	// tab is currently active); see network-monitor-dialog.cpp.
 
 	setLayout(layout);
 	QPointer<NdiSenderTableWidget> guard(this);
@@ -309,6 +309,7 @@ void NdiSenderTableWidget::showHeaderContextMenu(const QPoint &pos)
 				}
 			}
 			header->setSectionHidden(logicalIndex, !visible);
+			emit layoutStateChanged();
 		});
 	}
 	menu.exec(header->mapToGlobal(pos));

@@ -203,15 +203,7 @@ struct NdiAdapterInfo {
 	// Public), not by adapter, so a single machine with adapters in
 	// different profiles can have one adapter's traffic wide open and
 	// another's silently blocked - these fields let the UI show that per
-	// adapter instead of one misleading machine-wide answer. This used to
-	// be true even of fileSharingEnabled/icmpEchoAllowed (an earlier,
-	// deliberate exception - see filePrinterSharing below for why that
-	// changed): a machine with, say, a WSL/Hyper-V virtual switch also
-	// classified Private would keep reporting File & Printer Sharing as
-	// "on" for a real Wi-Fi/Ethernet adapter on Public, because the old
-	// machine-wide check (INetFwPolicy2::get_CurrentProfileTypes()) OR's
-	// together every currently active profile on the machine rather than
-	// asking about one specific adapter's own profile.
+	// adapter instead of one misleading machine-wide answer.
 	// firewallEnabled stays at its default (false), and mdnsPortOpen/
 	// ndiPortsOpen/filePrinterSharing stay at their default
 	// (NotApplicable), when networkCategory is Unknown (non-Windows, or no
