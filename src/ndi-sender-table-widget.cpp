@@ -280,7 +280,10 @@ NdiSenderTableWidget::~NdiSenderTableWidget()
 void NdiSenderTableWidget::setSenders(const std::vector<std::shared_ptr<SenderInfo>> &senders)
 {
 	m_model->setSenders(senders);
-	m_tableView->resizeColumnsToContents();
+	if (!m_columnsAutoSized) {
+		m_tableView->resizeColumnsToContents();
+		m_columnsAutoSized = true;
+	}
 }
 
 void NdiSenderTableWidget::showHeaderContextMenu(const QPoint &pos)

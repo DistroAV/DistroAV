@@ -87,4 +87,7 @@ private:
 	NdiReceiverTableModel *m_model;
 	QSortFilterProxyModel *m_proxyModel;
 	ChangeNotifier *m_changeNotifier = nullptr;
+	// Auto-size columns only once, on first population - otherwise every
+	// periodic data refresh would stomp on any column width the user dragged.
+	bool m_columnsAutoSized = false;
 };

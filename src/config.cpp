@@ -41,6 +41,7 @@
 #define PARAM_NETWORK_MONITOR_LOC_Y "NetworkMonitorLocY"
 #define PARAM_NETWORK_MONITOR_WIDTH "NetworkMonitorWidth"
 #define PARAM_NETWORK_MONITOR_HEIGHT "NetworkMonitorHeight"
+#define PARAM_NETWORK_MONITOR_ACTIVE_TAB "NetworkMonitorActiveTab"
 
 // App Settings
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
@@ -254,6 +255,7 @@ void Config::SetDefaultsToUserStore()
 		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_Y, -1);
 		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_WIDTH, -1);
 		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_HEIGHT, -1);
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ACTIVE_TAB, 0);
 	}
 }
 
@@ -469,6 +471,24 @@ void Config::SetNetworkMonitorGeometry(int x, int y, int width, int height)
 		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_Y, y);
 		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_WIDTH, width);
 		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_HEIGHT, height);
+		config_save(obs_config);
+	}
+}
+
+int Config::NetworkMonitorActiveTab()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ACTIVE_TAB);
+	}
+	return 0;
+}
+
+void Config::NetworkMonitorActiveTab(int index)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ACTIVE_TAB, index);
 		config_save(obs_config);
 	}
 }

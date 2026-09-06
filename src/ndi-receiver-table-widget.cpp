@@ -291,16 +291,10 @@ NdiReceiverTableWidget::~NdiReceiverTableWidget()
 void NdiReceiverTableWidget::setReceivers(const std::vector<std::shared_ptr<ReceiverInfo>> &receivers)
 {
 	m_model->setReceivers(receivers);
-	m_tableView->resizeColumnsToContents();
-	/*
-	// ensure reasonable width for some columns
-	QFontMetrics fm(m_tableView->font());
-	int charWidth = fm.horizontalAdvance(QLatin1Char('0'));
-	int numPixels = charWidth * 10 + 16;
- m_tableView->setColumnWidth(NdiReceiverTableModel::ColAvDriftMsPerHour, numPixels);
-	m_tableView->horizontalHeader()->setSectionResizeMode(NdiReceiverTableModel::ColAvDriftMsPerHour,
-							      QHeaderView::Fixed);
-								  */
+	if (!m_columnsAutoSized) {
+		m_tableView->resizeColumnsToContents();
+		m_columnsAutoSized = true;
+	}
 }
 
 void NdiReceiverTableWidget::showHeaderContextMenu(const QPoint &pos)

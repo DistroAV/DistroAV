@@ -111,6 +111,8 @@ public:
 	int NetworkMonitorWidth();
 	int NetworkMonitorHeight();
 	void SetNetworkMonitorGeometry(int x, int y, int width, int height);
+	int NetworkMonitorActiveTab();
+	void NetworkMonitorActiveTab(int index);
 
 	void Save();
 

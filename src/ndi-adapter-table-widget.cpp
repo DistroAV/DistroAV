@@ -529,25 +529,26 @@ void NdiAdapterTableWidget::setAdapters(const std::vector<NdiAdapterInfo> &adapt
 {
 	refreshDiagnosticFlags();
 	m_model->setAdapters(adapters);
-	m_tableView->resizeColumnsToContents();
+	// Auto-size columns only once, on first population - otherwise every
+	// periodic data refresh would stomp on any column width the user dragged.
+	if (!m_columnsAutoSized) {
+		m_tableView->resizeColumnsToContents();
 
-	// Ensure In/Out Bps columns can contain the fixed-width11-character field
-	// (6 for number +5 for unit). Compute pixel width from font metrics and
-	// apply it after resizing to contents so it is not overwritten.
-	QFontMetrics fm(m_tableView->font());
-	int charWidth = fm.horizontalAdvance(QLatin1Char('0'));
-	int bpsPixels = charWidth * 11 + 16; // add padding for cell margins
-	m_tableView->setColumnWidth(NdiAdapterTableModel::ColInBps, bpsPixels);
-	m_tableView->setColumnWidth(NdiAdapterTableModel::ColOutBps, bpsPixels);
-	m_tableView->setColumnWidth(NdiAdapterTableModel::ColReceiveSpeed, bpsPixels);
-	m_tableView->setColumnWidth(NdiAdapterTableModel::ColTransmitSpeed, bpsPixels);
-	// Prevent further automatic resizing of these two columns
-	m_tableView->horizontalHeader()->setSectionResizeMode(NdiAdapterTableModel::ColInBps, QHeaderView::Fixed);
-	m_tableView->horizontalHeader()->setSectionResizeMode(NdiAdapterTableModel::ColOutBps, QHeaderView::Fixed);
-	m_tableView->horizontalHeader()->setSectionResizeMode(NdiAdapterTableModel::ColReceiveSpeed,
-							      QHeaderView::Fixed);
-	m_tableView->horizontalHeader()->setSectionResizeMode(NdiAdapterTableModel::ColTransmitSpeed,
-							      QHeaderView::Fixed);
+		// Ensure In/Out Bps columns can contain the fixed-width 11-character
+		// field (6 for number + 5 for unit). Compute pixel width from font
+		// metrics and apply it after resizing to contents so it is not
+		// overwritten. All columns remain freely user-resizable (Interactive,
+		// the QHeaderView default) - this just sets a sensible initial width.
+		QFontMetrics fm(m_tableView->font());
+		int charWidth = fm.horizontalAdvance(QLatin1Char('0'));
+		int bpsPixels = charWidth * 11 + 16; // add padding for cell margins
+		m_tableView->setColumnWidth(NdiAdapterTableModel::ColInBps, bpsPixels);
+		m_tableView->setColumnWidth(NdiAdapterTableModel::ColOutBps, bpsPixels);
+		m_tableView->setColumnWidth(NdiAdapterTableModel::ColReceiveSpeed, bpsPixels);
+		m_tableView->setColumnWidth(NdiAdapterTableModel::ColTransmitSpeed, bpsPixels);
+
+		m_columnsAutoSized = true;
+	}
 
 	// Note: previously this forced the table's minimum size to fit every column/row
 	// so nothing ever needed scrolling. That's no longer wanted - the dialog itself

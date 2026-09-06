@@ -41,6 +41,7 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QEvent>
+#include <QMessageBox>
 
 namespace {
 // Watches the dialog for moves/resizes and persists its geometry to the user
@@ -127,6 +128,13 @@ bool open_network_monitor_dialog()
 	NdiNetworkConfigWidget *configWidget = new NdiNetworkConfigWidget(configPath, tabWidget);
 	tabWidget->addTab(configWidget, dialog->tr("Config"));
 
+	// Restore the last active tab, then persist it whenever the user switches.
+	const int savedTab = Config::Current()->NetworkMonitorActiveTab();
+	if (savedTab >= 0 && savedTab < tabWidget->count())
+		tabWidget->setCurrentIndex(savedTab);
+	QObject::connect(tabWidget, &QTabWidget::currentChanged, dialog,
+			 [](int index) { Config::Current()->NetworkMonitorActiveTab(index); });
+
 	layout->addWidget(tabWidget);
 
 	// Footer with OK buttons. OK closes the top-level window (dialog).
@@ -145,7 +153,14 @@ bool open_network_monitor_dialog()
 	QPushButton *dumpBtn = new QPushButton(dialog->tr("Dump to OBS Log"), dialog);
 	dumpBtn->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
 	footer->addWidget(dumpBtn);
-	QObject::connect(dumpBtn, &QPushButton::clicked, dialog, [configWidget]() {
+	QObject::connect(dumpBtn, &QPushButton::clicked, dialog, [dialog, configWidget]() {
+		auto result = QMessageBox::question(
+			dialog, dialog->tr("Dump to OBS Log"),
+			dialog->tr("Do you want to dump the contents of the Network Monitor to the current OBS "
+				   "log? The log can be accessed through OBS -> Help -> Log Files."),
+			QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+		if (result != QMessageBox::Yes)
+			return;
 		network_monitor->dumpNetworkReportToLog();
 		configWidget->dumpConfigToLog();
 	});

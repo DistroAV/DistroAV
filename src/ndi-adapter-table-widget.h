@@ -114,4 +114,7 @@ private:
 	QCheckBox *m_mdnsBindCheckBox = nullptr;
 	QCheckBox *m_mdnsPortCheckBox = nullptr;
 	QLabel *m_avahiStatusLabel = nullptr;
+	// Auto-size columns only once, on first population - otherwise every
+	// periodic data refresh would stomp on any column width the user dragged.
+	bool m_columnsAutoSized = false;
 };
