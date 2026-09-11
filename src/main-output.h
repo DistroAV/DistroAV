@@ -17,7 +17,9 @@
 
 #pragma once
 #include <QString>
+#include <obs.h>
 void main_output_deinit();
 void main_output_init();
 QString main_output_last_error();
 bool main_output_is_supported();
+bool main_output_sync_settings(obs_output_t *output, obs_data_t *settings);

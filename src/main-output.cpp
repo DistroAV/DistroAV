@@ -35,6 +35,24 @@ QString main_output_last_error()
 	return context.last_error;
 };
 
+bool main_output_sync_settings(obs_output_t *output, obs_data_t *settings)
+{
+	if (output != context.output)
+		return false;
+
+	context.ndi_name = obs_data_get_string(settings, "ndi_name");
+	context.ndi_groups = obs_data_get_string(settings, "ndi_groups");
+
+	auto config = Config::Current(false);
+	if (config->OutputName == context.ndi_name && config->OutputGroups == context.ndi_groups)
+		return true;
+
+	config->OutputName = context.ndi_name;
+	config->OutputGroups = context.ndi_groups;
+	config->Save();
+	return true;
+}
+
 void on_main_output_started(void *, calldata_t *)
 {
 	obs_log(LOG_DEBUG, "+on_main_output_started()");
