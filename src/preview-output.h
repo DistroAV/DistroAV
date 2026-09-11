@@ -17,5 +17,8 @@
 
 #pragma once
 
+#include <obs.h>
+
 void preview_output_deinit();
 void preview_output_init();
+bool preview_output_sync_settings(obs_output_t *output, obs_data_t *settings);

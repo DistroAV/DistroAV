@@ -16,6 +16,8 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "main-output.h"
+#include "preview-output.h"
 #include "sync-debug.h"
 #include <util/threading.h>
 #include <chrono>
@@ -265,6 +267,9 @@ void ndi_output_update(void *data, obs_data_t *settings)
 	o->ndi_groups = groups;
 	o->uses_video = obs_data_get_bool(settings, "uses_video");
 	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+
+	if (!main_output_sync_settings(o->output, settings))
+		preview_output_sync_settings(o->output, settings);
 
 	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,

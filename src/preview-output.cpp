@@ -41,6 +41,24 @@ struct preview_output {
 
 static struct preview_output context = {0};
 
+bool preview_output_sync_settings(obs_output_t *output, obs_data_t *settings)
+{
+	if (output != context.output)
+		return false;
+
+	context.ndi_name = obs_data_get_string(settings, "ndi_name");
+	context.ndi_groups = obs_data_get_string(settings, "ndi_groups");
+
+	auto config = Config::Current(false);
+	if (config->PreviewOutputName == context.ndi_name && config->PreviewOutputGroups == context.ndi_groups)
+		return true;
+
+	config->PreviewOutputName = context.ndi_name;
+	config->PreviewOutputGroups = context.ndi_groups;
+	config->Save();
+	return true;
+}
+
 void on_preview_scene_changed(enum obs_frontend_event event, void *param);
 void render_preview_source(void *param, uint32_t cx, uint32_t cy);
 
