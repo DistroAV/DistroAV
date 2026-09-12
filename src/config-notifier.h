@@ -1,5 +1,5 @@
 /******************************************************************************
-	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
+	Copyright (C) 2016-2026 DistroAV <contact@distroav.org>
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -16,9 +16,16 @@
 ******************************************************************************/
 
 #pragma once
-#include "obs-frontend-api.h"
-void preview_output_close();
-void preview_output_init();
-void preview_output_start();
-void preview_output_stop();
-void preview_output_get_settings(obs_data_t *settings);
+
+#include <QObject>
+
+// Lightweight QObject used to emit configuration change notifications.
+// This avoids making Config itself a QObject and keeps signalling centralized.
+class ConfigNotifier : public QObject {
+	Q_OBJECT
+public:
+	static ConfigNotifier *instance();
+
+signals:
+	void configChanged();
+};

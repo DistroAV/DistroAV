@@ -85,17 +85,120 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="QLineEdit" name="mainOutputName">
-                                <property name="toolTip">
-                                    <string>NDIPlugin.OutputSettings.Main.Name.Tooltip</string>
+                            <layout class="QGridLayout">
+                                <property name="horizontalSpacing">
+                                    <number>6</number>
                                 </property>
-                                <property name="styleSheet">
-                                    <string notr="true">QWidget { padding: 0; }</string>
-                                </property>
-                                <property name="text">
-                                    <string>mainOutputName</string>
-                                </property>
-                            </widget>
+                                <item row="0" column="0">
+                                    <widget class="QLineEdit" name="mainOutputName">
+                                        <property name="toolTip">
+                                            <string>NDIPlugin.OutputSettings.Main.Name.Tooltip</string>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>mainOutputName</string>
+                                        </property>
+                                        <property name="sizePolicy">
+                                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                                                <horstretch>0</horstretch>
+                                                <verstretch>0</verstretch>
+                                            </sizepolicy>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="1">
+                                    <widget class="QLabel" name="mainOutputSending">
+                                        <property name="minimumSize">
+                                            <size>
+                                                <width>10</width>
+                                                <height>0</height>
+                                            </size>
+                                        </property>
+                                        <property name="maximumSize">
+                                            <size>
+                                                <width>12</width>
+                                                <height>16777215</height>
+                                            </size>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>S</string>
+                                        </property>
+                                        <property name="font">
+                                            <font>
+                                                <bold>true</bold>
+                                            </font>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="2">
+                                    <widget class="QLabel" name="mainOutputDiscoverable">
+                                        <property name="minimumSize">
+                                            <size>
+                                                <width>10</width>
+                                                <height>0</height>
+                                            </size>
+                                        </property>
+                                        <property name="maximumSize">
+                                            <size>
+                                                <width>12</width>
+                                                <height>16777215</height>
+                                            </size>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>D</string>
+                                        </property>
+                                        <property name="font">
+                                            <font>
+                                                <bold>true</bold>
+                                            </font>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="3">
+                                    <widget class="QLabel" name="mainOutputReceiving">
+                                        <property name="minimumSize">
+                                            <size>
+                                                <width>10</width>
+                                                <height>0</height>
+                                            </size>
+                                        </property>
+                                        <property name="maximumSize">
+                                            <size>
+                                                <width>12</width>
+                                                <height>16777215</height>
+                                            </size>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>R</string>
+                                        </property>
+                                        <property name="font">
+                                            <font>
+                                                <bold>true</bold>
+                                            </font>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                            </layout>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="mainOutputGroupsLabel">
@@ -200,17 +303,120 @@
                             </widget>
                         </item>
                         <item row="0" column="1">
-                            <widget class="QLineEdit" name="previewOutputName">
-                                <property name="styleSheet">
-                                    <string notr="true">QWidget { padding: 0; }</string>
+                            <layout class="QGridLayout">
+                                <property name="horizontalSpacing">
+                                    <number>6</number>
                                 </property>
-                                <property name="text">
-                                    <string>previewOutputName</string>
-                                </property>
-                                <property name="toolTip">
-                                    <string>NDIPlugin.OutputSettings.Preview.Name.Tooltip</string>
-                                </property>
-                            </widget>
+                                <item row="0" column="0">
+                                    <widget class="QLineEdit" name="previewOutputName">
+                                        <property name="toolTip">
+                                            <string>NDIPlugin.OutputSettings.Preview.Name.Tooltip</string>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>previewOutputName</string>
+                                        </property>
+                                        <property name="sizePolicy">
+                                            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                                                <horstretch>0</horstretch>
+                                                <verstretch>0</verstretch>
+                                            </sizepolicy>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="1">
+                                    <widget class="QLabel" name="previewOutputSending">
+                                        <property name="minimumSize">
+                                            <size>
+                                                <width>10</width>
+                                                <height>0</height>
+                                            </size>
+                                        </property>
+                                        <property name="maximumSize">
+                                            <size>
+                                                <width>12</width>
+                                                <height>16777215</height>
+                                            </size>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>S</string>
+                                        </property>
+                                        <property name="font">
+                                            <font>
+                                                <bold>true</bold>
+                                            </font>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="2">
+                                    <widget class="QLabel" name="previewOutputDiscoverable">
+                                        <property name="minimumSize">
+                                            <size>
+                                                <width>10</width>
+                                                <height>0</height>
+                                            </size>
+                                        </property>
+                                        <property name="maximumSize">
+                                            <size>
+                                                <width>12</width>
+                                                <height>16777215</height>
+                                            </size>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>D</string>
+                                        </property>
+                                        <property name="font">
+                                            <font>
+                                                <bold>true</bold>
+                                            </font>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="3">
+                                    <widget class="QLabel" name="previewOutputReceiving">
+                                        <property name="minimumSize">
+                                            <size>
+                                                <width>10</width>
+                                                <height>0</height>
+                                            </size>
+                                        </property>
+                                        <property name="maximumSize">
+                                            <size>
+                                                <width>12</width>
+                                                <height>16777215</height>
+                                            </size>
+                                        </property>
+                                        <property name="styleSheet">
+                                            <string notr="true">QWidget { padding:0; }</string>
+                                        </property>
+                                        <property name="text">
+                                            <string>R</string>
+                                        </property>
+                                        <property name="font">
+                                            <font>
+                                                <bold>true</bold>
+                                            </font>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                            </layout>
                         </item>
                         <item row="1" column="0">
                             <widget class="QLabel" name="previewOutputGroupsLabel">

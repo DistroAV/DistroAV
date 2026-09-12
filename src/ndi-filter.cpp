@@ -17,6 +17,7 @@
 
 #include "plugin-main.h"
 #include "sync-debug.h"
+#include "config-notifier.h"
 #include <util/platform.h>
 #include <util/threading.h>
 #include <media-io/video-frame.h>
@@ -27,9 +28,19 @@
 #define TEXFORMAT GS_BGRA
 #define FLT_PROP_NAME "ndi_filter_ndiname"
 #define FLT_PROP_GROUPS "ndi_filter_ndigroups"
+#define FLT_PROP_STATUS "ndi_filter_status"
 
 typedef struct {
 	obs_source_t *obs_source;
+
+	// This is used to determine whether to update the NDI source list in the property dialog.
+	std::atomic<bool> update_properties;
+	SenderInfo *sender_info;
+	ChangeNotifier *change_notifier;
+
+	// A count of how many property dialogs are currently open. This can be more than one when opening the dialog.
+	// But once the dialog is being interacted with, the count shoule be 1. The count is decremented when the dialog is closed.
+	std::shared_ptr<std::atomic<unsigned int>> properties_dialog_open;
 
 	NDIlib_send_instance_t ndi_sender;
 
@@ -56,10 +67,6 @@ typedef struct {
 
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
-	int32_t no_video_connections;
-	std::chrono::time_point<std::chrono::steady_clock> last_video_conn_check;
-	int32_t no_audio_connections;
-	std::chrono::time_point<std::chrono::steady_clock> last_audio_conn_check;
 } ndi_filter_t;
 
 const char *ndi_filter_getname(void *)
@@ -117,11 +124,32 @@ static void ndi_filter_disconnect_rename_handlers(ndi_filter_t *filter)
 	}
 }
 
-obs_properties_t *ndi_filter_getproperties(void *priv)
+static void filter_property_dialog_destroyed(void *param)
 {
+	auto *flag = static_cast<std::shared_ptr<std::atomic<unsigned int>> *>(param);
+	unsigned int count = flag->get()->load();
+	if (count > 0) {
+		flag->get()->store(count - 1);
+	}
+}
+
+obs_properties_t *ndi_filter_getproperties(void *data)
+{
+	auto f = (ndi_filter_t *)data;
+
 	obs_log(LOG_DEBUG, "+ndi_filter_getproperties(...)");
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
+
+	// Set the property dialog open flag to true when the properties are being displayed
+	// Increase the counter by one (initialize to0 first if necessary).
+	if (f->properties_dialog_open) {
+		auto *param = new std::shared_ptr<std::atomic<unsigned int>>(f->properties_dialog_open);
+		obs_properties_set_param(props, param, filter_property_dialog_destroyed);
+	}
+
+	// Increment the counter to indicate a new property dialog is open.
+	f->properties_dialog_open->fetch_add(1u);
 
 	obs_property_t *ndi_name_property = obs_properties_add_text(
 		props, FLT_PROP_NAME, obs_module_text("NDIPlugin.FilterProps.NDIName"), OBS_TEXT_DEFAULT);
@@ -140,7 +168,7 @@ obs_properties_t *ndi_filter_getproperties(void *priv)
 			obs_data_release(settings);
 			return true;
 		},
-		priv);
+		data);
 
 	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
@@ -151,6 +179,7 @@ void ndi_filter_getdefaults(obs_data_t *defaults)
 	obs_log(LOG_DEBUG, "+ndi_filter_getdefaults(...)");
 	obs_data_set_default_string(defaults, FLT_PROP_NAME, obs_module_text("NDIPlugin.FilterProps.NDIName.Default"));
 	obs_data_set_default_string(defaults, FLT_PROP_GROUPS, "");
+	obs_data_set_default_string(defaults, FLT_PROP_STATUS, "");
 	obs_log(LOG_DEBUG, "-ndi_filter_getdefaults(...)");
 }
 
@@ -176,27 +205,13 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 {
 	auto f = (ndi_filter_t *)data;
 
+	uint64_t t0 = os_gettime_ns();
+
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
 
 	if (!f->ndi_sender) {
 		pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 		return;
-	}
-
-	auto now = std::chrono::steady_clock::now();
-	if (now - f->last_video_conn_check >= std::chrono::seconds(1)) {
-		f->last_video_conn_check = now;
-		int nc = ndiLib->send_get_no_connections(f->ndi_sender, 10);
-		if (nc != f->no_video_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(f->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output video '%s' has no connections",
-					ndi_source->p_ndi_name);
-			else if (f->no_video_connections == 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output video '%s' has %d connections",
-					ndi_source->p_ndi_name, nc);
-			f->no_video_connections = nc;
-		}
 	}
 
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
@@ -212,11 +227,9 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		video_frame.frame_rate_D = f->ovi.fps_den;
 		video_frame.picture_aspect_ratio = 0; // square pixels
 		video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-#ifdef SYNC_DEBUG
-		// Convert OBS timestamp in nanoseconds to NDI timestamp in 100-nanosecond intervals,
-		// applying offset to synchronize with audio frames
-		video_frame.timestamp = (frame->timestamp + f->obs_to_ndi_time_offset) / 100;
-#endif
+
+		// Convert OBS timestamp in nanoseconds to NDI timestamp in 100-nanosecond intervals
+		video_frame.timestamp = (frame->timestamp / 100); // +f->obs_to_ndi_time_offset) / 100;
 		video_frame.timecode = NDIlib_send_timecode_synthesize;
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
@@ -225,14 +238,30 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
 	SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source), video_frame.timestamp * 100,
 				  (uint8_t *)video_frame.p_data);
-	if (f->ndi_sender)
-		ndiLib->send_send_video_v2(f->ndi_sender, &video_frame);
+
+	uint64_t t1 = os_gettime_ns();
+	ndiLib->send_send_video_async_v2(f->ndi_sender, &video_frame);
+	uint64_t t2 = os_gettime_ns();
+
+	if (f->sender_info)
+		f->sender_info->send_video_frame(t0, t1, t2, video_frame, frame);
+
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 }
 
 void ndi_filter_render_video(void *data, gs_effect_t *)
 {
 	auto f = (ndi_filter_t *)data;
+
+	if (f->properties_dialog_open && f->properties_dialog_open->load() > 0) {
+		if (f->update_properties.exchange(false)) {
+			auto settings = obs_source_get_settings(f->obs_source);
+			std::string status = network_monitor->getSenderStatus(f->sender_info);
+			obs_data_set_string(settings, FLT_PROP_STATUS, status.c_str());
+			obs_source_update_properties(f->obs_source);
+			obs_data_release(settings);
+		}
+	}
 	obs_source_skip_video_filter(f->obs_source);
 
 	if (f->rendered)
@@ -329,6 +358,13 @@ void ndi_sender_destroy(ndi_filter_t *filter)
 		pthread_mutex_lock(&filter->ndi_sender_video_mutex);
 	}
 
+	network_monitor->unregisterSender(filter->ndi_sender);
+
+	if (filter->change_notifier) {
+		delete filter->change_notifier;
+		filter->change_notifier = nullptr;
+	}
+
 	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
 	ndiLib->send_destroy(filter->ndi_sender);
 	filter->ndi_sender = nullptr;
@@ -370,6 +406,12 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	// Replace any invalid filename characters in the original NDI name before saving it back to settings
 	replace_invalid_filename_chars(&ndi_name);
 	obs_data_set_string(settings, FLT_PROP_NAME, ndi_name.toUtf8().constData());
+
+	// Create a new ChangeNotifier for this filter and connect it to the filter's update_properties atomic flag.
+	filter->change_notifier = new ChangeNotifier([filter, ndi_name]() {
+		obs_log(LOG_DEBUG, "NDI Filter Output status changed '%s'", ndi_name.toUtf8().constData());
+		filter->update_properties.store(true);
+	});
 
 	// Check the original template for tokens before any replacements are made,
 	// so injected source/filter names cannot trigger unintended token expansion.
@@ -415,15 +457,21 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
+	if (filter->ndi_sender) {
+		ndi_sender_destroy(filter);
+	}
+
 	if (!filter->is_audioonly) {
 		pthread_mutex_lock(&filter->ndi_sender_video_mutex);
 	}
 
 	pthread_mutex_lock(&filter->ndi_sender_audio_mutex);
-	ndiLib->send_destroy(filter->ndi_sender);
 	filter->ndi_sender = ndiLib->send_create(&send_desc);
 
 	if (filter->ndi_sender) {
+		filter->sender_info = network_monitor->registerSender(filter->ndi_sender);
+		filter->sender_info->set_ndi_name(send_desc.p_ndi_name);
+		filter->sender_info->registerChangeNotifier(filter->change_notifier, "ndi-filter");
 		obs_log(LOG_INFO, "Dedicated NDI Output sender created: '%s'", send_desc.p_ndi_name);
 		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi output started", send_desc.p_ndi_name);
 	} else {
@@ -431,8 +479,6 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 			send_desc.p_ndi_name);
 		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi sender init failed", send_desc.p_ndi_name);
 	}
-
-	filter->no_audio_connections = -1;
 
 #ifdef SYNC_DEBUG
 	// Video timestamps are in OBS time, so calculate offset to convert to NDI timestamps
@@ -461,6 +507,10 @@ void ndi_filter_update(void *data, obs_data_t *settings)
 
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 
+	std::string status = network_monitor->getSenderStatus(f->sender_info);
+	obs_log(LOG_DEBUG, "ndi_filter_update: status='%s'", status.c_str());
+	obs_data_set_string(settings, FLT_PROP_STATUS, status.c_str());
+
 	obs_log(LOG_INFO, "NDI Filter Updated: '%s'", name);
 	obs_log(LOG_DEBUG, "-ndi_filter_update(name='%s', groups='%s')", name, groups);
 }
@@ -473,7 +523,13 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->obs_source = obs_source;
+
+	// Allocate the shared_ptr so property_dialog_destroyed can free the param safely
+	f->properties_dialog_open = std::make_shared<std::atomic<unsigned int>>(0u);
+	f->update_properties = true;
+
 	f->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
+
 	pthread_mutex_init(&f->ndi_sender_video_mutex, NULL);
 	pthread_mutex_init(&f->ndi_sender_audio_mutex, NULL);
 	obs_get_video_info(&f->ovi);
@@ -495,6 +551,11 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 
 	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
 	f->is_audioonly = true;
+
+	// Allocate the shared_ptr so property_dialog_destroyed can free the param safely
+	f->properties_dialog_open = std::make_shared<std::atomic<unsigned int>>(0u);
+	f->update_properties = true;
+
 	f->obs_source = obs_source;
 	pthread_mutex_init(&f->ndi_sender_audio_mutex, NULL);
 	obs_get_audio_info(&f->oai);
@@ -577,6 +638,11 @@ void ndi_filter_remove(void *data, obs_source_t * /* parent */)
 	if (!f)
 		return;
 
+	// Release the shared_ptr instead of deleting it
+	if (f->properties_dialog_open) {
+		f->properties_dialog_open.reset();
+	}
+
 	ndi_filter_disconnect_rename_handlers(f);
 	ndi_sender_destroy(f);
 }
@@ -587,27 +653,13 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	// ndi-output.cpp/ndi_output_raw_audio(...)
 	auto f = (ndi_filter_t *)data;
 
+	uint64_t t0 = os_gettime_ns();
+
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 
 	if (!f->ndi_sender) {
 		pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 		return audio_data;
-	}
-
-	auto now = std::chrono::steady_clock::now();
-	if (now - f->last_audio_conn_check >= std::chrono::seconds(1)) {
-		f->last_audio_conn_check = now;
-		int nc = ndiLib->send_get_no_connections(f->ndi_sender, 10);
-		if (nc != f->no_audio_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(f->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has no connections.",
-					ndi_source->p_ndi_name);
-			else if (f->no_audio_connections == 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has %d connections.",
-					ndi_source->p_ndi_name, nc);
-			f->no_audio_connections = nc;
-		}
 	}
 
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
@@ -653,10 +705,16 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source), audio_frame.timestamp * 100,
 				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
-	if (f->ndi_sender)
-		ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
-	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 
+	if (f->ndi_sender) {
+		uint64_t t1 = os_gettime_ns();
+		ndiLib->send_send_audio_v3(f->ndi_sender, &audio_frame);
+		uint64_t t2 = os_gettime_ns();
+
+		if (f->sender_info)
+			f->sender_info->send_audio_frame(t0, t1, t2, audio_frame, audio_data->timestamp);
+	}
+	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 	return audio_data;
 }
 

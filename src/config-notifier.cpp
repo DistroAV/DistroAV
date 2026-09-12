@@ -1,5 +1,5 @@
 /******************************************************************************
-	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
+	Copyright (C) 2016-2026 DistroAV <contact@distroav.org>
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -15,10 +15,11 @@
 	along with this program; if not, see <https://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-#pragma once
-#include "obs-frontend-api.h"
-void preview_output_close();
-void preview_output_init();
-void preview_output_start();
-void preview_output_stop();
-void preview_output_get_settings(obs_data_t *settings);
+#include "config-notifier.h"
+
+// Meyers singleton pattern for QObject instance.
+ConfigNotifier *ConfigNotifier::instance()
+{
+	static ConfigNotifier notifier;
+	return &notifier;
+}

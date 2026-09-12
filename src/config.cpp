@@ -22,6 +22,7 @@
 #include <util/config-file.h>
 
 #include <QCoreApplication>
+#include "config-notifier.h"
 
 #define SECTION_NAME "NDIPlugin"
 
@@ -35,6 +36,15 @@
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
+#define PARAM_NETWORK_MONITOR_UP "NetworkMonitorUp"
+#define PARAM_NETWORK_MONITOR_LOC_X "NetworkMonitorLocX"
+#define PARAM_NETWORK_MONITOR_LOC_Y "NetworkMonitorLocY"
+#define PARAM_NETWORK_MONITOR_WIDTH "NetworkMonitorWidth"
+#define PARAM_NETWORK_MONITOR_HEIGHT "NetworkMonitorHeight"
+#define PARAM_NETWORK_MONITOR_ACTIVE_TAB "NetworkMonitorActiveTab"
+#define PARAM_NETWORK_MONITOR_ADAPTER_COLUMNS "NetworkMonitorAdapterColumns"
+#define PARAM_NETWORK_MONITOR_SENDER_COLUMNS "NetworkMonitorSenderColumns"
+#define PARAM_NETWORK_MONITOR_RECEIVER_COLUMNS "NetworkMonitorReceiverColumns"
 
 // App Settings
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
@@ -242,6 +252,16 @@ void Config::SetDefaultsToUserStore()
 
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
+
+		config_set_default_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_UP, false);
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_X, -1);
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_Y, -1);
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_WIDTH, -1);
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_HEIGHT, -1);
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ACTIVE_TAB, 0);
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ADAPTER_COLUMNS, "");
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_SENDER_COLUMNS, "");
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_RECEIVER_COLUMNS, "");
 	}
 }
 
@@ -303,6 +323,10 @@ void Config::Save()
 		config_set_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
 
 		config_save(obs_config);
+
+		// Notify any Qt UI/listeners that the configuration has changed so they can refresh.
+		ConfigNotifier::instance();
+		emit ConfigNotifier::instance() -> configChanged();
 	}
 }
 
@@ -387,6 +411,144 @@ void Config::MinAutoUpdateCheckIntervalSeconds(int seconds)
 	auto obs_config = GetAppConfig();
 	if (obs_config) {
 		config_set_int(obs_config, SECTION_NAME, PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS, seconds);
+		config_save(obs_config);
+	}
+}
+
+bool Config::NetworkMonitorUp()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return config_get_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_UP);
+	}
+	return false;
+}
+
+void Config::NetworkMonitorUp(bool value)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_UP, value);
+		config_save(obs_config);
+	}
+}
+
+int Config::NetworkMonitorLocX()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_X);
+	}
+	return -1;
+}
+
+int Config::NetworkMonitorLocY()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_Y);
+	}
+	return -1;
+}
+
+int Config::NetworkMonitorWidth()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_WIDTH);
+	}
+	return -1;
+}
+
+int Config::NetworkMonitorHeight()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_HEIGHT);
+	}
+	return -1;
+}
+
+void Config::SetNetworkMonitorGeometry(int x, int y, int width, int height)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_X, x);
+		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_Y, y);
+		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_WIDTH, width);
+		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_HEIGHT, height);
+		config_save(obs_config);
+	}
+}
+
+int Config::NetworkMonitorActiveTab()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return (int)config_get_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ACTIVE_TAB);
+	}
+	return 0;
+}
+
+void Config::NetworkMonitorActiveTab(int index)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ACTIVE_TAB, index);
+		config_save(obs_config);
+	}
+}
+
+QString Config::NetworkMonitorAdapterColumns()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return config_get_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ADAPTER_COLUMNS);
+	}
+	return QString();
+}
+
+void Config::NetworkMonitorAdapterColumns(const QString &value)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ADAPTER_COLUMNS, QT_TO_UTF8(value));
+		config_save(obs_config);
+	}
+}
+
+QString Config::NetworkMonitorSenderColumns()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return config_get_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_SENDER_COLUMNS);
+	}
+	return QString();
+}
+
+void Config::NetworkMonitorSenderColumns(const QString &value)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_SENDER_COLUMNS, QT_TO_UTF8(value));
+		config_save(obs_config);
+	}
+}
+
+QString Config::NetworkMonitorReceiverColumns()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return config_get_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_RECEIVER_COLUMNS);
+	}
+	return QString();
+}
+
+void Config::NetworkMonitorReceiverColumns(const QString &value)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_string(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_RECEIVER_COLUMNS, QT_TO_UTF8(value));
 		config_save(obs_config);
 	}
 }
