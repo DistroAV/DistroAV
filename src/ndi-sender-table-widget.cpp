@@ -25,12 +25,13 @@
 #include <QAction>
 #include <QFontMetrics>
 #include <QPointer>
+#include <cmath>
 
 namespace {
-// Display a 0.0-1.0 fraction as a percentage string, e.g. 0.0432 -> "4.32".
+// Display a 0.0-1.0 fraction as a whole-number percentage string, e.g. 0.0432 -> "4".
 QString percentFromFraction(double fraction)
 {
-	return QString::number(fraction * 100.0, 'f', 2);
+	return QString::number(std::lround(fraction * 100.0));
 }
 } // namespace
 

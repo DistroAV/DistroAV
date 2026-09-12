@@ -47,6 +47,10 @@ struct NDIReceiverStats {
 	int64_t av_drift_min_ns = std::numeric_limits<int64_t>::infinity();
 	int64_t av_drift_max_ns = std::numeric_limits<int64_t>::lowest();
 	double av_drift_ns_per_hour = 0.0;
+	// True once the drift regression spans enough real time to be a trustworthy rate
+	// estimate (see kMinDriftSampleSpanSeconds). Before that, av_drift_ns_per_hour is
+	// still being accumulated and callers should display "Sampling..." instead.
+	bool av_drift_ready = false;
 
 	uint64_t last_video_frame_timestamp = 0;
 	uint64_t last_video_frame_os = 0;
@@ -81,6 +85,12 @@ struct NDIReceiverStats {
 	uint64_t avg_video_processing = 0; // rolling avg of video processing times
 };
 
+// Formats av_drift_ns_per_hour as "<ms/hr>" with 2 decimals, or "Sampling..." while
+// av_drift_ready is still false. Shared by every place that displays/logs the drift
+// rate so they can't disagree with each other (e.g. the ASCII report's column-width
+// computation and its row rendering).
+std::string format_av_drift_ms_per_hour(const NDIReceiverStats &stats);
+
 class ReceiverInfo {
 public:
 	// Construct with the NDI receiver handle
@@ -97,7 +107,9 @@ public:
 	void set_ndi_name(const std::string &ndi_name);
 	std::string get_ndi_name() const;
 
-	// Set receiver instance
+	// Set receiver instance. When set to a new non-null receiver (i.e. the
+	// underlying NDI receiver was just (re)created), also resets accumulated
+	// stats, since any previously running/reported stats no longer apply.
 	void set_receiver(NDIlib_recv_instance_t receiver);
 
 	// Snapshot accessor
@@ -116,6 +128,15 @@ public:
 	void add_drift_sample(uint64_t wall_ns, int64_t drift_ns);
 
 private:
+	// Clears running/snapshot stats and AV-drift tracking state. Caller must hold m_mutex.
+	void reset_stats_locked();
+
+	// Debug instrumentation: logs the raw inputs behind one A/V-drift sample so an
+	// out-of-range drift value can be traced back to the timestamps that produced it.
+	// Caller must hold m_mutex.
+	void log_drift_sample_locked(const char *trigger, uint64_t video_ts_ns, uint64_t video_wall_ns,
+				     uint64_t audio_ts_ns, uint64_t audio_wall_ns, int64_t drift_ns) const;
+
 	mutable std::mutex m_mutex;
 	obs_source_t *m_source = nullptr;
 	NDIlib_recv_instance_t m_receiver;

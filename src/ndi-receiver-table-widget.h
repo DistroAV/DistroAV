@@ -43,12 +43,13 @@ public:
 		ColOsFPS,
 		ColTsFPS,
 		ColDeficitFPS,
-		ColDeficitSPS,
 		ColJitterRatio,
 		ColBudgetUsedPerFrameCapture,
 		ColMaxCapturePct,
 		ColBudgetUsedPerFrameProcessing,
 		ColMaxProcessPct,
+		ColSPS,
+		ColDeficitSPS,
 		ColAvDriftMsPerHour,
 		ColumnCount
 	};

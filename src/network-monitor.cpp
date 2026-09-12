@@ -45,6 +45,11 @@ std::string formatFixed2(double value)
 	return out.str();
 }
 
+std::string formatRounded(double value)
+{
+	return std::to_string(std::lround(value));
+}
+
 std::string formatBps(double bps)
 {
 	std::ostringstream out;
@@ -82,13 +87,14 @@ std::array<std::size_t, N> computeReceiverWidths(const std::array<ReceiverColumn
 			formatFixed2(snapshot.osFPS),
 			formatFixed2(snapshot.tsFPS),
 			formatFixed2(snapshot.deficit_fps),
-			formatFixed2(snapshot.deficit_sps),
 			formatFixed2(snapshot.jitter_ratio),
 			formatFixed2(snapshot.budget_used_per_frame_capture),
 			formatFixed2(snapshot.max_capture_pct),
 			formatFixed2(snapshot.budget_used_per_frame_processing),
 			formatFixed2(snapshot.max_process_pct),
-			formatFixed2(snapshot.av_drift_ns_per_hour / 1000000.0),
+			formatRounded(snapshot.osSPS),
+			formatFixed2(snapshot.deficit_sps),
+			format_av_drift_ms_per_hour(snapshot),
 		}};
 		for (std::size_t i = 0; i < N; ++i)
 			widths[i] = std::max<std::size_t>(widths[i], values[i].size());
@@ -294,7 +300,7 @@ std::string NetworkMonitor::getReceiverStatus(ReceiverInfo *receiverInfo) const
 
 std::string getFormattedReceiverReport(const NetworkMonitor::ReceiverInfoMap &m_receivers)
 {
-	static const std::array<ReceiverColumnDef, 15> kColumns = {{
+	static const std::array<ReceiverColumnDef, 16> kColumns = {{
 		{"NDI Name", ""},
 		{"OBS Source Name", ""},
 		{"Dropped", "frames"},
@@ -303,12 +309,13 @@ std::string getFormattedReceiverReport(const NetworkMonitor::ReceiverInfoMap &m_
 		{"FPS", "fps"},
 		{"TS FPS", "fps"},
 		{"FPS Deficit %", "%"},
-		{"SPS Deficit %", "%"},
 		{"Jitter Ratio", "ratio"},
 		{"Capture %", "%"},
 		{"Max Capture %", "ratio"},
 		{"Process %", "%"},
 		{"Max Process %", "ratio"},
+		{"SPS", "sps"},
+		{"SPS Deficit %", "%"},
 		{"Drift ms/hr", "ms/hr"},
 	}};
 
@@ -338,7 +345,7 @@ std::string getFormattedReceiverReport(const NetworkMonitor::ReceiverInfoMap &m_
 
 	for (const auto &receiver : sortedReceivers) {
 		const auto snapshot = receiver->getReportSnapshot();
-		const std::array<std::string, 15> values = {{
+		const std::array<std::string, 16> values = {{
 			receiver->get_ndi_name(),
 			snapshot.obs_source_name,
 			std::to_string(snapshot.video_frames_dropped),
@@ -347,13 +354,14 @@ std::string getFormattedReceiverReport(const NetworkMonitor::ReceiverInfoMap &m_
 			formatFixed2(snapshot.osFPS),
 			formatFixed2(snapshot.tsFPS),
 			formatFixed2(snapshot.deficit_fps),
-			formatFixed2(snapshot.deficit_sps),
 			formatFixed2(snapshot.jitter_ratio),
 			formatFixed2(snapshot.budget_used_per_frame_capture),
 			formatFixed2(snapshot.max_capture_pct),
 			formatFixed2(snapshot.budget_used_per_frame_processing),
 			formatFixed2(snapshot.max_process_pct),
-			formatFixed2(snapshot.av_drift_ns_per_hour / 1000000.0),
+			formatRounded(snapshot.osSPS),
+			formatFixed2(snapshot.deficit_sps),
+			format_av_drift_ms_per_hour(snapshot),
 		}};
 		appendReceiverRow(out, values, widths);
 	}
@@ -530,7 +538,6 @@ void dumpReceiverReportToLog(const NetworkMonitor::ReceiverInfoMap &m_receivers)
 		obs_log(LOG_INFO, "%s '%s' FPS: %.2f fps", reportHeader, ndi_name.c_str(), snapshot.osFPS);
 		obs_log(LOG_INFO, "%s '%s' TS FPS: %.2f fps", reportHeader, ndi_name.c_str(), snapshot.tsFPS);
 		obs_log(LOG_INFO, "%s '%s' FPS Deficit %%: %.2f", reportHeader, ndi_name.c_str(), snapshot.deficit_fps);
-		obs_log(LOG_INFO, "%s '%s' SPS Deficit %%: %.2f", reportHeader, ndi_name.c_str(), snapshot.deficit_sps);
 		obs_log(LOG_INFO, "%s '%s' Jitter Ratio: %.2f", reportHeader, ndi_name.c_str(), snapshot.jitter_ratio);
 		obs_log(LOG_INFO, "%s '%s' Capture %%: %.2f", reportHeader, ndi_name.c_str(),
 			snapshot.budget_used_per_frame_capture);
@@ -540,8 +547,10 @@ void dumpReceiverReportToLog(const NetworkMonitor::ReceiverInfoMap &m_receivers)
 			snapshot.budget_used_per_frame_processing);
 		obs_log(LOG_INFO, "%s '%s' Max Process %%: %.2f", reportHeader, ndi_name.c_str(),
 			snapshot.max_process_pct);
-		obs_log(LOG_INFO, "%s '%s' Drift ms/hr: %.2f", reportHeader, ndi_name.c_str(),
-			snapshot.av_drift_ns_per_hour / 1000000.0);
+		obs_log(LOG_INFO, "%s '%s' SPS: %ld", reportHeader, ndi_name.c_str(), std::lround(snapshot.osSPS));
+		obs_log(LOG_INFO, "%s '%s' SPS Deficit %%: %.2f", reportHeader, ndi_name.c_str(), snapshot.deficit_sps);
+		obs_log(LOG_INFO, "%s '%s' Drift ms/hr: %s", reportHeader, ndi_name.c_str(),
+			format_av_drift_ms_per_hour(snapshot).c_str());
 	}
 }
 

@@ -25,19 +25,12 @@
 #include <QAction>
 #include <QFontMetrics>
 #include <QPointer>
+#include <cmath>
 
 namespace {
-QString msFromNs(int64_t ns)
-{
-	if (ns == 0)
-		return "0";
-	double ms = ns / 1000000.0;
-	return QString::number(ms, 'f', 2);
-}
-
 QString percentFromFraction(double fraction)
 {
-	return QString::number(fraction * 100.0, 'f', 2);
+	return QString::number(std::lround(fraction * 100.0));
 }
 } // namespace
 
@@ -103,8 +96,6 @@ QVariant NdiReceiverTableModel::data(const QModelIndex &index, int role) const
 			return QString::number(report.tsFPS, 'f', 2);
 		case ColDeficitFPS:
 			return percentFromFraction(report.deficit_fps);
-		case ColDeficitSPS:
-			return percentFromFraction(report.deficit_sps);
 		case ColJitterRatio:
 			return QString::number(report.jitter_ratio, 'f', 2);
 		case ColBudgetUsedPerFrameCapture:
@@ -115,8 +106,12 @@ QVariant NdiReceiverTableModel::data(const QModelIndex &index, int role) const
 			return percentFromFraction(report.budget_used_per_frame_processing);
 		case ColMaxProcessPct:
 			return percentFromFraction(report.max_process_pct);
+		case ColSPS:
+			return QString::number(std::lround(report.osSPS));
+		case ColDeficitSPS:
+			return percentFromFraction(report.deficit_sps);
 		case ColAvDriftMsPerHour:
-			return msFromNs(report.av_drift_ns_per_hour);
+			return QString::fromStdString(format_av_drift_ms_per_hour(report));
 		default:
 			return QVariant();
 		}
@@ -140,8 +135,6 @@ QVariant NdiReceiverTableModel::data(const QModelIndex &index, int role) const
 			return QVariant(report.tsFPS);
 		case ColDeficitFPS:
 			return QVariant(report.deficit_fps);
-		case ColDeficitSPS:
-			return QVariant(report.deficit_sps);
 		case ColJitterRatio:
 			return QVariant(report.jitter_ratio);
 		case ColBudgetUsedPerFrameCapture:
@@ -152,8 +145,12 @@ QVariant NdiReceiverTableModel::data(const QModelIndex &index, int role) const
 			return QVariant(report.budget_used_per_frame_processing);
 		case ColMaxProcessPct:
 			return QVariant(report.max_process_pct);
+		case ColSPS:
+			return QVariant(report.osSPS);
+		case ColDeficitSPS:
+			return QVariant(report.deficit_sps);
 		case ColAvDriftMsPerHour:
-			return QVariant(report.av_drift_ns_per_hour / 1000000.0);
+			return QVariant(report.av_drift_ready ? report.av_drift_ns_per_hour / 1000000.0 : 0.0);
 		default:
 			return QVariant();
 		}
@@ -165,12 +162,13 @@ QVariant NdiReceiverTableModel::data(const QModelIndex &index, int role) const
 		case ColOsFPS:
 		case ColTsFPS:
 		case ColDeficitFPS:
-		case ColDeficitSPS:
 		case ColJitterRatio:
 		case ColBudgetUsedPerFrameCapture:
 		case ColMaxCapturePct:
 		case ColBudgetUsedPerFrameProcessing:
 		case ColMaxProcessPct:
+		case ColSPS:
+		case ColDeficitSPS:
 		case ColAvDriftMsPerHour:
 			return QVariant(Qt::AlignRight | Qt::AlignVCenter);
 		default:
@@ -201,8 +199,6 @@ QVariant NdiReceiverTableModel::headerData(int section, Qt::Orientation orientat
 		return QStringLiteral("TS FPS");
 	case ColDeficitFPS:
 		return QStringLiteral("FPS Deficit %");
-	case ColDeficitSPS:
-		return QStringLiteral("SPS Deficit %");
 	case ColJitterRatio:
 		return QStringLiteral("Jitter Ratio");
 	case ColBudgetUsedPerFrameCapture:
@@ -213,6 +209,10 @@ QVariant NdiReceiverTableModel::headerData(int section, Qt::Orientation orientat
 		return QStringLiteral("Process %");
 	case ColMaxProcessPct:
 		return QStringLiteral("Max Process %");
+	case ColSPS:
+		return QStringLiteral("SPS");
+	case ColDeficitSPS:
+		return QStringLiteral("SPS Deficit %");
 	case ColAvDriftMsPerHour:
 		return QStringLiteral("Drift ms/hr");
 	default:
