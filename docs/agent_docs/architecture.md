@@ -30,8 +30,8 @@ Each corresponds to one `obs_*_info` struct registered in `plugin-main.cpp`:
   `global.ini` under the `[NDIPlugin]` section (see the doc comment at the top of
   `config.h` for exact file paths per OS).
 - [`sync-debug.cpp`/`.h`](../../src/sync-debug.cpp) — compile-time-gated (off by
-  default) A/V sync logging, added recently; see git log around "sync-debug" for
-  why (drift diagnostics).
+  default) A/V sync logging; see git log around "sync-debug" for why (drift
+  diagnostics).
 - [`premultiplied-alpha-filter.cpp`](../../src/premultiplied-alpha-filter.cpp) —
   small standalone OBS filter for alpha premultiplication, independent of the NDI
   filter above.
@@ -51,28 +51,39 @@ Each corresponds to one `obs_*_info` struct registered in `plugin-main.cpp`:
 NDI frame receive/send happens off the Qt/UI thread. `ndi-source.cpp` and
 `main-output.cpp`/`preview-output.cpp` each run their own worker thread(s) for
 frame pumping; UI-thread code (settings dialogs, `config.cpp` callbacks) must not
-block on NDI I/O. Recent commit history (search log for "Lock keys", "mutex",
-"queued on the UI thread") shows this has been an active source of real bugs —
-treat any new cross-thread state as something to explicitly synchronize, not an
-oversight to fix later.
+block on NDI I/O. Commit history (search log for "Lock keys", "mutex", "queued
+on the UI thread") shows this has been a source of real bugs — treat any new
+cross-thread state as something to explicitly synchronize, not an oversight to
+fix later.
+
+## Performance-sensitive paths
+
+The plugin's job is real-time A/V transport; the callbacks below run once per
+frame or per audio buffer, on the worker threads described above, and directly
+determine whether streams glitch, desync, or add latency. Treat any change to
+these as performance-critical by default:
+
+- `ndi-source.cpp` — the NDI receive callback(s) that hand frames/audio to OBS.
+- `main-output.cpp` / `preview-output.cpp` — the OBS output callbacks that hand
+  frames/audio to NDI for send.
+- `ndi-filter.cpp` — the per-source filter's video/audio callbacks.
+- `premultiplied-alpha-filter.cpp` — per-pixel work on the video path.
+
+Inside these callbacks, avoid heap allocation, blocking I/O, synchronous
+logging, and any lock that could be contended by another real-time callback
+or by the UI thread — do that work once (setup/config-change time) and cache
+the result instead of recomputing or re-locking per frame. When a change to
+one of these files is not obviously free, say so and profile rather than
+assume; don't trade pipeline performance for readability or a smaller diff.
 
 ## Error codes
 
-`obs_log(LOG_ERROR, "ERR-4xx - ...")` calls use a stable numeric convention,
-catalogued for end users on the
+`obs_log(LOG_ERROR, "ERR-4xx - ...")` and `obs_log(LOG_WARNING, "WARN-4xx - ...")`
+calls use a stable numeric convention, catalogued for end users on the
 [Troubleshooting wiki page](https://github.com/DistroAV/DistroAV/wiki/2.-Troubleshooting#error--warning-code---obs-log).
-If you add a new hard/soft-requirement failure path, pick an unused number
-(grep `src -r -oE '"?ERR-[0-9]+'` first) and tell the user the wiki catalog
-needs a matching entry — it can't be edited from this repo.
-
-**Verified against current code**: codes actually in use are `400`–`412`,
-`424`, `425`, `430`. The wiki catalog additionally lists `413`–`423` and
-`426` (update-check failures in `src/forms/update.cpp`, output-filter
-failures, a config-validation error) and marks `424`/`425` "reserved for
-future use" — but those two are already implemented in `plugin-main.cpp`
-(OBS/NDI minimum-version checks), and the other wiki-only codes don't
-appear anywhere in `src/`. Treat the wiki catalog as informative, not
-ground truth; verify against `src/` when it matters for a specific code.
+If you add, remove, or renumber one (grep `src -r -oE '"?(ERR|WARN)-[0-9]+'`
+to see what's in use), update the wiki catalog to match — it can't be edited
+from this repo.
 
 ## CLI test flags
 

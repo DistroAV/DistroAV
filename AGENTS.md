@@ -8,32 +8,36 @@ correctness is verified by building and exercising the plugin inside OBS.
 For anything not covered here, see [docs/agent_docs/architecture.md](docs/agent_docs/architecture.md)
 and [docs/agent_docs/build-system.md](docs/agent_docs/build-system.md).
 
-## Build (Windows — verified in this checkout)
+## Build (Windows)
 
-A configured `build_x64/` already exists in this repo (first-configure fetches
-OBS source + prebuilt deps into `.deps/`, which is large and slow; skip it when
-`build_x64/` is already present).
-
-```powershell
-cmake --build build_x64 --preset windows-x64
-```
-
-This was run and confirmed to succeed end-to-end in this checkout, producing
-`build_x64/RelWithDebInfo/distroav.dll` and copying it into `build_x64/rundir`.
-
-From scratch (no `build_x64/` yet):
+Use the `-ci` preset (`windows-ci-x64`), not the plain `windows-x64` preset —
+the only difference is `CMAKE_COMPILE_WARNING_AS_ERROR=ON`, which is what
+actually gates CI on macOS/Linux. MSVC and Clang/GCC warn about different
+things, so a build that's warning-clean under the plain preset can still fail
+CI on another OS; the `-ci` preset surfaces the overlapping subset of those
+warnings (unused parameters, narrowing conversions, etc.) locally first.
 
 ```powershell
-cmake --preset windows-x64
-cmake --build build_x64 --preset windows-x64
+cmake --preset windows-ci-x64
+cmake --build build_x64 --preset windows-ci-x64
 ```
 
-Equivalent wrapper (also handles `CI`/`GITHUB_EVENT_NAME` env defaults the
-underlying script expects): `.\tools\build-helper-windows.ps1`.
+A fresh configure + build with this preset produces
+`build_x64/RelWithDebInfo/distroav.dll`, with `CMAKE_COMPILE_WARNING_AS_ERROR:BOOL=TRUE`
+visible in `build_x64/CMakeCache.txt`. First configure fetches OBS source +
+prebuilt deps into `.deps/` — large and slow; skip only if `build_x64/` is
+already configured with this same `-ci` preset. Cache variables apply at
+configure time only, so switching an existing `build_x64/` from the plain
+preset requires re-running the `cmake --preset windows-ci-x64` configure step
+once, not just building under the new preset name.
 
-macOS/Linux use the same pattern with `macos`/`ubuntu-x86_64` presets, or
-`.github/scripts/build-macos` / `.github/scripts/build-ubuntu` — **unverified in
-this session** (this checkout only has Windows tooling available).
+`.\tools\build-helper-windows.ps1` already configures with `windows-ci-<Target>`
+internally, so warning-as-error is active through that wrapper too even though
+its build step names the plain preset.
+
+macOS/Linux: same pattern with `macos-ci`/`ubuntu-ci-x86_64` presets, or
+`.github/scripts/build-macos` / `build-ubuntu` (already CI-preset-based) —
+these can only be exercised on those platforms, not from Windows.
 
 ## Run / manually test a change
 
@@ -83,6 +87,17 @@ covers clang-format) on Linux/macOS/WSL.
   thread — see the threading note in `docs/agent_docs/architecture.md` before
   touching source/output code; cross-thread state bugs here have a real history.
 
+## Performance (top priority)
+
+This plugin transports live audio and video in real time between OBS and NDI.
+Pipeline performance — latency, frame drops, jitter — is the top priority
+architectural concern, above code cleanliness or convenience. Any design
+decision touching a frame/audio callback (allocation, locking, logging,
+copies, indirection) should default to the cheapest option that's correct,
+and be justified against this before anything else. See "Performance-sensitive
+paths" in [docs/agent_docs/architecture.md](docs/agent_docs/architecture.md)
+for exactly which files/callbacks this applies to.
+
 ## Conventions (not enforced by clang-format/gersemi)
 
 - Naming: `.github/CONTRIBUTING.md` says `snake_case` for C-style names,
@@ -93,11 +108,6 @@ covers clang-format) on Linux/macOS/WSL.
   is "somewhat scattered." Match whichever the surrounding code already
   uses; don't invent a stricter rule than either source states.
 - Indentation: tabs, 8 columns wide; ~80 col soft line limit (per [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)).
-- Commit messages: 50-char title / blank line / 72-col-wrapped body, present
-  tense, prefixed with a scope when there's an obvious one (`CI:`, `UI:`,
-  `Source:`, `PluginUpdate:` are all attested in history) — but a large fraction
-  of real commits skip the scope prefix entirely, so don't invent one that
-  doesn't fit.
 - `buildspec.json`'s `version` field is the single source of truth for the
   plugin version; bump it in its own commit, separate from feature/fix work.
 
@@ -105,13 +115,13 @@ covers clang-format) on Linux/macOS/WSL.
 
 **Always fine, no need to ask:**
 - Editing files under `src/`, `data/locale/` (translation strings), `docs/`.
-- Building locally (`cmake --build build_x64 --preset windows-x64`).
+- Building locally (`cmake --build build_x64 --preset windows-ci-x64`).
 - Reading anything in `.deps/`, `build_x64/`, `release/` for reference (all gitignored, regenerated, never hand-edit).
 
 **Ask first:**
 - Changing `CMakeLists.txt`, `CMakePresets.json`, `buildspec.json`, or anything
   under `.github/` (workflows, actions, scripts) — these affect CI and release
-  packaging for every platform, not just this checkout.
+  packaging for every platform, not just a local build.
 - Bumping the plugin version in `buildspec.json`.
 - Installing the built plugin system-wide (`tools/install-windows.ps1` requires
   admin elevation and overwrites the user's live OBS plugin).
@@ -120,41 +130,16 @@ covers clang-format) on Linux/macOS/WSL.
 **Never touch:**
 - [`lib/ndi/`](lib/ndi) — vendored third-party NDI SDK headers under their own license.
 - `.deps/`, `build_x64/`, `build_macos/`, `build_x86_64/`, `release*/` — generated, gitignored.
-- Root-level `CLAUDE_HANDOFF.md`, `adapter-table-columns.md`, `drift-fix.patch`,
-  `ReceiverStats.md`, `SenderStats.md` — gitignored personal scratch files left in
-  this working tree from prior sessions/branches, not part of the tracked project
-  (see "Uncertain" below).
+- Creating or making git commits (`git commit`) or pushing — agents must leave
+  all committing to the user, regardless of how the change was made or how
+  confident the change is.
 
-## Uncertain / please confirm
+## Known gaps
 
-- **`CLAUDE_HANDOFF.md`** etc.: checked this checkout — not present here,
-  confirming they were local/personal scratch files specific to whichever
-  working tree first wrote that note, not something every checkout has. The
-  **`networkmonitor` branch is real and actively developed**
-  (`origin/networkmonitor`, last commit 2026-08-27, newer than `master`'s),
-  so the underlying question stands: should that branch carry its own
-  AGENTS.md guidance for `ndi-network-report.*` once it lands, or fold in
-  here now?
-- I could only verify the **Windows** build path end-to-end. The
-  macOS/Ubuntu commands are corroborated by the project's own wiki
-  (Development page) in addition to the CI scripts, but still not executed
-  by me — a sanity check on those platforms is worth doing before trusting
-  them blindly.
-- `clang-format`/`gersemi` invocation is no longer a guess: I wrote and
-  tested `.github/scripts/run-clang-format.{ps1,sh}` (currently untracked —
-  add them to this branch if you want them kept) which install and run
-  clang-format 19.x cross-platform; see "Lint / format" above. `gersemi`
-  still has no wrapper script.
-- Commit-scope prefixes (`CI:`, `UI:`, `Source:`, etc.): confirmed accurate
-  against `.github/CONTRIBUTING.md`, but still inconsistently used in real
-  `git log` history — kept as a loose convention, not a hard rule, per the
-  file's own wording ("Typical scopes," not "required scopes").
-- The `!AGENTS.md` / `!/docs` `.gitignore` additions are confirmed present
-  in this branch's `.gitignore` already — no outstanding action there.
-- **New in this pass**: the `ERR-*` numbered error-code convention
-  (`obs_log(LOG_ERROR, "ERR-4xx - ...")`) and the `--distroav-*` CLI test
-  flags (`src/config.cpp`) were missing from this branch's docs entirely —
-  added both to `docs/agent_docs/architecture.md`, cross-checked against
-  current `src/` and the wiki's Troubleshooting page. Worth a skim since the
-  wiki's error-code catalog has drifted from code in a few places (noted
-  inline there).
+- The macOS/Ubuntu build commands are corroborated by the project's wiki
+  (Development page) and by the CI scripts, but nothing on Windows can
+  actually exercise them — sanity-check them on those platforms before
+  relying on them.
+- `.github/scripts/run-clang-format.{ps1,sh}` install and run clang-format
+  19.x cross-platform (see "Lint / format" above); `gersemi` has no
+  equivalent wrapper script.

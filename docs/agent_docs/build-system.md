@@ -33,9 +33,19 @@ takes significantly longer than the incremental build described in AGENTS.md.
 
 `CMakePresets.json` defines a `template` base (`ENABLE_FRONTEND_API`, `ENABLE_QT`)
 and per-OS presets (`windows-x64`, `macos`, `ubuntu-x86_64`), each with a `-ci`
-variant that adds `CMAKE_COMPILE_WARNING_AS_ERROR=ON` and ccache. Local dev presets
-do **not** warning-as-error; CI presets do — a change that's warning-clean locally
-can still fail CI.
+variant that adds `CMAKE_COMPILE_WARNING_AS_ERROR=ON` (and ccache on
+macOS/Ubuntu). The plain per-OS presets do **not** set warning-as-error — AGENTS.md
+directs local builds to the `-ci` variant specifically so that MSVC's overlap
+with Clang/GCC's warning set gets caught before pushing, rather than only in CI.
+The plain presets still exist for a faster inner loop (e.g. iterating on a
+change that intentionally produces a temporary warning); just don't treat a
+plain-preset build as a real signal that a change is CI-clean.
+
+Switching an existing `build_x64/` between the plain and `-ci` presets requires
+re-running the `cmake --preset <name>` configure step once — cache variables
+like `CMAKE_COMPILE_WARNING_AS_ERROR` are only applied at configure time, so
+building against a stale configure silently keeps the old behavior even if you
+pass the other preset's name to `cmake --build`.
 
 ## What CI actually gates a PR on
 
@@ -63,6 +73,6 @@ unit-testable without OBS + real/simulated NDI sources.
 ## Version bump
 
 `buildspec.json`'s `version` field is the single source of truth for the plugin
-version baked into `plugin-support.c.in` and the installers. Recent history bumps
-this in its own dedicated commit (e.g. "Update DistroAV version from 6.2.0 to
-6.2.1") separate from feature work.
+version baked into `plugin-support.c.in` and the installers. Bump it in its own
+dedicated commit (e.g. "Update DistroAV version from 6.2.0 to 6.2.1"), separate
+from feature/fix work.
