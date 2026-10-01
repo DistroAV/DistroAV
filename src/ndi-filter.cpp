@@ -117,7 +117,7 @@ static void ndi_filter_disconnect_rename_handlers(ndi_filter_t *filter)
 	}
 }
 
-obs_properties_t *ndi_filter_getproperties(void *)
+obs_properties_t *ndi_filter_getproperties(void *priv)
 {
 	obs_log(LOG_DEBUG, "+ndi_filter_getproperties(...)");
 	obs_properties_t *props = obs_properties_create();
@@ -131,14 +131,16 @@ obs_properties_t *ndi_filter_getproperties(void *)
 	obs_properties_add_text(props, FLT_PROP_GROUPS, obs_module_text("NDIPlugin.FilterProps.NDIGroups"),
 				OBS_TEXT_DEFAULT);
 
-	obs_properties_add_button(props, "ndi_apply", obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
-				  [](obs_properties_t *, obs_property_t *, void *private_data) {
-					  auto s = (ndi_filter_t *)private_data;
-					  auto settings = obs_source_get_settings(s->obs_source);
-					  ndi_filter_update(s, settings);
-					  obs_data_release(settings);
-					  return true;
-				  });
+	obs_properties_add_button2(
+		props, "ndi_apply", obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
+		[](obs_properties_t *, obs_property_t *, void *private_data) {
+			auto s = (ndi_filter_t *)private_data;
+			auto settings = obs_source_get_settings(s->obs_source);
+			ndi_filter_update(s, settings);
+			obs_data_release(settings);
+			return true;
+		},
+		priv);
 
 	obs_log(LOG_DEBUG, "-ndi_filter_getproperties(...)");
 	return props;
