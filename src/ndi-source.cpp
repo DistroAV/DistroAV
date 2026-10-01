@@ -25,6 +25,8 @@
 #include <QDesktopServices>
 #include <QUrl>
 
+#include <chrono>
+#include <string>
 #include <thread>
 
 #define PROP_SOURCE "ndi_source_name"
@@ -314,8 +316,6 @@ obs_properties_t *ndi_source_getproperties(void *data)
 
 	obs_properties_add_bool(props, PROP_AUDIO, obs_module_text("NDIPlugin.SourceProps.Audio"));
 
-	obs_properties_add_text(props, "ndi_web_control_url", "Web Control URL", OBS_TEXT_INFO);
-
 	obs_properties_t *group_ptz = obs_properties_create();
 	obs_properties_add_float_slider(group_ptz, PROP_PAN, obs_module_text("NDIPlugin.SourceProps.Pan"), -1.0, 1.0,
 					0.001);
@@ -342,7 +342,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
-	obs_data_set_default_string(settings, "web_control_url", "Unknown");
+	obs_data_set_default_string(settings, "web_control_url", "");
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -385,6 +385,37 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame);
 
+void update_web_control_url(ndi_source_t *s, NDIlib_recv_instance_t ndi_receiver)
+{
+	const char *p_url = ndiLib->recv_get_web_control(ndi_receiver);
+	std::string new_url = p_url ? p_url : "";
+	if (p_url) {
+		ndiLib->recv_free_string(ndi_receiver, p_url);
+	}
+
+	// This is polled, so only update (and log) when the URL changed
+	obs_data_t *settings = obs_source_get_settings(s->obs_source);
+	bool changed = new_url != obs_data_get_string(settings, "web_control_url");
+	obs_data_release(settings);
+	if (!changed) {
+		return;
+	}
+
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	if (!new_url.empty()) {
+		obs_log(LOG_INFO, "'%s' - This NDI source has a Web Control URL: %s", obs_source_name, new_url.c_str());
+	} else {
+		// This device does not currently support a configuration user interface.
+		obs_log(LOG_INFO, "'%s' - This NDI source does not have Web Control URL.", obs_source_name);
+	}
+
+	// obs_source_update() applies the change and emits the source's "update" signal so other plugins can react
+	obs_data_t *update = obs_data_create();
+	obs_data_set_string(update, "web_control_url", new_url.c_str());
+	obs_source_update(s->obs_source, update);
+	obs_data_release(update);
+}
+
 void *ndi_source_thread(void *data)
 {
 	auto s = (ndi_source_t *)data;
@@ -411,6 +442,9 @@ void *ndi_source_thread(void *data)
 
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
+
+	const auto web_control_poll_interval = std::chrono::seconds(1);
+	auto web_control_last_poll = std::chrono::steady_clock::time_point{};
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -509,6 +543,8 @@ void *ndi_source_thread(void *data)
 				obs_source_name);
 
 			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
+			// Poll the new receiver's Web Control URL as soon as it connects
+			web_control_last_poll = {};
 
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
@@ -603,6 +639,15 @@ void *ndi_source_thread(void *data)
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
+		}
+
+		//
+		// Web Control URL: polled because the sender can publish or change it at any time after connecting
+		//
+		auto now = std::chrono::steady_clock::now();
+		if (now - web_control_last_poll >= web_control_poll_interval) {
+			web_control_last_poll = now;
+			update_web_control_url(s, ndi_receiver);
 		}
 
 		//
@@ -702,27 +747,6 @@ void *ndi_source_thread(void *data)
 			frame_received =
 				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
 
-			if (frame_received == NDIlib_frame_type_status_change) {
-				const char *p_url = ndiLib->recv_get_web_control(ndi_receiver);
-				if (p_url) {
-					// You now have a URL that you can embed in your user interface if you want!
-					// Do what you want with it here and when done, call:
-					obs_log(LOG_INFO,
-						"'%s' - This NDI source supports the NDI Web Control protocol! Web Control URL: %s",
-						obs_source_name, p_url);
-					obs_data_t *data = obs_source_get_settings(s->obs_source);
-					obs_data_set_string(data, "web_control_url", p_url);
-					obs_data_release(data);
-					ndiLib->recv_free_string(ndi_receiver, p_url);
-				} else {
-					obs_log(LOG_INFO,
-						"'%s' - This NDI source does not support the NDI Web Control protocol.",
-						obs_source_name);
-					// This device does not currently support a configuration user interface.
-				}
-
-				continue;
-			}
 			if (frame_received == NDIlib_frame_type_audio) {
 				//
 				// AUDIO
@@ -937,10 +961,15 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	// TODO : Should this ba a if statement and simplify each following check ?
 
 	auto new_ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
-	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name, new_ndi_source_name) != 0;
+	bool ndi_source_name_changed = safe_strcmp(s->config.ndi_source_name, new_ndi_source_name) != 0;
+	reset_ndi_receiver |= ndi_source_name_changed;
 	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'NDI Source Name' changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
 		obs_source_name, new_ndi_source_name, s->config.ndi_source_name);
+	if (ndi_source_name_changed) {
+		// The new receiver reports its own Web Control URL on its first status change
+		obs_data_set_string(settings, "web_control_url", "");
+	}
 
 	if (s->config.ndi_source_name != nullptr) {
 		bfree(s->config.ndi_source_name);
@@ -1224,7 +1253,6 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
-
 	ndi_source_update(s, settings);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
@@ -1240,7 +1268,6 @@ void ndi_source_destroy(void *data)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_disconnect(sh, "rename", on_ndi_source_renamed, s);
-
 	ndi_source_thread_stop(s);
 
 	if (s->config.ndi_receiver_name) {
