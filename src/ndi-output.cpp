@@ -17,8 +17,11 @@
 
 #include "plugin-main.h"
 #include "sync-debug.h"
+#include "config-notifier.h"
+#include <util/platform.h>
 #include <util/threading.h>
 #include <chrono>
+#include <cstring>
 
 // #include "plugin-support.h"
 
@@ -67,6 +70,8 @@ typedef struct {
 	bool started;
 
 	NDIlib_send_instance_t ndi_sender;
+	SenderInfo *ndi_sender_info;
+	ChangeNotifier *ndi_sender_change_notifier;
 	pthread_mutex_t ndi_sender_mutex;
 
 	uint32_t frame_width;
@@ -83,8 +88,6 @@ typedef struct {
 
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
-	int32_t no_connections;
-	std::chrono::time_point<std::chrono::steady_clock> last_conn_check;
 } ndi_output_t;
 
 const char *ndi_output_getname(void *)
@@ -129,10 +132,6 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 	o->output = output;
 	pthread_mutex_init(&o->ndi_sender_mutex, NULL);
 	ndi_output_update(o, settings);
-
-	// initialize last_conn_check so first check will occur immediately
-	o->no_connections = -1;
-	o->last_conn_check = std::chrono::steady_clock::time_point();
 
 	obs_log(LOG_DEBUG, "-ndi_output_create(name='%s', groups='%s', ...)", name, groups);
 	return o;
@@ -239,6 +238,16 @@ bool ndi_output_start(void *data)
 		if (o->started) {
 			obs_log(LOG_INFO, "NDI Output started successfully. '%s'", name);
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: ndi output started", name);
+			o->ndi_sender_change_notifier = new ChangeNotifier([o]() {
+				obs_log(LOG_DEBUG, "NDI Output status changed - '%s'", o->ndi_name);
+				// Notify any Qt UI/listeners that the configuration has changed so they can refresh.
+				ConfigNotifier::instance();
+				emit ConfigNotifier::instance() -> configChanged();
+			});
+			o->ndi_sender_info =
+				network_monitor->registerSender(o->ndi_sender, obs_output_get_name(o->output));
+			o->ndi_sender_info->set_ndi_name(o->ndi_name);
+			o->ndi_sender_info->registerChangeNotifier(o->ndi_sender_change_notifier, "ndi-output");
 		} else {
 			obs_log(LOG_WARNING, "WARN-415 - NDI Sender data capture failed. '%s'", name);
 			obs_log(LOG_DEBUG, "'%s' ndi_output_start: data capture start failed", name);
@@ -254,17 +263,53 @@ bool ndi_output_start(void *data)
 	return o->started;
 }
 
+void ndi_output_stop(void *data, uint64_t);
+
+void replace_invalid_filename_chars(QString *s);
+
 void ndi_output_update(void *data, obs_data_t *settings)
 {
 	auto o = (ndi_output_t *)data;
 	auto name = obs_data_get_string(settings, "ndi_name");
+	// Replace invalid filename characters in the provided name and persist back to settings.
+	if (name) {
+		QString qname = QString::fromUtf8(name);
+		replace_invalid_filename_chars(&qname);
+		obs_data_set_string(settings, "ndi_name", QT_TO_UTF8(qname));
+		name = obs_data_get_string(settings, "ndi_name");
+	}
 	auto groups = obs_data_get_string(settings, "ndi_groups");
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', ...)", name, groups);
+
+	// If the output is running, stop it so it can be recreated with the new settings.
+	bool ndi_output_running = o->started;
+
+	if (ndi_output_running) {
+		obs_log(LOG_DEBUG, "ndi_output_update: ndi_name/ndi_groups changed, stopping output to apply changes");
+		// Stop the output; timestamp argument not used here so pass0.
+		ndi_output_stop(o, 0);
+	}
 
 	o->ndi_name = name;
 	o->ndi_groups = groups;
 	o->uses_video = obs_data_get_bool(settings, "uses_video");
 	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+
+	auto outputName = obs_output_get_name(o->output);
+	if (outputName && std::strcmp(outputName, "NDI Main Output") == 0) {
+		auto config = Config::Current();
+		config->OutputName = o->ndi_name;
+		config->OutputGroups = o->ndi_groups;
+		config->Save();
+	} else if (outputName && std::strcmp(outputName, "NDI Preview Output") == 0) {
+		auto config = Config::Current();
+		config->PreviewOutputName = o->ndi_name;
+		config->PreviewOutputGroups = o->ndi_groups;
+		config->Save();
+	}
+
+	if (ndi_output_running && !o->started)
+		ndi_output_start(o);
 
 	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,
@@ -285,6 +330,13 @@ void ndi_output_stop(void *data, uint64_t)
 		if (o->ndi_sender) {
 			obs_log(LOG_DEBUG, "ndi_output_stop: +ndiLib->send_destroy(o->ndi_sender)");
 			pthread_mutex_lock(&o->ndi_sender_mutex);
+			o->ndi_sender_info = nullptr;
+			network_monitor->unregisterSender(o->ndi_sender);
+			if (o->ndi_sender_change_notifier) {
+				delete o->ndi_sender_change_notifier;
+				o->ndi_sender_change_notifier = nullptr;
+			}
+
 			ndiLib->send_destroy(o->ndi_sender);
 			obs_log(LOG_DEBUG, "ndi_output_stop: -ndiLib->send_destroy(o->ndi_sender)");
 			o->ndi_sender = nullptr;
@@ -331,6 +383,9 @@ void ndi_output_destroy(void *data)
 void ndi_output_rawvideo(void *data, video_data *frame)
 {
 	auto o = (ndi_output_t *)data;
+
+	uint64_t t0 = os_gettime_ns();
+
 	if (!o->started || !o->frame_width || !o->frame_height)
 		return;
 
@@ -339,24 +394,7 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		pthread_mutex_unlock(&o->ndi_sender_mutex);
 		return;
 	}
-
-	// Throttle calls to send_get_no_connections to at most once per second
-	auto now = std::chrono::steady_clock::now();
-	if (now - o->last_conn_check >= std::chrono::seconds(1)) {
-		int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
-		o->last_conn_check = now;
-
-		if (nc != o->no_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "NDI Output video '%s' has no connections.", ndi_source->p_ndi_name);
-			else if (o->no_connections == 0)
-				obs_log(LOG_DEBUG, "NDI Output video '%s' has %d connections.", ndi_source->p_ndi_name,
-					nc);
-			o->no_connections = nc;
-		}
-	}
-
+	auto local_ndi_sender = o->ndi_sender;
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
 	uint32_t width = o->frame_width;
@@ -370,9 +408,7 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.frame_rate_D =
 		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
-#ifdef SYNC_DEBUG
 	video_frame.timestamp = frame->timestamp / 100;
-#endif
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.FourCC = o->frame_fourcc;
 
@@ -386,7 +422,13 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	}
 	SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name, video_frame.timestamp * 100,
 				  (uint8_t *)video_frame.p_data);
-	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
+
+	uint64_t t1 = os_gettime_ns();
+	ndiLib->send_send_video_async_v2(local_ndi_sender, &video_frame);
+	uint64_t t2 = os_gettime_ns();
+
+	if (o->ndi_sender_info)
+		o->ndi_sender_info->send_video_frame(t0, t1, t2, video_frame, frame);
 }
 
 void ndi_output_rawaudio(void *data, audio_data *frame)
@@ -394,6 +436,9 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	// NOTE: The logic in this function should be similar to
 	// ndi-filter.cpp/ndi_filter_asyncaudio(...)
 	auto o = (ndi_output_t *)data;
+
+	uint64_t t0 = os_gettime_ns();
+
 	if (!o->started || !o->audio_samplerate || !o->audio_channels)
 		return;
 
@@ -402,32 +447,14 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 		pthread_mutex_unlock(&o->ndi_sender_mutex);
 		return;
 	}
-
-	auto now = std::chrono::steady_clock::now();
-	if (now - o->last_conn_check >= std::chrono::seconds(1)) {
-		o->last_conn_check = now;
-
-		int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
-
-		if (nc != o->no_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "NDI Output audio '%s' has no connections.", ndi_source->p_ndi_name);
-			else if (o->no_connections == 0)
-				obs_log(LOG_DEBUG, "NDI Output audio '%s' has %d connections.", ndi_source->p_ndi_name,
-					nc);
-			o->no_connections = nc;
-		}
-	}
+	auto local_ndi_sender = o->ndi_sender;
 
 	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
-#ifdef SYNC_DEBUG
 	audio_frame.timestamp = frame->timestamp / 100;
-#endif
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
@@ -456,7 +483,13 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	audio_frame.p_data = o->audio_conv_buffer;
 	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name, audio_frame.timestamp * 100,
 				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
-	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
+
+	uint64_t t1 = os_gettime_ns();
+	ndiLib->send_send_audio_v3(local_ndi_sender, &audio_frame);
+	uint64_t t2 = os_gettime_ns();
+
+	if (o->ndi_sender_info)
+		o->ndi_sender_info->send_audio_frame(t0, t1, t2, audio_frame, frame->timestamp);
 }
 
 obs_output_info create_ndi_output_info()

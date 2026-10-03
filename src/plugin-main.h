@@ -22,7 +22,8 @@
 #include "plugin-support.h"
 
 #include "obs-support/obs-app.hpp"
-
+#include "forms/output-settings.h"
+#include "network-monitor.h"
 #include <Processing.NDI.Lib.h>
 
 #define PLUGIN_MIN_QT_VERSION "6.0.0"
@@ -59,6 +60,8 @@ The following accomplishes two goals:
 QString rehostUrl(const char *url);
 QString makeLink(const char *url, const char *text = nullptr);
 bool is_version_supported(const char *version, const char *min_version);
+extern OutputSettings *output_settings;
+extern NetworkMonitor *network_monitor;
 
 #define PLUGIN_UPDATE_URL "https://distroav.org/api/update"
 
