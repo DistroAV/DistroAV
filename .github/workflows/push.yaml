@@ -23,7 +23,9 @@ jobs:
     uses: ./.github/workflows/build-project.yaml
     secrets: inherit
     permissions:
+      actions: read
       contents: read
+      pull-requests: read
 
   create-release:
     name: Create Release 🛫

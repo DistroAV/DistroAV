@@ -5,6 +5,10 @@ on:
       pluginName:
         description: Project name detected by parsing build spec file
         value: ${{ jobs.check-event.outputs.pluginName }}
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
 jobs:
   check-event:
     name: Check GitHub Event Data 🔎
