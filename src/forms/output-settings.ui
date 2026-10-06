@@ -268,6 +268,135 @@
                     </layout>
                 </widget>
             </item>
+            <item>
+                <widget class="QGroupBox" name="canvasOutputGroupBox">
+                    <property name="styleSheet">
+                        <string notr="true">QWidget { padding-top: 1em; }</string>
+                    </property>
+                    <property name="title">
+                        <string>NDIPlugin.OutputSettings.GroupBox.Canvas</string>
+                    </property>
+                    <property name="checkable">
+                        <bool>true</bool>
+                    </property>
+                    <layout class="QGridLayout">
+                        <item row="0" column="0">
+                            <widget class="QLabel" name="canvasOutputCanvasLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Canvas.Canvas</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="0" column="1">
+                            <widget class="QComboBox" name="canvasOutputCanvas">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="0">
+                            <widget class="QLabel" name="canvasOutputNameLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Canvas.Name</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="1">
+                            <widget class="QLineEdit" name="canvasOutputName">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>canvasOutputName</string>
+                                </property>
+                                <property name="toolTip">
+                                    <string>NDIPlugin.OutputSettings.Canvas.Name.Tooltip</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="0">
+                            <widget class="QLabel" name="canvasOutputGroupsLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Canvas.Groups</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="1">
+                            <widget class="QLineEdit" name="canvasOutputGroups">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>canvasOutputGroups</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="3" column="0">
+                            <widget class="QLabel" name="canvasOutputAudioTrackLabel">
+                                <property name="minimumSize">
+                                    <size>
+                                        <width>200</width>
+                                        <height>0</height>
+                                    </size>
+                                </property>
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>NDIPlugin.OutputSettings.Canvas.AudioTrack</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="3" column="1">
+                            <widget class="QComboBox" name="canvasOutputAudioTrack">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; }</string>
+                                </property>
+                                <property name="toolTip">
+                                    <string>NDIPlugin.OutputSettings.Canvas.AudioTrack.Tooltip</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="4" column="0" colspan="2">
+                            <widget class="QLabel" name="canvasOutputLastError">
+                                <property name="styleSheet">
+                                    <string notr="true">QWidget { padding: 0; color: red; }</string>
+                                </property>
+                                <property name="text">
+                                    <string>canvasOutputLastError</string>
+                                </property>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
 
             <item>
                 <widget class="QLabel" name="labelRequirements">

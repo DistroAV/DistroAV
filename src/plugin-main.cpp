@@ -21,6 +21,7 @@
 
 #include "forms/output-settings.h"
 #include "forms/update.h"
+#include "canvas-output.h"
 #include "main-output.h"
 #include "preview-output.h"
 
@@ -483,19 +484,32 @@ bool obs_module_load(void)
 						[] {
 							main_output_init();
 							preview_output_init();
+							canvas_output_init();
+							canvas_output_register_signals();
 						},
 						Qt::QueuedConnection);
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
+					canvas_output_unregister_signals();
 					main_output_deinit();
 					preview_output_deinit();
+					canvas_output_deinit();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
 					main_output_deinit();
 					preview_output_deinit();
+					canvas_output_deinit();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 					if (plugin_features_registered) {
 						main_output_init();
 						preview_output_init();
+						canvas_output_init();
+					}
+				} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGING) {
+					// Canvases are saved per scene collection and are destroyed when switching
+					canvas_output_deinit();
+				} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {
+					if (plugin_features_registered) {
+						canvas_output_init();
 					}
 				}
 			},
