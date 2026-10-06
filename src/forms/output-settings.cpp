@@ -94,7 +94,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		    ndiVersionCheckResult
 			    ? QString("OK (%1 ≥ %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)
 			    : (ndiVersionShort.isEmpty()
-				       ? QString("Missing (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
+				       ? QString("Not loaded (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
 				       : QString("Too old (%1 < %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)));
 
 	// DistroAV Section Logic
