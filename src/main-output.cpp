@@ -38,7 +38,9 @@ QString main_output_last_error()
 void on_main_output_started(void *, calldata_t *)
 {
 	obs_log(LOG_DEBUG, "+on_main_output_started()");
-	Config::Current()->OutputEnabled = true;
+	auto config = Config::Current();
+	config->OutputEnabled = true;
+	config->Save();
 	obs_log(LOG_DEBUG, "-on_main_output_started()");
 	obs_log(LOG_INFO, "NDI Main Output started");
 }
@@ -46,7 +48,9 @@ void on_main_output_started(void *, calldata_t *)
 void on_main_output_stopped(void *, calldata_t *)
 {
 	obs_log(LOG_DEBUG, "+on_main_output_stopped()");
-	Config::Current()->OutputEnabled = false;
+	auto config = Config::Current();
+	config->OutputEnabled = false;
+	config->Save();
 	obs_log(LOG_DEBUG, "-on_main_output_stopped()");
 	obs_log(LOG_INFO, "NDI Main Output stopped");
 }
@@ -102,6 +106,10 @@ void main_output_start()
 bool main_output_is_supported()
 {
 	obs_log(LOG_DEBUG, "+main_output_is_supported()");
+	auto config = Config::Current();
+	auto output_name = config->OutputName;
+	auto output_groups = config->OutputGroups;
+
 	obs_data_t *output_settings = obs_data_create();
 	auto output = obs_output_create("test_ndi_output", "Test NDI Output", output_settings, nullptr);
 	bool is_supported = false;
@@ -126,14 +134,12 @@ bool main_output_is_supported()
 	return is_supported;
 }
 
-void main_output_deinit()
+void main_output_close()
 {
-	obs_log(LOG_DEBUG, "+main_output_deinit()");
+	obs_log(LOG_DEBUG, "+main_output_close()");
 
 	if (context.output) {
-		main_output_stop();
-
-		obs_log(LOG_DEBUG, "main_output_deinit: releasing NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
+		obs_log(LOG_DEBUG, "main_output_close: releasing NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
 
 		// Stop handling "remote" start/stop events (ex: from obs-websocket)
 		auto sh = obs_output_get_signal_handler(context.output);
@@ -142,14 +148,20 @@ void main_output_deinit()
 		signal_handler_disconnect(sh, "stop", //
 					  on_main_output_stopped, nullptr);
 
+		if (obs_output_active(context.output)) {
+			obs_log(LOG_DEBUG, "main_output_close: stopping NDI Main Output '%s'",
+				QT_TO_UTF8(context.ndi_name));
+			main_output_stop();
+		}
+
 		obs_output_release(context.output);
 		context.output = nullptr;
 		context.ndi_name.clear();
 		context.ndi_groups.clear();
-		obs_log(LOG_DEBUG, "main_output_deinit: successfully released NDI Main Output '%s'",
+		obs_log(LOG_DEBUG, "main_output_close: successfully released NDI Main Output '%s'",
 			QT_TO_UTF8(context.ndi_name));
 	}
-	obs_log(LOG_DEBUG, "-main_output_deinit()");
+	obs_log(LOG_DEBUG, "-main_output_close()");
 }
 
 void main_output_init()
@@ -166,36 +178,47 @@ void main_output_init()
 		obs_log(LOG_WARNING, "WARN-426 - NDI Main Output disabled, format not supported");
 	}
 
-	main_output_deinit();
+	if (context.output)
+		main_output_close();
 
+	obs_log(LOG_DEBUG, "main_output_init: creating NDI Main Output '%s'", QT_TO_UTF8(output_name));
+	obs_data_t *output_settings = obs_data_create();
+	obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
+	obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
+
+	context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
+	obs_data_release(output_settings);
+	if (context.output) {
+		obs_log(LOG_DEBUG, "main_output_init: created NDI Main Output '%s'", QT_TO_UTF8(output_name));
+
+		// Start handling "remote" start/stop events (ex: from obs-websocket)
+		auto sh = obs_output_get_signal_handler(context.output);
+		signal_handler_connect( //
+			sh, "start", on_main_output_started, nullptr);
+		signal_handler_connect( //
+			sh, "stop", on_main_output_stopped, nullptr);
+
+		context.ndi_name = output_name;
+		context.ndi_groups = output_groups;
+	} else {
+		obs_log(LOG_DEBUG, "main_output_init: failed to create NDI Main Output '%s'", QT_TO_UTF8(output_name));
+		obs_log(LOG_ERROR, "ERR-412 - Failed to create NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
+	}
 	if (is_enabled && !output_name.isEmpty()) {
-		obs_log(LOG_DEBUG, "main_output_init: creating NDI Main Output '%s'", QT_TO_UTF8(output_name));
-		obs_data_t *output_settings = obs_data_create();
-		obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
-		obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
-
-		context.output = obs_output_create("ndi_output", "NDI Main Output", output_settings, nullptr);
-		obs_data_release(output_settings);
-		if (context.output) {
-			obs_log(LOG_DEBUG, "main_output_init: created NDI Main Output '%s'", QT_TO_UTF8(output_name));
-
-			// Start handling "remote" start/stop events (ex: from obs-websocket)
-			auto sh = obs_output_get_signal_handler(context.output);
-			signal_handler_connect( //
-				sh, "start", on_main_output_started, nullptr);
-			signal_handler_connect( //
-				sh, "stop", on_main_output_stopped, nullptr);
-
-			context.ndi_name = output_name;
-			context.ndi_groups = output_groups;
-		} else {
-			obs_log(LOG_DEBUG, "main_output_init: failed to create NDI Main Output '%s'",
-				QT_TO_UTF8(output_name));
-			obs_log(LOG_ERROR, "ERR-412 - Failed to create NDI Main Output '%s'",
-				QT_TO_UTF8(context.ndi_name));
-		}
 		main_output_start();
 	}
 
 	obs_log(LOG_DEBUG, "-main_output_init()");
+}
+
+void main_output_get_settings(obs_data_t *settings)
+{
+	obs_log(LOG_DEBUG, "+main_output_get_settings()");
+	if (context.output) {
+		settings = obs_output_get_settings(context.output);
+	} else {
+		obs_data_set_string(settings, "ndi_name", QT_TO_UTF8(context.ndi_name));
+		obs_data_set_string(settings, "ndi_groups", QT_TO_UTF8(context.ndi_groups));
+	}
+	obs_log(LOG_DEBUG, "-main_output_get_settings()");
 }

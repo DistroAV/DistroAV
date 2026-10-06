@@ -75,6 +75,8 @@ target_sources(
     src/sync-debug.h
     src/config.cpp
     src/config.h
+    src/config-notifier.cpp
+    src/config-notifier.h
     src/main-output.cpp
     src/main-output.h
     src/ndi-filter.cpp
