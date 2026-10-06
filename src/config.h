@@ -42,6 +42,12 @@
  * AutoCheckForUpdates=true
  * MainOutputGroups=
  * PreviewOutputGroups=
+ * CanvasOutputEnabled=false
+ * CanvasOutputName=OBS Canvas
+ * CanvasOutputGroups=
+ * CanvasOutputCanvasUuid=
+ * CanvasOutputCanvasName=
+ * CanvasOutputAudioTrack=1
  * ```
  */
 class Config {
@@ -87,6 +93,12 @@ public:
 	bool PreviewOutputEnabled;
 	QString PreviewOutputName;
 	QString PreviewOutputGroups;
+	bool CanvasOutputEnabled;
+	QString CanvasOutputName;
+	QString CanvasOutputGroups;
+	QString CanvasOutputCanvasUuid;
+	QString CanvasOutputCanvasName;
+	int CanvasOutputAudioTrack; // 1-6, the OBS audio track sent over NDI
 	bool TallyProgramEnabled;
 	bool TallyPreviewEnabled;
 

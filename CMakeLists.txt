@@ -73,6 +73,8 @@ target_sources(
     src/obs-support/remote-text.hpp
     src/sync-debug.cpp
     src/sync-debug.h
+    src/canvas-output.cpp
+    src/canvas-output.h
     src/config.cpp
     src/config.h
     src/main-output.cpp

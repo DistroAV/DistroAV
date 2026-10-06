@@ -18,9 +18,12 @@
 #include "output-settings.h"
 
 #include "plugin-main.h"
+#include "canvas-output.h"
 #include "main-output.h"
 #include "preview-output.h"
 #include "update.h"
+
+#include <util/config-file.h>
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -30,6 +33,11 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QRegularExpression>
+
+#include <algorithm>
+
+static constexpr int CanvasUuidRole = Qt::UserRole;
+static constexpr int CanvasNameRole = Qt::UserRole + 1;
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
@@ -298,6 +306,16 @@ void OutputSettings::onFormAccepted()
 	replace_invalid_filename_chars(&config->PreviewOutputName);
 	config->PreviewOutputGroups = ui->previewOutputGroups->text();
 
+	config->CanvasOutputEnabled = ui->canvasOutputGroupBox->isChecked();
+	config->CanvasOutputName = ui->canvasOutputName->text();
+	replace_invalid_filename_chars(&config->CanvasOutputName);
+	config->CanvasOutputGroups = ui->canvasOutputGroups->text();
+	if (ui->canvasOutputCanvas->currentIndex() >= 0) {
+		config->CanvasOutputCanvasUuid = ui->canvasOutputCanvas->currentData(CanvasUuidRole).toString();
+		config->CanvasOutputCanvasName = ui->canvasOutputCanvas->currentData(CanvasNameRole).toString();
+	}
+	config->CanvasOutputAudioTrack = ui->canvasOutputAudioTrack->currentIndex() + 1;
+
 	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	config->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
@@ -313,6 +331,11 @@ void OutputSettings::onFormAccepted()
 		config->OutputEnabled, config->OutputName.toUtf8().constData(),
 		config->OutputGroups.toUtf8().constData(), config->PreviewOutputEnabled,
 		config->PreviewOutputName.toUtf8().constData(), config->PreviewOutputGroups.toUtf8().constData());
+	obs_log(LOG_INFO,
+		"Canvas Output Settings set to CanvasEnabled='%d', CanvasName='%s', CanvasGroup='%s', Canvas='%s' (%s), AudioTrack='%d'",
+		config->CanvasOutputEnabled, QT_TO_UTF8(config->CanvasOutputName),
+		QT_TO_UTF8(config->CanvasOutputGroups), QT_TO_UTF8(config->CanvasOutputCanvasName),
+		QT_TO_UTF8(config->CanvasOutputCanvasUuid), config->CanvasOutputAudioTrack);
 
 	config->Save();
 
@@ -337,6 +360,19 @@ void OutputSettings::onFormAccepted()
 		}
 	} else {
 		preview_output_deinit();
+	}
+	if (config->CanvasOutputEnabled && !config->CanvasOutputName.isEmpty()) {
+		if ((last_config.CanvasOutputEnabled != config->CanvasOutputEnabled) ||
+		    (last_config.CanvasOutputName != config->CanvasOutputName) ||
+		    (last_config.CanvasOutputGroups != config->CanvasOutputGroups) ||
+		    (last_config.CanvasOutputCanvasUuid != config->CanvasOutputCanvasUuid) ||
+		    (last_config.CanvasOutputAudioTrack != config->CanvasOutputAudioTrack)) {
+			// The Canvas Output is enabled, OutputName exists and a Name, GroupName, Canvas or Audio Track has changed since last form submission
+			obs_log(LOG_INFO, "Initializing Canvas output");
+			canvas_output_init();
+		}
+	} else {
+		canvas_output_deinit();
 	}
 }
 
@@ -369,6 +405,51 @@ void OutputSettings::showEvent(QShowEvent *)
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
 	ui->previewOutputName->setText(config->PreviewOutputName);
 	ui->previewOutputGroups->setText(config->PreviewOutputGroups);
+
+	ui->canvasOutputGroupBox->setChecked(config->CanvasOutputEnabled);
+	ui->canvasOutputName->setText(config->CanvasOutputName);
+	ui->canvasOutputGroups->setText(config->CanvasOutputGroups);
+
+	// Audio tracks 1-6, labelled with the track names from the OBS profile (Settings > Output > Audio)
+	ui->canvasOutputAudioTrack->clear();
+	auto profileConfig = obs_frontend_get_profile_config();
+	for (int track = 1; track <= MAX_AUDIO_MIXES; track++) {
+		auto label = QTStr("NDIPlugin.OutputSettings.Canvas.AudioTrack.Item").arg(track);
+		auto key = QString("Track%1Name").arg(track);
+		const char *trackName = profileConfig ? config_get_string(profileConfig, "AdvOut", QT_TO_UTF8(key))
+						      : nullptr;
+		if (trackName && *trackName) {
+			label += QString(" (%1)").arg(QString::fromUtf8(trackName));
+		}
+		ui->canvasOutputAudioTrack->addItem(label);
+	}
+	ui->canvasOutputAudioTrack->setCurrentIndex(std::clamp(config->CanvasOutputAudioTrack, 1, MAX_AUDIO_MIXES) - 1);
+
+	ui->canvasOutputCanvas->clear();
+	for (const auto &canvas : canvas_output_list_canvases()) {
+		ui->canvasOutputCanvas->addItem(canvas.first);
+		auto index = ui->canvasOutputCanvas->count() - 1;
+		ui->canvasOutputCanvas->setItemData(index, canvas.second, CanvasUuidRole);
+		ui->canvasOutputCanvas->setItemData(index, canvas.first, CanvasNameRole);
+	}
+	auto canvasIndex = ui->canvasOutputCanvas->findData(config->CanvasOutputCanvasUuid, CanvasUuidRole);
+	if (canvasIndex < 0 && !config->CanvasOutputCanvasUuid.isEmpty()) {
+		// Keep the saved selection even if the canvas does not exist right now (ex: different scene collection)
+		ui->canvasOutputCanvas->addItem(QString("%1 %2").arg(config->CanvasOutputCanvasName,
+								     Str("NDIPlugin.OutputSettings.Canvas.Missing")));
+		canvasIndex = ui->canvasOutputCanvas->count() - 1;
+		ui->canvasOutputCanvas->setItemData(canvasIndex, config->CanvasOutputCanvasUuid, CanvasUuidRole);
+		ui->canvasOutputCanvas->setItemData(canvasIndex, config->CanvasOutputCanvasName, CanvasNameRole);
+	}
+	ui->canvasOutputCanvas->setCurrentIndex(canvasIndex < 0 ? 0 : canvasIndex);
+
+	auto canvasLastError = canvas_output_last_error();
+	ui->canvasOutputLastError->setText(canvasLastError);
+	if (canvasLastError.isEmpty()) {
+		ui->canvasOutputLastError->setFixedHeight(0);
+	} else {
+		ui->canvasOutputLastError->setFixedHeight(ui->canvasOutputLastError->sizeHint().height());
+	}
 
 	ui->tallyProgramCheckBox->setChecked(config->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(config->TallyPreviewEnabled);

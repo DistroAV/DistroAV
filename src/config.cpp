@@ -32,6 +32,12 @@
 #define PARAM_PREVIEW_OUTPUT_ENABLED "PreviewOutputEnabled"
 #define PARAM_PREVIEW_OUTPUT_NAME "PreviewOutputName"
 #define PARAM_PREVIEW_OUTPUT_GROUPS "PreviewOutputGroups"
+#define PARAM_CANVAS_OUTPUT_ENABLED "CanvasOutputEnabled"
+#define PARAM_CANVAS_OUTPUT_NAME "CanvasOutputName"
+#define PARAM_CANVAS_OUTPUT_GROUPS "CanvasOutputGroups"
+#define PARAM_CANVAS_OUTPUT_CANVAS_UUID "CanvasOutputCanvasUuid"
+#define PARAM_CANVAS_OUTPUT_CANVAS_NAME "CanvasOutputCanvasName"
+#define PARAM_CANVAS_OUTPUT_AUDIO_TRACK "CanvasOutputAudioTrack"
 #define PARAM_TALLY_PROGRAM_ENABLED "TallyProgramEnabled"
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
@@ -217,6 +223,12 @@ Config::Config()
 	  PreviewOutputEnabled(false),
 	  PreviewOutputName("OBS Preview"),
 	  PreviewOutputGroups(""),
+	  CanvasOutputEnabled(false),
+	  CanvasOutputName("OBS Canvas"),
+	  CanvasOutputGroups(""),
+	  CanvasOutputCanvasUuid(""),
+	  CanvasOutputCanvasName(""),
+	  CanvasOutputAudioTrack(1),
 	  TallyProgramEnabled(true),
 	  TallyPreviewEnabled(true)
 {
@@ -239,6 +251,18 @@ void Config::SetDefaultsToUserStore()
 					  QT_TO_UTF8(PreviewOutputName));
 		config_set_default_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
 					  QT_TO_UTF8(PreviewOutputGroups));
+
+		config_set_default_bool(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_ENABLED, CanvasOutputEnabled);
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_NAME,
+					  QT_TO_UTF8(CanvasOutputName));
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_GROUPS,
+					  QT_TO_UTF8(CanvasOutputGroups));
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_CANVAS_UUID,
+					  QT_TO_UTF8(CanvasOutputCanvasUuid));
+		config_set_default_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_CANVAS_NAME,
+					  QT_TO_UTF8(CanvasOutputCanvasName));
+		config_set_default_int(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_AUDIO_TRACK,
+				       CanvasOutputAudioTrack);
 
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
@@ -281,6 +305,13 @@ void Config::Load()
 		PreviewOutputName = config_get_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME);
 		PreviewOutputGroups = config_get_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS);
 
+		CanvasOutputEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_ENABLED);
+		CanvasOutputName = config_get_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_NAME);
+		CanvasOutputGroups = config_get_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_GROUPS);
+		CanvasOutputCanvasUuid = config_get_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_CANVAS_UUID);
+		CanvasOutputCanvasName = config_get_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_CANVAS_NAME);
+		CanvasOutputAudioTrack = (int)config_get_int(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_AUDIO_TRACK);
+
 		TallyProgramEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED);
 		TallyPreviewEnabled = config_get_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED);
 	}
@@ -298,6 +329,15 @@ void Config::Save()
 		config_set_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_NAME, QT_TO_UTF8(PreviewOutputName));
 		config_set_string(obs_config, SECTION_NAME, PARAM_PREVIEW_OUTPUT_GROUPS,
 				  QT_TO_UTF8(PreviewOutputGroups));
+
+		config_set_bool(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_ENABLED, CanvasOutputEnabled);
+		config_set_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_NAME, QT_TO_UTF8(CanvasOutputName));
+		config_set_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_GROUPS, QT_TO_UTF8(CanvasOutputGroups));
+		config_set_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_CANVAS_UUID,
+				  QT_TO_UTF8(CanvasOutputCanvasUuid));
+		config_set_string(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_CANVAS_NAME,
+				  QT_TO_UTF8(CanvasOutputCanvasName));
+		config_set_int(obs_config, SECTION_NAME, PARAM_CANVAS_OUTPUT_AUDIO_TRACK, CanvasOutputAudioTrack);
 
 		config_set_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
 		config_set_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
