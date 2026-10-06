@@ -47,7 +47,7 @@ winget install --exact --id DistroAV.DistroAV
 
 MacOS
 ```
-brew install --cask distroav/distroav/distroav
+brew install --cask distroav/tap/distroav
 ```
 
 

@@ -196,14 +196,14 @@ If you are running a local build, don't forget to add your build info to the upd
 		const auto script = QString(
 			"tell application \"Terminal\"\n"
 			"activate\n"
-			"do script \"brew tap distroav/distroav && brew reinstall --cask distroav/distroav/distroav && exit\"\n"
+			"do script \"brew tap distroav/tap && brew reinstall --cask distroav/tap/distroav && exit\"\n"
 			"end tell");
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
 			QMessageBox::warning(
 				this, QTStr("NDIPlugin.OneclickInstallError.Title"),
 				QTStr("NDIPlugin.OneclickInstallError.Message") +
-					QStringLiteral("brew reinstall --cask distroav/distroav/distroav"));
+					QStringLiteral("brew reinstall --cask distroav/tap/distroav"));
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
