@@ -200,10 +200,9 @@ If you are running a local build, don't forget to add your build info to the upd
 			"end tell");
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
-			QMessageBox::warning(
-				this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-				QTStr("NDIPlugin.OneclickInstallError.Message") +
-					QStringLiteral("brew reinstall --cask distroav/tap/distroav"));
+			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
+					     QTStr("NDIPlugin.OneclickInstallError.Message") +
+						     QStringLiteral("brew reinstall --cask distroav/tap/distroav"));
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
