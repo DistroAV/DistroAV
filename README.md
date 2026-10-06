@@ -45,9 +45,11 @@ Windows ![WinGet Package Version](https://img.shields.io/winget/v/DistroAV.Distr
 winget install --exact --id DistroAV.DistroAV
 ```
 
-MacOS
+MacOS ![Homebrew](https://img.shields.io/badge/Homebrew-FBB040?logo=homebrew&logoColor=fff)
 ```
-brew install --cask distroav/distroav/distroav
+brew tap distroav/tap
+brew trust distroav/tap
+brew install --cask distroav/tap/distroav
 ```
 
 
