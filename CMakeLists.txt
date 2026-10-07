@@ -27,6 +27,30 @@ endif()
 if(ENABLE_QT)
   find_package(Qt6 COMPONENTS Widgets Core Network)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)
+  if(APPLE)
+    foreach(
+      _qt_target
+      IN
+      ITEMS Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network WrapOpenGL::WrapOpenGL OpenGL::GL OpenGL::GLU
+    )
+      if(TARGET ${_qt_target})
+        foreach(_qt_prop IN ITEMS INTERFACE_LINK_LIBRARIES INTERFACE_LINK_OPTIONS)
+          get_target_property(_qt_prop_value ${_qt_target} ${_qt_prop})
+          if(_qt_prop_value)
+            set(_qt_prop_cleaned "${_qt_prop_value}")
+            string(REPLACE "-framework;AGL;" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+            string(REPLACE ";-framework;AGL" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+            string(REPLACE "-framework;AGL" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+            string(REPLACE "-framework AGL" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+            string(REPLACE "/System/Library/Frameworks/AGL.framework" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+            if(NOT _qt_prop_cleaned STREQUAL _qt_prop_value)
+              set_property(TARGET ${_qt_target} PROPERTY ${_qt_prop} "${_qt_prop_cleaned}")
+            endif()
+          endif()
+        endforeach()
+      endif()
+    endforeach()
+  endif()
   target_compile_options(
     ${CMAKE_PROJECT_NAME}
     PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-quoted-include-in-framework-header -Wno-comma>
@@ -47,14 +71,19 @@ target_sources(
     src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
     src/obs-support/remote-text.hpp
+    src/sync-debug.cpp
+    src/sync-debug.h
     src/config.cpp
     src/config.h
+    src/config-notifier.cpp
+    src/config-notifier.h
     src/main-output.cpp
     src/main-output.h
     src/ndi-filter.cpp
     src/ndi-finder.h
     src/ndi-finder.cpp
     src/ndi-output.cpp
+    src/test-output.cpp
     src/ndi-source.cpp
     src/plugin-main.cpp
     src/plugin-main.h
@@ -73,5 +102,6 @@ configure_file(
   cmake/windows/resources/installer-Windows.iss.in
   "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
 )
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/distroav.ico" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

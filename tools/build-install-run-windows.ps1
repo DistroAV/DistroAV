@@ -1,0 +1,1 @@
+.\tools\build-helper-windows.ps1 && .\tools\install-windows.ps1 && .\tools\run-obs-debug-windows.cmd

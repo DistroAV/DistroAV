@@ -1,11 +1,14 @@
 name: Check Code Formatting 🛠️
 on:
   workflow_call:
+permissions:
+  contents: read
 jobs:
   clang-format:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
+    timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: clang-format check 🐉
@@ -15,9 +18,10 @@ jobs:
           failCondition: error
 
   gersemi:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
+    timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: gersemi Check 🎛️

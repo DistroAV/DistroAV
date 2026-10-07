@@ -64,6 +64,17 @@ public:
 	static int UpdateLocalPort;
 	static bool UpdateLastCheckIgnore;
 	/**
+	 * Force DistroAV requirement checks to fail (for automated testing)
+	 */
+	static bool CheckNdiLibForceFail;
+	static bool CheckObsForceFail;
+	/**
+	 * Skip/Bypass DistroAV requirement checks (for advanced users only - not recommended)
+	 * 
+	 */
+	static bool CheckNdiLibBypass;
+	static bool CheckObsBypass;
+	/**
 	 * -1 = `--DistroAV-detect-obsndi-force=off` : force OBS-NDI not detected
 	 *  0 = detect normally
 	 *  1 = `--DistroAV-detect-obsndi-force=on` : force OBS-NDI detected

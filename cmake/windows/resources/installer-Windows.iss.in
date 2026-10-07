@@ -23,6 +23,8 @@ DefaultDirName={commonappdata}\obs-studio\plugins\{#MyProjectName}
 UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Windows-Installer
+SetupIconFile=distroav.ico
+UninstallDisplayIcon={app}\distroav.ico
 Compression=lzma
 SolidCompression=yes
 DirExistsWarning=no
@@ -37,10 +39,13 @@ Name: AddFirewallEntry; Description: "Allow OBS/DistroAV in Windows Firewall (re
 
 [Files]
 Source: "..\release\Package\{#MyProjectName}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "distroav.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Do not use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
+Name: "{group}\{#MyAppName} (Launch OBS)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; AppUserModelID: "{#MyProjectName}.LaunchOBS"; Comment: "Launch OBS Studio with {#MyAppName}"
+Name: "{group}\Debug {#MyAppName} (OBS verbose log)"; Filename: "{code:GetOBSDirName}\bin\64bit\obs64.exe"; Parameters: "--distroav-debug"; WorkingDir: "{code:GetOBSDirName}\bin\64bit"; IconFilename: "{app}\distroav.ico"; AppUserModelID: "{#MyProjectName}.DebugOBS"; Comment: "Launch OBS Studio with debug logging for {#MyAppName} debugging"
 
 [Code]
 // Remove old OBS-NDI conflicting plugin - by Trouffman for DistroAV https://github.com/DistroAV/DistroAV/ & https://github.com/DistroAV/DistroAV/wiki/OBS%E2%80%90NDI-Is-Now-DistroAV
@@ -101,19 +106,42 @@ begin
       Result := RemoveQuotes(UninstallerPathRegistry);
 end;
 
+// Returns True if DisplayName contains a known DistroAV or OBS-NDI name fragment (case-insensitive)
+function IsDisplayNameDistroAvOrObsNdi(DisplayName: String): Boolean;
+var
+  LowerDisplayName: String;
+begin
+  LowerDisplayName := LowerCase(DisplayName);
+  Result := (Pos('distroav', LowerDisplayName) > 0) or (Pos('obs-ndi', LowerDisplayName) > 0);
+end;
+
 // DistroAV 6.1.0 used an empty AppID installer and needs to be removed
 function Get610AppUninstallerPath(Param: String): String;
 var
   UninstallerPathRegistry: String;
+  DisplayNameRegistry: String;
 // At least one Param string is required to use this function with {code:}, can be empty.
 begin
   Result := '';
-// Check primary registry location DistroAV version 6.0.0 and up
+// Check primary registry location DistroAV version 6.1.0
+// Only uninstall if DisplayName contains 'DistroAV' or 'obs-ndi' to avoid uninstalling other apps that also use {}_is1
   if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'UninstallString', UninstallerPathRegistry) ) then
-      Result := RemoveQuotes(UninstallerPathRegistry)
+    begin
+      if ( RegQueryStringValue(HKLM, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
+        begin
+          if IsDisplayNameDistroAvOrObsNdi(DisplayNameRegistry) then
+            Result := RemoveQuotes(UninstallerPathRegistry);
+        end;
+    end
 // Check alternative Registry location
   else if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'UninstallString', UninstallerPathRegistry) ) then
-      Result := RemoveQuotes(UninstallerPathRegistry);
+    begin
+      if ( RegQueryStringValue(HKCU, UninstallRegistryKey610, 'DisplayName', DisplayNameRegistry) ) then
+        begin
+          if IsDisplayNameDistroAvOrObsNdi(DisplayNameRegistry) then
+            Result := RemoveQuotes(UninstallerPathRegistry);
+        end;
+    end;
 end;
 
 // Firewall Rules

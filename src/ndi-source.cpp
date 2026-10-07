@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "sync-debug.h"
 #include "ndi-finder.h"
 
 #include <util/platform.h>
@@ -24,6 +25,8 @@
 #include <QDesktopServices>
 #include <QUrl>
 
+#include <chrono>
+#include <string>
 #include <thread>
 
 #define PROP_SOURCE "ndi_source_name"
@@ -339,6 +342,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_YUV_COLORSPACE, PROP_YUV_SPACE_BT709);
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
+	obs_data_set_default_string(settings, "web_control_url", "");
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -381,6 +385,37 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v2_t *ndi_video_frame,
 				      obs_source *obs_source, obs_source_frame *obs_video_frame);
 
+void update_web_control_url(ndi_source_t *s, NDIlib_recv_instance_t ndi_receiver)
+{
+	const char *p_url = ndiLib->recv_get_web_control(ndi_receiver);
+	std::string new_url = p_url ? p_url : "";
+	if (p_url) {
+		ndiLib->recv_free_string(ndi_receiver, p_url);
+	}
+
+	// This is polled, so only update (and log) when the URL changed
+	obs_data_t *settings = obs_source_get_settings(s->obs_source);
+	bool changed = new_url != obs_data_get_string(settings, "web_control_url");
+	obs_data_release(settings);
+	if (!changed) {
+		return;
+	}
+
+	auto obs_source_name = obs_source_get_name(s->obs_source);
+	if (!new_url.empty()) {
+		obs_log(LOG_INFO, "'%s' - This NDI source has a Web Control URL: %s", obs_source_name, new_url.c_str());
+	} else {
+		// This device does not currently support a configuration user interface.
+		obs_log(LOG_INFO, "'%s' - This NDI source does not have Web Control URL.", obs_source_name);
+	}
+
+	// obs_source_update() applies the change and emits the source's "update" signal so other plugins can react
+	obs_data_t *update = obs_data_create();
+	obs_data_set_string(update, "web_control_url", new_url.c_str());
+	obs_source_update(s->obs_source, update);
+	obs_data_release(update);
+}
+
 void *ndi_source_thread(void *data)
 {
 	auto s = (ndi_source_t *)data;
@@ -407,6 +442,9 @@ void *ndi_source_thread(void *data)
 
 	int64_t timestamp_audio = 0;
 	int64_t timestamp_video = 0;
+
+	const auto web_control_poll_interval = std::chrono::seconds(1);
+	auto web_control_last_poll = std::chrono::steady_clock::time_point{};
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -505,6 +543,8 @@ void *ndi_source_thread(void *data)
 				obs_source_name);
 
 			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
+			// Poll the new receiver's Web Control URL as soon as it connects
+			web_control_last_poll = {};
 
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
@@ -599,6 +639,15 @@ void *ndi_source_thread(void *data)
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
+		}
+
+		//
+		// Web Control URL: polled because the sender can publish or change it at any time after connecting
+		//
+		auto now = std::chrono::steady_clock::now();
+		if (now - web_control_last_poll >= web_control_poll_interval) {
+			web_control_last_poll = now;
+			update_web_control_url(s, ndi_receiver);
 		}
 
 		//
@@ -784,7 +833,9 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config, NDIlib_audio_
 		obs_audio_frame->data[i] =
 			(uint8_t *)ndi_audio_frame->p_data + (i * ndi_audio_frame->channel_stride_in_bytes);
 	}
-
+	SYNC_DEBUG_LOG_AUDIO_TIME("OBS <- ndi_source_thread", obs_source_get_name(obs_source),
+				  obs_audio_frame->timestamp, (float *)obs_audio_frame->data[0],
+				  obs_audio_frame->frames, obs_audio_frame->samples_per_sec);
 	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
@@ -846,7 +897,8 @@ void ndi_source_thread_process_video2(ndi_source_t *source, NDIlib_video_frame_v
 	obs_video_frame->height = ndi_video_frame->yres;
 	obs_video_frame->linesize[0] = ndi_video_frame->line_stride_in_bytes;
 	obs_video_frame->data[0] = ndi_video_frame->p_data;
-
+	SYNC_DEBUG_LOG_VIDEO_TIME("OBS <- ndi_source_thread", obs_source_get_name(obs_source),
+				  (int64_t)obs_video_frame->timestamp, obs_video_frame->data[0]);
 	obs_source_output_video(obs_source, obs_video_frame);
 }
 
@@ -884,6 +936,16 @@ int safe_strcmp(const char *str1, const char *str2)
 	return strcmp(str1, str2);
 }
 
+bool tally_on_preview(obs_source_t *source)
+{
+	return (Config::Current())->TallyPreviewEnabled && obs_source_showing(source) && !obs_source_active(source);
+}
+
+bool tally_on_program(obs_source_t *source)
+{
+	return (Config::Current())->TallyProgramEnabled && obs_source_active(source);
+}
+
 void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = (ndi_source_t *)data;
@@ -899,10 +961,15 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	// TODO : Should this ba a if statement and simplify each following check ?
 
 	auto new_ndi_source_name = obs_data_get_string(settings, PROP_SOURCE);
-	reset_ndi_receiver |= safe_strcmp(s->config.ndi_source_name, new_ndi_source_name) != 0;
+	bool ndi_source_name_changed = safe_strcmp(s->config.ndi_source_name, new_ndi_source_name) != 0;
+	reset_ndi_receiver |= ndi_source_name_changed;
 	obs_log(LOG_DEBUG,
 		"'%s' ndi_source_update: Check for 'NDI Source Name' changes: new_ndi_source_name='%s' vs config.ndi_source_name='%s'",
 		obs_source_name, new_ndi_source_name, s->config.ndi_source_name);
+	if (ndi_source_name_changed) {
+		// The new receiver reports its own Web Control URL on its first status change
+		obs_data_set_string(settings, "web_control_url", "");
+	}
 
 	if (s->config.ndi_source_name != nullptr) {
 		bfree(s->config.ndi_source_name);
@@ -1002,10 +1069,10 @@ void ndi_source_update(void *data, obs_data_t *settings)
 
 	} else {
 		// Fallback option. If the behavior is invalid, force it to "Keep Active" as it most likely came from the 4.14.x version.
-		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%s' forced to '%d'",
+		obs_log(LOG_DEBUG, "'%s' ndi_source_update: Invalid or unknown behavior detected :'%d' forced to '%d'",
 			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_log(LOG_WARNING,
-			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%s' forced to '%d'",
+			"WARN-414 - Invalid or unknown behavior detected in config file for source '%s': '%d' forced to '%d'",
 			obs_source_name, behavior, PROP_BEHAVIOR_KEEP_ACTIVE);
 		obs_data_set_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_KEEP_ACTIVE);
 		s->config.behavior = PROP_BEHAVIOR_KEEP_ACTIVE;
@@ -1064,9 +1131,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 
 	// Update tally status
-	auto config = Config::Current();
-	s->config.tally.on_preview = config->TallyPreviewEnabled && obs_source_showing(obs_source);
-	s->config.tally.on_program = config->TallyProgramEnabled && obs_source_active(obs_source);
+	s->config.tally.on_preview = tally_on_preview(obs_source);
+	s->config.tally.on_program = tally_on_program(obs_source);
 
 	if (strlen(s->config.ndi_source_name) == 0) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
@@ -1111,7 +1177,7 @@ void ndi_source_shown(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_shown(…)", obs_source_name);
-	s->config.tally.on_preview = (Config::Current())->TallyPreviewEnabled;
+	s->config.tally.on_preview = tally_on_preview(s->obs_source);
 	if (!s->running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_shown: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
@@ -1138,7 +1204,8 @@ void ndi_source_activated(void *data)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_activated(…)", obs_source_name);
-	s->config.tally.on_program = (Config::Current())->TallyProgramEnabled;
+	s->config.tally.on_preview = tally_on_preview(s->obs_source);
+	s->config.tally.on_program = tally_on_program(s->obs_source);
 	if (!s->running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_activated: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
@@ -1149,6 +1216,7 @@ void ndi_source_deactivated(void *data)
 {
 	auto s = (ndi_source_t *)data;
 	obs_log(LOG_DEBUG, "'%s' ndi_source_deactivated(…)", obs_source_get_name(s->obs_source));
+	s->config.tally.on_preview = tally_on_preview(s->obs_source);
 	s->config.tally.on_program = false;
 }
 
@@ -1185,7 +1253,6 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
-
 	ndi_source_update(s, settings);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
@@ -1201,7 +1268,6 @@ void ndi_source_destroy(void *data)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_disconnect(sh, "rename", on_ndi_source_renamed, s);
-
 	ndi_source_thread_stop(s);
 
 	if (s->config.ndi_receiver_name) {
@@ -1217,18 +1283,6 @@ void ndi_source_destroy(void *data)
 	bfree(s);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
-}
-
-uint32_t ndi_source_get_width(void *data)
-{
-	auto s = (ndi_source_t *)data;
-	return s->width;
-}
-
-uint32_t ndi_source_get_height(void *data)
-{
-	auto s = (ndi_source_t *)data;
-	return s->height;
 }
 
 obs_source_info create_ndi_source_info()
@@ -1251,9 +1305,6 @@ obs_source_info create_ndi_source_info()
 	ndi_source_info.hide = ndi_source_hidden;
 	ndi_source_info.deactivate = ndi_source_deactivated;
 	ndi_source_info.destroy = ndi_source_destroy;
-
-	ndi_source_info.get_width = ndi_source_get_width;
-	ndi_source_info.get_height = ndi_source_get_height;
 
 	return ndi_source_info;
 }

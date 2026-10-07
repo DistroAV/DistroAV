@@ -30,6 +30,11 @@ void NDIFinder::refreshNDISourceList(Callback callback)
 
 void NDIFinder::retrieveNDISourceList()
 {
+	// Safety check to avoid crash if the Lib is not loaded.
+	if (!ndiLib) {
+		return;
+	}
+
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
 	find_desc.p_groups = NULL;
