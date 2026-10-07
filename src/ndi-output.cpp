@@ -461,7 +461,7 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
-    audio_frame.timestamp = frame->timestamp / 100;
+	audio_frame.timestamp = frame->timestamp / 100;
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
