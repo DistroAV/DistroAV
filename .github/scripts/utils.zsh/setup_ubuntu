@@ -64,4 +64,42 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
 
   sudo apt-get install ${apt_args} ${_qt_packages}
   log_group
+
+  log_group 'Building obs-studio from buildspec.json...'
+  sudo apt-get install ${apt_args} \
+    cmake ninja-build jq pkg-config extra-cmake-modules uthash-dev \
+    libavcodec-dev libavformat-dev libswscale-dev libswresample-dev \
+    libx11-dev libx11-xcb-dev libxcb1-dev libxcb-xinput-dev libgl1-mesa-dev \
+    libwayland-dev libxkbcommon-dev libdrm-dev libpulse-dev \
+    libjansson-dev uuid-dev zlib1g-dev
+
+  local deps_dir=${project_root}/.deps
+  local obs_prefix=${deps_dir}/obs-install
+  local obs_version obs_base
+  obs_version=$(jq -r '.dependencies["obs-studio"].version' ${project_root}/buildspec.json)
+  obs_base=$(jq -r '.dependencies["obs-studio"].baseUrl' ${project_root}/buildspec.json)
+  local obs_src=${deps_dir}/obs-studio-${obs_version}
+
+  mkdir -p ${deps_dir}
+
+  if [[ ! -d ${obs_src} ]] {
+    curl -fsSL ${obs_base}/${obs_version}.tar.gz -o ${deps_dir}/obs-${obs_version}.tar.gz
+    tar -xf ${deps_dir}/obs-${obs_version}.tar.gz -C ${deps_dir}
+  }
+
+  if [[ ! -f ${obs_prefix}/lib/cmake/libobs/libobsConfig.cmake ]] {
+    cmake -S ${obs_src} -B ${deps_dir}/obs-build -G Ninja \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_INSTALL_PREFIX=${obs_prefix} \
+      -DCMAKE_PREFIX_PATH=${obs_prefix} \
+      -DOBS_VERSION_OVERRIDE=${obs_version} \
+      -DENABLE_FRONTEND=OFF -DENABLE_UI=OFF -DENABLE_FRONTEND_API=ON \
+      -DENABLE_PLUGINS=OFF -DENABLE_SCRIPTING=OFF -DENABLE_BROWSER=OFF \
+      -DENABLE_WEBSOCKET=OFF -DENABLE_NEW_MPEGTS_OUTPUT=OFF -DENABLE_AJA=OFF \
+      -DENABLE_WEBRTC=OFF -DENABLE_VST=OFF \
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Wno-dev
+    cmake --build ${deps_dir}/obs-build
+    cmake --install ${deps_dir}/obs-build
+  }
+  log_group
 }
