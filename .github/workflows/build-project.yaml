@@ -182,12 +182,20 @@ jobs:
           key: ${{ runner.os }}-ccache-${{ needs.check-event.outputs.config }}
 
   ubuntu-build:
-    name: Build for Ubuntu 🐧
+    name: Build for ${{ matrix.platform }} 🐧
     strategy:
       matrix:
-        os: [ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+        include:
+          - platform: ubuntu-24.04
+            image: ubuntu:24.04
+          - platform: ubuntu-26.04
+            image: ubuntu:26.04
+          - platform: debian-13
+            image: debian:13
+          - platform: fedora-44
+            image: fedora:44
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     needs: check-event
     defaults:
       run:
@@ -214,47 +222,64 @@ jobs:
         id: ccache-cache
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ${{ runner.os }}-${{ matrix.os }}-ccache-x86_64-${{ needs.check-event.outputs.config }}
+          key: ${{ matrix.platform }}-ccache-x86_64-${{ needs.check-event.outputs.config }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.os }}-ccache-x86_64-
+            ${{ matrix.platform }}-ccache-x86_64-
 
-      - name: Build Plugin 🧱
-        uses: ./.github/actions/build-plugin
-        with:
-          target: x86_64
-          config: ${{ needs.check-event.outputs.config }}
-
-      - name: Package Plugin 📀
-        uses: ./.github/actions/package-plugin
-        with:
-          target: x86_64
-          config: ${{ needs.check-event.outputs.config }}
-          package: ${{ fromJSON(needs.check-event.outputs.package) }}
+      - name: Build and Package Plugin 🧱📦
+        env:
+          BUILD_CONFIG: ${{ needs.check-event.outputs.config }}
+          DISTRO_IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/work" \
+            --workdir /work \
+            --env CI=true \
+            --env CCACHE_DIR=/work/.ccache \
+            --env BUILD_CONFIG \
+            "${DISTRO_IMAGE}" \
+            bash -euc '
+              source /etc/os-release
+              if [[ "${ID}" == fedora ]]; then
+                dnf install -y zsh ccache
+              else
+                apt-get update
+                apt-get install -y zsh ccache
+              fi
+              git config --global --add safe.directory /work
+              zsh .github/scripts/build-ubuntu --target ubuntu-x86_64 --config "${BUILD_CONFIG}"
+              zsh .github/scripts/package-ubuntu --target ubuntu-x86_64 --config "${BUILD_CONFIG}" --package --skip-deps
+              if [[ "${ID}" == fedora ]]; then
+                dnf install -y ./release/*.rpm
+              else
+                apt-get install -y ./release/*.deb
+              fi
+            '
 
       - name: Upload Source Tarball 🗜️
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-sources-${{ needs.check-event.outputs.commitHash }}
+          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.platform }}-sources-${{ needs.check-event.outputs.commitHash }}
           path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-source.*
 
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}
+          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.platform }}-x86_64-${{ needs.check-event.outputs.commitHash }}
           path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*.*
 
       - name: Upload debug symbol artifacts 🪲
         uses: actions/upload-artifact@v7
-        if: ${{ fromJSON(needs.check-event.outputs.package) }}
+        if: ${{ matrix.platform != 'fedora-44' }}
         with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}-dbgsym
+          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.platform }}-x86_64-${{ needs.check-event.outputs.commitHash }}-dbgsym
           path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*-dbgsym.ddeb
 
       - uses: actions/cache/save@v5
         if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ${{ runner.os }}-${{ matrix.os }}-ccache-x86_64-${{ needs.check-event.outputs.config }}
+          key: ${{ matrix.platform }}-ccache-x86_64-${{ needs.check-event.outputs.config }}
 
   windows-build:
     name: Build for Windows 🪟

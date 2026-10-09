@@ -35,12 +35,12 @@ TRAPZERR() {
 
 build() {
   if (( ! ${+SCRIPT_HOME} )) typeset -g SCRIPT_HOME=${ZSH_ARGZERO:A:h}
-  local host_os='ubuntu'
+  local host_os='linux'
   local project_root=${SCRIPT_HOME:A:h:h}
   local buildspec_file=${project_root}/buildspec.json
 
   fpath=("${SCRIPT_HOME}/utils.zsh" ${fpath})
-  autoload -Uz log_group log_info log_error log_output set_loglevel check_ubuntu setup_ccache
+  autoload -Uz log_group log_info log_error log_output set_loglevel check_linux setup_ccache
 
   if [[ ! -r ${buildspec_file} ]] {
     log_error \
@@ -161,13 +161,9 @@ ${_usage_host:-}"
   set -- ${(@)args}
   set_loglevel ${verbosity}
 
-  if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
-    check_${host_os}
-  }
+  check_${host_os}
 
-  if [[ ${host_os} == ubuntu ]] {
-    autoload -Uz setup_ubuntu && setup_ubuntu
-  }
+  autoload -Uz setup_linux && setup_linux
 
   local product_name
   local product_version
@@ -198,7 +194,18 @@ ${_usage_host:-}"
           -DQT_VERSION=${QT_VERSION:-6}
           -DCMAKE_BUILD_TYPE=${config}
           -DCMAKE_INSTALL_PREFIX=/usr
+          -DDISTROAV_PACKAGE_FORMAT=${DISTROAV_PACKAGE_FORMAT:-DEB}
+          -DDISTROAV_OBS_RUNTIME_VERSION=${DISTROAV_OBS_RUNTIME_VERSION}
+          -DDISTROAV_CUSTOM_LINUX=${DISTROAV_CUSTOM_LINUX}
+          -DDISTROAV_CUSTOM_OS_SHORTNAME=${DISTROAV_CUSTOM_OS_SHORTNAME}
         )
+        if (( DISTROAV_CUSTOM_LINUX )) {
+          cmake_args+=(
+            -DCMAKE_PREFIX_PATH=
+            -Dlibobs_DIR:PATH=
+            -Dobs-frontend-api_DIR:PATH=
+          )
+        }
 
         local cmake_version
         read -r _ _ cmake_version <<< "$(cmake --version)"
