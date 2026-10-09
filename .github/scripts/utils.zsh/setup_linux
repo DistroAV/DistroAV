@@ -28,10 +28,9 @@ if [[ ${ID} == fedora ]] {
 	${sudo_cmd[@]} dnf install -y \
 		"https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${VERSION_ID}.noarch.rpm"
 	${sudo_cmd[@]} dnf install -y \
-		cmake ninja-build jq pkgconf-pkg-config git curl zsh ccache rpm-build libcurl-devel \
+		cmake ninja-build gcc-c++ jq pkgconf-pkg-config git curl zsh ccache file rpm-build libcurl-devel \
 		extra-cmake-modules uthash-devel ffmpeg-free-devel \
-		libX11-devel libX11-xcb-devel libxcb-devel libxcb-util-devel \
-		libxcb-xinerama-devel libxcb-randr-devel libxcb-shm-devel libxcb-devel \
+		libX11-devel libxcb-devel \
 		mesa-libGL-devel libdrm-devel wayland-devel libxkbcommon-devel \
 		pulseaudio-libs-devel jansson-devel libuuid-devel zlib-devel simde-devel \
 		qt6-qtbase-devel qt6-qtsvg-devel obs-studio
@@ -45,7 +44,7 @@ if [[ ${ID} == fedora ]] {
 		${sudo_cmd[@]} apt-get update
 	}
 	${sudo_cmd[@]} apt-get install -y --no-install-recommends \
-		build-essential cmake ninja-build jq pkg-config git curl zsh ccache libcurl4-openssl-dev libsimde-dev \
+		build-essential cmake ninja-build jq pkg-config git curl zsh ccache file libcurl4-openssl-dev libsimde-dev \
 		extra-cmake-modules uthash-dev libavcodec-dev libavformat-dev \
 		libswscale-dev libswresample-dev libx11-dev libx11-xcb-dev \
 		libxcb1-dev libxcb-xinput-dev libgl1-mesa-dev libwayland-dev \
@@ -84,7 +83,7 @@ if [[ ! -d ${obs_src} ]] {
 		log_error "OBS ${obs_version} source archive checksum mismatch"
 		return 2
 	}
-	tar -xf ${obs_archive} -C ${deps_dir}
+	tar --no-same-owner -xf ${obs_archive} -C ${deps_dir}
 }
 
 if [[ -r ${obs_version_file} ]] installed_obs_version=$(<${obs_version_file})

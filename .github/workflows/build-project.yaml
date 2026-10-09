@@ -241,18 +241,18 @@ jobs:
             bash -euc '
               source /etc/os-release
               if [[ "${ID}" == fedora ]]; then
-                dnf install -y zsh ccache
+                dnf install -y git zsh ccache
               else
                 apt-get update
-                apt-get install -y zsh ccache
+                apt-get install -y git zsh ccache
               fi
               git config --global --add safe.directory /work
               zsh .github/scripts/build-ubuntu --target ubuntu-x86_64 --config "${BUILD_CONFIG}"
-              zsh .github/scripts/package-ubuntu --target ubuntu-x86_64 --config "${BUILD_CONFIG}" --package --skip-deps
-              if [[ "${ID}" == fedora ]]; then
-                dnf install -y ./release/*.rpm
-              else
+              if [[ "${ID}" == ubuntu ]]; then
+                zsh .github/scripts/package-ubuntu --target ubuntu-x86_64 --config "${BUILD_CONFIG}" --package --skip-deps
                 apt-get install -y ./release/*.deb
+              else
+                zsh .github/scripts/package-ubuntu --target ubuntu-x86_64 --config "${BUILD_CONFIG}" --skip-deps
               fi
             '
 
@@ -270,7 +270,7 @@ jobs:
 
       - name: Upload debug symbol artifacts 🪲
         uses: actions/upload-artifact@v7
-        if: ${{ matrix.platform != 'fedora-44' }}
+        if: ${{ startsWith(matrix.platform, 'ubuntu-') }}
         with:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.platform }}-x86_64-${{ needs.check-event.outputs.commitHash }}-dbgsym
           path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*-dbgsym.ddeb
