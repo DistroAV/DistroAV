@@ -72,6 +72,10 @@ function Package {
     # Windows Portable Package
     Log-Group "Archiving Portable ${ProductName}..."
     tree /F "${ProjectRoot}/release/${Configuration}/${ProductName}"
+    $PortablePluginPath = "${ProjectRoot}/release-portable/${Configuration}/plugins/${ProductName}"
+    New-Item -ItemType Directory -Path $PortablePluginPath -Force | Out-Null
+    Copy-Item -Path "${ProjectRoot}/release/${Configuration}/${ProductName}/${ProductName}.dll" -Destination $PortablePluginPath
+    Copy-Item -Path "${ProjectRoot}/release/${Configuration}/${ProductName}/data" -Destination $PortablePluginPath -Recurse
     Copy-Item -Path "${ProjectRoot}/release/${Configuration}/${ProductName}/data/locale" -Destination "${ProjectRoot}/release-portable/${Configuration}/data/obs-plugins/${ProductName}/locale" -Recurse
     Copy-Item -Path "${ProjectRoot}/release/${Configuration}/${ProductName}/bin" -Destination "${ProjectRoot}/release-portable/${Configuration}/obs-plugins" -Recurse
     tree /F "${ProjectRoot}/release-portable/${Configuration}"
