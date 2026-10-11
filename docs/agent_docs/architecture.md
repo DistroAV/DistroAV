@@ -26,6 +26,15 @@ Each corresponds to one `obs_*_info` struct registered in `plugin-main.cpp`:
 
 - [`ndi-finder.cpp`/`.h`](../../src/ndi-finder.cpp) — locates and dynamically loads
   the installed NDI runtime library across OS.
+- [`ndi-ptz.cpp`/`.h`](../../src/ndi-ptz.cpp) — the NDI source's PTZ: a command
+  slot for the receiver, and the obs-ptz PTZ Device API (version 0.10) registered
+  on the source's own `proc_handler`/`signal_handler`, so PTZ controllers can drive
+  an NDI camera. The source says `ptz_device_add` when its PTZ is on and
+  `ptz_device_remove` when it is switched off or the source is removed. A PTZ Device
+  on the same source (a filter that has said `ptz_device_add`) has priority: the
+  source turns its PTZ off, sending no NDI PTZ and leaving the controller's list of
+  devices. See
+  [the design](../superpowers/specs/2026-10-11-ndi-ptz-device-design.md).
 - [`config.cpp`/`.h`](../../src/config.cpp) — reads/writes plugin settings to OBS's
   `global.ini` under the `[NDIPlugin]` section (see the doc comment at the top of
   `config.h` for exact file paths per OS).
@@ -55,6 +64,17 @@ block on NDI I/O. Commit history (search log for "Lock keys", "mutex", "queued
 on the UI thread") shows this has been a source of real bugs — treat any new
 cross-thread state as something to explicitly synchronize, not an oversight to
 fix later.
+
+The NDI receiver belongs to the source thread. PTZ commands from any other
+thread (a controller's `ptz_move`, the sliders) are posted to the slot in
+`ndi-ptz.cpp`, and only the source thread drains it and calls `recv_ptz_*`. The
+other procs, and the signals, are thread safe as the API requires: any thread may
+call a proc, and a signal is sent from whichever thread has the news (the source
+thread for a change of connection). The presets and the sending of signals are
+under one lock, so that signals go one at a time in the order of the changes.
+Whether a PTZ Device filter has priority is an atomic the source thread reads;
+the `ptz_device_add` and `ptz_device_remove` signals set it, and what this device
+says in answer is queued until they are let go.
 
 ## Performance-sensitive paths
 
