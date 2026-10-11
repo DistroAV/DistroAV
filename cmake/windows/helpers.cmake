@@ -32,9 +32,9 @@ function(set_target_properties_plugin target)
     OPTIONAL
   )
 
-# set target for the legacy OBS (pre-33) plugin location
+  # set target for the legacy OBS (pre-33) plugin location
   install(TARGETS ${target} RUNTIME DESTINATION "${target}/bin/64bit" LIBRARY DESTINATION "${target}/bin/64bit")
- 
+
   install(
     FILES "$<TARGET_PDB_FILE:${target}>"
     CONFIGURATIONS RelWithDebInfo Debug Release
