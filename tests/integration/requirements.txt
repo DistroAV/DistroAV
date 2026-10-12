@@ -1,0 +1,4 @@
+# Copyright (C) 2026 Grant Likely <grant.likely@secretlab.ca>
+pytest>=7
+websockets>=15
+cyndilib==0.1.3

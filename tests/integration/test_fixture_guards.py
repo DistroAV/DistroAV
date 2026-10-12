@@ -1,0 +1,81 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2026 Grant Likely <grant.likely@secretlab.ca>
+"""Covers the fixture's own guards, with no OBS: what it takes to be told a
+run is not testing what it says, or is not the OBS it believes it quit.
+"""
+
+import subprocess
+import time
+
+import pytest
+from conftest import ObsProcess, World, loaded_plugin_problem
+
+
+def fake_obs_exiting_with(tmp_path, code, **kwargs):
+    """An ObsProcess whose process quits with `code` when told to; returns
+    once it has said that it will"""
+    obs = make_obs(tmp_path, **kwargs)
+    ready = tmp_path / "ready"
+    obs.proc = subprocess.Popen(
+        ["bash", "-c", f"trap 'exit {code}' TERM; touch {ready}; while :; do sleep 0.1; done"],
+        start_new_session=True)
+    deadline = time.time() + 10
+    while not ready.exists():
+        assert time.time() < deadline, "the fake OBS never started"
+        time.sleep(0.05)
+    return obs
+
+
+def make_obs(tmp_path, **kwargs):
+    return ObsProcess("obs", tmp_path, tmp_path / "obs.log", 1, "distroav-it-x", **kwargs)
+
+
+def test_obs_has_30_seconds_to_start_unless_told_otherwise(monkeypatch):
+    from conftest import obs_start_timeout
+
+    monkeypatch.delenv("DISTROAV_OBS_START_TIMEOUT", raising=False)
+    assert obs_start_timeout() == 30
+    monkeypatch.setenv("DISTROAV_OBS_START_TIMEOUT", "75")
+    assert obs_start_timeout() == 75
+
+
+def test_obs_is_started_next_to_any_other_instance(tmp_path):
+    # Without --multi OBS asks, in a dialog nobody answers, when any other
+    # OBS on the machine is running, the user's own included
+    assert "--multi" in make_obs(tmp_path).command()
+
+
+def test_obs_that_exits_with_a_failure_on_quit_is_not_clean_when_that_is_required(tmp_path):
+    obs = fake_obs_exiting_with(tmp_path, 3, require_clean_exit=True)
+    with pytest.warns(UserWarning, match="status 3"):
+        assert obs.stop(timeout=10) is False
+    assert obs.last_returncode == 3
+
+
+def test_obs_that_exits_with_a_failure_on_quit_is_recorded_and_warned_of_otherwise(tmp_path):
+    obs = fake_obs_exiting_with(tmp_path, 3)
+    with pytest.warns(UserWarning, match="status 3"):
+        assert obs.stop(timeout=10) is True
+    assert obs.last_returncode == 3
+
+
+def test_obs_that_exits_with_success_on_quit_is_clean(tmp_path):
+    assert fake_obs_exiting_with(tmp_path, 0).stop(timeout=10) is True
+
+
+def test_a_world_whose_obs_is_down_says_so_and_cleans_up_quietly(tmp_path):
+    world = World(make_obs(tmp_path), tmp_path, tmp_path)
+    world._scenes.append("left-over")
+    world.cleanup_scenes()
+    with pytest.raises(RuntimeError, match="OBS is not running"):
+        world.ws.call("GetVersion")
+
+
+def test_a_plugin_skipped_for_another_of_its_name_is_reported():
+    log = ("12:00:00.000: Skipping plugin 'distroav.so' at '/home/u/.config/obs-studio/plugins/distroav/bin/"
+           "64bit', already loaded from '/usr/lib/x86_64-linux-gnu/obs-plugins/distroav.so'\n")
+    assert "already loaded from" in loaded_plugin_problem(log)
+
+
+def test_a_log_without_a_skipped_plugin_has_no_problem():
+    assert loaded_plugin_problem("12:00:00.000: [DistroAV] plugin loaded successfully\n") is None
