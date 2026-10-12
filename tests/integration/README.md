@@ -101,6 +101,25 @@ shows it publishes its source alone.
 An audio filter's stream has no picture, so a receiver connects to it with
 `wait_for_video=False`.
 
+## What is covered
+
+| Module | Covers |
+|---|---|
+| `test_smoke.py` | The plugin loads and registers its source and filter kinds; OBS restarts on the same profile. |
+| `test_source_receive.py` | An NDI source shows what a sender sends, at its size, and follows a change of both. |
+| `test_source_audio.py` | A source carries the sender's audio, and is silent when there is none. |
+| `test_source_behavior.py` | Keeping or clearing the last frame when the sender goes (`ndi_behavior_timeout`), and recovering when it returns. |
+| `test_main_output.py` | The Main Output is published, follows the program scene, stops and starts, and OBS quits cleanly with it on. |
+| `test_filter_output.py` | `ndi_filter` publishes its source alone; `ndi_audiofilter` publishes audio; removing the filter ends the stream. |
+| `test_preview_output.py` | In studio mode the Preview Output publishes the preview scene. |
+| `test_settings_persistence.py` | Source settings and the main output's on/off, also when set over obs-websocket, survive a restart. |
+| `test_ndi_helpers.py`, `test_strays.py` | The suite's own helpers and guard, with no OBS. |
+
+Not covered: the `ndi_behavior` setting (what the source does while not
+visible), the dialogs, the update check, and PTZ and tally.
+Nothing here asserts latency or dropped frames: those are timing properties and
+noisy on shared hosts.
+
 ## Quitting
 
 OBS is told to quit with SIGTERM, which it handles as a normal quit, and it has
