@@ -2,3 +2,4 @@
 pytest>=7
 websockets>=12
 cyndilib==0.1.3
+pillow>=10

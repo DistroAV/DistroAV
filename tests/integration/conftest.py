@@ -20,6 +20,7 @@ build_*/rundir/<config>/distroav.plugin of this checkout, and OBS is
 $DISTROAV_OBS_BINARY, or the newest release in /Applications.
 """
 
+import base64
 import os
 import platform
 import shutil
@@ -31,10 +32,12 @@ import tempfile
 import time
 import uuid
 import warnings
+from io import BytesIO
 from pathlib import Path
 
 import pytest
-from obsws import Client, ObsWebSocketError, connect_when_ready
+from obsws import EVENT_INPUT_VOLUME_METERS, Client, ObsWebSocketError, connect_when_ready
+from PIL import Image, ImageStat
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -396,6 +399,7 @@ class World:
         self.config_dir = config_dir
         self.scratch = scratch
         self._scenes = []
+        self._inputs = []
 
     @property
     def ws(self) -> Client:
@@ -434,6 +438,66 @@ class World:
             raise last_exc
         raise AssertionError("condition never became true")
 
+    def new_client(self, event_subscriptions=0) -> Client:
+        """A connection of its own, for what the shared one cannot be used for
+        (events). The caller closes it."""
+        return Client(f"ws://127.0.0.1:{self._obs.ws_port}", password=self._obs.ws_password,
+                      event_subscriptions=event_subscriptions)
+
+    def add_ndi_source(self, scene: str, ndi_name: str, **settings) -> str:
+        """An ndi_source of that NDI name (`HOST (name)`) in `scene`, which is
+        made the program scene, so that the source is active and connects"""
+        name = f"it-source-{uuid.uuid4().hex[:8]}"
+        self.ws.call("CreateInput", {"sceneName": scene, "inputName": name, "inputKind": "ndi_source",
+                                     "inputSettings": {"ndi_source_name": ndi_name, **settings}})
+        self._inputs.append(name)
+        self.ws.call("SetCurrentProgramScene", {"sceneName": scene})
+        return name
+
+    def source_screenshot(self, source: str) -> Image.Image:
+        """What OBS has of the source now, at the source's own size"""
+        data = self.ws.call("GetSourceScreenshot", {"sourceName": source, "imageFormat": "png"})["imageData"]
+        return Image.open(BytesIO(base64.b64decode(data.split(",", 1)[1]))).convert("RGB")
+
+    def source_color(self, source: str):
+        """(r, g, b) averaged over the source's picture"""
+        return tuple(round(v) for v in ImageStat.Stat(self.source_screenshot(source)).mean)
+
+    def wait_for_color(self, source: str, predicate, timeout=15):
+        self.wait_for(lambda: predicate(self.source_color(source)), timeout=timeout, interval=0.25)
+
+    def _meter_peaks(self, source: str, seconds: float):
+        """Each peak (linear, 1.0 full scale) OBS meters on the input over
+        `seconds`"""
+        client = self.new_client(EVENT_INPUT_VOLUME_METERS)
+        try:
+            deadline = time.time() + seconds
+            while time.time() < deadline:
+                try:
+                    data = client.wait_event("InputVolumeMeters", timeout=max(deadline - time.time(), 0.01))
+                except TimeoutError:
+                    return
+                for item in data.get("inputs", []):
+                    if item.get("inputName") == source:
+                        yield max((ch[1] for ch in item.get("inputLevelsMul", [])), default=0.0)
+        finally:
+            client.close()
+
+    def audio_peak(self, source: str, seconds: float = 2) -> float:
+        """The loudest peak OBS metered on the input in `seconds`. No reading
+        at all is an error, not silence: a meter that never reports would make
+        any test of quiet pass."""
+        peaks = list(self._meter_peaks(source, seconds))
+        assert peaks, f"OBS metered no audio level for {source} in {seconds}s"
+        return max(peaks)
+
+    def wait_for_audio(self, source: str, timeout=15, threshold=0.01) -> float:
+        """The first peak above `threshold` that OBS meters on the input"""
+        for peak in self._meter_peaks(source, timeout):
+            if peak > threshold:
+                return peak
+        raise AssertionError(f"no audio above {threshold} on {source} within {timeout}s")
+
     def create_scene(self) -> str:
         name = f"it-scene-{uuid.uuid4().hex[:8]}"
         self.ws.call("CreateScene", {"sceneName": name})
@@ -442,8 +506,15 @@ class World:
 
     def cleanup_scenes(self):
         if self._obs.ws is None:
+            self._inputs.clear()
             self._scenes.clear()
             return
+        for name in self._inputs:
+            try:
+                self.ws.call("RemoveInput", {"inputName": name})
+            except ObsWebSocketError:
+                pass
+        self._inputs.clear()
         for name in self._scenes:
             try:
                 self.ws.call("RemoveScene", {"sceneName": name})

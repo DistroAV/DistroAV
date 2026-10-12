@@ -24,7 +24,11 @@ OP_HELLO = 0
 OP_IDENTIFY = 1
 OP_IDENTIFIED = 2
 OP_REQUEST = 6
+OP_EVENT = 5
 OP_REQUEST_RESPONSE = 7
+
+# obs-websocket's EventSubscription bits that are not on by default
+EVENT_INPUT_VOLUME_METERS = 1 << 16
 
 
 class ObsWebSocketError(RuntimeError):
@@ -34,7 +38,7 @@ class ObsWebSocketError(RuntimeError):
 
 
 class Client:
-    def __init__(self, url, password=None, timeout=10):
+    def __init__(self, url, password=None, timeout=10, event_subscriptions=0):
         self._ws = connect(url, open_timeout=timeout, legacy=True)
         self._ids = itertools.count(1)
 
@@ -42,7 +46,7 @@ class Client:
         if hello.get("op") != OP_HELLO:
             raise ObsWebSocketError(f"expected Hello, got {hello}")
 
-        identify = {"rpcVersion": hello["d"]["rpcVersion"], "eventSubscriptions": 0}
+        identify = {"rpcVersion": hello["d"]["rpcVersion"], "eventSubscriptions": event_subscriptions}
         auth = hello["d"].get("authentication")
         if auth and password is not None:
             secret = base64.b64encode(hashlib.sha256((password + auth["salt"]).encode()).digest())
@@ -73,11 +77,30 @@ class Client:
                 raise ObsWebSocketError(f"{request_type} failed: {status}", status=status)
             return d.get("responseData") or {}
 
+    def wait_event(self, event_type, predicate=None, timeout=10):
+        """The data of the next `event_type` event for which predicate(data)
+        is true. Events that came while a request was waiting for its answer
+        are gone, so ask for the event after what causes it, not before."""
+        deadline = time.time() + timeout
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                raise TimeoutError(f"no {event_type} event within {timeout}s")
+            try:
+                msg = json.loads(self._ws.recv(timeout=remaining))
+            except TimeoutError:
+                raise TimeoutError(f"no {event_type} event within {timeout}s") from None
+            if msg.get("op") != OP_EVENT or msg["d"].get("eventType") != event_type:
+                continue
+            data = msg["d"].get("eventData") or {}
+            if predicate is None or predicate(data):
+                return data
+
     def close(self):
         self._ws.close()
 
 
-def connect_when_ready(url, password=None, timeout=30, alive=lambda: True):
+def connect_when_ready(url, password=None, timeout=30, event_subscriptions=0, alive=lambda: True):
     """A Client, once the server will complete the handshake. OBS accepts the
     connection while it is still starting, and may close it before saying
     Hello, so any failure to connect is tried again until the deadline, or
@@ -88,7 +111,7 @@ def connect_when_ready(url, password=None, timeout=30, alive=lambda: True):
         if not alive():
             raise ObsWebSocketError(f"the server exited while it was being waited for: {last_error}")
         try:
-            return Client(url, password=password)
+            return Client(url, password=password, event_subscriptions=event_subscriptions)
         except Exception as e:  # websockets raises its own, OSError, EOFError...
             last_error = e
             time.sleep(0.2)
