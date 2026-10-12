@@ -91,6 +91,16 @@ The output is then published as soon as OBS has loaded, and can be stopped and
 started over obs-websocket as "NDI Main Output".
 `World.add_color_source()` gives a scene a known picture to publish.
 
+## Filters
+
+`World.add_filter()` puts an `ndi_filter` or `ndi_audiofilter` on a source and
+names its NDI output, with the plugin's `ndi_filter_ndiname` setting.
+The video filter test stacks a red source over a green one and puts the filter
+on the green: the filter's output is green while the program mix is red, which
+shows it publishes its source alone.
+An audio filter's stream has no picture, so a receiver connects to it with
+`wait_for_video=False`.
+
 ## Quitting
 
 OBS is told to quit with SIGTERM, which it handles as a normal quit, and it has
