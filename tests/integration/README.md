@@ -51,6 +51,23 @@ On Linux OBS needs a display, so `DISPLAY` must be set; `xvfb-run` works.
 3. OBS is started once per session, and the scenes a test made are removed after
    it.
 
+## NDI test sender and receiver
+
+`ndi_helpers.py` has `TestSender`, which sends a solid colour and, once asked, a
+sine tone, and `TestReceiver`, which reports the size, colour and audio of what
+it receives.
+Their own tests (`test_ndi_helpers.py`) need no OBS.
+Every name carries a per-run prefix from `unique_name()`, so a test cannot find
+a source from the LAN or from another run.
+A receiver finds a source by its full `HOST (name)` form or by its bare name.
+
+Two things about cyndilib shape them.
+A frame cannot be altered while it is on a sender, so
+`TestSender.set_resolution()` makes a new sender under the same name; the stream
+goes away and comes back.
+Audio is read on a receiver of its own, because cyndilib's frame sync returns
+silence where its plain receiver returns what was sent.
+
 ## Quitting
 
 OBS is told to quit with SIGTERM, which it handles as a normal quit, and it has
