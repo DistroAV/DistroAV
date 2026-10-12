@@ -68,6 +68,17 @@ goes away and comes back.
 Audio is read on a receiver of its own, because cyndilib's frame sync returns
 silence where its plain receiver returns what was sent.
 
+## What the tests look at
+
+A source's picture is read with obs-websocket's `GetSourceScreenshot`
+(`World.source_color()`, `World.wait_for_color()`).
+Its audio is read as the level OBS meters on the input, through obs-websocket's
+`InputVolumeMeters` events on a connection of its own (`World.audio_peak()`,
+`World.wait_for_audio()`).
+An input with no meter reading at all is an error, not silence, so a test of
+"quiet" cannot pass because the meter never spoke.
+Both are polled to a deadline, not waited for with a sleep.
+
 ## Quitting
 
 OBS is told to quit with SIGTERM, which it handles as a normal quit, and it has
