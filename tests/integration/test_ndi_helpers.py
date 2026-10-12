@@ -5,7 +5,7 @@ their own, with no OBS: if these are wrong, every other test is.
 """
 
 import pytest
-from ndi_helpers import TestReceiver, TestSender, unique_name
+from ndi_helpers import TestReceiver, SourceWatcher, TestSender, dominant_channel, unique_name
 
 
 def test_receiver_sees_what_sender_sends():
@@ -46,3 +46,26 @@ def test_a_receiver_does_not_find_a_sender_of_another_name():
     with TestSender(unique_name("a")), TestReceiver(unique_name("b")) as rx:
         with pytest.raises(TimeoutError):
             rx.connect(timeout=3)
+
+
+def test_dominant_channel_is_the_colour_whatever_the_brightness():
+    assert dominant_channel((255, 0, 0)) == "r"
+    assert dominant_channel((0, 113, 3)) == "g"
+    assert dominant_channel((10, 20, 200)) == "b"
+    assert dominant_channel((113, 113, 113)) is None
+    assert dominant_channel((20, 5, 5)) is None  # too dark to say
+
+
+def test_a_watcher_sees_a_source_go_even_when_it_goes_at_once():
+    name = unique_name("gone")
+    tx = TestSender(name)
+    tx.start()
+    with SourceWatcher(name) as watcher:
+        tx.stop()  # gone before anything is waited for
+        watcher.wait_gone(timeout=20)
+
+
+def test_a_watcher_cannot_be_opened_on_a_source_that_is_not_there():
+    with pytest.raises(TimeoutError):
+        with SourceWatcher(unique_name("never"), timeout=3):
+            pass

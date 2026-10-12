@@ -59,6 +59,9 @@ Their own tests (`test_ndi_helpers.py`) need no OBS.
 Every name carries a per-run prefix from `unique_name()`, so a test cannot find
 a source from the LAN or from another run.
 A receiver finds a source by its full `HOST (name)` form or by its bare name.
+`SourceWatcher` is opened on a source before what is to make it go, since a
+finder made afterwards cannot tell a source that has gone from one that was
+never there.
 
 Two things about cyndilib shape them.
 A frame cannot be altered while it is on a sender, so
@@ -77,6 +80,15 @@ Its audio is read as the level OBS meters on the input, through obs-websocket's
 An input with no meter reading at all is an error, not silence, so a test of
 "quiet" cannot pass because the meter never spoke.
 Both are polled to a deadline, not waited for with a sleep.
+
+## The plugin's own settings
+
+The fixture writes the `[NDIPlugin]` section of OBS's `global.ini` before
+launch, with the Main Output on under a name made for the run
+(`World.main_output_name`).
+The output is then published as soon as OBS has loaded, and can be stopped and
+started over obs-websocket as "NDI Main Output".
+`World.add_color_source()` gives a scene a known picture to publish.
 
 ## Quitting
 
@@ -128,6 +140,11 @@ Four things are particular to macOS, and handled by the fixture:
   answers, so the profile says both were done.
 - OBS is told to quit with SIGINT, which is a normal quit in every version since
   23.2; SIGTERM only is since 32.1.
+
+OBS's own colour source is not as bright on every platform: white comes out as
+113 in OBS 32.2's own screenshot of the scene on macOS.
+The tests that look at a picture OBS drew therefore compare which colour it is
+(`dominant_channel()`), not how bright.
 
 ### Windows
 
