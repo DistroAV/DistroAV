@@ -27,6 +27,7 @@ folder) and installs `requirements.txt` into it.
 |---|---|
 | `DISTROAV_OBS_BINARY` | The OBS to run. Default: the `obs` on the `PATH`, or on macOS the newest release in `/Applications` (not a release candidate). |
 | `DISTROAV_PLUGIN_DIR` | Linux: the folder holding `distroav.so` and `distroav/locale`. Default: a `build_*/rundir/<config>` of this checkout. |
+| `NDI_RUNTIME_DIR_V6` | Windows: the folder holding `Processing.NDI.Lib.x64.dll`, if the NDI runtime is not installed (cyndilib ships one, in its `wrapper\bin`). |
 | `DISTROAV_PLUGIN_BUNDLE` | macOS: the `distroav.plugin` to test. Default: a `build_*/rundir/<config>/distroav.plugin` of this checkout. |
 | `DISTROAV_IT_VENV` | Where the virtualenv lives. |
 | `DISTROAV_OBS_START_TIMEOUT` | Seconds OBS has to start and come up (default 30; it takes 2 to 6). |
@@ -71,11 +72,7 @@ It also says if the run itself left one behind.
 
 ## Platforms
 
-Linux and macOS.
-The tests that start OBS are skipped, with a reason, on Windows until its launch
-details are written and tried.
-Windows arm64 has no cyndilib wheel, so the helpers cannot be installed there at
-all.
+Linux, macOS and Windows.
 
 ### macOS
 
@@ -104,3 +101,32 @@ Four things are particular to macOS, and handled by the fixture:
   answers, so the profile says both were done.
 - OBS is told to quit with SIGINT, which is a normal quit in every version since
   23.2; SIGTERM only is since 32.1.
+
+### Windows
+
+`scripts/run-integration-tests.ps1` runs the suite; arguments go to pytest.
+
+- **A copy of OBS made for testing.**
+  A portable OBS keeps its profile in the folder it is in, which is the only way
+  to give a run a profile of its own on Windows, as OBS uses your own
+  `%APPDATA%` otherwise.
+  Unzip an OBS release somewhere (not the one you use), and point
+  `DISTROAV_OBS_BINARY` at its `bin\64bit\obs64.exe`.
+  The suite makes it portable, keeps the last run's profile as `config.prev`,
+  and puts the plugin beside OBS's own in `obs-plugins\64bit`, since a portable
+  OBS does not scan the profile for plugins.
+- **The plugin and the NDI runtime.**
+  Build with `cmake --preset windows-x64`, then
+  `cmake --build build_x64 --config RelWithDebInfo`.
+  The plugin needs the NDI runtime, installed or in `NDI_RUNTIME_DIR_V6`.
+- **The architecture is one.**
+  OBS, the plugin and the Python that runs the tests are all x64, or all arm64:
+  Windows arm64 runs x64 programs, and cyndilib has a wheel only for x64, so on
+  an arm64 machine use an x64 Python and x64 OBS.
+- **The session has a desktop.**
+  OBS shows a window, so the suite runs in a logged-in session, not from a
+  service.
+
+OBS is asked to close, with `taskkill`, and ended with `taskkill /F` if it has
+not in 30 seconds.
+

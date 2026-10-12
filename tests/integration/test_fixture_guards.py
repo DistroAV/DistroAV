@@ -9,7 +9,9 @@ import subprocess
 import time
 
 import pytest
-from conftest import ObsProcess, World, loaded_plugin_problem
+from conftest import IS_WIN, ObsProcess, World, loaded_plugin_problem
+
+posix_only = pytest.mark.skipif(IS_WIN, reason="the fake OBS is a bash script that traps signals")
 
 
 def fake_obs_exiting_with(tmp_path, code, **kwargs):
@@ -48,6 +50,7 @@ def test_obs_is_started_next_to_any_other_instance(tmp_path):
     assert "--multi" in make_obs(tmp_path).command()
 
 
+@posix_only
 def test_obs_that_exits_with_a_failure_on_quit_is_not_clean_when_that_is_required(tmp_path):
     obs = fake_obs_exiting_with(tmp_path, 3, require_clean_exit=True)
     with pytest.warns(UserWarning, match="status 3"):
@@ -55,6 +58,7 @@ def test_obs_that_exits_with_a_failure_on_quit_is_not_clean_when_that_is_require
     assert obs.last_returncode == 3
 
 
+@posix_only
 def test_obs_that_exits_with_a_failure_on_quit_is_recorded_and_warned_of_otherwise(tmp_path):
     obs = fake_obs_exiting_with(tmp_path, 3)
     with pytest.warns(UserWarning, match="status 3"):
@@ -62,6 +66,7 @@ def test_obs_that_exits_with_a_failure_on_quit_is_recorded_and_warned_of_otherwi
     assert obs.last_returncode == 3
 
 
+@posix_only
 def test_obs_that_exits_with_success_on_quit_is_clean(tmp_path):
     assert fake_obs_exiting_with(tmp_path, 0).stop(timeout=10) is True
 
@@ -89,3 +94,53 @@ def test_obs_keeps_its_profile_where_the_platform_puts_it(tmp_path):
 
     assert obs_config_root(tmp_path, "Linux") == tmp_path / ".config" / "obs-studio"
     assert obs_config_root(tmp_path, "Darwin") == tmp_path / "Library" / "Application Support" / "obs-studio"
+
+
+def test_obs_keeps_its_profile_beside_a_portable_install_on_windows(tmp_path):
+    from conftest import obs_config_root
+
+    assert obs_config_root(tmp_path, "Windows") == tmp_path / "config" / "obs-studio"
+
+
+def test_a_portable_install_gets_a_fresh_profile_and_keeps_the_last_one(tmp_path):
+    from conftest import portable_home
+
+    install = tmp_path / "obs"
+    binary = install / "bin" / "64bit" / "obs64.exe"
+    binary.parent.mkdir(parents=True)
+    binary.touch()
+    (install / "config").mkdir()
+    (install / "config" / "last-run").touch()
+    (install / "config.prev").mkdir()
+    (install / "config.prev" / "older").touch()
+
+    home = portable_home(binary)
+
+    assert home == install
+    assert (install / "portable_mode.txt").exists()
+    assert not (install / "config").exists()  # OBS makes a new one
+    assert (install / "config.prev" / "last-run").exists()
+    assert not (install / "config.prev" / "older").exists()
+
+
+def test_windows_asks_obs_to_close_and_only_then_ends_it():
+    from conftest import windows_quit_command
+
+    assert windows_quit_command(42) == ["taskkill", "/PID", "42", "/T"]
+    assert windows_quit_command(42, force=True) == ["taskkill", "/PID", "42", "/T", "/F"]
+
+
+def test_a_portable_windows_install_gets_the_plugin_beside_its_own(tmp_path):
+    from conftest import PLUGIN_LIB, install_plugin_windows
+
+    build = tmp_path / "build"
+    (build / "distroav" / "locale").mkdir(parents=True)
+    (build / PLUGIN_LIB).write_text("dll")
+    (build / "distroav" / "locale" / "en-US.ini").write_text("x")
+    install = tmp_path / "obs"
+    (install / "obs-plugins" / "64bit").mkdir(parents=True)
+
+    install_plugin_windows(install, build)
+
+    assert (install / "obs-plugins" / "64bit" / PLUGIN_LIB).read_text() == "dll"
+    assert (install / "data" / "obs-plugins" / "distroav" / "locale" / "en-US.ini").exists()

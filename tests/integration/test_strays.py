@@ -10,9 +10,13 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+from conftest import obs_processes
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.skipif(obs_processes() is None, reason="no ps to find another OBS with (Windows)")
 def test_session_refuses_to_start_with_a_stray_obs():
     # Looks to ps like an OBS this suite started: called obs, with its marker.
     # Not a Python: a framework Python on macOS starts itself again, as itself.
