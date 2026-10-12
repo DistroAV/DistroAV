@@ -247,7 +247,9 @@ class TestReceiver:
         self._audio_frame = None
         self._source = None
 
-    def connect(self, timeout: float = 10):
+    def connect(self, timeout: float = 10, wait_for_video: bool = True):
+        """Find the source and connect. With `wait_for_video` False it returns
+        once connected, for a stream that has no picture (audio only)."""
         deadline = time.time() + timeout
         self._finder = Finder()
         self._finder.open()
@@ -268,6 +270,8 @@ class TestReceiver:
         self._receiver.set_source(source)
         while time.time() < deadline:
             if self._receiver.is_connected():
+                if not wait_for_video:
+                    return
                 sync.capture_video()
                 if min(self._video.get_resolution()) > 0 and self._video.get_data_size() > 0:
                     return

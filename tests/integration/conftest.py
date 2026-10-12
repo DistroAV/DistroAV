@@ -468,6 +468,14 @@ class World:
         self._inputs.append(name)
         return name
 
+    def add_filter(self, source: str, kind: str, **settings) -> str:
+        """A filter of `kind` on the source (or scene); its name. OBS removes it
+        with the source."""
+        name = f"it-filter-{uuid.uuid4().hex[:8]}"
+        self.ws.call("CreateSourceFilter", {"sourceName": source, "filterName": name, "filterKind": kind,
+                                            "filterSettings": settings})
+        return name
+
     def source_screenshot(self, source: str) -> Image.Image:
         """What OBS has of the source now, at the source's own size"""
         data = self.ws.call("GetSourceScreenshot", {"sourceName": source, "imageFormat": "png"})["imageData"]
