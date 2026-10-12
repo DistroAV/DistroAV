@@ -72,7 +72,7 @@ def test_obs_that_exits_with_success_on_quit_is_clean(tmp_path):
 
 
 def test_a_world_whose_obs_is_down_says_so_and_cleans_up_quietly(tmp_path):
-    world = World(make_obs(tmp_path), tmp_path, tmp_path)
+    world = World(make_obs(tmp_path), tmp_path, tmp_path, "main")
     world._scenes.append("left-over")
     world.cleanup_scenes()
     with pytest.raises(RuntimeError, match="OBS is not running"):

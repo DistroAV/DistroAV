@@ -33,6 +33,22 @@ SAMPLES_PER_FRAME = SAMPLE_RATE // FRAME_RATE
 AUDIO_PEAK_FLOOR = 1e-3
 
 
+def dominant_channel(color, floor=50, ratio=3):
+    """'r', 'g' or 'b' if one channel of (r, g, b) is at least `floor` and
+    `ratio` times each of the others, else None.
+
+    For a picture OBS drew from one of its own colour sources, whose
+    brightness is not the same on every platform: white comes out as 113 on
+    OBS 32.2 on macOS, in OBS's own screenshot of the scene, before NDI is
+    involved. Which colour it is, is what a test of the plugin can rely on.
+    """
+    for index, name in enumerate("rgb"):
+        others = [c for i, c in enumerate(color) if i != index]
+        if color[index] >= floor and all(color[index] >= ratio * max(c, 1) for c in others):
+            return name
+    return None
+
+
 def unique_name(label: str) -> str:
     """An NDI name only this run uses"""
     return f"distroav-it-{RUN_ID}-{label}"
@@ -49,6 +65,45 @@ def _find_source(name: str, timeout: float):
                     # A Source belongs to its finder: keep what a receiver needs
                     return source.name
     raise TimeoutError(f"NDI source {name!r} not found within {timeout}s")
+
+
+class SourceWatcher:
+    """Watches one source on the network: opened once the source is there,
+    so that it can say when it has gone.
+
+    Open it before what is meant to make the source go. A finder made after
+    the source has already gone cannot tell that from a source that was never
+    there, and a stop or a removal is over before the next call can be made.
+    """
+
+    def __init__(self, name: str, timeout: float = 20):
+        self._name = name
+        self._timeout = timeout
+        self._finder = None
+
+    def _present(self) -> bool:
+        return any(s.valid and self._name in (s.name, s.stream_name) for s in self._finder)
+
+    def __enter__(self):
+        self._finder = Finder()
+        self._finder.open()
+        deadline = time.time() + self._timeout
+        while not self._present():
+            if time.time() > deadline:
+                self._finder.close()
+                raise TimeoutError(f"NDI source {self._name!r} is not on the network after {self._timeout}s")
+            self._finder.wait_for_sources(0.5)
+        return self
+
+    def __exit__(self, *exc):
+        self._finder.close()
+
+    def wait_gone(self, timeout: float = 10):
+        deadline = time.time() + timeout
+        while self._present():
+            if time.time() > deadline:
+                raise TimeoutError(f"NDI source {self._name!r} still on the network after {timeout}s")
+            self._finder.wait_for_sources(0.5)
 
 
 class TestSender:
@@ -250,6 +305,17 @@ class TestReceiver:
                 return
             time.sleep(0.1)
         raise TimeoutError(f"still {self.dimensions()}, not {tuple(expected)}, after {timeout}s")
+
+    def wait_for_color(self, predicate, timeout: float = 15):
+        """Poll the picture until predicate((r, g, b)) holds"""
+        deadline = time.time() + timeout
+        color = None
+        while time.time() < deadline:
+            color = self.mean_color()
+            if predicate(color):
+                return color
+            time.sleep(0.1)
+        raise TimeoutError(f"picture was {color} after {timeout}s")
 
     def mean_color(self):
         """(r, g, b) averaged over the last frame"""

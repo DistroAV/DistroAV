@@ -262,8 +262,9 @@ def install_plugin(config_dir: Path, plugin_dir: Path):
     shutil.copytree(plugin_dir / "distroav" / "locale", root / "data" / "locale")
 
 
-def write_obs_config(config_dir: Path, ws_port, ws_password):
-    """Pre-seed obs-websocket's settings so it is enabled on first launch"""
+def write_obs_config(config_dir: Path, ws_port, ws_password, main_output_name):
+    """Pre-seed obs-websocket's settings, so that it is enabled on first launch,
+    and the plugin's, with its Main Output on under a name of this run's"""
     config_dir.mkdir(parents=True, exist_ok=True)
     # The plugin's strings are en-US's: the language OBS is in must not be
     # one with a file of its own that takes over
@@ -280,7 +281,11 @@ def write_obs_config(config_dir: Path, ws_port, ws_password):
         f"ServerPort={ws_port}\n"
         "AlertsEnabled=false\n"
         "AuthRequired=false\n"
-        f"ServerPassword={ws_password}\n")
+        f"ServerPassword={ws_password}\n"
+        "\n[NDIPlugin]\n"
+        "MainOutputEnabled=true\n"
+        f"MainOutputName={main_output_name}\n"
+        "PreviewOutputEnabled=false\n")
 
 
 class ObsProcess:
@@ -403,8 +408,9 @@ class ObsProcess:
 class World:
     """What a test is given: OBS, driven over obs-websocket"""
 
-    def __init__(self, obs: ObsProcess, config_dir: Path, scratch: Path):
+    def __init__(self, obs: ObsProcess, config_dir: Path, scratch: Path, main_output_name: str):
         self._obs = obs
+        self.main_output_name = main_output_name
         self.config_dir = config_dir
         self.scratch = scratch
         self._scenes = []
@@ -461,6 +467,14 @@ class World:
                                      "inputSettings": {"ndi_source_name": ndi_name, **settings}})
         self._inputs.append(name)
         self.ws.call("SetCurrentProgramScene", {"sceneName": scene})
+        return name
+
+    def add_color_source(self, scene: str, colour: int) -> str:
+        """A colour source over `scene`'s canvas; `colour` is OBS's 0xAABBGGRR"""
+        name = f"it-color-{uuid.uuid4().hex[:8]}"
+        self.ws.call("CreateInput", {"sceneName": scene, "inputName": name, "inputKind": "color_source_v3",
+                                     "inputSettings": {"color": colour, "width": 1280, "height": 720}})
+        self._inputs.append(name)
         return name
 
     def source_screenshot(self, source: str) -> Image.Image:
@@ -547,7 +561,8 @@ def obs_world(tmp_path_factory):
     config_dir = obs_config_root(home)
     ws_port = free_port()
     ws_password = STRAY_MARKER + uuid.uuid4().hex[:8]
-    write_obs_config(config_dir, ws_port, ws_password)
+    main_output_name = f"distroav-it-{uuid.uuid4().hex[:6]}-main"
+    write_obs_config(config_dir, ws_port, ws_password, main_output_name)
     if IS_WIN:
         install_plugin_windows(home, plugin)
     else:
@@ -557,7 +572,7 @@ def obs_world(tmp_path_factory):
     obs = ObsProcess(binary, home, scratch / "obs.log", ws_port, ws_password,
                      require_clean_exit=bool(os.environ.get("DISTROAV_REQUIRE_CLEAN_QUIT")))
     obs.start()
-    world = World(obs, config_dir, scratch)
+    world = World(obs, config_dir, scratch, main_output_name)
     try:
         yield world
     finally:
