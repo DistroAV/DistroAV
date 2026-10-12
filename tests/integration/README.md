@@ -117,6 +117,8 @@ folder) and installs `requirements.txt` into it.
 | `DISTROAV_PLUGIN_DIR` | Linux: the folder holding `distroav.so` and `distroav/locale`. Default: a `build_*/rundir/<config>` of this checkout. |
 | `NDI_RUNTIME_DIR_V6` | Windows: the folder holding `Processing.NDI.Lib.x64.dll`, if the NDI runtime is not installed (cyndilib ships one, in its `wrapper\bin`). |
 | `DISTROAV_PLUGIN_BUNDLE` | macOS: the `distroav.plugin` to test. Default: a `build_*/rundir/<config>/distroav.plugin` of this checkout. |
+| `DISTROAV_PTZ_CONTROLLER` | macOS: the `obs-ptz.plugin`, or Linux: the `obs-ptz.so`, to load as a PTZ controller. It needs the PTZ API's obs-websocket binding (obs-ptz 1.0.0-beta4 or later), and no test build. The PTZ tests skip without it. |
+| `DISTROAV_PTZ_API_DOC` | obs-ptz's `docs/ptz-device-api.md`, which `test_ptz_api_doc.py` holds the plugin to. Default: the one in the checkout the controller was built in, if it is in a `build_*/rundir` folder. |
 | `DISTROAV_IT_VENV` | Where the virtualenv lives. |
 | `DISTROAV_OBS_START_TIMEOUT` | Seconds OBS has to start and come up (default 30; it takes 2 to 6). |
 | `DISTROAV_KEEP_HOME` | Set to keep OBS's isolated home and log after the run. |
@@ -189,6 +191,32 @@ shows it publishes its source alone.
 An audio filter's stream has no picture, so a receiver connects to it with
 `wait_for_video=False`.
 
+## PTZ
+
+The NDI source implements obs-ptz's PTZ Device API (`docs/ptz-device-api.md`
+there), and yields to a PTZ Device filter on the same source.
+obs-websocket cannot call a source's `proc_handler`, so the PTZ tests load
+obs-ptz as a controller, and call the API through the obs-websocket binding it
+registers (the vendor `obs-ptz`: a request for each proc and an event for each
+signal), by way of `PtzController` in `ptz_helpers.py`.
+Set `DISTROAV_PTZ_CONTROLLER` to it; without it the PTZ tests skip.
+obs-ptz reads the API's version for itself: a controller at a later minor
+version than a device does not find the device, so the controller and the
+plugin have to be built from the same API version (0.10).
+
+`PtzSender` in `ptz_helpers.py` is an NDI sender that says it can do PTZ and
+records the PTZ commands its receivers send it.
+cyndilib can do neither, so it goes to the NDI runtime itself, through ctypes,
+using the copy cyndilib ships.
+The directions the tests expect are NDI's own: its pan speed is -1.0 for
+right where the API's is +1.0, and its absolute zoom is 0.0 zoomed in where
+the API's is wide.
+
+With the controller loaded, OBS on macOS can fail to leave its event loop when
+asked to quit: obs-ptz's joystick polling is in it.
+The suite then prints that OBS had to be killed and goes on, where without the
+controller it is a failure.
+
 ## What is covered
 
 | Module | Covers |
@@ -201,10 +229,13 @@ An audio filter's stream has no picture, so a receiver connects to it with
 | `test_filter_output.py` | `ndi_filter` publishes its source alone; `ndi_audiofilter` publishes audio; removing the filter ends the stream. |
 | `test_preview_output.py` | In studio mode the Preview Output publishes the preview scene. |
 | `test_settings_persistence.py` | Source settings and the main output's on/off, also when set over obs-websocket, survive a restart. |
-| `test_ndi_helpers.py`, `test_strays.py` | The suite's own helpers and guard, with no OBS. |
+| `test_ptz_device.py` | The NDI source as a PTZ device: found by a controller, its version and features, moves, absolute moves, autofocus, white balance and presets reaching the sender with NDI's directions, the speed cap and inversion, preset slots, recall announcements, and a stop kept for a sender that is away. |
+| `test_ptz_priority.py` | An enabled PTZ filter on the source takes priority: the NDI source turns its PTZ off (`ptz_device_remove`, no version, no NDI PTZ), sends one stop for a move in progress, and is back (`ptz_device_add`) when the filter is removed or disabled. |
+| `test_ptz_api_doc.py` | Every proc and signal the source says it has is declared, and has the thread and access, as obs-ptz's document of the API has it. |
+| `test_ndi_helpers.py`, `test_ptz_helpers.py`, `test_strays.py` | The suite's own helpers and guard, with no OBS. |
 
 Not covered: the `ndi_behavior` setting (what the source does while not
-visible), the dialogs, the update check, and PTZ and tally.
+visible), the dialogs, the update check, and tally.
 Nothing here asserts latency or dropped frames: those are timing properties and
 noisy on shared hosts.
 
