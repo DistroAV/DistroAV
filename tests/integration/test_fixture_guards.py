@@ -4,6 +4,7 @@
 run is not testing what it says, or is not the OBS it believes it quit.
 """
 
+import signal
 import subprocess
 import time
 
@@ -17,8 +18,10 @@ def fake_obs_exiting_with(tmp_path, code, **kwargs):
     obs = make_obs(tmp_path, **kwargs)
     ready = tmp_path / "ready"
     obs.proc = subprocess.Popen(
-        ["bash", "-c", f"trap 'exit {code}' TERM; touch {ready}; while :; do sleep 0.1; done"],
-        start_new_session=True)
+        ["bash", "-c", f"trap 'exit {code}' TERM INT; touch {ready}; while :; do sleep 0.1; done"],
+        start_new_session=True,
+        # a run started in the background has SIGINT ignored, and bash cannot trap what is
+        preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
     deadline = time.time() + 10
     while not ready.exists():
         assert time.time() < deadline, "the fake OBS never started"
@@ -70,3 +73,10 @@ def test_a_plugin_skipped_for_another_of_its_name_is_reported():
 
 def test_a_log_without_a_skipped_plugin_has_no_problem():
     assert loaded_plugin_problem("12:00:00.000: [DistroAV] plugin loaded successfully\n") is None
+
+
+def test_obs_keeps_its_profile_where_the_platform_puts_it(tmp_path):
+    from conftest import obs_config_root
+
+    assert obs_config_root(tmp_path, "Linux") == tmp_path / ".config" / "obs-studio"
+    assert obs_config_root(tmp_path, "Darwin") == tmp_path / "Library" / "Application Support" / "obs-studio"

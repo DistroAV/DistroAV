@@ -25,8 +25,9 @@ folder) and installs `requirements.txt` into it.
 
 | Variable | Meaning |
 |---|---|
-| `DISTROAV_OBS_BINARY` | The `obs` to run. Default: the one on the `PATH`. |
-| `DISTROAV_PLUGIN_DIR` | The folder holding `distroav.so` and `distroav/locale`. Default: a `build_*/rundir/<config>` of this checkout. |
+| `DISTROAV_OBS_BINARY` | The OBS to run. Default: the `obs` on the `PATH`, or on macOS the newest release in `/Applications` (not a release candidate). |
+| `DISTROAV_PLUGIN_DIR` | Linux: the folder holding `distroav.so` and `distroav/locale`. Default: a `build_*/rundir/<config>` of this checkout. |
+| `DISTROAV_PLUGIN_BUNDLE` | macOS: the `distroav.plugin` to test. Default: a `build_*/rundir/<config>/distroav.plugin` of this checkout. |
 | `DISTROAV_IT_VENV` | Where the virtualenv lives. |
 | `DISTROAV_KEEP_HOME` | Set to keep OBS's isolated home and log after the run. |
 | `DISTROAV_ALLOW_STRAYS` | Set to run although an OBS from an earlier run is still alive. |
@@ -34,7 +35,7 @@ folder) and installs `requirements.txt` into it.
 
 The plugin needs the NDI runtime installed, as it does for any use.
 The tests themselves use cyndilib, which brings its own copy.
-OBS needs a display, so `DISPLAY` must be set; `xvfb-run` works.
+On Linux OBS needs a display, so `DISPLAY` must be set; `xvfb-run` works.
 
 ## How it works
 
@@ -69,6 +70,36 @@ It also says if the run itself left one behind.
 
 ## Platforms
 
-Linux only so far.
-macOS and Windows are skipped, with a reason, until their launch details are
-written and tried.
+Linux and macOS.
+The tests that start OBS are skipped, with a reason, on Windows until its launch
+details are written and tried.
+Windows arm64 has no cyndilib wheel, so the helpers cannot be installed there at
+all.
+
+### macOS
+
+Build the plugin first, from this checkout, so that it is the code under test:
+
+```bash
+cmake --preset macos -DCMAKE_OSX_ARCHITECTURES=arm64
+cmake --build build_macos --config RelWithDebInfo
+```
+
+Then `scripts/run-integration-tests.sh` finds
+`build_macos/rundir/RelWithDebInfo/distroav.plugin` by itself.
+A build older than a fix the suite tests fails that test, which is the suite
+working: the persistence tests need #1472.
+
+Four things are particular to macOS, and handled by the fixture:
+
+- OBS finds its profile through a system call that ignores `$HOME`, so the
+  fixture sets `CFFIXED_USER_HOME`, which it does honor.
+  A run never reads or changes your own profile.
+- A build straight from CMake has no code signature, and an arm64 Mac will not
+  load code without one.
+  The fixture copies the bundle into the temporary profile and signs the copy ad
+  hoc, so that the build is left as it was.
+- OBS asks for a first run wizard and for permissions, in modal dialogs no one
+  answers, so the profile says both were done.
+- OBS is told to quit with SIGINT, which is a normal quit in every version since
+  23.2; SIGTERM only is since 32.1.
