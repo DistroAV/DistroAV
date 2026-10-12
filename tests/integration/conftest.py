@@ -254,9 +254,10 @@ def install_plugin(config_dir: Path, plugin_dir: Path):
     shutil.copytree(plugin_dir / "distroav" / "locale", root / "data" / "locale")
 
 
-def write_obs_config(config_dir: Path, ws_port, ws_password, main_output_name):
+def write_obs_config(config_dir: Path, ws_port, ws_password, main_output_name, preview_output_name):
     """Pre-seed obs-websocket's settings, so that it is enabled on first launch,
-    and the plugin's, with its Main Output on under a name of this run's"""
+    and the plugin's, with its Main and Preview Outputs on under names of this
+    run's (the Preview Output publishes only while OBS is in studio mode)"""
     config_dir.mkdir(parents=True, exist_ok=True)
     # The plugin's strings are en-US's: the language OBS is in must not be
     # one with a file of its own that takes over
@@ -277,7 +278,8 @@ def write_obs_config(config_dir: Path, ws_port, ws_password, main_output_name):
         "\n[NDIPlugin]\n"
         "MainOutputEnabled=true\n"
         f"MainOutputName={main_output_name}\n"
-        "PreviewOutputEnabled=false\n")
+        "PreviewOutputEnabled=true\n"
+        f"PreviewOutputName={preview_output_name}\n")
 
 
 class ObsProcess:
@@ -399,9 +401,11 @@ class ObsProcess:
 class World:
     """What a test is given: OBS, driven over obs-websocket"""
 
-    def __init__(self, obs: ObsProcess, config_dir: Path, scratch: Path, main_output_name: str):
+    def __init__(self, obs: ObsProcess, config_dir: Path, scratch: Path, main_output_name: str,
+                 preview_output_name: str):
         self._obs = obs
         self.main_output_name = main_output_name
+        self.preview_output_name = preview_output_name
         self.config_dir = config_dir
         self.scratch = scratch
         self._scenes = []
@@ -561,7 +565,8 @@ def obs_world(tmp_path_factory):
     ws_port = free_port()
     ws_password = STRAY_MARKER + uuid.uuid4().hex[:8]
     main_output_name = f"distroav-it-{uuid.uuid4().hex[:6]}-main"
-    write_obs_config(config_dir, ws_port, ws_password, main_output_name)
+    preview_output_name = f"distroav-it-{uuid.uuid4().hex[:6]}-preview"
+    write_obs_config(config_dir, ws_port, ws_password, main_output_name, preview_output_name)
     if IS_WIN:
         install_plugin_windows(home, plugin)
     else:
@@ -571,7 +576,7 @@ def obs_world(tmp_path_factory):
     obs = ObsProcess(binary, home, scratch / "obs.log", ws_port, ws_password,
                      require_clean_exit=bool(os.environ.get("DISTROAV_REQUIRE_CLEAN_QUIT")))
     obs.start()
-    world = World(obs, config_dir, scratch, main_output_name)
+    world = World(obs, config_dir, scratch, main_output_name, preview_output_name)
     try:
         yield world
     finally:
