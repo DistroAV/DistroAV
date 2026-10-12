@@ -130,9 +130,8 @@ for exactly which files/callbacks this applies to.
 **Never touch:**
 - [`lib/ndi/`](lib/ndi) — vendored third-party NDI SDK headers under their own license.
 - `.deps/`, `build_x64/`, `build_macos/`, `build_x86_64/`, `release*/` — generated, gitignored.
-- Creating or making git commits (`git commit`) or pushing — agents must leave
-  all committing to the user, regardless of how the change was made or how
-  confident the change is.
+- Pushing commits — agents must leave interaction with the project to the user,
+  regardless of how the change was made or how confident the change is.
 
 ## Known gaps
 
