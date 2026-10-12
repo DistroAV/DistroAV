@@ -14,6 +14,10 @@ The plugin is looked for in $DISTROAV_PLUGIN_DIR, or in a build_*/rundir
 folder of this checkout: a folder that holds distroav.so and
 distroav/locale, which is what the CMake build leaves there. OBS is
 $DISTROAV_OBS_BINARY, or the obs on the PATH.
+
+On macOS the plugin is a bundle: $DISTROAV_PLUGIN_BUNDLE, or a
+build_*/rundir/<config>/distroav.plugin of this checkout, and OBS is
+$DISTROAV_OBS_BINARY, or the newest release in /Applications.
 """
 
 import os
@@ -33,6 +37,8 @@ import pytest
 from obsws import Client, ObsWebSocketError, connect_when_ready
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+IS_MAC = platform.system() == "Darwin"
 
 # What every OBS this suite starts is given for obs-websocket's password,
 # so that one left running by an earlier run can be told from the user's own
@@ -103,9 +109,9 @@ def pytest_sessionfinish(session, exitstatus):
 
 def pytest_collection_modifyitems(config, items):
     """Skip what needs OBS where the suite is not yet written to run it"""
-    if platform.system() == "Linux":
+    if platform.system() in ("Linux", "Darwin"):
         return
-    skip = pytest.mark.skip(reason=f"OBS is launched only on Linux so far, not on {platform.system()}")
+    skip = pytest.mark.skip(reason=f"OBS is launched only on Linux and macOS so far, not on {platform.system()}")
     for item in items:
         if "obs_world" in item.fixturenames:
             item.add_marker(skip)
@@ -121,7 +127,21 @@ def loaded_plugin_problem(log_text: str):
     return None
 
 
+def newest_mac_obs():
+    """The newest release OBS in /Applications, not a release candidate or a
+    beta: those are built against other Qt libraries than a plugin built from
+    the pinned dependencies"""
+    apps = [p for p in Path("/Applications").glob("OBS [0-9]*.app")
+            if not any(tag in p.name for tag in ("rc", "beta"))]
+    apps.sort(key=lambda p: [int(n) for n in p.name.split()[1].removesuffix(".app").split(".") if n.isdigit()])
+    return str(apps[-1] / "Contents" / "MacOS" / "OBS") if apps else None
+
+
 def pytest_report_header(config):
+    if IS_MAC:
+        given = os.environ.get("DISTROAV_PLUGIN_BUNDLE")
+        found = sorted(REPO_ROOT.glob("build_*/rundir/*/distroav.plugin"))
+        return f"distroav plugin under test: {given or (found[0] if found else 'none found')}"
     given = os.environ.get("DISTROAV_PLUGIN_DIR")
     found = sorted(p.parent for p in REPO_ROOT.glob("build_*/rundir/*/distroav.so"))
     return f"distroav plugin under test: {given or (found[0] if found else 'none found')}"
@@ -141,6 +161,17 @@ def free_port():
         return s.getsockname()[1]
 
 
+def find_plugin_bundle():
+    """macOS: the distroav.plugin to test"""
+    given = os.environ.get("DISTROAV_PLUGIN_BUNDLE")
+    candidates = [Path(given)] if given else sorted(REPO_ROOT.glob("build_*/rundir/*/distroav.plugin"))
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    pytest.exit("No built plugin found: set DISTROAV_PLUGIN_BUNDLE to the distroav.plugin to test "
+                "(a build_*/rundir/<config> folder holds it).", returncode=4)
+
+
 def find_plugin_dir():
     given = os.environ.get("DISTROAV_PLUGIN_DIR")
     candidates = [Path(given)] if given else sorted(p.parent for p in REPO_ROOT.glob("build_*/rundir/*/distroav.so"))
@@ -149,6 +180,28 @@ def find_plugin_dir():
             return candidate
     pytest.exit("No built plugin found: set DISTROAV_PLUGIN_DIR to the folder holding distroav.so "
                 "and distroav/locale (a build_*/rundir/<config> folder).", returncode=4)
+
+
+def obs_config_root(home: Path, system=None) -> Path:
+    """Where OBS keeps its profile for a home folder"""
+    if (system or platform.system()) == "Darwin":
+        return home / "Library" / "Application Support" / "obs-studio"
+    return home / ".config" / "obs-studio"
+
+
+def install_plugin_bundle(config_dir: Path, bundle: Path):
+    """macOS: a copy of the bundle in the profile's plugin folder, signed
+    ad hoc. A build straight from CMake has no signature at all, and an arm64
+    Mac will not load code that has none; a copy is signed, rather than the
+    build, so that what was built is left as it was."""
+    plugins = config_dir / "plugins"
+    plugins.mkdir(parents=True, exist_ok=True)
+    target = plugins / "distroav.plugin"
+    shutil.copytree(bundle, target, symlinks=True)
+    result = subprocess.run(["codesign", "--force", "--sign", "-", "--options", "runtime", str(target)],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        pytest.exit(f"could not sign the plugin bundle: {result.stderr.strip()}", returncode=4)
 
 
 def install_plugin(config_dir: Path, plugin_dir: Path):
@@ -165,9 +218,14 @@ def write_obs_config(config_dir: Path, ws_port, ws_password):
     config_dir.mkdir(parents=True, exist_ok=True)
     # The plugin's strings are en-US's: the language OBS is in must not be
     # one with a file of its own that takes over
-    (config_dir / "user.ini").write_text("[General]\nLanguage=en-US\n")
+    # On macOS, OBS opens its first-run wizard, a modal dialog, unless it has
+    # run before (FirstRun), and another asking for permissions it will never
+    # be given, unless it has shown that already (a dialog version, so set it
+    # high enough to cover any a later OBS has)
+    (config_dir / "user.ini").write_text("[General]\nLanguage=en-US\n" + ("FirstRun=true\n" if IS_MAC else ""))
     (config_dir / "global.ini").write_text(
-        "[OBSWebSocket]\n"
+        ("[General]\nMacOSPermissionsDialogLastShown=1000\n\n" if IS_MAC else "")
+        + "[OBSWebSocket]\n"
         "FirstLoad=false\n"
         "ServerEnabled=true\n"
         f"ServerPort={ws_port}\n"
@@ -186,6 +244,10 @@ class ObsProcess:
         self.ws_port = ws_port
         self.ws_password = ws_password
         self.env = dict(os.environ, HOME=str(home))
+        if IS_MAC:
+            # OBS asks the system for the account's home, which ignores
+            # $HOME; Core Foundation honors this
+            self.env["CFFIXED_USER_HOME"] = str(home)
         self.proc = None
         self.ws = None
         self.last_returncode = None
@@ -203,8 +265,11 @@ class ObsProcess:
         timeout = obs_start_timeout() if timeout is None else timeout
         with open(self.log_path, "ab") as log:
             # Its own process group, so that whatever OBS starts goes when it does
+            # A run started in the background has SIGINT ignored, which a child
+            # inherits, and which would make OBS ignore the signal that quits it
             self.proc = subprocess.Popen(self.command(), env=self.env, stdout=log, stderr=subprocess.STDOUT,
-                                         start_new_session=True)
+                                         start_new_session=True,
+                                         preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
         deadline = time.time() + timeout
         try:
             self.ws = connect_when_ready(f"ws://127.0.0.1:{self.ws_port}", self.ws_password,
@@ -253,8 +318,10 @@ class ObsProcess:
             self.ws = None
         if self.proc is None:
             return True
+        # SIGINT where OBS closes its main window on it, which is every version
+        # since 23.2; SIGTERM is a normal quit only since 32.1
         try:
-            os.killpg(self.proc.pid, signal.SIGTERM)
+            os.killpg(self.proc.pid, signal.SIGINT if IS_MAC else signal.SIGTERM)
         except ProcessLookupError:
             pass
         try:
@@ -340,17 +407,17 @@ class World:
 def obs_world(tmp_path_factory):
     if platform.system() == "Linux" and not os.environ.get("DISPLAY"):
         pytest.exit("OBS needs a display: set DISPLAY (xvfb-run works).", returncode=4)
-    binary = os.environ.get("DISTROAV_OBS_BINARY") or shutil.which("obs")
+    binary = os.environ.get("DISTROAV_OBS_BINARY") or (newest_mac_obs() if IS_MAC else shutil.which("obs"))
     if not binary:
         pytest.exit("No OBS found: set DISTROAV_OBS_BINARY.", returncode=4)
-    plugin_dir = find_plugin_dir()
+    plugin = find_plugin_bundle() if IS_MAC else find_plugin_dir()
 
     home = Path(tempfile.mkdtemp(prefix="distroav-it-home-"))
-    config_dir = home / ".config" / "obs-studio"
+    config_dir = obs_config_root(home)
     ws_port = free_port()
     ws_password = STRAY_MARKER + uuid.uuid4().hex[:8]
     write_obs_config(config_dir, ws_port, ws_password)
-    install_plugin(config_dir, plugin_dir)
+    (install_plugin_bundle if IS_MAC else install_plugin)(config_dir, plugin)
 
     scratch = tmp_path_factory.mktemp("world")
     obs = ObsProcess(binary, home, scratch / "obs.log", ws_port, ws_password,
