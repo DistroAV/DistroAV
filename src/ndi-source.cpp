@@ -169,11 +169,7 @@ static speaker_layout channel_count_to_layout(int channels)
 	case 3:
 		return SPEAKERS_2POINT1;
 	case 4:
-#if LIBOBS_API_VER >= MAKE_SEMANTIC_VERSION(21, 0, 0)
 		return SPEAKERS_4POINT0;
-#else
-		return SPEAKERS_QUAD;
-#endif
 	case 5:
 		return SPEAKERS_4POINT1;
 	case 6:
