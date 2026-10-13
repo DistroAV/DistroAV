@@ -25,7 +25,7 @@ if(ENABLE_FRONTEND_API)
 endif()
 
 if(ENABLE_QT)
-  find_package(Qt6 COMPONENTS Widgets Core Network)
+  find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)
   if(APPLE)
     foreach(
@@ -92,16 +92,18 @@ target_sources(
     src/preview-output.h
 )
 
-set(valid_uuid FALSE)
-check_uuid(${WINDOWS_APP_UUID} valid_uuid)
-if(NOT valid_uuid)
-  message(FATAL_ERROR "Specified Windows package UUID is not a valid UUID value: ${WINDOWS_APP_UUID}")
-endif()
+if(WIN32)
+  set(valid_uuid FALSE)
+  check_uuid(${WINDOWS_APP_UUID} valid_uuid)
+  if(NOT valid_uuid)
+    message(FATAL_ERROR "Specified Windows package UUID is not a valid UUID value: ${WINDOWS_APP_UUID}")
+  endif()
 
-configure_file(
-  cmake/windows/resources/installer-Windows.iss.in
-  "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
-)
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/distroav.ico" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+  configure_file(
+    cmake/windows/resources/installer-Windows.iss.in
+    "${CMAKE_CURRENT_BINARY_DIR}/installer-Windows.generated.iss"
+  )
+  file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/distroav.ico" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/lib/ndi)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
