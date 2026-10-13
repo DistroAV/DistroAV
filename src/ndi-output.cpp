@@ -18,33 +18,27 @@
 #include "plugin-main.h"
 #include "sync-debug.h"
 #include <util/threading.h>
-#include <chrono>
+#include <algorithm>
 #include <cstring>
+#include <mutex>
+#include <string>
+#include <vector>
 
 // #include "plugin-support.h"
 
-static FORCE_INLINE uint32_t min_uint32(uint32_t a, uint32_t b)
-{
-	return a < b ? a : b;
-}
+using uyvy_conv_function = void (*)(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
+				    uint32_t end_y, uint8_t *output, uint32_t out_linesize);
 
-typedef void (*uyvy_conv_function)(uint8_t *input[], uint32_t in_linesize[], uint32_t start_y, uint32_t end_y,
-				   uint8_t *output, uint32_t out_linesize);
-
-static void convert_i444_to_uyvy(uint8_t *input[], uint32_t in_linesize[], uint32_t start_y, uint32_t end_y,
-				 uint8_t *output, uint32_t out_linesize)
+static void convert_i444_to_uyvy(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
+				 uint32_t end_y, uint8_t *output, uint32_t out_linesize)
 {
-	uint8_t *_Y;
-	uint8_t *_U;
-	uint8_t *_V;
-	uint8_t *_out;
-	uint32_t width = min_uint32(in_linesize[0], out_linesize);
+	const uint32_t width = std::min(in_linesize[0], out_linesize);
 	for (uint32_t y = start_y; y < end_y; ++y) {
-		_Y = input[0] + ((size_t)y * (size_t)in_linesize[0]);
-		_U = input[1] + ((size_t)y * (size_t)in_linesize[1]);
-		_V = input[2] + ((size_t)y * (size_t)in_linesize[2]);
+		const uint8_t *_Y = input[0] + ((size_t)y * (size_t)in_linesize[0]);
+		const uint8_t *_U = input[1] + ((size_t)y * (size_t)in_linesize[1]);
+		const uint8_t *_V = input[2] + ((size_t)y * (size_t)in_linesize[2]);
 
-		_out = output + ((size_t)y * (size_t)out_linesize);
+		uint8_t *_out = output + ((size_t)y * (size_t)out_linesize);
 
 		for (uint32_t x = 0; x < width; x += 2) {
 			// Quality loss here. Some chroma samples are ignored.
@@ -58,35 +52,34 @@ static void convert_i444_to_uyvy(uint8_t *input[], uint32_t in_linesize[], uint3
 	}
 }
 
-typedef struct {
-	obs_output_t *output;
-	const char *ndi_name;
-	const char *ndi_groups;
-	bool uses_video;
-	bool uses_audio;
+struct ndi_output_t {
+	obs_output_t *output = nullptr;
+	std::string ndi_name;
+	std::string ndi_groups;
+	bool uses_video = false;
+	bool uses_audio = false;
 
-	bool started;
+	bool started = false;
 
-	NDIlib_send_instance_t ndi_sender;
-	pthread_mutex_t ndi_sender_mutex;
+	NDIlib_send_instance_t ndi_sender = nullptr;
+	std::mutex ndi_sender_mutex;
 
-	uint32_t frame_width;
-	uint32_t frame_height;
-	NDIlib_FourCC_video_type_e frame_fourcc;
-	double video_framerate;
+	uint32_t frame_width = 0;
+	uint32_t frame_height = 0;
+	NDIlib_FourCC_video_type_e frame_fourcc = NDIlib_FourCC_video_type_UYVY;
+	int frame_rate_n = 0;
+	int frame_rate_d = 1;
 
-	size_t audio_channels;
-	uint32_t audio_samplerate;
+	size_t audio_channels = 0;
+	uint32_t audio_samplerate = 0;
 
-	uint8_t *conv_buffer;
-	uint32_t conv_linesize;
-	uyvy_conv_function conv_function;
+	std::vector<uint8_t> conv_buffer;
+	uint32_t conv_linesize = 0;
+	uyvy_conv_function conv_function = nullptr;
 
-	uint8_t *audio_conv_buffer;
-	size_t audio_conv_buffer_size;
-	int32_t no_connections;
-	std::chrono::time_point<std::chrono::steady_clock> last_conn_check;
-} ndi_output_t;
+	std::vector<uint8_t> audio_conv_buffer;
+	ndi_connection_monitor connections;
+};
 
 const char *ndi_output_getname(void *)
 {
@@ -127,14 +120,9 @@ void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 	auto name = obs_data_get_string(settings, NDI_OUTPUT_KEY_NAME);
 	auto groups = obs_data_get_string(settings, NDI_OUTPUT_KEY_GROUPS);
 	obs_log(LOG_DEBUG, "+ndi_output_create(name='%s', groups='%s', ...)", name, groups);
-	auto o = (ndi_output_t *)bzalloc(sizeof(ndi_output_t));
+	auto o = new ndi_output_t();
 	o->output = output;
-	pthread_mutex_init(&o->ndi_sender_mutex, NULL);
 	ndi_output_update(o, settings);
-
-	// initialize last_conn_check so first check will occur immediately
-	o->no_connections = -1;
-	o->last_conn_check = std::chrono::steady_clock::time_point();
 
 	obs_log(LOG_DEBUG, "-ndi_output_create(name='%s', groups='%s', ...)", name, groups);
 	return o;
@@ -147,9 +135,9 @@ static const std::map<video_format, std::string> video_to_color_format_map = {{V
 
 bool ndi_output_start(void *data)
 {
-	auto o = (ndi_output_t *)data;
-	auto name = o->ndi_name;
-	auto groups = o->ndi_groups;
+	auto o = static_cast<ndi_output_t *>(data);
+	const char *name = o->ndi_name.c_str();
+	const char *groups = o->ndi_groups.c_str();
 	obs_log(LOG_DEBUG, "+ndi_output_start(name='%s', groups='%s', ...)", name, groups);
 	if (o->started) {
 		obs_log(LOG_INFO, "NDI Output already started: '%s'", name);
@@ -179,7 +167,7 @@ bool ndi_output_start(void *data)
 			o->conv_function = convert_i444_to_uyvy;
 			o->frame_fourcc = NDIlib_FourCC_video_type_UYVY;
 			o->conv_linesize = width * 2;
-			o->conv_buffer = new uint8_t[(size_t)height * (size_t)o->conv_linesize * 2]();
+			o->conv_buffer.assign((size_t)height * (size_t)o->conv_linesize, 0);
 			break;
 
 		case VIDEO_FORMAT_NV12:
@@ -206,15 +194,18 @@ bool ndi_output_start(void *data)
 			obs_log(LOG_ERROR, "ERR-410 - NDI Output cannot start : Unsupported pixel format %d. ('%s')",
 				format, name);
 			obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s', ...)", name, groups);
-			auto error_string = obs_module_text("NDIPlugin.OutputSettings.LastError") +
-					    video_to_color_format_map.at(format);
+			auto it = video_to_color_format_map.find(format);
+			auto error_string = std::string(obs_module_text("NDIPlugin.OutputSettings.LastError")) +
+					    (it != video_to_color_format_map.end() ? it->second : std::to_string(format));
 			obs_output_set_last_error(o->output, error_string.c_str());
 			return false;
 		}
 
 		o->frame_width = width;
 		o->frame_height = height;
-		o->video_framerate = video_output_get_frame_rate(video);
+		const video_output_info *voi = video_output_get_info(video);
+		o->frame_rate_n = (int)voi->fps_num;
+		o->frame_rate_d = (int)voi->fps_den;
 		flags |= OBS_OUTPUT_VIDEO;
 	}
 
@@ -226,14 +217,11 @@ bool ndi_output_start(void *data)
 
 	NDIlib_send_create_t send_desc{};
 	send_desc.p_ndi_name = name;
-	if (groups && groups[0])
-		send_desc.p_groups = groups;
-	else
-		send_desc.p_groups = nullptr;
+	send_desc.p_groups = groups[0] ? groups : nullptr;
 	send_desc.clock_video = false;
 	send_desc.clock_audio = false;
 
-	pthread_mutex_lock(&o->ndi_sender_mutex);
+	std::lock_guard<std::mutex> lock(o->ndi_sender_mutex);
 	o->ndi_sender = ndiLib->send_create(&send_desc);
 
 	if (o->ndi_sender) {
@@ -251,7 +239,6 @@ bool ndi_output_start(void *data)
 	}
 
 	obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s'...)", name, groups);
-	pthread_mutex_unlock(&o->ndi_sender_mutex);
 
 	return o->started;
 }
@@ -262,7 +249,7 @@ void replace_invalid_filename_chars(QString *s);
 
 void ndi_output_update(void *data, obs_data_t *settings)
 {
-	auto o = (ndi_output_t *)data;
+	auto o = static_cast<ndi_output_t *>(data);
 	auto name = obs_data_get_string(settings, NDI_OUTPUT_KEY_NAME);
 	// Replace invalid filename characters in the provided name and persist back to settings.
 	if (name) {
@@ -283,21 +270,21 @@ void ndi_output_update(void *data, obs_data_t *settings)
 		ndi_output_stop(o, 0);
 	}
 
-	o->ndi_name = name;
-	o->ndi_groups = groups;
+	o->ndi_name = name ? name : "";
+	o->ndi_groups = groups ? groups : "";
 	o->uses_video = obs_data_get_bool(settings, NDI_OUTPUT_KEY_USES_VIDEO);
 	o->uses_audio = obs_data_get_bool(settings, NDI_OUTPUT_KEY_USES_AUDIO);
 
 	auto outputName = obs_output_get_name(o->output);
 	if (outputName && std::strcmp(outputName, NDI_MAIN_OUTPUT_NAME) == 0) {
 		auto config = Config::Current();
-		config->OutputName = o->ndi_name;
-		config->OutputGroups = o->ndi_groups;
+		config->OutputName = o->ndi_name.c_str();
+		config->OutputGroups = o->ndi_groups.c_str();
 		config->Save();
 	} else if (outputName && std::strcmp(outputName, NDI_PREVIEW_OUTPUT_NAME) == 0) {
 		auto config = Config::Current();
-		config->PreviewOutputName = o->ndi_name;
-		config->PreviewOutputGroups = o->ndi_groups;
+		config->PreviewOutputName = o->ndi_name.c_str();
+		config->PreviewOutputGroups = o->ndi_groups.c_str();
 		config->Save();
 	}
 
@@ -311,33 +298,32 @@ void ndi_output_update(void *data, obs_data_t *settings)
 
 void ndi_output_stop(void *data, uint64_t)
 {
-	auto o = (ndi_output_t *)data;
-	auto name = o->ndi_name;
-	auto groups = o->ndi_groups;
+	auto o = static_cast<ndi_output_t *>(data);
+	const char *name = o->ndi_name.c_str();
+	const char *groups = o->ndi_groups.c_str();
 	obs_log(LOG_DEBUG, "+ndi_output_stop(name='%s', groups='%s', ...)", name, groups);
 	if (o->started) {
 		o->started = false;
 
 		obs_output_end_data_capture(o->output);
 
-		if (o->ndi_sender) {
-			obs_log(LOG_DEBUG, "ndi_output_stop: +ndiLib->send_destroy(o->ndi_sender)");
-			pthread_mutex_lock(&o->ndi_sender_mutex);
-			ndiLib->send_destroy(o->ndi_sender);
-			obs_log(LOG_DEBUG, "ndi_output_stop: -ndiLib->send_destroy(o->ndi_sender)");
-			o->ndi_sender = nullptr;
-			pthread_mutex_unlock(&o->ndi_sender_mutex);
+		{
+			std::lock_guard<std::mutex> lock(o->ndi_sender_mutex);
+			if (o->ndi_sender) {
+				obs_log(LOG_DEBUG, "ndi_output_stop: +ndiLib->send_destroy(o->ndi_sender)");
+				ndiLib->send_destroy(o->ndi_sender);
+				obs_log(LOG_DEBUG, "ndi_output_stop: -ndiLib->send_destroy(o->ndi_sender)");
+				o->ndi_sender = nullptr;
+			}
 		}
 
-		if (o->conv_buffer) {
-			delete[] o->conv_buffer;
-			o->conv_buffer = nullptr;
-			o->conv_function = nullptr;
-		}
+		o->conv_buffer.clear();
+		o->conv_function = nullptr;
 
 		o->frame_width = 0;
 		o->frame_height = 0;
-		o->video_framerate = 0.0;
+		o->frame_rate_n = 0;
+		o->frame_rate_d = 1;
 		o->audio_channels = 0;
 		o->audio_samplerate = 0;
 
@@ -349,64 +335,34 @@ void ndi_output_stop(void *data, uint64_t)
 
 void ndi_output_destroy(void *data)
 {
-	auto o = (ndi_output_t *)data;
-	auto name = o->ndi_name;
-	auto groups = o->ndi_groups;
-
-	pthread_mutex_destroy(&o->ndi_sender_mutex);
-
-	obs_log(LOG_DEBUG, "+ndi_output_destroy(name='%s', groups='%s', ...)", name, groups);
-
-	if (o->audio_conv_buffer) {
-		obs_log(LOG_DEBUG, "ndi_output_destroy: freeing %zu bytes", o->audio_conv_buffer_size);
-		bfree(o->audio_conv_buffer);
-		o->audio_conv_buffer = nullptr;
-	}
-	obs_log(LOG_DEBUG, "-ndi_output_destroy(name='%s', groups='%s', ...)", name, groups);
-	bfree(o);
+	auto o = static_cast<ndi_output_t *>(data);
+	obs_log(LOG_DEBUG, "+ndi_output_destroy(name='%s', groups='%s', ...)", o->ndi_name.c_str(),
+		o->ndi_groups.c_str());
+	obs_log(LOG_DEBUG, "-ndi_output_destroy(name='%s', groups='%s', ...)", o->ndi_name.c_str(),
+		o->ndi_groups.c_str());
+	delete o;
 }
 
 void ndi_output_rawvideo(void *data, video_data *frame)
 {
-	auto o = (ndi_output_t *)data;
+	auto o = static_cast<ndi_output_t *>(data);
 	if (!o->started || !o->frame_width || !o->frame_height)
 		return;
 
-	pthread_mutex_lock(&o->ndi_sender_mutex);
-	if (!o->ndi_sender) {
-		pthread_mutex_unlock(&o->ndi_sender_mutex);
+	// Held until the send completes so ndi_output_stop cannot destroy the sender mid-send.
+	std::lock_guard<std::mutex> lock(o->ndi_sender_mutex);
+	if (!o->ndi_sender)
 		return;
-	}
 
-	// Throttle calls to send_get_no_connections to at most once per second
-	auto now = std::chrono::steady_clock::now();
-	if (now - o->last_conn_check >= std::chrono::seconds(1)) {
-		int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
-		o->last_conn_check = now;
+	o->connections.check(o->ndi_sender, "video");
 
-		if (nc != o->no_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "NDI Output video '%s' has no connections.", ndi_source->p_ndi_name);
-			else if (o->no_connections == 0)
-				obs_log(LOG_DEBUG, "NDI Output video '%s' has %d connections.", ndi_source->p_ndi_name,
-					nc);
-			o->no_connections = nc;
-		}
-	}
-
-	pthread_mutex_unlock(&o->ndi_sender_mutex);
-
-	uint32_t width = o->frame_width;
 	uint32_t height = o->frame_height;
 
 	NDIlib_video_frame_v2_t video_frame = {0};
-	video_frame.xres = width;
+	video_frame.xres = o->frame_width;
 	video_frame.yres = height;
-	video_frame.frame_rate_N = (int)(o->video_framerate * 100);
-	// TODO fixme: broken on fractional framerates
-	video_frame.frame_rate_D =
-		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
+	video_frame.frame_rate_N = o->frame_rate_n;
+	video_frame.frame_rate_D = o->frame_rate_d;
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 #ifdef SYNC_DEBUG
 	video_frame.timestamp = frame->timestamp / 100;
@@ -415,14 +371,14 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.FourCC = o->frame_fourcc;
 
 	if (video_frame.FourCC == NDIlib_FourCC_type_UYVY) {
-		o->conv_function(frame->data, frame->linesize, 0, height, o->conv_buffer, o->conv_linesize);
-		video_frame.p_data = o->conv_buffer;
+		o->conv_function(frame->data, frame->linesize, 0, height, o->conv_buffer.data(), o->conv_linesize);
+		video_frame.p_data = o->conv_buffer.data();
 		video_frame.line_stride_in_bytes = o->conv_linesize;
 	} else {
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
-	SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name, video_frame.timestamp * 100,
+	SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name.c_str(), video_frame.timestamp * 100,
 				  (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
@@ -431,34 +387,15 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 {
 	// NOTE: The logic in this function should be similar to
 	// ndi-filter.cpp/ndi_filter_asyncaudio(...)
-	auto o = (ndi_output_t *)data;
+	auto o = static_cast<ndi_output_t *>(data);
 	if (!o->started || !o->audio_samplerate || !o->audio_channels)
 		return;
 
-	pthread_mutex_lock(&o->ndi_sender_mutex);
-	if (!o->ndi_sender) {
-		pthread_mutex_unlock(&o->ndi_sender_mutex);
+	std::lock_guard<std::mutex> lock(o->ndi_sender_mutex);
+	if (!o->ndi_sender)
 		return;
-	}
 
-	auto now = std::chrono::steady_clock::now();
-	if (now - o->last_conn_check >= std::chrono::seconds(1)) {
-		o->last_conn_check = now;
-
-		int nc = ndiLib->send_get_no_connections(o->ndi_sender, 10);
-
-		if (nc != o->no_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(o->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "NDI Output audio '%s' has no connections.", ndi_source->p_ndi_name);
-			else if (o->no_connections == 0)
-				obs_log(LOG_DEBUG, "NDI Output audio '%s' has %d connections.", ndi_source->p_ndi_name,
-					nc);
-			o->no_connections = nc;
-		}
-	}
-
-	pthread_mutex_unlock(&o->ndi_sender_mutex);
+	o->connections.check(o->ndi_sender, "audio");
 
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
@@ -468,31 +405,21 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 #endif
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
-	audio_frame.channel_stride_in_bytes = frame->frames * 4;
+	audio_frame.channel_stride_in_bytes = frame->frames * sizeof(float);
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
 	const size_t data_size = (size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
 
-	if (data_size > o->audio_conv_buffer_size) {
-		obs_log(LOG_DEBUG, "ndi_output_rawaudio('%s'): growing audio_conv_buffer from %zu to %zu bytes",
-			o->ndi_name, o->audio_conv_buffer_size, data_size);
-		if (o->audio_conv_buffer) {
-			obs_log(LOG_DEBUG, "ndi_output_rawaudio('%s'): freeing %zu bytes", o->ndi_name,
-				o->audio_conv_buffer_size);
-			bfree(o->audio_conv_buffer);
-		}
-		obs_log(LOG_DEBUG, "ndi_output_rawaudio('%s'): allocating %zu bytes", o->ndi_name, data_size);
-		o->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
-		o->audio_conv_buffer_size = data_size;
-	}
+	if (data_size > o->audio_conv_buffer.size())
+		o->audio_conv_buffer.resize(data_size);
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(o->audio_conv_buffer + (i * audio_frame.channel_stride_in_bytes), frame->data[i],
+		memcpy(o->audio_conv_buffer.data() + ((size_t)i * audio_frame.channel_stride_in_bytes), frame->data[i],
 		       audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = o->audio_conv_buffer;
-	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name, audio_frame.timestamp * 100,
+	audio_frame.p_data = o->audio_conv_buffer.data();
+	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name.c_str(), audio_frame.timestamp * 100,
 				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
