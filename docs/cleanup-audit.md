@@ -48,6 +48,8 @@ Scope: `CMakeLists.txt`, `ndi-output.cpp`, and greps across `src/`. `ndi-source.
 
 ## Suggested order
 
+Status: steps 1-4 done except: filter still uses pthread mutexes and C-style `(ndi_filter_t *)` casts, `ndi-source.cpp` not reviewed, `new QTimer()` in `update.cpp` untouched, audio `memcpy` kept, `target_sources` list still manual.
+
 1. Shared constants header (settings keys, output names, URLs). Lowest risk, biggest simplification.
 2. Fix frame-rate and sender-lock bugs.
 3. Modernize memory handling and casts in output, filter, and source files.
