@@ -49,7 +49,7 @@ Scope: `CMakeLists.txt`, `ndi-output.cpp`, and greps across `src/`. `ndi-source.
 ## Suggested order
 
 Status: steps 1-4 done except: filter still uses pthread mutexes and C-style `(ndi_filter_t *)` / `(ndi_source_t *)` casts, `new QTimer()` in `update.cpp` untouched, audio `memcpy` kept, `target_sources` list still manual.
-`ndi-source.cpp`: `running` and `reset_ndi_receiver` are now atomic (shared with the receiver thread), constants named. Still open: `config.ptz`, `config.tally` and the `ndi_source_name` / `ndi_receiver_name` char* are read by the receiver thread while the UI thread writes them without synchronization.
+`ndi-source.cpp`: `running` and `reset_ndi_receiver` are now atomic (shared with the receiver thread), constants named. Still open: `config.ptz` and `config.tally` are read by the receiver thread while the UI thread writes them without synchronization. The source/receiver name strings are now mutex-guarded and copied by the thread.
 
 1. Shared constants header (settings keys, output names, URLs). Lowest risk, biggest simplification.
 2. Fix frame-rate and sender-lock bugs.

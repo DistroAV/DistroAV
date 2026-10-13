@@ -27,6 +27,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -126,7 +127,8 @@ typedef struct ndi_source_config_t {
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
-
+	// Guards writes to config.ndi_source_name / ndi_receiver_name, which the receiver thread copies.
+	std::mutex config_mutex;
 	std::atomic<bool> running{false};
 	pthread_t av_thread;
 
@@ -452,6 +454,9 @@ void *ndi_source_thread(void *data)
 	const auto web_control_poll_interval = std::chrono::seconds(1);
 	auto web_control_last_poll = std::chrono::steady_clock::time_point{};
 
+	// Thread-owned copies so the UI thread can replace the config strings while the receiver runs.
+	std::string recv_name_copy;
+	std::string source_name_copy;
 	//
 	// Main NDI receiver loop: BEGIN
 	//
@@ -468,7 +473,12 @@ void *ndi_source_thread(void *data)
 			//
 			// Update recv_desc.p_ndi_recv_name
 			//
-			recv_desc.p_ndi_recv_name = s->config.ndi_receiver_name;
+			{
+				std::lock_guard<std::mutex> lock(s->config_mutex);
+				recv_name_copy = s->config.ndi_receiver_name ? s->config.ndi_receiver_name : "";
+				source_name_copy = s->config.ndi_source_name ? s->config.ndi_source_name : "";
+			}
+			recv_desc.p_ndi_recv_name = recv_name_copy.c_str();
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.p_ndi_recv_name='%s'",
 				obs_source_name, //
@@ -477,7 +487,7 @@ void *ndi_source_thread(void *data)
 			//
 			// Update recv_desc.source_to_connect_to.p_ndi_name
 			//
-			recv_desc.source_to_connect_to.p_ndi_name = s->config.ndi_source_name;
+			recv_desc.source_to_connect_to.p_ndi_name = source_name_copy.c_str();
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver; Setting recv_desc.source_to_connect_to.p_ndi_name='%s'",
 				obs_source_name, //
@@ -977,11 +987,14 @@ void ndi_source_update(void *data, obs_data_t *settings)
 		obs_data_set_string(settings, "web_control_url", "");
 	}
 
-	if (s->config.ndi_source_name != nullptr) {
-		bfree(s->config.ndi_source_name);
-	}
+	{
+		std::lock_guard<std::mutex> lock(s->config_mutex);
+		if (s->config.ndi_source_name != nullptr) {
+			bfree(s->config.ndi_source_name);
+		}
 
-	s->config.ndi_source_name = bstrdup(new_ndi_source_name);
+		s->config.ndi_source_name = bstrdup(new_ndi_source_name);
+	}
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
@@ -1151,7 +1164,9 @@ void ndi_source_update(void *data, obs_data_t *settings)
 			//
 			// Thread is running; notify it if it needs to reset the NDI receiver
 			//
-			s->config.reset_ndi_receiver = reset_ndi_receiver;
+			// Only raise the flag; storing false could discard a reset the thread has not consumed yet.
+			if (reset_ndi_receiver)
+				s->config.reset_ndi_receiver = true;
 		} else {
 			//
 			// Thread is not running; start it if either:
@@ -1242,7 +1257,10 @@ void on_ndi_source_renamed(void *data, calldata_t *)
 {
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
-	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	{
+		std::lock_guard<std::mutex> lock(s->config_mutex);
+		new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	}
 	s->config.reset_ndi_receiver = true;
 	obs_log(LOG_DEBUG, "'%s' on_ndi_source_renamed: new ndi_receiver_name='%s'", obs_source_name,
 		s->config.ndi_receiver_name);
