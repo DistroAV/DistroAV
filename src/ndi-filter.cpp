@@ -21,6 +21,8 @@
 #include <util/threading.h>
 #include <media-io/video-frame.h>
 
+#include <vector>
+
 #include <QDesktopServices>
 #include <QUrl>
 
@@ -28,7 +30,7 @@
 #define FLT_PROP_NAME "ndi_filter_ndiname"
 #define FLT_PROP_GROUPS "ndi_filter_ndigroups"
 
-typedef struct {
+struct ndi_filter_t {
 	obs_source_t *obs_source;
 
 	NDIlib_send_instance_t ndi_sender;
@@ -54,11 +56,10 @@ typedef struct {
 	video_t *video_output;
 	bool is_audioonly;
 
-	uint8_t *audio_conv_buffer;
-	size_t audio_conv_buffer_size;
+	std::vector<uint8_t> audio_conv_buffer;
 	ndi_connection_monitor video_connections;
 	ndi_connection_monitor audio_connections;
-} ndi_filter_t;
+};
 
 const char *ndi_filter_getname(void *)
 {
@@ -456,11 +457,11 @@ void *ndi_filter_create(obs_data_t *settings, obs_source_t *obs_source)
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 	obs_log(LOG_DEBUG, "+ndi_filter_create(name='%s', groups='%s')", name, groups);
 
-	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
+	auto f = new ndi_filter_t();
 	f->obs_source = obs_source;
 	f->texrender = gs_texrender_create(TEXFORMAT, GS_ZS_NONE);
-	pthread_mutex_init(&f->ndi_sender_video_mutex, NULL);
-	pthread_mutex_init(&f->ndi_sender_audio_mutex, NULL);
+	pthread_mutex_init(&f->ndi_sender_video_mutex, nullptr);
+	pthread_mutex_init(&f->ndi_sender_audio_mutex, nullptr);
 	obs_get_video_info(&f->ovi);
 	obs_get_audio_info(&f->oai);
 
@@ -478,10 +479,10 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 	auto groups = obs_data_get_string(settings, FLT_PROP_GROUPS);
 	obs_log(LOG_DEBUG, "+ndi_filter_create_audioonly(name='%s', groups='%s')", name, groups);
 
-	auto f = (ndi_filter_t *)bzalloc(sizeof(ndi_filter_t));
+	auto f = new ndi_filter_t();
 	f->is_audioonly = true;
 	f->obs_source = obs_source;
-	pthread_mutex_init(&f->ndi_sender_audio_mutex, NULL);
+	pthread_mutex_init(&f->ndi_sender_audio_mutex, nullptr);
 	obs_get_audio_info(&f->oai);
 
 	ndi_filter_update(f, settings);
@@ -508,13 +509,10 @@ void ndi_filter_destroy(void *data)
 	gs_stagesurface_destroy(f->stagesurface);
 	gs_texrender_destroy(f->texrender);
 
-	if (f->audio_conv_buffer) {
-		obs_log(LOG_DEBUG, "ndi_filter_destroy: freeing %zu bytes", f->audio_conv_buffer_size);
-		bfree(f->audio_conv_buffer);
-		f->audio_conv_buffer = nullptr;
-	}
+	pthread_mutex_destroy(&f->ndi_sender_video_mutex);
+	pthread_mutex_destroy(&f->ndi_sender_audio_mutex);
 
-	bfree(f);
+	delete f;
 
 	obs_log(LOG_INFO, "NDI Filter Destroyed: '%s'", name);
 	obs_log(LOG_DEBUG, "-ndi_filter_destroy('%s'...)", name);
@@ -529,12 +527,9 @@ void ndi_filter_destroy_audioonly(void *data)
 	ndi_filter_disconnect_rename_handlers(f);
 	ndi_sender_destroy(f);
 
-	if (f->audio_conv_buffer) {
-		bfree(f->audio_conv_buffer);
-		f->audio_conv_buffer = nullptr;
-	}
+	pthread_mutex_destroy(&f->ndi_sender_audio_mutex);
 
-	bfree(f);
+	delete f;
 
 	obs_log(LOG_INFO, "NDI Audio-Only Filter Destroyed: '%s'", name);
 	obs_log(LOG_DEBUG, "-ndi_filter_destroy_audioonly('%s'...)", name);
@@ -598,28 +593,19 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 		4; // TODO: Check if this correct or should 4 be replaced by number of channels.
 	// audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 	// audio_frame.p_data = p_frame;
-	audio_frame.p_metadata = NULL; // No metadata support yet!
+	audio_frame.p_metadata = nullptr; // No metadata support yet!
 
 	const size_t data_size = audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
 
-	if (data_size > f->audio_conv_buffer_size) {
-		obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
-			f->audio_conv_buffer_size, data_size);
-		if (f->audio_conv_buffer) {
-			obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: freeing %zu bytes", f->audio_conv_buffer_size);
-			bfree(f->audio_conv_buffer);
-		}
-		obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: allocating %zu bytes", data_size);
-		f->audio_conv_buffer = (uint8_t *)bmalloc(data_size);
-		f->audio_conv_buffer_size = data_size;
-	}
+	if (data_size > f->audio_conv_buffer.size())
+		f->audio_conv_buffer.resize(data_size);
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(f->audio_conv_buffer + (i * audio_frame.channel_stride_in_bytes), audio_data->data[i],
+		memcpy(f->audio_conv_buffer.data() + ((size_t)i * audio_frame.channel_stride_in_bytes), audio_data->data[i],
 		       audio_frame.channel_stride_in_bytes);
 	}
 
-	audio_frame.p_data = f->audio_conv_buffer;
+	audio_frame.p_data = f->audio_conv_buffer.data();
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source), audio_frame.timestamp * 100,
