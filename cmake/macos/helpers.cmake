@@ -4,6 +4,34 @@ include_guard(GLOBAL)
 
 include(helpers_common)
 
+# strip_qt_agl_references: Remove the removed AGL framework from Qt/OpenGL imported targets
+function(strip_qt_agl_references)
+  foreach(
+    _qt_target
+    IN
+    ITEMS Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network WrapOpenGL::WrapOpenGL OpenGL::GL OpenGL::GLU
+  )
+    if(NOT TARGET ${_qt_target})
+      continue()
+    endif()
+    foreach(_qt_prop IN ITEMS INTERFACE_LINK_LIBRARIES INTERFACE_LINK_OPTIONS)
+      get_target_property(_qt_prop_value ${_qt_target} ${_qt_prop})
+      if(NOT _qt_prop_value)
+        continue()
+      endif()
+      set(_qt_prop_cleaned "${_qt_prop_value}")
+      string(REPLACE "-framework;AGL;" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+      string(REPLACE ";-framework;AGL" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+      string(REPLACE "-framework;AGL" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+      string(REPLACE "-framework AGL" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+      string(REPLACE "/System/Library/Frameworks/AGL.framework" "" _qt_prop_cleaned "${_qt_prop_cleaned}")
+      if(NOT _qt_prop_cleaned STREQUAL _qt_prop_value)
+        set_property(TARGET ${_qt_target} PROPERTY ${_qt_prop} "${_qt_prop_cleaned}")
+      endif()
+    endforeach()
+  endforeach()
+endfunction()
+
 # set_target_properties_obs: Set target properties for use in obs-studio
 function(set_target_properties_plugin target)
   set(options "")
