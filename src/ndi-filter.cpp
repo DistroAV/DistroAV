@@ -56,10 +56,8 @@ typedef struct {
 
 	uint8_t *audio_conv_buffer;
 	size_t audio_conv_buffer_size;
-	int32_t no_video_connections;
-	std::chrono::time_point<std::chrono::steady_clock> last_video_conn_check;
-	int32_t no_audio_connections;
-	std::chrono::time_point<std::chrono::steady_clock> last_audio_conn_check;
+	ndi_connection_monitor video_connections;
+	ndi_connection_monitor audio_connections;
 } ndi_filter_t;
 
 const char *ndi_filter_getname(void *)
@@ -183,21 +181,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 		return;
 	}
 
-	auto now = std::chrono::steady_clock::now();
-	if (now - f->last_video_conn_check >= std::chrono::seconds(1)) {
-		f->last_video_conn_check = now;
-		int nc = ndiLib->send_get_no_connections(f->ndi_sender, 10);
-		if (nc != f->no_video_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(f->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output video '%s' has no connections",
-					ndi_source->p_ndi_name);
-			else if (f->no_video_connections == 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output video '%s' has %d connections",
-					ndi_source->p_ndi_name, nc);
-			f->no_video_connections = nc;
-		}
-	}
+	f->video_connections.check(f->ndi_sender, "video (dedicated)");
 
 	pthread_mutex_unlock(&f->ndi_sender_video_mutex);
 
@@ -432,7 +416,8 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 		obs_log(LOG_DEBUG, "'%s' ndi_sender_create: ndi sender init failed", send_desc.p_ndi_name);
 	}
 
-	filter->no_audio_connections = -1;
+	filter->video_connections = {};
+	filter->audio_connections = {};
 
 #ifdef SYNC_DEBUG
 	// Video timestamps are in OBS time, so calculate offset to convert to NDI timestamps
@@ -594,21 +579,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 		return audio_data;
 	}
 
-	auto now = std::chrono::steady_clock::now();
-	if (now - f->last_audio_conn_check >= std::chrono::seconds(1)) {
-		f->last_audio_conn_check = now;
-		int nc = ndiLib->send_get_no_connections(f->ndi_sender, 10);
-		if (nc != f->no_audio_connections) {
-			auto ndi_source = ndiLib->send_get_source_name(f->ndi_sender);
-			if (nc <= 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has no connections.",
-					ndi_source->p_ndi_name);
-			else if (f->no_audio_connections == 0)
-				obs_log(LOG_DEBUG, "Dedicated NDI Output audio '%s' has %d connections.",
-					ndi_source->p_ndi_name, nc);
-			f->no_audio_connections = nc;
-		}
-	}
+	f->audio_connections.check(f->ndi_sender, "audio (dedicated)");
 
 	pthread_mutex_unlock(&f->ndi_sender_audio_mutex);
 

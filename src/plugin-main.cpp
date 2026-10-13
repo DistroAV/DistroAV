@@ -75,6 +75,28 @@ QLibrary *loaded_lib = nullptr;
 
 OutputSettings *output_settings = nullptr;
 
+static constexpr std::chrono::seconds CONNECTION_CHECK_INTERVAL{1};
+static constexpr uint32_t CONNECTION_CHECK_TIMEOUT_MS = 10;
+
+void ndi_connection_monitor::check(NDIlib_send_instance_t sender, const char *kind)
+{
+	auto now = std::chrono::steady_clock::now();
+	if (now - last_check < CONNECTION_CHECK_INTERVAL)
+		return;
+	last_check = now;
+
+	int nc = ndiLib->send_get_no_connections(sender, CONNECTION_CHECK_TIMEOUT_MS);
+	if (nc == no_connections)
+		return;
+
+	auto ndi_source = ndiLib->send_get_source_name(sender);
+	if (nc <= 0)
+		obs_log(LOG_DEBUG, "NDI Output %s '%s' has no connections.", kind, ndi_source->p_ndi_name);
+	else if (no_connections == 0)
+		obs_log(LOG_DEBUG, "NDI Output %s '%s' has %d connections.", kind, ndi_source->p_ndi_name, nc);
+	no_connections = nc;
+}
+
 //
 //
 //

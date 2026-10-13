@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <chrono>
+
 #include "config.h"
 #include "obs-support/qt_wrapper.hpp"
 #include "plugin-support.h"
@@ -47,6 +49,14 @@ inline constexpr const char *NDI_FILTER_TOKEN_FILTER = "${filter}";
 inline constexpr const char *NDI_FILTER_DEFAULT_NAME = "${filter} (${source})";
 
 extern const NDIlib_v6 *ndiLib;
+
+// Throttled `send_get_no_connections` poll that logs connection changes. Caller must hold the sender lock.
+struct ndi_connection_monitor {
+	int32_t no_connections = -1;
+	std::chrono::steady_clock::time_point last_check{};
+
+	void check(NDIlib_send_instance_t sender, const char *kind);
+};
 
 /*
 The following accomplishes two goals:
