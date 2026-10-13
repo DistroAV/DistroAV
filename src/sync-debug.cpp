@@ -49,6 +49,9 @@ int64_t sync_white_time(int64_t time, uint8_t *p_data)
 	return white ? time : 0;
 }
 
+static constexpr int64_t NS_PER_SEC = 1000000000LL;
+static constexpr int64_t NS_PER_MS = 1000000LL;
+
 int64_t sync_audio_on_time(int64_t time, float *p_data, int nsamples, int samplerate)
 {
 	int64_t return_time = -1;
@@ -57,7 +60,7 @@ int64_t sync_audio_on_time(int64_t time, float *p_data, int nsamples, int sample
 	while (sample < nsamples) {
 		float sample_amp = p_data[sample];
 		if (sample_amp != last_amp) {
-			int64_t ns_per_sample = 1000000000 / samplerate;
+			int64_t ns_per_sample = NS_PER_SEC / samplerate;
 			return_time = time + (sample * ns_per_sample);
 			return return_time;
 		}
@@ -74,7 +77,7 @@ int64_t sync_audio_off_time(int64_t time, float *p_data, int nsamples, int sampl
 	while (sample < nsamples) {
 		float sample_amp = p_data[sample];
 		if (sample_amp == last_amp) {
-			int64_t ns_per_sample = 1000000000 / samplerate;
+			int64_t ns_per_sample = NS_PER_SEC / samplerate;
 			return_time = time + (sample * ns_per_sample);
 			return return_time;
 		}
@@ -82,7 +85,7 @@ int64_t sync_audio_off_time(int64_t time, float *p_data, int nsamples, int sampl
 	}
 	return return_time;
 }
-const int64_t max_offset = 2000000000LL; //2 seconds
+const int64_t max_offset = 2 * NS_PER_SEC;
 
 void sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_on_time, int64_t *audio_off_time,
 		    int audio_sync_count, int64_t *white_on_time, int64_t *white_off_time, int video_sync_count)
@@ -92,11 +95,11 @@ void sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_on_ti
 			int64_t diff = *white_on_time - *audio_on_time;
 			obs_log(LOG_DEBUG,
 				"Sync A/V   AT: %15lld AW: %5lld AC: %3d VT: %15lld VW: %5lld VC: %3d Delta: %5lld %s",
-				*audio_on_time / 1000000,
-				*audio_off_time > 0 ? (*audio_off_time - *audio_on_time) / 1000000 : -1,
-				audio_sync_count, *white_on_time / 1000000,
-				*white_off_time > 0 ? (*white_off_time - *white_on_time) / 1000000 : -1,
-				video_sync_count, diff / 1000000, message);
+				*audio_on_time / NS_PER_MS,
+				*audio_off_time > 0 ? (*audio_off_time - *audio_on_time) / NS_PER_MS : -1,
+				audio_sync_count, *white_on_time / NS_PER_MS,
+				*white_off_time > 0 ? (*white_off_time - *white_on_time) / NS_PER_MS : -1,
+				video_sync_count, diff / NS_PER_MS, message);
 			*audio_on_time = 0;
 			*audio_off_time = 0;
 			*white_on_time = 0;
@@ -105,8 +108,8 @@ void sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_on_ti
 		if (*white_on_time > 0 && video_sync_count > 0) {
 			obs_log(LOG_DEBUG,
 				"Sync Video AT: --------------- AW: ----- AC: --- VT: %15lld VW: %5lld VC: %3d Delta: ----- %s",
-				*white_on_time / 1000000,
-				*white_off_time > 0 ? (*white_off_time - *white_on_time) / 1000000 : -1,
+				*white_on_time / NS_PER_MS,
+				*white_off_time > 0 ? (*white_off_time - *white_on_time) / NS_PER_MS : -1,
 				video_sync_count, message);
 			*white_on_time = 0;
 			*white_off_time = 0;
@@ -115,8 +118,8 @@ void sync_debug_log(const char *message, int64_t timestamp, int64_t *audio_on_ti
 		if (*audio_on_time > 0 && audio_sync_count > 0) {
 			obs_log(LOG_DEBUG,
 				"Sync Audio AT: %15lld AW: %5lld AC: %3d VT: --------------- VW: ----- VC: --- Delta: ----- %s",
-				*audio_on_time / 1000000,
-				*audio_off_time > 0 ? (*audio_off_time - *audio_on_time) / 1000000 : -1,
+				*audio_on_time / NS_PER_MS,
+				*audio_off_time > 0 ? (*audio_off_time - *audio_on_time) / NS_PER_MS : -1,
 				audio_sync_count, message);
 			*audio_on_time = 0;
 			*audio_off_time = 0;
