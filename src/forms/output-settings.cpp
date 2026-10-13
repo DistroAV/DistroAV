@@ -380,8 +380,8 @@ void OutputSettings::refreshUI()
 	obs_data_t *main_settings = nullptr;
 	main_output_get_settings(main_settings);
 	if (main_settings) {
-		config->OutputName = obs_data_get_string(main_settings, "ndi_name");
-		config->OutputGroups = obs_data_get_string(main_settings, "ndi_groups");
+		config->OutputName = obs_data_get_string(main_settings, NDI_OUTPUT_KEY_NAME);
+		config->OutputGroups = obs_data_get_string(main_settings, NDI_OUTPUT_KEY_GROUPS);
 		obs_data_release(main_settings);
 		config->Save();
 	}
@@ -401,8 +401,8 @@ void OutputSettings::refreshUI()
 	obs_data_t *preview_settings = nullptr;
 	preview_output_get_settings(preview_settings);
 	if (preview_settings) {
-		config->PreviewOutputName = obs_data_get_string(preview_settings, "ndi_name");
-		config->PreviewOutputGroups = obs_data_get_string(preview_settings, "ndi_groups");
+		config->PreviewOutputName = obs_data_get_string(preview_settings, NDI_OUTPUT_KEY_NAME);
+		config->PreviewOutputGroups = obs_data_get_string(preview_settings, NDI_OUTPUT_KEY_GROUPS);
 		obs_data_release(preview_settings);
 		config->Save();
 	}

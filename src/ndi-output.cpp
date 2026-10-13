@@ -100,8 +100,9 @@ obs_properties_t *ndi_output_getproperties(void *)
 	obs_properties_t *props = obs_properties_create();
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 
-	obs_properties_add_text(props, "ndi_name", obs_module_text("NDIPlugin.OutputProps.NDIName"), OBS_TEXT_DEFAULT);
-	obs_properties_add_text(props, "ndi_groups", obs_module_text("NDIPlugin.OutputProps.NDIGroups"),
+	obs_properties_add_text(props, NDI_OUTPUT_KEY_NAME, obs_module_text("NDIPlugin.OutputProps.NDIName"),
+				OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, NDI_OUTPUT_KEY_GROUPS, obs_module_text("NDIPlugin.OutputProps.NDIGroups"),
 				OBS_TEXT_DEFAULT);
 
 	obs_log(LOG_DEBUG, "-ndi_output_getproperties()");
@@ -112,10 +113,10 @@ obs_properties_t *ndi_output_getproperties(void *)
 void ndi_output_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+ndi_output_getdefaults()");
-	obs_data_set_default_string(settings, "ndi_name", "DistroAV output (changeme)");
-	obs_data_set_default_string(settings, "ndi_groups", "DistroAV output (changeme)");
-	obs_data_set_default_bool(settings, "uses_video", true);
-	obs_data_set_default_bool(settings, "uses_audio", true);
+	obs_data_set_default_string(settings, NDI_OUTPUT_KEY_NAME, NDI_OUTPUT_DEFAULT_NAME);
+	obs_data_set_default_string(settings, NDI_OUTPUT_KEY_GROUPS, NDI_OUTPUT_DEFAULT_NAME);
+	obs_data_set_default_bool(settings, NDI_OUTPUT_KEY_USES_VIDEO, true);
+	obs_data_set_default_bool(settings, NDI_OUTPUT_KEY_USES_AUDIO, true);
 	obs_log(LOG_DEBUG, "-ndi_output_getdefaults()");
 }
 
@@ -123,8 +124,8 @@ void ndi_output_update(void *data, obs_data_t *settings);
 
 void *ndi_output_create(obs_data_t *settings, obs_output_t *output)
 {
-	auto name = obs_data_get_string(settings, "ndi_name");
-	auto groups = obs_data_get_string(settings, "ndi_groups");
+	auto name = obs_data_get_string(settings, NDI_OUTPUT_KEY_NAME);
+	auto groups = obs_data_get_string(settings, NDI_OUTPUT_KEY_GROUPS);
 	obs_log(LOG_DEBUG, "+ndi_output_create(name='%s', groups='%s', ...)", name, groups);
 	auto o = (ndi_output_t *)bzalloc(sizeof(ndi_output_t));
 	o->output = output;
@@ -262,15 +263,15 @@ void replace_invalid_filename_chars(QString *s);
 void ndi_output_update(void *data, obs_data_t *settings)
 {
 	auto o = (ndi_output_t *)data;
-	auto name = obs_data_get_string(settings, "ndi_name");
+	auto name = obs_data_get_string(settings, NDI_OUTPUT_KEY_NAME);
 	// Replace invalid filename characters in the provided name and persist back to settings.
 	if (name) {
 		QString qname = QString::fromUtf8(name);
 		replace_invalid_filename_chars(&qname);
-		obs_data_set_string(settings, "ndi_name", QT_TO_UTF8(qname));
-		name = obs_data_get_string(settings, "ndi_name");
+		obs_data_set_string(settings, NDI_OUTPUT_KEY_NAME, QT_TO_UTF8(qname));
+		name = obs_data_get_string(settings, NDI_OUTPUT_KEY_NAME);
 	}
-	auto groups = obs_data_get_string(settings, "ndi_groups");
+	auto groups = obs_data_get_string(settings, NDI_OUTPUT_KEY_GROUPS);
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', ...)", name, groups);
 
 	// If the output is running, stop it so it can be recreated with the new settings.
@@ -284,16 +285,16 @@ void ndi_output_update(void *data, obs_data_t *settings)
 
 	o->ndi_name = name;
 	o->ndi_groups = groups;
-	o->uses_video = obs_data_get_bool(settings, "uses_video");
-	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+	o->uses_video = obs_data_get_bool(settings, NDI_OUTPUT_KEY_USES_VIDEO);
+	o->uses_audio = obs_data_get_bool(settings, NDI_OUTPUT_KEY_USES_AUDIO);
 
 	auto outputName = obs_output_get_name(o->output);
-	if (outputName && std::strcmp(outputName, "NDI Main Output") == 0) {
+	if (outputName && std::strcmp(outputName, NDI_MAIN_OUTPUT_NAME) == 0) {
 		auto config = Config::Current();
 		config->OutputName = o->ndi_name;
 		config->OutputGroups = o->ndi_groups;
 		config->Save();
-	} else if (outputName && std::strcmp(outputName, "NDI Preview Output") == 0) {
+	} else if (outputName && std::strcmp(outputName, NDI_PREVIEW_OUTPUT_NAME) == 0) {
 		auto config = Config::Current();
 		config->PreviewOutputName = o->ndi_name;
 		config->PreviewOutputGroups = o->ndi_groups;
@@ -499,7 +500,7 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 obs_output_info create_ndi_output_info()
 {
 	obs_output_info ndi_output_info = {};
-	ndi_output_info.id = "ndi_output";
+	ndi_output_info.id = NDI_OUTPUT_ID;
 	ndi_output_info.flags = OBS_OUTPUT_AV;
 
 	ndi_output_info.get_name = ndi_output_getname;

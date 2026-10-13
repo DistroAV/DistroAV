@@ -88,7 +88,7 @@ QString rehostUrl(const char *url)
 	auto result = QString::fromUtf8(url);
 	if (Config::UpdateLocalPort > 0) {
 		result.replace(
-			"https://distroav.org",
+			PLUGIN_WEB_BASE_URL,
 			QString("http://%1:%2").arg(PLUGIN_WEB_HOST_LOCAL_EMULATOR).arg(Config::UpdateLocalPort));
 	}
 	return result;

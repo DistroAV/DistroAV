@@ -31,6 +31,21 @@
 
 #define OBS_NDI_ALPHA_FILTER_ID "premultiplied_alpha_filter"
 
+// Shared by ndi-output, main-output, preview-output and output-settings.
+inline constexpr const char *NDI_OUTPUT_ID = "ndi_output";
+inline constexpr const char *NDI_MAIN_OUTPUT_NAME = "NDI Main Output";
+inline constexpr const char *NDI_PREVIEW_OUTPUT_NAME = "NDI Preview Output";
+inline constexpr const char *NDI_OUTPUT_KEY_NAME = "ndi_name";
+inline constexpr const char *NDI_OUTPUT_KEY_GROUPS = "ndi_groups";
+inline constexpr const char *NDI_OUTPUT_KEY_USES_VIDEO = "uses_video";
+inline constexpr const char *NDI_OUTPUT_KEY_USES_AUDIO = "uses_audio";
+inline constexpr const char *NDI_OUTPUT_DEFAULT_NAME = "DistroAV output (default name)";
+
+// Name templates for the NDI filter; tokens are expanded in ndi-filter.cpp.
+inline constexpr const char *NDI_FILTER_TOKEN_SOURCE = "${source}";
+inline constexpr const char *NDI_FILTER_TOKEN_FILTER = "${filter}";
+inline constexpr const char *NDI_FILTER_DEFAULT_NAME = "${filter} (${source})";
+
 extern const NDIlib_v6 *ndiLib;
 
 /*
@@ -61,28 +76,30 @@ QString makeLink(const char *url, const char *text = nullptr);
 bool is_version_supported(const char *version, const char *min_version);
 extern OutputSettings *output_settings;
 
-#define PLUGIN_UPDATE_URL "https://distroav.org/api/update"
+#define PLUGIN_WEB_BASE_URL "https://" PLUGIN_WEB_HOST_PRODUCTION
 
-#define PLUGIN_REDIRECT_DISCORD_URL "https://distroav.org/discord"
-#define PLUGIN_REDIRECT_DONATE_URL "https://distroav.org/donate"
-#define PLUGIN_REDIRECT_REPORT_BUG_URL "https://distroav.org/report-bug"
-#define PLUGIN_REDIRECT_HELP_URL "https://distroav.org/help"
-#define PLUGIN_REDIRECT_TROUBLESHOOTING_URL "https://distroav.org/kb/troubleshooting"
-#define PLUGIN_REDIRECT_UNINSTALL_URL "https://distroav.org/kb/uninstall"
-#define PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL "https://distroav.org/kb/uninstall-obs-ndi"
+#define PLUGIN_UPDATE_URL PLUGIN_WEB_BASE_URL "/api/update"
+
+#define PLUGIN_REDIRECT_DISCORD_URL PLUGIN_WEB_BASE_URL "/discord"
+#define PLUGIN_REDIRECT_DONATE_URL PLUGIN_WEB_BASE_URL "/donate"
+#define PLUGIN_REDIRECT_REPORT_BUG_URL PLUGIN_WEB_BASE_URL "/report-bug"
+#define PLUGIN_REDIRECT_HELP_URL PLUGIN_WEB_BASE_URL "/help"
+#define PLUGIN_REDIRECT_TROUBLESHOOTING_URL PLUGIN_WEB_BASE_URL "/kb/troubleshooting"
+#define PLUGIN_REDIRECT_UNINSTALL_URL PLUGIN_WEB_BASE_URL "/kb/uninstall"
+#define PLUGIN_REDIRECT_UNINSTALL_OBSNDI_URL PLUGIN_WEB_BASE_URL "/kb/uninstall-obs-ndi"
 #if defined(Q_OS_WIN)
 // Windows
-#define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-windows"
+#define PLUGIN_REDIRECT_NDI_REDIST_URL PLUGIN_WEB_BASE_URL "/ndi/redist-windows"
 #elif defined(Q_OS_MACOS)
 // MacOS
-#define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-macos"
+#define PLUGIN_REDIRECT_NDI_REDIST_URL PLUGIN_WEB_BASE_URL "/ndi/redist-macos"
 #else
 // Linux
-#define PLUGIN_REDIRECT_NDI_REDIST_URL "https://distroav.org/ndi/redist-linux"
+#define PLUGIN_REDIRECT_NDI_REDIST_URL PLUGIN_WEB_BASE_URL "/ndi/redist-linux"
 #endif
-#define PLUGIN_REDIRECT_NDI_SDK_CPU_REQUIREMENTS_URL "https://distroav.org/ndi/sdk-cpu-requirements"
-#define PLUGIN_REDIRECT_NDI_TOOLS_URL "https://distroav.org/ndi/tools"
-#define PLUGIN_REDIRECT_NDI_WEB_URL "https://distroav.org/ndi/web"
+#define PLUGIN_REDIRECT_NDI_SDK_CPU_REQUIREMENTS_URL PLUGIN_WEB_BASE_URL "/ndi/sdk-cpu-requirements"
+#define PLUGIN_REDIRECT_NDI_TOOLS_URL PLUGIN_WEB_BASE_URL "/ndi/tools"
+#define PLUGIN_REDIRECT_NDI_WEB_URL PLUGIN_WEB_BASE_URL "/ndi/web"
 
 //
 // `NDI_OFFICIAL_*` urls that should be displayed cosmetically/literally to the user.

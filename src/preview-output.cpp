@@ -152,8 +152,8 @@ void preview_output_start()
 		obs_add_main_render_callback(render_preview_source, &context);
 
 		obs_data_t *settings = obs_output_get_settings(context.output);
-		obs_data_set_string(settings, "ndi_name", QT_TO_UTF8(context.ndi_name));
-		obs_data_set_string(settings, "ndi_groups", QT_TO_UTF8(context.ndi_groups));
+		obs_data_set_string(settings, NDI_OUTPUT_KEY_NAME, QT_TO_UTF8(context.ndi_name));
+		obs_data_set_string(settings, NDI_OUTPUT_KEY_GROUPS, QT_TO_UTF8(context.ndi_groups));
 		obs_output_update(context.output, settings);
 		obs_data_release(settings);
 
@@ -228,13 +228,13 @@ void preview_output_init()
 
 	obs_log(LOG_DEBUG, "preview_output_init: creating NDI Preview Output '%s'", QT_TO_UTF8(output_name));
 	obs_data_t *output_settings = obs_data_create();
-	obs_data_set_string(output_settings, "ndi_name", QT_TO_UTF8(output_name));
-	obs_data_set_string(output_settings, "ndi_groups", QT_TO_UTF8(output_groups));
+	obs_data_set_string(output_settings, NDI_OUTPUT_KEY_NAME, QT_TO_UTF8(output_name));
+	obs_data_set_string(output_settings, NDI_OUTPUT_KEY_GROUPS, QT_TO_UTF8(output_groups));
 
-	obs_data_set_bool(output_settings, "uses_audio",
+	obs_data_set_bool(output_settings, NDI_OUTPUT_KEY_USES_AUDIO,
 			  false); // Preview has no audio
 
-	context.output = obs_output_create("ndi_output", "NDI Preview Output", output_settings, nullptr);
+	context.output = obs_output_create(NDI_OUTPUT_ID, NDI_PREVIEW_OUTPUT_NAME, output_settings, nullptr);
 	obs_data_release(output_settings);
 	if (context.output) {
 		obs_log(LOG_DEBUG, "preview_output_init: Successfully created NDI Preview Output '%s'",
@@ -343,8 +343,8 @@ void preview_output_get_settings(obs_data_t *settings)
 	if (context.output) {
 		settings = obs_output_get_settings(context.output);
 	} else {
-		obs_data_set_string(settings, "ndi_name", QT_TO_UTF8(context.ndi_name));
-		obs_data_set_string(settings, "ndi_groups", QT_TO_UTF8(context.ndi_groups));
+		obs_data_set_string(settings, NDI_OUTPUT_KEY_NAME, QT_TO_UTF8(context.ndi_name));
+		obs_data_set_string(settings, NDI_OUTPUT_KEY_GROUPS, QT_TO_UTF8(context.ndi_groups));
 	}
 	obs_log(LOG_DEBUG, "-preview_output_get_settings()");
 }
