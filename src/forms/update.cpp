@@ -563,11 +563,10 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 #ifdef UPDATE_REQUEST_QT
 	auto manager = new QNetworkAccessManager(main_window);
 
-	auto timer = new QTimer();
+	auto timer = new QTimer(manager);
 	timer->setSingleShot(true);
 	QObject::connect(timer, &QTimer::timeout, []() {
 		obs_log(LOG_WARNING, "WARN-418 - Update Check took too long for a response");
-		PostToMainThread("timer->timeout", []() { updateCheckStop(); });
 		obs_log(LOG_DEBUG, "updateCheckStart: timer: Request timed out");
 		PostToMainThread("timer->timeout", []() { updateCheckStop(); });
 	});
@@ -589,7 +588,7 @@ bool updateCheckStart(UserRequestCallback userRequestCallback)
 				 timer->deleteLater();
 				 manager->deleteLater();
 			 });
-	timer->start(UPDATE_TIMEOUT_SEC * 1000));
+	timer->start(UPDATE_TIMEOUT_SEC * 1000);
 	update_reply = manager->get(*update_request);
 #else
 	QObject::connect(

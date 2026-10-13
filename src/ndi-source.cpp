@@ -224,7 +224,7 @@ const char *ndi_source_getname(void *)
 
 obs_properties_t *ndi_source_getproperties(void *data)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	obs_log(LOG_DEBUG, "+ndi_source_getproperties(…)");
 
 	obs_properties_t *props = obs_properties_create();
@@ -426,7 +426,7 @@ void update_web_control_url(ndi_source_t *s, NDIlib_recv_instance_t ndi_receiver
 
 void *ndi_source_thread(void *data)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' +ndi_source_thread(…)", obs_source_name);
 
@@ -964,7 +964,7 @@ bool tally_on_program(obs_source_t *source)
 
 void ndi_source_update(void *data, obs_data_t *settings)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source = s->obs_source;
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "'%s' +ndi_source_update(…)", obs_source_name);
@@ -1195,7 +1195,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 void ndi_source_shown(void *data)
 {
 	// NOTE: This does NOT fire when showing a source in Preview that is also in Program.
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_shown(…)", obs_source_name);
 	s->config.tally.on_preview = tally_on_preview(s->obs_source);
@@ -1208,7 +1208,7 @@ void ndi_source_shown(void *data)
 void ndi_source_hidden(void *data)
 {
 	// NOTE: This does NOT fire when hiding a source in Preview that is also in Program.
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_hidden(…)", obs_source_name);
 	s->config.tally.on_preview = false;
@@ -1222,7 +1222,7 @@ void ndi_source_hidden(void *data)
 
 void ndi_source_activated(void *data)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_activated(…)", obs_source_name);
 	s->config.tally.on_preview = tally_on_preview(s->obs_source);
@@ -1235,7 +1235,7 @@ void ndi_source_activated(void *data)
 
 void ndi_source_deactivated(void *data)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_deactivated(…)", obs_source_get_name(s->obs_source));
 	s->config.tally.on_preview = tally_on_preview(s->obs_source);
 	s->config.tally.on_program = false;
@@ -1255,7 +1255,7 @@ void new_ndi_receiver_name(const char *obs_source_name, char **ndi_receiver_name
 
 void on_ndi_source_renamed(void *data, calldata_t *)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	{
 		std::lock_guard<std::mutex> lock(s->config_mutex);
@@ -1286,7 +1286,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 void ndi_source_destroy(void *data)
 {
-	auto s = (ndi_source_t *)data;
+	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' +ndi_source_destroy(…)", obs_source_name);
 

@@ -87,7 +87,7 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings);
 // Callback fired when the parent source is renamed. Recreate the NDI sender to pick up the new name.
 void on_renamed(void *data, calldata_t *)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	if (!f)
 		return;
 	obs_log(LOG_DEBUG, "on_parent_renamed: parent source renamed; recreating NDI sender for filter '%s'",
@@ -133,7 +133,7 @@ obs_properties_t *ndi_filter_getproperties(void *priv)
 	obs_properties_add_button2(
 		props, "ndi_apply", obs_module_text("NDIPlugin.FilterProps.ApplySettings"),
 		[](obs_properties_t *, obs_property_t *, void *private_data) {
-			auto s = (ndi_filter_t *)private_data;
+			auto s = static_cast<ndi_filter_t *>(private_data);
 			auto settings = obs_source_get_settings(s->obs_source);
 			ndi_filter_update(s, settings);
 			obs_data_release(settings);
@@ -173,7 +173,7 @@ bool is_filter_valid(ndi_filter_t *filter)
 
 void ndi_filter_raw_video(void *data, video_data *frame)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 
 	pthread_mutex_lock(&f->ndi_sender_video_mutex);
 
@@ -217,7 +217,7 @@ void ndi_filter_raw_video(void *data, video_data *frame)
 
 void ndi_filter_render_video(void *data, gs_effect_t *)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	obs_source_skip_video_filter(f->obs_source);
 
 	if (f->rendered)
@@ -438,7 +438,7 @@ void ndi_sender_create(ndi_filter_t *filter, obs_data_t *settings)
 
 void ndi_filter_update(void *data, obs_data_t *settings)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	auto obs_source = f->obs_source;
 	auto name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_update(name='%s')", name);
@@ -495,7 +495,7 @@ void *ndi_filter_create_audioonly(obs_data_t *settings, obs_source_t *obs_source
 
 void ndi_filter_destroy(void *data)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy('%s'...)", name);
 
@@ -520,7 +520,7 @@ void ndi_filter_destroy(void *data)
 
 void ndi_filter_destroy_audioonly(void *data)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	auto name = obs_source_get_name(f->obs_source);
 	obs_log(LOG_DEBUG, "+ndi_filter_destroy_audioonly('%s'...)", name);
 
@@ -537,7 +537,7 @@ void ndi_filter_destroy_audioonly(void *data)
 
 void ndi_filter_tick(void *data, float)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 
 	obs_get_video_info(&f->ovi);
 
@@ -546,14 +546,14 @@ void ndi_filter_tick(void *data, float)
 
 void ndi_filter_add(void *data, obs_source_t * /* parent */)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	if (!f->ndi_sender)
 		ndi_sender_create(f, nullptr);
 }
 
 void ndi_filter_remove(void *data, obs_source_t * /* parent */)
 {
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 	if (!f)
 		return;
 
@@ -565,7 +565,7 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 {
 	// NOTE: The logic in this function should be similar to
 	// ndi-output.cpp/ndi_output_raw_audio(...)
-	auto f = (ndi_filter_t *)data;
+	auto f = static_cast<ndi_filter_t *>(data);
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 
