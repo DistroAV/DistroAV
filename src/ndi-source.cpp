@@ -25,6 +25,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 
+#include <atomic>
 #include <chrono>
 #include <string>
 #include <thread>
@@ -75,6 +76,11 @@
 #define PROP_LATENCY_LOW 1
 #define PROP_LATENCY_LOWEST 2
 
+static constexpr std::chrono::seconds SOURCE_TIMEOUT{3};
+static constexpr std::chrono::milliseconds NO_CONNECTION_SLEEP{100};
+static constexpr std::chrono::milliseconds POLL_SLEEP{5};
+static constexpr uint32_t RECV_CAPTURE_TIMEOUT_MS = 100;
+static constexpr int FRAMESYNC_AUDIO_SAMPLES = 1024;
 typedef struct ptz_t {
 	bool enabled;
 	float pan;
@@ -91,7 +97,7 @@ typedef struct ptz_t {
 } ptz_t;
 
 typedef struct ndi_source_config_t {
-	bool reset_ndi_receiver = true;
+	std::atomic<bool> reset_ndi_receiver{true};
 	// Initialize value to true to ensure a receiver reset on OBS launch.
 
 	//
@@ -121,7 +127,7 @@ typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
 
-	bool running;
+	std::atomic<bool> running{false};
 	pthread_t av_thread;
 
 	uint32_t width;
@@ -359,7 +365,7 @@ void deactivate_source_output_video_texture(ndi_source_t *source)
 	source->width = 0;
 	source->height = 0;
 	obs_log(LOG_DEBUG, "'%s' deactivate_source_output_video_texture(…)", obs_source_get_name(source->obs_source));
-	obs_source_output_video(source->obs_source, NULL);
+	obs_source_output_video(source->obs_source, nullptr);
 }
 
 void process_empty_frame(ndi_source_t *source)
@@ -369,8 +375,8 @@ void process_empty_frame(ndi_source_t *source)
 
 	uint64_t now = os_gettime_ns();
 
-	// 3 second timeout on no new data received for the source
-	uint64_t source_timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(3)).count();
+	// Timeout on no new data received for the source
+	uint64_t source_timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(SOURCE_TIMEOUT).count();
 
 	uint64_t target_timestamp = source->last_frame_timestamp + source_timeout;
 
@@ -637,7 +643,7 @@ void *ndi_source_thread(void *data)
 			process_empty_frame(s);
 
 			// This will also slow down the shutdown of OBS when no NDI feed is received.
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(NO_CONNECTION_SLEEP);
 			continue;
 		}
 
@@ -698,7 +704,7 @@ void *ndi_source_thread(void *data)
 		//
 		if (!obs_source_showing(s->obs_source)) {
 			// Avoid busy-waiting when the source is hidden but kept active.
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			std::this_thread::sleep_for(POLL_SLEEP);
 			continue;
 		}
 
@@ -715,7 +721,7 @@ void *ndi_source_thread(void *data)
 				ndi_frame_sync, &audio_frame,
 				0,     // "The desired sample rate. 0 to get the source value."
 				0,     // "The desired channel count. 0 to get the source value."
-				1024); // "The desired sample count. 0 to get the source value."
+				FRAMESYNC_AUDIO_SAMPLES); // "The desired sample count. 0 to get the source value."
 			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
 			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 				timestamp_audio = audio_frame.timestamp;
@@ -739,13 +745,13 @@ void *ndi_source_thread(void *data)
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
 
 			// TODO: More accurate sleep that subtracts the duration of this loop iteration?
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			std::this_thread::sleep_for(POLL_SLEEP);
 		} else {
 			//
 			// !ndi_frame_sync
 			//
 			frame_received =
-				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
+				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, RECV_CAPTURE_TIMEOUT_MS);
 
 			if (frame_received == NDIlib_frame_type_audio) {
 				//
@@ -917,7 +923,7 @@ void ndi_source_thread_stop(ndi_source_t *s)
 {
 	if (s->running) {
 		s->running = false;
-		pthread_join(s->av_thread, NULL);
+		pthread_join(s->av_thread, nullptr);
 		auto obs_source = s->obs_source;
 		auto obs_source_name = obs_source_get_name(obs_source);
 		obs_log(LOG_DEBUG, "'%s' ndi_source_thread_stop: Stopped A/V ndi_source_thread for NDI source '%s'",
@@ -1247,7 +1253,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	auto obs_source_name = obs_source_get_name(obs_source);
 	obs_log(LOG_DEBUG, "'%s' +ndi_source_create(…)", obs_source_name);
 
-	auto s = (ndi_source_t *)bzalloc(sizeof(ndi_source_t));
+	auto s = new ndi_source_t();
 	s->obs_source = obs_source;
 	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
 
@@ -1280,7 +1286,7 @@ void ndi_source_destroy(void *data)
 		s->config.ndi_source_name = nullptr;
 	}
 
-	bfree(s);
+	delete s;
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_destroy(…)", obs_source_name);
 }
