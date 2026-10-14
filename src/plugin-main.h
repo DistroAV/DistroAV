@@ -18,6 +18,7 @@
 #pragma once
 
 #include <chrono>
+#include <vector>
 
 #include "config.h"
 #include "obs-support/qt_wrapper.hpp"
@@ -57,6 +58,11 @@ struct ndi_connection_monitor {
 
 	void check(NDIlib_send_instance_t sender, const char *kind);
 };
+
+// Returns planar audio laid out as NDI FLTP expects; copies into `scratch` only when the planes are not already contiguous.
+// `last_path` (-1 = none yet, 0 = copy, 1 = direct) is caller-owned state so the path is logged only when it changes.
+const uint8_t *ndi_pack_planar_audio(uint8_t *const planes[], size_t channels, size_t stride_bytes,
+				     std::vector<uint8_t> &scratch, int8_t &last_path, const char *kind);
 
 /*
 The following accomplishes two goals:

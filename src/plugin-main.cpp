@@ -97,6 +97,30 @@ void ndi_connection_monitor::check(NDIlib_send_instance_t sender, const char *ki
 	no_connections = nc;
 }
 
+const uint8_t *ndi_pack_planar_audio(uint8_t *const planes[], size_t channels, size_t stride_bytes,
+				     std::vector<uint8_t> &scratch, int8_t &last_path, const char *kind)
+{
+	bool contiguous = true;
+	for (size_t i = 1; i < channels && contiguous; ++i)
+		contiguous = planes[i] == planes[0] + i * stride_bytes;
+
+	if (last_path != (contiguous ? 1 : 0)) {
+		last_path = contiguous ? 1 : 0;
+		obs_log(LOG_DEBUG, "ndi_pack_planar_audio: %s audio: %s", kind,
+			contiguous ? "planes are contiguous, sending OBS buffer directly (no copy)"
+				   : "planes are not contiguous, copying into scratch buffer");
+	}
+
+	if (contiguous)
+		return planes[0];
+
+	if (scratch.size() < channels * stride_bytes)
+		scratch.resize(channels * stride_bytes);
+	for (size_t i = 0; i < channels; ++i)
+		memcpy(scratch.data() + i * stride_bytes, planes[i], stride_bytes);
+	return scratch.data();
+}
+
 //
 //
 //

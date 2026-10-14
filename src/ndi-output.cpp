@@ -78,6 +78,7 @@ struct ndi_output_t {
 	uyvy_conv_function conv_function = nullptr;
 
 	std::vector<uint8_t> audio_conv_buffer;
+	int8_t audio_path = -1;
 	ndi_connection_monitor connections;
 };
 
@@ -408,17 +409,10 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	audio_frame.channel_stride_in_bytes = frame->frames * sizeof(float);
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
-	const size_t data_size = (size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
-
-	if (data_size > o->audio_conv_buffer.size())
-		o->audio_conv_buffer.resize(data_size);
-
-	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(o->audio_conv_buffer.data() + ((size_t)i * audio_frame.channel_stride_in_bytes), frame->data[i],
-		       audio_frame.channel_stride_in_bytes);
-	}
-
-	audio_frame.p_data = o->audio_conv_buffer.data();
+	const size_t channels = (size_t)audio_frame.no_channels;
+	audio_frame.p_data = const_cast<uint8_t *>(
+		ndi_pack_planar_audio(frame->data, channels, audio_frame.channel_stride_in_bytes, o->audio_conv_buffer,
+				      o->audio_path, "NDI Output"));
 	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name.c_str(), audio_frame.timestamp * 100,
 				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);

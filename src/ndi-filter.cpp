@@ -57,6 +57,7 @@ struct ndi_filter_t {
 	bool is_audioonly;
 
 	std::vector<uint8_t> audio_conv_buffer;
+	int8_t audio_path = -1;
 	ndi_connection_monitor video_connections;
 	ndi_connection_monitor audio_connections;
 };
@@ -595,17 +596,10 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	// audio_frame.p_data = p_frame;
 	audio_frame.p_metadata = nullptr; // No metadata support yet!
 
-	const size_t data_size = audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
-
-	if (data_size > f->audio_conv_buffer.size())
-		f->audio_conv_buffer.resize(data_size);
-
-	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(f->audio_conv_buffer.data() + ((size_t)i * audio_frame.channel_stride_in_bytes), audio_data->data[i],
-		       audio_frame.channel_stride_in_bytes);
-	}
-
-	audio_frame.p_data = f->audio_conv_buffer.data();
+	const size_t channels = (size_t)audio_frame.no_channels;
+	audio_frame.p_data = const_cast<uint8_t *>(
+		ndi_pack_planar_audio(audio_data->data, channels, audio_frame.channel_stride_in_bytes,
+				      f->audio_conv_buffer, f->audio_path, "NDI Filter"));
 
 	pthread_mutex_lock(&f->ndi_sender_audio_mutex);
 	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_filter", obs_source_get_name(f->obs_source), audio_frame.timestamp * 100,
