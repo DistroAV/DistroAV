@@ -42,6 +42,7 @@ inline constexpr const char *NDI_OUTPUT_KEY_GROUPS = "ndi_groups";
 inline constexpr const char *NDI_OUTPUT_KEY_USES_VIDEO = "uses_video";
 inline constexpr const char *NDI_OUTPUT_KEY_USES_AUDIO = "uses_audio";
 inline constexpr const char *NDI_OUTPUT_DEFAULT_NAME = "DistroAV output (default name)";
+inline constexpr const char *NDI_OUTPUT_DEFAULT_GROUPS = "";
 
 // Name templates for the NDI filter; tokens are expanded in ndi-filter.cpp.
 inline constexpr const char *NDI_FILTER_TOKEN_SOURCE = "${source}";

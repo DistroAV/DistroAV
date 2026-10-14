@@ -107,7 +107,7 @@ void ndi_output_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+ndi_output_getdefaults()");
 	obs_data_set_default_string(settings, NDI_OUTPUT_KEY_NAME, NDI_OUTPUT_DEFAULT_NAME);
-	obs_data_set_default_string(settings, NDI_OUTPUT_KEY_GROUPS, NDI_OUTPUT_DEFAULT_NAME);
+	obs_data_set_default_string(settings, NDI_OUTPUT_KEY_GROUPS, NDI_OUTPUT_DEFAULT_GROUPS);
 	obs_data_set_default_bool(settings, NDI_OUTPUT_KEY_USES_VIDEO, true);
 	obs_data_set_default_bool(settings, NDI_OUTPUT_KEY_USES_AUDIO, true);
 	obs_log(LOG_DEBUG, "-ndi_output_getdefaults()");
