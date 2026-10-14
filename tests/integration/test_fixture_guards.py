@@ -144,3 +144,51 @@ def test_a_portable_windows_install_gets_the_plugin_beside_its_own(tmp_path):
 
     assert (install / "obs-plugins" / "64bit" / PLUGIN_LIB).read_text() == "dll"
     assert (install / "data" / "obs-plugins" / "distroav" / "locale" / "en-US.ini").exists()
+
+
+def test_a_per_user_installed_bundle_is_the_one_to_copy_into_the_profile(tmp_path):
+    from conftest import installed_plugin_bundle
+
+    user = tmp_path / "user"
+    system = tmp_path / "system"
+    (user / "distroav.plugin").mkdir(parents=True)
+    system.mkdir()
+
+    assert installed_plugin_bundle(user, system) == user / "distroav.plugin"
+
+
+def test_a_system_wide_install_is_loaded_by_every_obs_and_is_not_copied(tmp_path):
+    from conftest import installed_plugin_bundle
+
+    user = tmp_path / "user"
+    system = tmp_path / "system"
+    (user / "distroav.plugin").mkdir(parents=True)
+    (system / "distroav.plugin").mkdir(parents=True)
+
+    assert installed_plugin_bundle(user, system) is None
+
+
+def test_no_installed_bundle_is_none(tmp_path):
+    from conftest import installed_plugin_bundle
+
+    assert installed_plugin_bundle(tmp_path / "user", tmp_path / "system") is None
+
+
+def test_the_plugin_the_windows_installer_left_is_found_in_programdata(tmp_path):
+    from conftest import PLUGIN_LIB, installed_windows_plugin
+
+    root = tmp_path / "plugins"
+    (root / "distroav" / "bin" / "64bit").mkdir(parents=True)
+    (root / "distroav" / "bin" / "64bit" / PLUGIN_LIB).write_text("dll")
+    (root / "distroav" / "data" / "locale").mkdir(parents=True)
+
+    dll, locale = installed_windows_plugin(root)
+
+    assert dll == root / "distroav" / "bin" / "64bit" / PLUGIN_LIB
+    assert locale == root / "distroav" / "data" / "locale"
+
+
+def test_no_windows_install_is_none(tmp_path):
+    from conftest import installed_windows_plugin
+
+    assert installed_windows_plugin(tmp_path / "plugins") is None

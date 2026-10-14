@@ -10,6 +10,93 @@ filters API.
 NDI senders and receivers written for the tests (cyndilib) stand in for the
 network.
 
+## Quickstart
+
+This tests the plugin built from your checkout, so it is the code you changed
+that is under test.
+
+You need Python 3.10 or later (on Windows an x64 Python, as cyndilib has no
+wheel for arm64), OBS Studio, the NDI runtime, and the build tools DistroAV
+itself needs.
+Build the plugin, then run the suite, from the checkout:
+
+**macOS**
+
+```bash
+cmake --preset macos -DCMAKE_OSX_ARCHITECTURES=arm64
+cmake --build build_macos --config RelWithDebInfo
+scripts/run-integration-tests.sh
+```
+
+It uses the newest OBS release in `/Applications`, and the
+`build_macos/rundir/RelWithDebInfo/distroav.plugin` just built.
+
+**Linux**
+
+```bash
+cmake --preset ubuntu-x86_64
+cmake --build build_x86_64
+scripts/run-integration-tests.sh
+```
+
+Run it from a logged-in desktop session, as OBS shows a window.
+It uses the `obs` on your `PATH`, and the plugin in the `build_*/rundir` folder
+of the build.
+
+**Windows (PowerShell)**
+
+```powershell
+cmake --preset windows-x64
+cmake --build build_x64 --config RelWithDebInfo
+robocopy "C:\Program Files\obs-studio" C:\obs-test /E
+$env:DISTROAV_OBS_BINARY = "C:\obs-test\bin\64bit\obs64.exe"
+scripts\run-integration-tests.ps1
+```
+
+The suite makes the OBS it runs portable and keeps its profile in that folder,
+so it has to be a copy, not the OBS you use.
+It puts the plugin you built into that copy.
+If the NDI runtime is not installed, set `NDI_RUNTIME_DIR_V6` to a folder with
+`Processing.NDI.Lib.x64.dll`.
+
+The first run makes a virtualenv and installs the requirements, which needs the
+network.
+A run takes a couple of minutes, and OBS windows come and go while it does.
+Arguments after the script go to pytest: `-k smoke` runs part of it, `-v` lists
+each test.
+
+Your own OBS profile is not read or changed: the suite runs OBS on a profile of
+its own.
+
+If it does not pass:
+
+- "the plugin's NDI outputs were never made": OBS started but DistroAV did not
+  load.
+  The error says which log to read.
+- A test of behavior an older DistroAV does not have fails.
+  Persistence over obs-websocket needs a DistroAV with #1472, for example.
+  That is a finding, not a fault of the suite.
+- "OBS left running by an earlier run": quit the OBS the message names, or set
+  `DISTROAV_ALLOW_STRAYS=1`.
+
+### Testing the installed DistroAV instead
+
+To test the DistroAV a machine already has, with nothing built, set
+`DISTROAV_INSTALLED_PLUGIN=1`:
+
+```bash
+DISTROAV_INSTALLED_PLUGIN=1 scripts/run-integration-tests.sh
+```
+
+On Linux OBS loads the plugin from where the package put it.
+On macOS the suite uses the one in
+`~/Library/Application Support/obs-studio/plugins` or in
+`/Library/Application Support/obs-studio/plugins`.
+On Windows set `$env:DISTROAV_INSTALLED_PLUGIN = "1"` before the PowerShell
+steps above, minus the build: the plugin is taken from
+`%ProgramData%\obs-studio\plugins`, where its installer puts it, if the OBS
+copy does not have it already.
+
 ## Running
 
 Build the plugin first, then:
@@ -26,6 +113,7 @@ folder) and installs `requirements.txt` into it.
 | Variable | Meaning |
 |---|---|
 | `DISTROAV_OBS_BINARY` | The OBS to run. Default: the `obs` on the `PATH`, or on macOS the newest release in `/Applications` (not a release candidate). |
+| `DISTROAV_INSTALLED_PLUGIN` | Set to test the DistroAV that is installed, not a build. |
 | `DISTROAV_PLUGIN_DIR` | Linux: the folder holding `distroav.so` and `distroav/locale`. Default: a `build_*/rundir/<config>` of this checkout. |
 | `NDI_RUNTIME_DIR_V6` | Windows: the folder holding `Processing.NDI.Lib.x64.dll`, if the NDI runtime is not installed (cyndilib ships one, in its `wrapper\bin`). |
 | `DISTROAV_PLUGIN_BUNDLE` | macOS: the `distroav.plugin` to test. Default: a `build_*/rundir/<config>/distroav.plugin` of this checkout. |
@@ -37,7 +125,7 @@ folder) and installs `requirements.txt` into it.
 
 The plugin needs the NDI runtime installed, as it does for any use.
 The tests themselves use cyndilib, which brings its own copy.
-On Linux OBS needs a display, so `DISPLAY` must be set; `xvfb-run` works.
+On Linux OBS needs a display, so `DISPLAY` must be set.
 
 ## How it works
 

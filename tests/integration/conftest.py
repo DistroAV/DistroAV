@@ -145,6 +145,8 @@ def newest_mac_obs():
 
 
 def pytest_report_header(config):
+    if use_installed_plugin():
+        return "distroav plugin under test: the one OBS has installed"
     if IS_MAC:
         given = os.environ.get("DISTROAV_PLUGIN_BUNDLE")
         found = sorted(REPO_ROOT.glob("build_*/rundir/*/distroav.plugin"))
@@ -177,6 +179,33 @@ def find_plugin_bundle():
             return candidate
     pytest.exit("No built plugin found: set DISTROAV_PLUGIN_BUNDLE to the distroav.plugin to test "
                 "(a build_*/rundir/<config> folder holds it).", returncode=4)
+
+
+def use_installed_plugin() -> bool:
+    """Test the DistroAV that OBS has installed, rather than a build"""
+    return bool(os.environ.get("DISTROAV_INSTALLED_PLUGIN"))
+
+
+def installed_plugin_bundle(user_root: Path, system_root: Path):
+    """macOS: the installed bundle to put in the suite's profile, or None.
+
+    A system-wide install is in a folder every OBS loads from, and needs no
+    copy: a second one would be skipped. A per-user one is in the user's own
+    profile, which the suite does not use, so it is copied into its own."""
+    if (system_root / "distroav.plugin").is_dir():
+        return None
+    bundle = user_root / "distroav.plugin"
+    return bundle if bundle.is_dir() else None
+
+
+def installed_windows_plugin(plugins_root: Path):
+    """Windows: (the dll, the locale folder) of the plugin the installer put
+    in %ProgramData%\\obs-studio\\plugins, or None. A portable OBS does not
+    look there, so the suite copies these into the install it runs."""
+    base = plugins_root / "distroav"
+    dll = base / "bin" / "64bit" / PLUGIN_LIB
+    locale = base / "data" / "locale"
+    return (dll, locale) if dll.is_file() and locale.is_dir() else None
 
 
 def find_plugin_dir():
@@ -363,7 +392,8 @@ class ObsProcess:
             time.sleep(0.1)
         else:
             self.stop()
-            raise RuntimeError(f"the plugin's NDI outputs were never made; see {self.log_path}")
+            raise RuntimeError(f"the plugin's NDI outputs were never made (is DistroAV "
+                               f"installed, and does it load?); see {self.log_path}")
 
         problem = loaded_plugin_problem(self.log_path.read_text(errors="replace"))
         if problem:
@@ -565,7 +595,13 @@ def obs_world(tmp_path_factory):
     binary = os.environ.get("DISTROAV_OBS_BINARY") or (newest_mac_obs() if IS_MAC else shutil.which("obs"))
     if not binary:
         pytest.exit("No OBS found: set DISTROAV_OBS_BINARY.", returncode=4)
-    plugin = find_plugin_bundle() if IS_MAC else find_plugin_dir()
+    if use_installed_plugin():
+        # Windows and Linux: OBS loads it from where it is installed
+        plugin = installed_plugin_bundle(
+            Path.home() / "Library" / "Application Support" / "obs-studio" / "plugins",
+            Path("/Library/Application Support/obs-studio/plugins")) if IS_MAC else None
+    else:
+        plugin = find_plugin_bundle() if IS_MAC else find_plugin_dir()
 
     # Windows: the OBS install is the home, since that is where a portable
     # one keeps its profile; it is one for testing, and is left in place
@@ -576,7 +612,22 @@ def obs_world(tmp_path_factory):
     main_output_name = f"distroav-it-{uuid.uuid4().hex[:6]}-main"
     preview_output_name = f"distroav-it-{uuid.uuid4().hex[:6]}-preview"
     write_obs_config(config_dir, ws_port, ws_password, main_output_name, preview_output_name)
-    if IS_WIN:
+    if use_installed_plugin():
+        if plugin is not None:
+            install_plugin_bundle(config_dir, plugin)
+        elif IS_WIN and not (home / "obs-plugins" / "64bit" / PLUGIN_LIB).is_file():
+            found = installed_windows_plugin(
+                Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "obs-studio" / "plugins")
+            if found is None:
+                pytest.exit("DistroAV is not installed: not in the OBS folder, nor in "
+                            "%ProgramData%\\obs-studio\\plugins.", returncode=4)
+            stage = Path(tempfile.mkdtemp(prefix="distroav-it-installed-"))
+            (stage / "distroav").mkdir()
+            shutil.copy2(found[0], stage / PLUGIN_LIB)
+            shutil.copytree(found[1], stage / "distroav" / "locale")
+            install_plugin_windows(home, stage)
+            shutil.rmtree(stage, ignore_errors=True)
+    elif IS_WIN:
         install_plugin_windows(home, plugin)
     else:
         (install_plugin_bundle if IS_MAC else install_plugin)(config_dir, plugin)
