@@ -1,6 +1,6 @@
 # DistroAV Cleanup Audit
 
-Scope: `CMakeLists.txt`, `ndi-output.cpp`, and greps across `src/`. `ndi-source.cpp` and `ndi-filter.cpp` were not read in full.
+Scope: `CMakeLists.txt`, `src/` (output, filter, source, finder, sync-debug, update, plugin-main). See "Status" at the end for what was done.
 
 ## Hardcoded values that should be shared
 
@@ -46,13 +46,24 @@ Scope: `CMakeLists.txt`, `ndi-output.cpp`, and greps across `src/`. `ndi-source.
 - `cmake_minimum_required(3.28...3.30)` is hardcoded. Qt component list is repeated in two places; add `Gui` to components since the AGL loop references `Qt6::Gui`.
 - Manual `target_sources` list is easy to forget when adding files.
 
-## Suggested order
+## Status
 
-Status: steps 1-4 done except: filter still uses pthread mutexes, audio `memcpy` kept, `target_sources` list left explicit on purpose (matches the OBS plugin template).
-Also done: C-style casts in filter/source replaced with `static_cast`; the disabled `UPDATE_REQUEST_QT` path in `update.cpp` had a stray `)` that would not compile, a duplicated `PostToMainThread` call and an unparented `QTimer` (all fixed).
-`ndi-source.cpp`: `running` and `reset_ndi_receiver` are now atomic (shared with the receiver thread), constants named. Still open: filter pthread mutexes. The per-channel audio copy is now skipped when OBS's planes are already contiguous (`ndi_pack_planar_audio`). PTZ, tally and the source/receiver name strings are now guarded by `config_mutex` in `ndi-source.cpp`.
+Done:
 
-1. Shared constants header (settings keys, output names, URLs). Lowest risk, biggest simplification.
-2. Fix frame-rate and sender-lock bugs.
-3. Modernize memory handling and casts in output, filter, and source files.
-4. CMake cleanup: platform guards and `REQUIRED`.
+- Shared constants (settings keys, output names, URLs, filter name template) in `plugin-main.h`; filter default name removed from locale files.
+- `ndi-output.cpp`: fractional frame rate, sender lock held through send, `std::string` names, correct I444 buffer size, safe format lookup, `std::vector` buffers, `new`/`delete`, `static_cast`.
+- Shared `ndi_connection_monitor` (declared in `plugin-main.h`, defined in `plugin-main.cpp`) used by output and filter.
+- `ndi_pack_planar_audio` skips the per-channel audio copy when OBS planes are contiguous; the path taken is logged at debug level on change.
+- `ndi-filter.cpp`: `new`/`delete`, `std::vector` audio buffer, `static_cast`, pthread mutexes now destroyed.
+- `ndi-source.cpp`: atomic `running` / `reset_ndi_receiver`, `config_mutex` guarding name strings, PTZ and tally, reset flag no longer overwritten, named constants, `static_cast`.
+- `ndi-finder.cpp` / `sync-debug.cpp`: named constants, `nullptr`.
+- `update.cpp`: disabled `UPDATE_REQUEST_QT` path fixed (stray `)`, duplicate call, unparented `QTimer`). Other `new Q*` dialogs already use `WA_DeleteOnClose` / `deleteLater` or a parent.
+- CMake: Windows-only steps under `if(WIN32)`, `Qt6 REQUIRED` with `Gui`, AGL stripping moved to `cmake/macos/helpers.cmake`. `target_sources` stays explicit on purpose (matches the OBS plugin template). `plugin-support.c.in` is OBS's C template, so `malloc` stays.
+
+Open:
+
+- Filter still uses `pthread_mutex_t` with conditional locking (video + audio); changing it needs runtime testing.
+- I444 to UYVY conversion is a scalar loop.
+- `"NDI Library not loaded"` in `output-settings.cpp` is untranslated.
+- Output groups default is the same text as the name; an empty default would be more sensible but changes behavior.
+- If the debug log shows OBS never delivers contiguous audio planes, remove `ndi_pack_planar_audio` and go back to the plain copy.
