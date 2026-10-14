@@ -25,7 +25,7 @@ Scope: `CMakeLists.txt`, `src/` (output, filter, source, finder, sync-debug, upd
 - Duplicated code: connection-check block exists in both video and audio paths (likely also `ndi-filter.cpp` ~190). Extract a helper.
 - Audio path does a per-channel `memcpy` every callback. Check whether avoidable against the NDI SDK.
 - `video_to_color_format_map.at(format)` throws for unmapped formats. Use `find`.
-- I444 to UYVY conversion is a scalar byte loop on the video thread.
+- I444 to UYVY conversion is a scalar byte loop on the video thread. (Rewritten in index form for auto-vectorization; also fixed the row width, which used the input line stride and could run into padding.)
 - Connection throttle still takes the lock and calls `steady_clock::now()` on every frame.
 
 ## Outdated practices
@@ -63,7 +63,6 @@ Done:
 Open:
 
 - Filter still uses `pthread_mutex_t` with conditional locking (video + audio); changing it needs runtime testing.
-- I444 to UYVY conversion is a scalar loop.
 - `"NDI Library not loaded"` in `output-settings.cpp` is untranslated.
 - Output groups default is the same text as the name; an empty default would be more sensible but changes behavior.
 - If the debug log shows OBS never delivers contiguous audio planes, remove `ndi_pack_planar_audio` and go back to the plain copy.

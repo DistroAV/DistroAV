@@ -32,22 +32,21 @@ using uyvy_conv_function = void (*)(uint8_t *const input[], const uint32_t in_li
 static void convert_i444_to_uyvy(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
 				 uint32_t end_y, uint8_t *output, uint32_t out_linesize)
 {
-	const uint32_t width = std::min(in_linesize[0], out_linesize);
+	// UYVY is 2 bytes per pixel; using it for the width avoids reading/writing into row padding.
+	const uint32_t pairs = out_linesize / 4;
 	for (uint32_t y = start_y; y < end_y; ++y) {
-		const uint8_t *_Y = input[0] + ((size_t)y * (size_t)in_linesize[0]);
-		const uint8_t *_U = input[1] + ((size_t)y * (size_t)in_linesize[1]);
-		const uint8_t *_V = input[2] + ((size_t)y * (size_t)in_linesize[2]);
+		const uint8_t *__restrict Y = input[0] + ((size_t)y * (size_t)in_linesize[0]);
+		const uint8_t *__restrict U = input[1] + ((size_t)y * (size_t)in_linesize[1]);
+		const uint8_t *__restrict V = input[2] + ((size_t)y * (size_t)in_linesize[2]);
+		uint8_t *__restrict out = output + ((size_t)y * (size_t)out_linesize);
 
-		uint8_t *_out = output + ((size_t)y * (size_t)out_linesize);
-
-		for (uint32_t x = 0; x < width; x += 2) {
-			// Quality loss here. Some chroma samples are ignored.
-			*(_out++) = *(_U++);
-			_U++;
-			*(_out++) = *(_Y++);
-			*(_out++) = *(_V++);
-			_V++;
-			*(_out++) = *(_Y++);
+		// Index form with no pointer carried between iterations so the compiler can vectorize it.
+		// Quality loss here: every other chroma sample is dropped.
+		for (uint32_t i = 0; i < pairs; ++i) {
+			out[4 * i + 0] = U[2 * i];
+			out[4 * i + 1] = Y[2 * i];
+			out[4 * i + 2] = V[2 * i];
+			out[4 * i + 3] = Y[2 * i + 1];
 		}
 	}
 }
