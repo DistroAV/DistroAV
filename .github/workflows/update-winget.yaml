@@ -1,38 +1,36 @@
-name: Update WinGet Package Workflow
+name: Update WinGet Package
+run-name: Publish ${{ inputs.versionTargeted || github.event.release.tag_name }} to WinGet
+
 on:
   release:
-    types: [released]
+    types: [released] # Fires when a non-prerelease is published (draft -> published); skips prereleases.
   workflow_dispatch:
     inputs:
       versionTargeted:
-        description: "Package version (Auto-detect for GitHub releases, or specify custom tag for manual dispatch)"
-        required: false
+        description: "Existing release tag to submit to WinGet (e.g. 6.2.2)"
+        required: true
         type: string
-#  schedule:
-#    - cron:  '0 3 * * *' # Scheduled to run daily at 03:00
+
+permissions: {}
 
 concurrency:
-  group: '${{ github.repository }} @ publish-winget'
-
-env:
-  PACKAGE_IDENTIFIER: ${{ format('{0}.{1}', github.repository_owner, github.event.repository.name) }}
+  group: publish-winget
+  cancel-in-progress: false
 
 jobs:
   publish-winget-package:
-    name: Publish WinGet Package Job
-    # if: github.repository == 'DistroAV/DistroAV' # Avoid forks to push non-approved versions.
-    runs-on: windows-latest
+    name: Publish WinGet Package
+    if: github.repository == 'DistroAV/DistroAV' # Forks must not submit to winget-pkgs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Use Winget-Releaser Action
+      # Opens a PR on microsoft/winget-pkgs from the token owner's fork of winget-pkgs.
+      # Requires a fork of microsoft/winget-pkgs and the WINGET_UPDATER_TOKEN secret (classic PAT, public_repo scope).
+      - name: Submit WinGet manifest PR
         uses: vedantmgoyal9/winget-releaser@v2
-        with: 
-          # identifier: DistroAV.DistroAV # The hardcoded identifier of the package to update
-          identifier: ${{ env.PACKAGE_IDENTIFIER }} # The dynamic identifier of the package to update. Will use Owner.Repo format.
-          # release-repository: DistroAV/DistroAV # The hardcoded repository where the release is created, in the format owner/repo
-          release-repository: ${{ github.repository }} # The dynamic repository where the release is created, in the format owner/repo
-          installers-regex: '.*windows-x64-Installer\.exe$' # Tune for release assets matching - TO DO: update when we have more variants.
-          max-versions-to-keep: 5 # Optional, defaults to 10
-          release-tag: ${{ inputs.versionTargeted || github.event.release.tag_name }} # Custom release tag targeted for the release. TBC if an empty string would cause issues - Optional
+        with:
+          identifier: DistroAV.DistroAV
+          installers-regex: '-windows-x64-Installer\.exe$' # Only the Inno Setup installer; excludes zip/portable.
+          release-tag: ${{ inputs.versionTargeted || github.event.release.tag_name }}
           release-notes-url: https://github.com/${{ github.repository }}/releases/tag/${{ inputs.versionTargeted || github.event.release.tag_name }}
-          # release-notes-url: https://example.com/release-notes/${{ github.event.release.tag_name }} # URL to package version's release notes. To update if we put the relase notes on the website one day. Optional, defaults to empty string.
           token: ${{ secrets.WINGET_UPDATER_TOKEN }}
