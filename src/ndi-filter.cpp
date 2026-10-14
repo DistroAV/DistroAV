@@ -601,8 +601,8 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 		f->audio_conv_buffer.resize(data_size);
 
 	for (int i = 0; i < audio_frame.no_channels; ++i) {
-		memcpy(f->audio_conv_buffer.data() + ((size_t)i * audio_frame.channel_stride_in_bytes), audio_data->data[i],
-		       audio_frame.channel_stride_in_bytes);
+		memcpy(f->audio_conv_buffer.data() + ((size_t)i * audio_frame.channel_stride_in_bytes),
+		       audio_data->data[i], audio_frame.channel_stride_in_bytes);
 	}
 
 	audio_frame.p_data = f->audio_conv_buffer.data();

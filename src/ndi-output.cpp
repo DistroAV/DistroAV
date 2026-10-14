@@ -29,8 +29,8 @@
 using uyvy_conv_function = void (*)(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
 				    uint32_t end_y, uint8_t *output, uint32_t out_linesize);
 
-static void convert_i444_to_uyvy(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
-				 uint32_t end_y, uint8_t *output, uint32_t out_linesize)
+static void convert_i444_to_uyvy(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y, uint32_t end_y,
+				 uint8_t *output, uint32_t out_linesize)
 {
 	const uint32_t width = std::min(in_linesize[0], out_linesize);
 	for (uint32_t y = start_y; y < end_y; ++y) {
@@ -195,8 +195,9 @@ bool ndi_output_start(void *data)
 				format, name);
 			obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s', ...)", name, groups);
 			auto it = video_to_color_format_map.find(format);
-			auto error_string = std::string(obs_module_text("NDIPlugin.OutputSettings.LastError")) +
-					    (it != video_to_color_format_map.end() ? it->second : std::to_string(format));
+			auto error_string =
+				std::string(obs_module_text("NDIPlugin.OutputSettings.LastError")) +
+				(it != video_to_color_format_map.end() ? it->second : std::to_string(format));
 			obs_output_set_last_error(o->output, error_string.c_str());
 			return false;
 		}
