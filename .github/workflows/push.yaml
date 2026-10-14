@@ -31,7 +31,7 @@ jobs:
     name: Create Release 🛫
     if: github.ref_type == 'tag'
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: build-project
     defaults:
       run:
