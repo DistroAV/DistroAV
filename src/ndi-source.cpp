@@ -669,12 +669,20 @@ void *ndi_source_thread(void *data)
 		//
 		// Change PTZ: Realtime updated from Source settings UI
 		//
-		if (s->config.ptz.enabled) {
+		// Snapshot UI-written config so the checks below see a consistent value.
+		ptz_t cfg_ptz;
+		NDIlib_tally_t cfg_tally;
+		{
+			std::lock_guard<std::mutex> lock(s->config_mutex);
+			cfg_ptz = s->config.ptz;
+			cfg_tally = s->config.tally;
+		}
+
+		if (cfg_ptz.enabled) {
 			const static float tollerance = 0.001f;
-			if (fabs(s->config.ptz.pan - ptz.pan) > tollerance ||
-			    fabs(s->config.ptz.tilt - ptz.tilt) > tollerance ||
-			    fabs(s->config.ptz.zoom - ptz.zoom) > tollerance) {
-				ptz = s->config.ptz;
+			if (fabs(cfg_ptz.pan - ptz.pan) > tollerance || fabs(cfg_ptz.tilt - ptz.tilt) > tollerance ||
+			    fabs(cfg_ptz.zoom - ptz.zoom) > tollerance) {
+				ptz = cfg_ptz;
 				if (ndiLib->recv_ptz_is_supported(ndi_receiver)) {
 					obs_log(LOG_DEBUG,
 						"'%s' ndi_source_thread: ptz changed; Sending PTZ pan=%f, tilt=%f, zoom=%f",
@@ -695,10 +703,10 @@ void *ndi_source_thread(void *data)
 			s->config.tally2.on_preview,
 			s->config.tally2.on_program);
 #endif
-		if ((config->TallyPreviewEnabled && s->config.tally.on_preview != tally.on_preview) ||
-		    (config->TallyProgramEnabled && s->config.tally.on_program != tally.on_program)) {
-			tally.on_preview = s->config.tally.on_preview;
-			tally.on_program = s->config.tally.on_program;
+		if ((config->TallyPreviewEnabled && cfg_tally.on_preview != tally.on_preview) ||
+		    (config->TallyProgramEnabled && cfg_tally.on_program != tally.on_program)) {
+			tally.on_preview = cfg_tally.on_preview;
+			tally.on_program = cfg_tally.on_program;
 			obs_log(LOG_INFO, "'%s': Tally status : on_preview=%d, on_program=%d", obs_source_name,
 				tally.on_preview, tally.on_program);
 			obs_log(LOG_DEBUG,
@@ -962,6 +970,19 @@ bool tally_on_program(obs_source_t *source)
 	return (Config::Current())->TallyProgramEnabled && obs_source_active(source);
 }
 
+static void set_tally(ndi_source_t *s, bool on_preview)
+{
+	std::lock_guard<std::mutex> lock(s->config_mutex);
+	s->config.tally.on_preview = on_preview;
+}
+
+static void set_tally(ndi_source_t *s, bool on_preview, bool on_program)
+{
+	std::lock_guard<std::mutex> lock(s->config_mutex);
+	s->config.tally.on_preview = on_preview;
+	s->config.tally.on_program = on_program;
+}
+
 void ndi_source_update(void *data, obs_data_t *settings)
 {
 	auto s = static_cast<ndi_source_t *>(data);
@@ -1147,11 +1168,16 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
 	float zoom = (float)obs_data_get_double(settings, PROP_ZOOM);
-	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
+	bool tally_preview = tally_on_preview(obs_source);
+	bool tally_program = tally_on_program(obs_source);
+	{
+		std::lock_guard<std::mutex> lock(s->config_mutex);
+		s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 
-	// Update tally status
-	s->config.tally.on_preview = tally_on_preview(obs_source);
-	s->config.tally.on_program = tally_on_program(obs_source);
+		// Update tally status
+		s->config.tally.on_preview = tally_preview;
+		s->config.tally.on_program = tally_program;
+	}
 
 	if (strlen(s->config.ndi_source_name) == 0) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_update: No NDI Source selected; Requesting Source Thread Stop.",
@@ -1198,7 +1224,7 @@ void ndi_source_shown(void *data)
 	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_shown(…)", obs_source_name);
-	s->config.tally.on_preview = tally_on_preview(s->obs_source);
+	set_tally(s, tally_on_preview(s->obs_source));
 	if (!s->running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_shown: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
@@ -1211,7 +1237,7 @@ void ndi_source_hidden(void *data)
 	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_hidden(…)", obs_source_name);
-	s->config.tally.on_preview = false;
+	set_tally(s, false);
 	if (s->running && s->config.behavior != PROP_BEHAVIOR_KEEP_ACTIVE) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_hidden: Requesting Source Thread Stop.", obs_source_name);
 		// Stopping the thread may result in `on_preview=false` not getting sent,
@@ -1225,8 +1251,7 @@ void ndi_source_activated(void *data)
 	auto s = static_cast<ndi_source_t *>(data);
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_activated(…)", obs_source_name);
-	s->config.tally.on_preview = tally_on_preview(s->obs_source);
-	s->config.tally.on_program = tally_on_program(s->obs_source);
+	set_tally(s, tally_on_preview(s->obs_source), tally_on_program(s->obs_source));
 	if (!s->running) {
 		obs_log(LOG_DEBUG, "'%s' ndi_source_activated: Requesting Source Thread Start.", obs_source_name);
 		ndi_source_thread_start(s);
@@ -1237,8 +1262,7 @@ void ndi_source_deactivated(void *data)
 {
 	auto s = static_cast<ndi_source_t *>(data);
 	obs_log(LOG_DEBUG, "'%s' ndi_source_deactivated(…)", obs_source_get_name(s->obs_source));
-	s->config.tally.on_preview = tally_on_preview(s->obs_source);
-	s->config.tally.on_program = false;
+	set_tally(s, tally_on_preview(s->obs_source), false);
 }
 
 void new_ndi_receiver_name(const char *obs_source_name, char **ndi_receiver_name)

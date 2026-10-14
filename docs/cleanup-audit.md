@@ -50,7 +50,7 @@ Scope: `CMakeLists.txt`, `ndi-output.cpp`, and greps across `src/`. `ndi-source.
 
 Status: steps 1-4 done except: filter still uses pthread mutexes, audio `memcpy` kept, `target_sources` list left explicit on purpose (matches the OBS plugin template).
 Also done: C-style casts in filter/source replaced with `static_cast`; the disabled `UPDATE_REQUEST_QT` path in `update.cpp` had a stray `)` that would not compile, a duplicated `PostToMainThread` call and an unparented `QTimer` (all fixed).
-`ndi-source.cpp`: `running` and `reset_ndi_receiver` are now atomic (shared with the receiver thread), constants named. Still open: `config.ptz` and `config.tally` are read by the receiver thread while the UI thread writes them without synchronization. The source/receiver name strings are now mutex-guarded and copied by the thread.
+`ndi-source.cpp`: `running` and `reset_ndi_receiver` are now atomic (shared with the receiver thread), constants named. Still open: filter pthread mutexes and the per-channel audio `memcpy`. PTZ, tally and the source/receiver name strings are now guarded by `config_mutex` in `ndi-source.cpp`.
 
 1. Shared constants header (settings keys, output names, URLs). Lowest risk, biggest simplification.
 2. Fix frame-rate and sender-lock bugs.
