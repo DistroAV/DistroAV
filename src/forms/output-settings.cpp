@@ -83,7 +83,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		ndiVersionShort =
 			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
 	} else {
-		ndiVersionFull = "NDI Library not loaded";
+		ndiVersionFull = QTStr("NDIPlugin.OutputSettings.NDILibraryNotLoaded");
 	}
 
 	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionFull)));
@@ -223,8 +223,8 @@ If you are running a local build, don't forget to add your build info to the upd
 			obs_log(LOG_DEBUG, "Install DistroAV button: something went wrong");
 		}
 #else
-			QMessageBox::information(this, "Unsupported platform",
-						"Automatic DistroAV installation is currently only supported on Windows and macOS using the default installation methods.");
+			QMessageBox::information(this, QTStr("NDIPlugin.OutputSettings.UnsupportedPlatform.Title"),
+						 QTStr("NDIPlugin.OutputSettings.UnsupportedPlatform.InstallPlugin"));
 #endif
 	});
 
@@ -256,11 +256,11 @@ If you are running a local build, don't forget to add your build info to the upd
 					<< "winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements || pause")) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
 						 QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id NDI.NDIRuntime"));
-			obs_log(LOG_DEBUG, "Install NDI button: something went wrong");
+			obs_log(LOG_DEBUG, "Install NDI button: something went wrong when launching winget to get the NDI runtime");
 		}
 #else
-		QMessageBox::information(this, "Unsupported platform",
-						 "Automatic NDI installation is currently only supported on Windows and macOS using the default installation methods.");
+		QMessageBox::information(this, QTStr("NDIPlugin.OutputSettings.UnsupportedPlatform.Title"),
+					 QTStr("NDIPlugin.OutputSettings.UnsupportedPlatform.InstallNdi"));
 #endif
 	});
 
