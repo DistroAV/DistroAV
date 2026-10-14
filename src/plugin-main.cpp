@@ -358,7 +358,7 @@ bool obs_module_load(void)
 
 			auto title = "OBS version not supported";
 			auto message =
-				"Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
+				"Error-424: Plugin requires OBS " + QString(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
 			showCriticalMessageBoxDelayed(title, message);
 
 			return false;
@@ -395,7 +395,7 @@ bool obs_module_load(void)
 
 			auto title = "OBS version is too old for some features";
 			auto message =
-				"Error-424: Plugin requires OBS " + QTStr(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
+				"Error-424: Plugin requires OBS " + QString(PLUGIN_MIN_OBS_VERSION) + " or higher <br>";
 			showCriticalMessageBoxDelayed(title, message);
 		}
 	}
@@ -459,7 +459,7 @@ bool obs_module_load(void)
 
 				auto title = "NDI Library version not supported";
 				auto message =
-					"Error-425: Plugin requires NDI " + QTStr(PLUGIN_MIN_NDI_VERSION) +
+					"Error-425: Plugin requires NDI " + QString(PLUGIN_MIN_NDI_VERSION) +
 					" or higher <br> <br> Version detected: " + QT_TO_UTF8(ndi_version_short) +
 					"<br> Get the latest NDI library at: <br>";
 				message += makeLink(PLUGIN_REDIRECT_NDI_REDIST_URL);
