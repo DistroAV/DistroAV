@@ -737,8 +737,8 @@ void *ndi_source_thread(void *data)
 			audio_frame = {};
 			ndiLib->framesync_capture_audio_v2(
 				ndi_frame_sync, &audio_frame,
-				0,     // "The desired sample rate. 0 to get the source value."
-				0,     // "The desired channel count. 0 to get the source value."
+				0,                        // "The desired sample rate. 0 to get the source value."
+				0,                        // "The desired channel count. 0 to get the source value."
 				FRAMESYNC_AUDIO_SAMPLES); // "The desired sample count. 0 to get the source value."
 			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
 			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
@@ -768,8 +768,8 @@ void *ndi_source_thread(void *data)
 			//
 			// !ndi_frame_sync
 			//
-			frame_received =
-				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, RECV_CAPTURE_TIMEOUT_MS);
+			frame_received = ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr,
+								 RECV_CAPTURE_TIMEOUT_MS);
 
 			if (frame_received == NDIlib_frame_type_audio) {
 				//

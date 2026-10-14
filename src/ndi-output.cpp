@@ -29,8 +29,8 @@
 using uyvy_conv_function = void (*)(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
 				    uint32_t end_y, uint8_t *output, uint32_t out_linesize);
 
-static void convert_i444_to_uyvy(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y,
-				 uint32_t end_y, uint8_t *output, uint32_t out_linesize)
+static void convert_i444_to_uyvy(uint8_t *const input[], const uint32_t in_linesize[], uint32_t start_y, uint32_t end_y,
+				 uint8_t *output, uint32_t out_linesize)
 {
 	// UYVY is 2 bytes per pixel; using it for the width avoids reading/writing into row padding.
 	const uint32_t pairs = out_linesize / 4;
@@ -195,8 +195,9 @@ bool ndi_output_start(void *data)
 				format, name);
 			obs_log(LOG_DEBUG, "-ndi_output_start(name='%s', groups='%s', ...)", name, groups);
 			auto it = video_to_color_format_map.find(format);
-			auto error_string = std::string(obs_module_text("NDIPlugin.OutputSettings.LastError")) +
-					    (it != video_to_color_format_map.end() ? it->second : std::to_string(format));
+			auto error_string =
+				std::string(obs_module_text("NDIPlugin.OutputSettings.LastError")) +
+				(it != video_to_color_format_map.end() ? it->second : std::to_string(format));
 			obs_output_set_last_error(o->output, error_string.c_str());
 			return false;
 		}
@@ -409,9 +410,9 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
 	const size_t channels = (size_t)audio_frame.no_channels;
-	audio_frame.p_data = const_cast<uint8_t *>(
-		ndi_pack_planar_audio(frame->data, channels, audio_frame.channel_stride_in_bytes, o->audio_conv_buffer,
-				      o->audio_path, "NDI Output"));
+	audio_frame.p_data =
+		const_cast<uint8_t *>(ndi_pack_planar_audio(frame->data, channels, audio_frame.channel_stride_in_bytes,
+							    o->audio_conv_buffer, o->audio_path, "NDI Output"));
 	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name.c_str(), audio_frame.timestamp * 100,
 				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
