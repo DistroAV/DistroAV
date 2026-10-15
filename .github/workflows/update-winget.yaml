@@ -66,7 +66,8 @@ jobs:
 
       - name: Defender malware scan
         run: |
-          Update-MpSignature
+          # Hosted runners ship with signatures; the update RPC call can fail and is not fatal.
+          try { Update-MpSignature -ErrorAction Stop } catch { Write-Warning "Update-MpSignature failed: $_" }
           Start-MpScan -ScanType CustomScan -ScanPath "$PWD\installer.exe"
           $threats = @(Get-MpThreatDetection | Where-Object { $_.Resources -like '*installer.exe*' })
           if ($threats.Count -gt 0) { throw "Defender flagged the installer: $($threats | Out-String)" }
@@ -100,7 +101,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: winget-validation-logs
           path: |
