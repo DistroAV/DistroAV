@@ -64,4 +64,54 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
 
   sudo apt-get install ${apt_args} ${_qt_packages}
   log_group
+
+  log_group 'Building obs-studio from buildspec.json...'
+  sudo apt-get install ${apt_args} \
+    cmake ninja-build jq pkg-config extra-cmake-modules uthash-dev \
+    libavcodec-dev libavformat-dev libswscale-dev libswresample-dev \
+    libx11-dev libx11-xcb-dev libxcb1-dev libxcb-xinput-dev libgl1-mesa-dev \
+    libwayland-dev libxkbcommon-dev libdrm-dev libpulse-dev \
+    libjansson-dev uuid-dev zlib1g-dev
+
+  local deps_dir=${project_root}/.deps
+  local obs_prefix=${deps_dir}/obs-install
+  local obs_version obs_base obs_hash
+  obs_version=$(jq -r '.dependencies["obs-studio"].version' ${project_root}/buildspec.json)
+  obs_base=$(jq -r '.dependencies["obs-studio"].baseUrl' ${project_root}/buildspec.json)
+  obs_hash=$(jq -r '.dependencies["obs-studio"].hashes.ubuntu' ${project_root}/buildspec.json)
+  local obs_src=${deps_dir}/obs-studio-${obs_version}
+  local obs_archive=${deps_dir}/obs-${obs_version}.tar.gz
+  local obs_build=${deps_dir}/obs-build-${obs_version}
+  local obs_version_file=${obs_prefix}/.obs-source-version
+  local installed_obs_version=''
+
+  mkdir -p ${deps_dir}
+
+  if [[ ! -d ${obs_src} ]] {
+    curl -fsSL ${obs_base}/${obs_version}.tar.gz -o ${obs_archive}
+    if ! printf '%s  %s\n' ${obs_hash} ${obs_archive} | sha256sum --check --status; then
+      log_error "OBS ${obs_version} source archive checksum mismatch"
+      return 2
+    fi
+    tar -xf ${obs_archive} -C ${deps_dir}
+  }
+
+  if [[ -r ${obs_version_file} ]] installed_obs_version=$(<${obs_version_file})
+
+  if [[ ! -f ${obs_prefix}/lib/cmake/libobs/libobsConfig.cmake || ${installed_obs_version} != ${obs_version} ]] {
+    cmake -S ${obs_src} -B ${obs_build} -G Ninja \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_INSTALL_PREFIX=${obs_prefix} \
+      -DCMAKE_PREFIX_PATH=${obs_prefix} \
+      -DOBS_VERSION_OVERRIDE=${obs_version} \
+      -DENABLE_FRONTEND=OFF -DENABLE_UI=OFF -DENABLE_FRONTEND_API=ON \
+      -DENABLE_PLUGINS=OFF -DENABLE_SCRIPTING=OFF -DENABLE_BROWSER=OFF \
+      -DENABLE_WEBSOCKET=OFF -DENABLE_NEW_MPEGTS_OUTPUT=OFF -DENABLE_AJA=OFF \
+      -DENABLE_WEBRTC=OFF -DENABLE_VST=OFF \
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Wno-dev
+    cmake --build ${obs_build}
+    cmake --install ${obs_build}
+    print -r -- ${obs_version} > ${obs_version_file}
+  }
+  log_group
 }
