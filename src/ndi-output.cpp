@@ -16,8 +16,10 @@
 ******************************************************************************/
 
 #include "plugin-main.h"
+#include "sync-debug.h"
 #include <util/threading.h>
 #include <chrono>
+#include <cstring>
 
 // #include "plugin-support.h"
 
@@ -253,17 +255,53 @@ bool ndi_output_start(void *data)
 	return o->started;
 }
 
+void ndi_output_stop(void *data, uint64_t);
+
+void replace_invalid_filename_chars(QString *s);
+
 void ndi_output_update(void *data, obs_data_t *settings)
 {
 	auto o = (ndi_output_t *)data;
 	auto name = obs_data_get_string(settings, "ndi_name");
+	// Replace invalid filename characters in the provided name and persist back to settings.
+	if (name) {
+		QString qname = QString::fromUtf8(name);
+		replace_invalid_filename_chars(&qname);
+		obs_data_set_string(settings, "ndi_name", QT_TO_UTF8(qname));
+		name = obs_data_get_string(settings, "ndi_name");
+	}
 	auto groups = obs_data_get_string(settings, "ndi_groups");
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', ...)", name, groups);
+
+	// If the output is running, stop it so it can be recreated with the new settings.
+	bool ndi_output_running = o->started;
+
+	if (ndi_output_running) {
+		obs_log(LOG_DEBUG, "ndi_output_update: ndi_name/ndi_groups changed, stopping output to apply changes");
+		// Stop the output; timestamp argument not used here so pass0.
+		ndi_output_stop(o, 0);
+	}
 
 	o->ndi_name = name;
 	o->ndi_groups = groups;
 	o->uses_video = obs_data_get_bool(settings, "uses_video");
 	o->uses_audio = obs_data_get_bool(settings, "uses_audio");
+
+	auto outputName = obs_output_get_name(o->output);
+	if (outputName && std::strcmp(outputName, "NDI Main Output") == 0) {
+		auto config = Config::Current();
+		config->OutputName = o->ndi_name;
+		config->OutputGroups = o->ndi_groups;
+		config->Save();
+	} else if (outputName && std::strcmp(outputName, "NDI Preview Output") == 0) {
+		auto config = Config::Current();
+		config->PreviewOutputName = o->ndi_name;
+		config->PreviewOutputGroups = o->ndi_groups;
+		config->Save();
+	}
+
+	if (ndi_output_running && !o->started)
+		ndi_output_start(o);
 
 	obs_log(LOG_INFO, "NDI Output Updated. '%s'", name);
 	obs_log(LOG_DEBUG, "ndi_output_update(name='%s', groups='%s', uses_video='%s', uses_audio='%s')", name, groups,
@@ -369,6 +407,8 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 	video_frame.frame_rate_D =
 		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
+	video_frame.timestamp = frame->timestamp / 100;
+
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.FourCC = o->frame_fourcc;
 
@@ -380,7 +420,8 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		video_frame.p_data = frame->data[0];
 		video_frame.line_stride_in_bytes = frame->linesize[0];
 	}
-
+	SYNC_DEBUG_LOG_VIDEO_TIME("NDI <- ndi_output", o->ndi_name, video_frame.timestamp * 100,
+				  (uint8_t *)video_frame.p_data);
 	ndiLib->send_send_video_async_v2(o->ndi_sender, &video_frame);
 }
 
@@ -420,12 +461,13 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	NDIlib_audio_frame_v3_t audio_frame = {0};
 	audio_frame.sample_rate = o->audio_samplerate;
 	audio_frame.no_channels = (int)o->audio_channels;
+	audio_frame.timestamp = frame->timestamp / 100;
 	audio_frame.timecode = NDIlib_send_timecode_synthesize;
 	audio_frame.no_samples = frame->frames;
 	audio_frame.channel_stride_in_bytes = frame->frames * 4;
 	audio_frame.FourCC = NDIlib_FourCC_audio_type_FLTP;
 
-	const size_t data_size = audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
+	const size_t data_size = (size_t)audio_frame.no_channels * (size_t)audio_frame.channel_stride_in_bytes;
 
 	if (data_size > o->audio_conv_buffer_size) {
 		obs_log(LOG_DEBUG, "ndi_output_rawaudio('%s'): growing audio_conv_buffer from %zu to %zu bytes",
@@ -446,7 +488,8 @@ void ndi_output_rawaudio(void *data, audio_data *frame)
 	}
 
 	audio_frame.p_data = o->audio_conv_buffer;
-
+	SYNC_DEBUG_LOG_AUDIO_TIME("NDI <- ndi_output", o->ndi_name, audio_frame.timestamp * 100,
+				  (float *)audio_frame.p_data, audio_frame.no_samples, audio_frame.sample_rate);
 	ndiLib->send_send_audio_v3(o->ndi_sender, &audio_frame);
 }
 

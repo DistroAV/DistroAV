@@ -71,14 +71,19 @@ target_sources(
     src/obs-support/obs-app.hpp
     src/obs-support/remote-text.cpp
     src/obs-support/remote-text.hpp
+    src/sync-debug.cpp
+    src/sync-debug.h
     src/config.cpp
     src/config.h
+    src/config-notifier.cpp
+    src/config-notifier.h
     src/main-output.cpp
     src/main-output.h
     src/ndi-filter.cpp
     src/ndi-finder.h
     src/ndi-finder.cpp
     src/ndi-output.cpp
+    src/test-output.cpp
     src/ndi-source.cpp
     src/plugin-main.cpp
     src/plugin-main.h

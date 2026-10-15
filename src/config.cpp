@@ -22,6 +22,7 @@
 #include <util/config-file.h>
 
 #include <QCoreApplication>
+#include "config-notifier.h"
 
 #define SECTION_NAME "NDIPlugin"
 
@@ -303,6 +304,10 @@ void Config::Save()
 		config_set_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
 
 		config_save(obs_config);
+
+		// Notify any Qt UI/listeners that the configuration has changed so they can refresh.
+		ConfigNotifier::instance();
+		emit ConfigNotifier::instance() -> configChanged();
 	}
 }
 

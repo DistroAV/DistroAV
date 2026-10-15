@@ -5,10 +5,15 @@ on:
       pluginName:
         description: Project name detected by parsing build spec file
         value: ${{ jobs.check-event.outputs.pluginName }}
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
 jobs:
   check-event:
     name: Check GitHub Event Data 🔎
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     defaults:
       run:
         shell: bash
@@ -74,6 +79,7 @@ jobs:
   macos-build:
     name: Build for macOS 🍏
     runs-on: macos-15
+    timeout-minutes: 10
     needs: check-event
     defaults:
       run:
@@ -181,6 +187,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     needs: check-event
     defaults:
       run:
@@ -252,6 +259,7 @@ jobs:
   windows-build:
     name: Build for Windows 🪟
     runs-on: windows-2022
+    timeout-minutes: 10
     needs: check-event
     defaults:
       run:

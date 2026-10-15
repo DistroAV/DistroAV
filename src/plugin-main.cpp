@@ -56,6 +56,9 @@ struct obs_source_info ndi_source_info;
 extern struct obs_output_info create_ndi_output_info();
 struct obs_output_info ndi_output_info;
 
+extern struct obs_output_info create_test_output_info();
+struct obs_output_info test_output_info;
+
 extern struct obs_source_info create_ndi_filter_info();
 struct obs_source_info ndi_filter_info;
 
@@ -263,6 +266,9 @@ static void register_plugin_features()
 	ndi_output_info = create_ndi_output_info();
 	obs_register_output(&ndi_output_info);
 
+	test_output_info = create_test_output_info();
+	obs_register_output(&test_output_info);
+
 	ndi_filter_info = create_ndi_filter_info();
 	obs_register_source(&ndi_filter_info);
 
@@ -400,6 +406,14 @@ bool obs_module_load(void)
 				"ERR-406 - NDI library could not initialize. Usually due to unsupported CPU.");
 			obs_log(LOG_DEBUG,
 				"obs_module_load: ndiLib->initialize() failed; CPU unsupported by NDI library.");
+			QString title = "NDI library could not initialize";
+			QString message = "ERR-406: NDI library was detected but could not initialize. "
+					  "This is usually due to unsupported CPU instructions.<br><br>";
+			message += "See NDI CPU requirements: <br>";
+			message += makeLink(PLUGIN_REDIRECT_NDI_SDK_CPU_REQUIREMENTS_URL);
+			showCriticalMessageBoxDelayed(title, message);
+			ndiLib->destroy();
+			ndiLib = nullptr;
 			// return false;
 		} else {
 			obs_log(LOG_INFO, "obs_module_load: NDI library initialized ('%s')", ndiLib->version());
@@ -481,11 +495,11 @@ bool obs_module_load(void)
 						Qt::QueuedConnection);
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
-					main_output_deinit();
-					preview_output_deinit();
+					main_output_close();
+					preview_output_close();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
-					main_output_deinit();
-					preview_output_deinit();
+					main_output_close();
+					preview_output_close();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGED) {
 					if (plugin_features_registered) {
 						main_output_init();

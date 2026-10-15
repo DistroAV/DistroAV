@@ -28,6 +28,10 @@ public:
 
 private slots:
 	void onFormAccepted();
+	void onConfigChanged();
+
+private:
+	void refreshUI();
 
 private:
 	std::unique_ptr<Ui::OutputSettings> ui;

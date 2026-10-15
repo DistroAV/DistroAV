@@ -1,3 +1,4 @@
+
 /******************************************************************************
 	Copyright (C) 2016-2024 DistroAV <contact@distroav.org>
 
@@ -21,6 +22,7 @@
 #include "main-output.h"
 #include "preview-output.h"
 #include "update.h"
+#include "../config-notifier.h"
 
 #include <QClipboard>
 #include <QDesktopServices>
@@ -36,6 +38,9 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	ui->setupUi(this);
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
+
+	// Listen for external config changes so the dialog can update while visible.
+	connect(ConfigNotifier::instance(), &ConfigNotifier::configChanged, this, &OutputSettings::onConfigChanged);
 
 	// Requirements checks and status display
 	// Global rules for color based on requirement checks: red for fail, green for pass. Text is set per check below.
@@ -94,7 +99,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		    ndiVersionCheckResult
 			    ? QString("OK (%1 ≥ %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)
 			    : (ndiVersionShort.isEmpty()
-				       ? QString("Missing (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
+				       ? QString("Not loaded (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
 				       : QString("Too old (%1 < %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)));
 
 	// DistroAV Section Logic
@@ -196,14 +201,13 @@ If you are running a local build, don't forget to add your build info to the upd
 		const auto script = QString(
 			"tell application \"Terminal\"\n"
 			"activate\n"
-			"do script \"brew tap distroav/distroav && brew reinstall --cask distroav/distroav/distroav && exit\"\n"
+			"do script \"brew tap distroav/tap && brew reinstall --cask distroav/tap/distroav && exit\"\n"
 			"end tell");
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
-			QMessageBox::warning(
-				this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-				QTStr("NDIPlugin.OneclickInstallError.Message") +
-					QStringLiteral("brew reinstall --cask distroav/distroav/distroav"));
+			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
+					     QTStr("NDIPlugin.OneclickInstallError.Message") +
+						     QStringLiteral("brew reinstall --cask distroav/tap/distroav"));
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -215,7 +219,7 @@ If you are running a local build, don't forget to add your build info to the upd
 					<< "/c"
 					<< "winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements || pause")) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-					     QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id DistroAV.DistroAV"));
+						 QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id DistroAV.DistroAV"));
 			obs_log(LOG_DEBUG, "Install DistroAV button: something went wrong");
 		}
 #else
@@ -251,12 +255,12 @@ If you are running a local build, don't forget to add your build info to the upd
 					<< "/c"
 					<< "winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements || pause")) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-					     QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id NDI.NDIRuntime"));
+						 QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id NDI.NDIRuntime"));
 			obs_log(LOG_DEBUG, "Install NDI button: something went wrong");
 		}
 #else
 		QMessageBox::information(this, "Unsupported platform",
-					 "Automatic NDI installation is currently only supported on Windows and macOS using the default installation methods.");
+						 "Automatic NDI installation is currently only supported on Windows and macOS using the default installation methods.");
 #endif
 	});
 
@@ -273,7 +277,16 @@ If you are running a local build, don't forget to add your build info to the upd
 	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
 		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, makeLink(PLUGIN_REDIRECT_NDI_WEB_URL, NDI_OFFICIAL_WEB_URL)));
 }
-
+void replace_invalid_filename_chars(QString *s)
+{
+	if (!s)
+		return;
+	const QString forbidden = "\\/:*?\"<>|";
+	for (QChar &ch : *s) {
+		if (forbidden.contains(ch))
+			ch = ' ';
+	}
+}
 void OutputSettings::onFormAccepted()
 {
 	auto config = Config::Current();
@@ -281,10 +294,12 @@ void OutputSettings::onFormAccepted()
 
 	config->OutputEnabled = ui->mainOutputGroupBox->isChecked();
 	config->OutputName = ui->mainOutputName->text();
+	replace_invalid_filename_chars(&config->OutputName);
 	config->OutputGroups = ui->mainOutputGroups->text();
 
 	config->PreviewOutputEnabled = ui->previewOutputGroupBox->isChecked();
 	config->PreviewOutputName = ui->previewOutputName->text();
+	replace_invalid_filename_chars(&config->PreviewOutputName);
 	config->PreviewOutputGroups = ui->previewOutputGroups->text();
 
 	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
@@ -314,7 +329,7 @@ void OutputSettings::onFormAccepted()
 			main_output_init();
 		}
 	} else {
-		main_output_deinit();
+		main_output_stop();
 	}
 	if (config->PreviewOutputEnabled && !config->PreviewOutputName.isEmpty()) {
 		if ((last_config.PreviewOutputEnabled != config->PreviewOutputEnabled) ||
@@ -325,11 +340,30 @@ void OutputSettings::onFormAccepted()
 			preview_output_init();
 		}
 	} else {
-		preview_output_deinit();
+		preview_output_stop();
 	}
 }
 
 void OutputSettings::showEvent(QShowEvent *)
+{
+	refreshUI();
+}
+
+void OutputSettings::toggleShowHide()
+{
+	setVisible(!isVisible());
+}
+
+void OutputSettings::onConfigChanged()
+{
+	// Only update widgets while dialog is visible to avoid surprising background UI changes.
+	if (!isVisible())
+		return;
+
+	refreshUI();
+}
+
+void OutputSettings::refreshUI()
 {
 	auto config = Config::Current();
 
@@ -341,6 +375,15 @@ void OutputSettings::showEvent(QShowEvent *)
 	} else {
 		ui->mainOutputGroupBox->setEnabled(false);
 		ui->previewOutputGroupBox->setEnabled(false);
+	}
+
+	obs_data_t *main_settings = nullptr;
+	main_output_get_settings(main_settings);
+	if (main_settings) {
+		config->OutputName = obs_data_get_string(main_settings, "ndi_name");
+		config->OutputGroups = obs_data_get_string(main_settings, "ndi_groups");
+		obs_data_release(main_settings);
+		config->Save();
 	}
 
 	ui->mainOutputGroupBox->setChecked(config->OutputEnabled);
@@ -355,6 +398,15 @@ void OutputSettings::showEvent(QShowEvent *)
 		ui->mainOutputLastError->setFixedHeight(ui->mainOutputLastError->sizeHint().height());
 	}
 
+	obs_data_t *preview_settings = nullptr;
+	preview_output_get_settings(preview_settings);
+	if (preview_settings) {
+		config->PreviewOutputName = obs_data_get_string(preview_settings, "ndi_name");
+		config->PreviewOutputGroups = obs_data_get_string(preview_settings, "ndi_groups");
+		obs_data_release(preview_settings);
+		config->Save();
+	}
+
 	ui->previewOutputGroupBox->setChecked(config->PreviewOutputEnabled);
 	ui->previewOutputName->setText(config->PreviewOutputName);
 	ui->previewOutputGroups->setText(config->PreviewOutputGroups);
@@ -363,9 +415,4 @@ void OutputSettings::showEvent(QShowEvent *)
 	ui->tallyPreviewCheckBox->setChecked(config->TallyPreviewEnabled);
 
 	ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
-}
-
-void OutputSettings::toggleShowHide()
-{
-	setVisible(!isVisible());
 }
