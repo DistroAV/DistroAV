@@ -116,7 +116,12 @@ jobs:
     timeout-minutes: 15
     steps:
       # Opens a PR on microsoft/winget-pkgs from the token owner's fork of winget-pkgs.
-      # Requires a fork of microsoft/winget-pkgs and the WINGET_UPDATER_TOKEN secret (classic PAT, public_repo scope).
+      # Setup:
+      #   1. Fork https://github.com/microsoft/winget-pkgs under the account that owns the token.
+      #   2. Create a classic PAT at https://github.com/settings/tokens/new (Settings > Developer settings >
+      #      Personal access tokens > Tokens (classic)) with only the `public_repo` scope.
+      #   3. Add it as repo secret WINGET_UPDATER_TOKEN at
+      #      https://github.com/DistroAV/DistroAV/settings/secrets/actions/new
       - name: Submit WinGet manifest PR
         uses: vedantmgoyal9/winget-releaser@v2
         with:
