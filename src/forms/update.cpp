@@ -38,6 +38,7 @@ Inspiration(s):
 #include <QMainWindow>
 #include <QMetaEnum>
 #include <QPointer>
+#include <QScrollBar>
 #include <QSslSocket>
 #include <QTextDocument>
 #include <QTimer>
@@ -169,6 +170,7 @@ public:
 			pluginUpdateInfo.releaseNotes,
 			QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub |
 							QTextDocument::MarkdownNoHTML));
+		ui->textReleaseNotes->verticalScrollBar()->setValue(0);
 
 		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
 #if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
