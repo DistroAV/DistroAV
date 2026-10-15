@@ -629,7 +629,8 @@ obs_audio_data *ndi_filter_asyncaudio(void *data, obs_audio_data *audio_data)
 	// audio_frame.p_data = p_frame;
 	audio_frame.p_metadata = NULL; // No metadata support yet!
 
-	const size_t data_size = audio_frame.no_channels * audio_frame.channel_stride_in_bytes;
+	const size_t data_size =
+		static_cast<size_t>(audio_frame.no_channels) * static_cast<size_t>(audio_frame.channel_stride_in_bytes);
 
 	if (data_size > f->audio_conv_buffer_size) {
 		obs_log(LOG_DEBUG, "ndi_filter_asyncaudio: growing audio_conv_buffer from %zu to %zu bytes",
