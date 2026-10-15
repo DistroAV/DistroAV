@@ -242,7 +242,8 @@ void Config::SetDefaultsToAppStore()
 			config_get_string(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES_VERSION);
 		if (!installed_version || std::strcmp(installed_version, PLUGIN_VERSION) != 0) {
 			config_set_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
-			config_set_string(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES_VERSION, PLUGIN_VERSION);
+			config_set_string(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES_VERSION,
+					  PLUGIN_VERSION);
 			config_save(app_config);
 		}
 	}
