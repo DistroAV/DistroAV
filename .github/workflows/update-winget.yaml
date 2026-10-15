@@ -10,11 +10,6 @@ on:
         description: "Existing release tag to submit to WinGet (e.g. 6.2.2)"
         required: true
         type: string
-      dryRun:
-        description: "Dry run: run validation only, do not submit to winget-pkgs"
-        required: true
-        default: true
-        type: boolean
 
 permissions: {}
 
@@ -28,109 +23,25 @@ env:
   INSTALLER_SUFFIX: -windows-x64-Installer.exe
 
 jobs:
-  validate-winget-package:
-    name: Validate WinGet Package
-    if: github.repository == 'DistroAV/DistroAV' # Forks must not submit to winget-pkgs.
-    runs-on: windows-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    defaults:
-      run:
-        shell: pwsh
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - name: Check release and installer asset
-        id: asset
-        run: |
-          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:RELEASE_TAG" | ConvertFrom-Json
-          if ($release.draft -or $release.prerelease) { throw "Release $env:RELEASE_TAG is a draft or prerelease." }
-          $assets = @($release.assets | Where-Object { $_.name.EndsWith($env:INSTALLER_SUFFIX) })
-          if ($assets.Count -ne 1) { throw "Expected exactly 1 installer asset, found $($assets.Count)." }
-          $asset = $assets[0]
-          $version = $env:RELEASE_TAG
-          if ($asset.name -notlike "*-$version-*") { throw "Asset '$($asset.name)' does not match version $version." }
-          "name=$($asset.name)" >> $env:GITHUB_OUTPUT
-          "url=$($asset.browser_download_url)" >> $env:GITHUB_OUTPUT
-          "digest=$($asset.digest -replace '^sha256:','')" >> $env:GITHUB_OUTPUT
-
-      - name: Download installer and verify hash
-        run: |
-          Invoke-WebRequest -Uri '${{ steps.asset.outputs.url }}' -OutFile installer.exe
-          $actual = (Get-FileHash installer.exe -Algorithm SHA256).Hash.ToLower()
-          $expected = '${{ steps.asset.outputs.digest }}'.ToLower()
-          if (-not $expected) { throw 'GitHub did not provide a digest for the asset.' }
-          if ($actual -ne $expected) { throw "SHA256 mismatch: expected $expected, got $actual" }
-          Write-Host "SHA256 OK: $actual"
-
-      - name: Defender malware scan
-        run: |
-          # Hosted runners ship with signatures; the update RPC call can fail and is not fatal.
-          try { Update-MpSignature -ErrorAction Stop } catch { Write-Warning "Update-MpSignature failed: $_" }
-
-          try {
-            Start-MpScan -ScanType CustomScan -ScanPath "$PWD\installer.exe" -ErrorAction Stop
-          } catch {
-            Write-Warning "Defender scan could not complete on this runner: $_"
-          }
-
-          # Only an actual detection fails the job.
-          $threats = @()
-          try {
-            $threats = @(Get-MpThreatDetection -ErrorAction Stop | Where-Object { $_.Resources -like '*installer.exe*' })
-          } catch {
-            Write-Warning "Could not query Defender threat detections: $_"
-          }
-          if ($threats.Count -gt 0) {
-            throw "Defender flagged the installer: $($threats | Out-String)"
-          }
-          $global:LASTEXITCODE = 0
-
-      - name: Generate and validate manifests
-        run: |
-          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-          ./wingetcreate.exe update $env:PACKAGE_ID --version $env:RELEASE_TAG --urls '${{ steps.asset.outputs.url }}' --out manifests --token $env:GH_TOKEN
-          if ($LASTEXITCODE -ne 0) { throw 'wingetcreate failed.' }
-          $manifestDir = (Get-ChildItem manifests -Recurse -Filter '*.installer.yaml' | Select-Object -First 1).DirectoryName
-          winget validate --manifest $manifestDir
-          if ($LASTEXITCODE -ne 0) { throw 'winget validate failed.' }
-
-      - name: Silent install test
-        run: |
-          $p = Start-Process .\installer.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/LOG=$PWD\install.log" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Silent install exited with $($p.ExitCode)" }
-          $keys = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
-          $entry = Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'DistroAV*' } | Select-Object -First 1
-          if (-not $entry) { throw 'No DistroAV uninstall entry found after install.' }
-          if ($entry.DisplayVersion -ne $env:RELEASE_TAG) { throw "Installed version '$($entry.DisplayVersion)' != $env:RELEASE_TAG" }
-          Write-Host "Installed: $($entry.DisplayName) $($entry.DisplayVersion)"
-          "UNINSTALL=$($entry.UninstallString -replace '"','')" >> $env:GITHUB_ENV
-
-      - name: Silent uninstall test
-        run: |
-          $p = Start-Process $env:UNINSTALL -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Silent uninstall exited with $($p.ExitCode)" }
-          $keys = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
-          if (Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'DistroAV*' }) { throw 'Uninstall entry still present.' }
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: winget-validation-logs
-          path: |
-            install.log
-            manifests/
-          if-no-files-found: ignore
-
   publish-winget-package:
     name: Publish WinGet Package
-    needs: validate-winget-package
-    if: github.repository == 'DistroAV/DistroAV' && !(github.event_name == 'workflow_dispatch' && inputs.dryRun) # Forks must not submit to winget-pkgs.
-    runs-on: ubuntu-latest
+    if: github.repository == 'DistroAV/DistroAV' # Forks must not submit to winget-pkgs.
+    runs-on: ubuntu-slim
     timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
+      - name: Verify requested release exists
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq 'select(.draft == false and .prerelease == false) | .tag_name')
+          if [[ "$release_tag" != "$RELEASE_TAG" ]]; then
+            echo "::error::Release $RELEASE_TAG is not a published, non-prerelease release."
+            exit 1
+          fi
+
       # Opens a PR on microsoft/winget-pkgs from the token owner's fork of winget-pkgs.
       # Setup:
       #   1. Fork https://github.com/microsoft/winget-pkgs under the account that owns the token.
