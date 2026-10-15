@@ -44,3 +44,8 @@ scratch/
 !/CI
 !/lib
 !/tools
+
+# Except for the integration test suite
+!/tests
+!/scripts
+__pycache__/
