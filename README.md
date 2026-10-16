@@ -11,6 +11,7 @@
 [![GitHub](https://img.shields.io/github/license/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/blob/master/LICENSE)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DistroAV/DistroAV/push.yaml?label=master)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/DistroAV/DistroAV)](https://github.com/DistroAV/DistroAV/releases/latest) ![GitHub Release Date](https://img.shields.io/github/release-date/distroav/distroav?display_date=published_at)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FDistroAV%2FDistroAV.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FDistroAV%2FDistroAV?ref=badge_shield)
 
 [![Total downloads](https://img.shields.io/github/downloads/DistroAV/DistroAV/total)](https://github.com/DistroAV/DistroAV/releases)
 ![Discord](https://img.shields.io/discord/1082173788101279746?style=social&logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.gg%2FZuTxbUK3ug)
@@ -119,3 +120,7 @@ This project exists thanks to all the people who contributed code & reviews over
   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=DistroAV/DistroAV&type=Date" />
   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=DistroAV/DistroAV&type=Date" />
 </picture>
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FDistroAV%2FDistroAV.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FDistroAV%2FDistroAV?ref=badge_large)
