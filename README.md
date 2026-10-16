@@ -88,6 +88,11 @@ See [Development Wiki](https://github.com/DistroAV/DistroAV/wiki/3.-Development)
 
 **NOTE:** `OBS-NDI` was renamed to `DistroAV` ~2024/06 per [obsproject.com](https://obsproject.com)'s request to drop `OBS` from our name.
 
+## AI disclosure & AI-assited developement
+
+See our [AI usage guideline & disclosure](https://github.com/DistroAV/DistroAV/blob/master/AI_DISCLOSURE.md).
+See the [OBS Project's AI/Machine Learning Policy](https://github.com/obsproject/obs-studio/blob/master/CONTRIBUTING.md#aimachine-learning-policy) and [OBS's Resource & IP Policy](https://obsproject.com/forum/threads/forum-resource-and-ip-policy.178569/).
+
 # Project Sponsors
 
 <a href="https://distroav.org/sponsors/epeakstudio" target="_blank" rel="noopener">
