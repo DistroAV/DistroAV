@@ -223,8 +223,7 @@ Config::Config()
 {
 	ProcessCommandLine();
 	SetDefaultsToUserStore();
-	if (obs_get_version() >= MAKE_SEMANTIC_VERSION(31, 0, 0))
-		GlobalToUserMigration();
+	GlobalToUserMigration();
 }
 
 void Config::SetDefaultsToUserStore()
