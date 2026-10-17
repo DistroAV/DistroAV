@@ -36,6 +36,7 @@
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+	auto config = Config::Current();
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
 
@@ -227,6 +228,16 @@ If you are running a local build, don't forget to add your build info to the upd
 						"Automatic DistroAV installation is currently only supported on Windows and macOS using the default installation methods.");
 #endif
 	});
+
+	// Set the auto check for updates checkbox based on the current configuration
+	ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
+#if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
+	connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
+		[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+#else
+	connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::checkStateChanged, this,
+		[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
+#endif
 
 	// NDI Library Section Logic
 	connect(ui->pushButtonGetNdi, &QPushButton::clicked,

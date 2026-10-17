@@ -151,13 +151,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
-     <property name="text">
-      <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <layout class="QHBoxLayout" name="horizontalLayoutButtonBox">
      <item>
       <widget class="QPushButton" name="buttonSkipThisVersion">
