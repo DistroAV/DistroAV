@@ -35,7 +35,7 @@ TRAPZERR() {
 
 package() {
   if (( ! ${+SCRIPT_HOME} )) typeset -g SCRIPT_HOME=${ZSH_ARGZERO:A:h}
-  local host_os='ubuntu'
+  local host_os='linux'
   local project_root=${SCRIPT_HOME:A:h:h}
   local buildspec_file=${project_root}/buildspec.json
 
@@ -138,9 +138,7 @@ ${_usage_host:-}"
   set -- ${(@)args}
   set_loglevel ${verbosity}
 
-  if (( ! skip_deps )) {
-    check_${host_os}
-  }
+  check_${host_os}
 
   local product_name
   local product_version
@@ -162,7 +160,12 @@ ${_usage_host:-}"
     popd
   } else {
     log_group "Archiving ${product_name}..."
-    local output_name="${product_name}-${product_version}-${target##*-}-ubuntu-gnu"
+    source /etc/os-release
+    local output_platform="${ID}-${VERSION_ID}-gnu"
+    if (( ${DISTROAV_CUSTOM_LINUX:-0} )) {
+      output_platform="linux-custom-${DISTROAV_CUSTOM_OS_SHORTNAME}"
+    }
+    local output_name="${product_name}-${product_version}-${target##*-}-${output_platform}"
     local _tarflags='cJf'
     if (( _loglevel > 1 || ${+CI} )) _tarflags="v${_tarflags}"
 
