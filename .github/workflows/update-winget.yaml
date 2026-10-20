@@ -1,0 +1,59 @@
+name: Update WinGet Package
+run-name: Publish ${{ inputs.versionTargeted || github.event.release.tag_name }} to WinGet
+
+on:
+  release:
+    types: [released] # Fires when a non-prerelease is published (draft -> published); skips prereleases.
+  workflow_dispatch:
+    inputs:
+      versionTargeted:
+        description: "Existing release tag to submit to WinGet (e.g. 6.2.2)"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-winget
+  cancel-in-progress: false
+
+env:
+  PACKAGE_ID: DistroAV.DistroAV
+  RELEASE_TAG: ${{ inputs.versionTargeted || github.event.release.tag_name }}
+  INSTALLER_SUFFIX: -windows-x64-Installer.exe
+
+jobs:
+  publish-winget-package:
+    name: Publish WinGet Package
+    if: github.repository == 'DistroAV/DistroAV' # Forks must not submit to winget-pkgs.
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Verify requested release exists
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq 'select(.draft == false and .prerelease == false) | .tag_name')
+          if [[ "$release_tag" != "$RELEASE_TAG" ]]; then
+            echo "::error::Release $RELEASE_TAG is not a published, non-prerelease release."
+            exit 1
+          fi
+
+      # Opens a PR on microsoft/winget-pkgs from the token owner's fork of winget-pkgs.
+      # Setup:
+      #   1. Fork https://github.com/microsoft/winget-pkgs under the account that owns the token.
+      #   2. Create a classic PAT at https://github.com/settings/tokens/new (Settings > Developer settings >
+      #      Personal access tokens > Tokens (classic)) with only the `public_repo` scope.
+      #   3. Add it as repo secret WINGET_UPDATER_TOKEN at
+      #      https://github.com/DistroAV/DistroAV/settings/secrets/actions/new
+      - name: Submit WinGet manifest PR
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: DistroAV.DistroAV
+          installers-regex: '-windows-x64-Installer\.exe$' # Only the Inno Setup installer; excludes zip/portable.
+          release-tag: ${{ env.RELEASE_TAG }}
+          release-notes-url: https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}
+          token: ${{ secrets.WINGET_UPDATER_TOKEN }}
