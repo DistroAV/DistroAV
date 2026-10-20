@@ -18,11 +18,14 @@
 #include "config.h"
 
 #include "plugin-main.h"
+#include "plugin-support.h"
 
 #include <util/config-file.h>
 
 #include <QCoreApplication>
 #include "config-notifier.h"
+
+#include <cstring>
 
 #define SECTION_NAME "NDIPlugin"
 
@@ -39,6 +42,7 @@
 
 // App Settings
 #define PARAM_AUTO_CHECK_FOR_UPDATES "AutoCheckForUpdates"
+#define PARAM_AUTO_CHECK_FOR_UPDATES_VERSION "AutoCheckForUpdatesVersion"
 #define PARAM_LAST_UPDATE_CHECK "LastUpdateCheck"
 #define PARAM_MIN_AUTO_UPDATE_CHECK_INTERVAL_SECONDS "MinAutoUpdateCheckIntervalSeconds"
 
@@ -222,9 +226,27 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
+	SetDefaultsToAppStore();
 	SetDefaultsToUserStore();
 	if (obs_get_version() >= MAKE_SEMANTIC_VERSION(31, 0, 0))
 		GlobalToUserMigration();
+}
+
+void Config::SetDefaultsToAppStore()
+{
+	auto app_config = GetAppConfig();
+	if (app_config) {
+		config_set_default_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
+
+		const char *installed_version =
+			config_get_string(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES_VERSION);
+		if (!installed_version || std::strcmp(installed_version, PLUGIN_VERSION) != 0) {
+			config_set_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
+			config_set_string(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES_VERSION,
+					  PLUGIN_VERSION);
+			config_save(app_config);
+		}
+	}
 }
 
 void Config::SetDefaultsToUserStore()
