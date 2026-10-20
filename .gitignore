@@ -18,6 +18,8 @@
 !CMakePresets.json
 !LICENSE
 !README.md
+!AI_DISCLOSURE.md
+!CONTRIBUTING.md
 
 # Exclude lock files
 *.lock.json
