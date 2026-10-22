@@ -1,6 +1,11 @@
 name: Build Project
 on:
   workflow_call:
+    inputs:
+      target:
+        description: Build target to run (all, macos, ubuntu, ubuntu-24, ubuntu-26, windows)
+        type: string
+        default: all
     outputs:
       pluginName:
         description: Project name detected by parsing build spec file
@@ -81,6 +86,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'macos'
     defaults:
       run:
         shell: zsh --no-rcs --errexit --pipefail {0}
@@ -181,91 +187,22 @@ jobs:
           path: ${{ github.workspace }}/.ccache
           key: ${{ runner.os }}-ccache-${{ needs.check-event.outputs.config }}
 
-  ubuntu-build:
-    name: Build for Ubuntu 24 (t64 packages)🐧
-    strategy:
-      matrix:
-        os: [ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    needs: check-event
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Set Up Environment 🔧
-        id: setup
-        run: |
-          : Set Up Environment 🔧
-          if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
-
-          read -r product_name product_version <<< \
-            "$(jq -r '. | {name, version} | join(" ")' buildspec.json)"
-
-          echo "pluginName=${product_name}" >> $GITHUB_OUTPUT
-          echo "pluginVersion=${product_version}" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache/restore@v6
-        id: ccache-cache
-        with:
-          path: ${{ github.workspace }}/.ccache
-          key: ${{ runner.os }}-${{ matrix.os }}-ccache-x86_64-${{ needs.check-event.outputs.config }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.os }}-ccache-x86_64-
-
-      - name: Build Plugin 🧱
-        uses: ./.github/actions/build-plugin
-        with:
-          target: x86_64
-          config: ${{ needs.check-event.outputs.config }}
-
-      - name: Package Plugin 📀
-        uses: ./.github/actions/package-plugin
-        with:
-          target: x86_64
-          config: ${{ needs.check-event.outputs.config }}
-          package: ${{ fromJSON(needs.check-event.outputs.package) }}
-
-      - name: Upload Source Tarball 🗜️
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-sources-${{ needs.check-event.outputs.commitHash }}
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-source.*
-
-      - name: Upload Artifacts 📡
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*.*
-
-      - name: Upload debug symbol artifacts 🪲
-        uses: actions/upload-artifact@v7
-        if: ${{ fromJSON(needs.check-event.outputs.package) }}
-        with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}-dbgsym
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*-dbgsym.ddeb
-
-      - uses: actions/cache/save@v6
-        if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
-        with:
-          path: ${{ github.workspace }}/.ccache
-          key: ${{ runner.os }}-${{ matrix.os }}-ccache-x86_64-${{ needs.check-event.outputs.config }}
-
   # Ubuntu 26.04 renamed the Qt6 runtime packages (libqt6gui6t64 -> libqt6gui6), so a .deb built on
   # 24.04 depends on package names that do not exist there. Build in a 26.04 container instead.
-  ubuntu-26-build:
-    name: Build for Ubuntu 26 🐧
+  ubuntu-build:
+    name: Build for Ubuntu 🐧
     strategy:
       matrix:
-        os: [ubuntu-26.04]
+        os: >-
+          ${{ fromJSON(
+            inputs.target == 'ubuntu-24' && '["ubuntu-24.04"]'
+            || inputs.target == 'ubuntu-26' && '["ubuntu-26.04"]'
+            || '["ubuntu-24.04", "ubuntu-26.04"]'
+          ) }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     needs: check-event
+    if: inputs.target == 'all' || startsWith(inputs.target, 'ubuntu')
     defaults:
       run:
         shell: bash
@@ -278,6 +215,7 @@ jobs:
       - name: Set Up Environment 🔧
         id: setup
         run: |
+          echo "Running on ${{ matrix.os }}"
           : Set Up Environment 🔧
           if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
 
@@ -338,6 +276,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'windows'
     defaults:
       run:
         shell: pwsh
