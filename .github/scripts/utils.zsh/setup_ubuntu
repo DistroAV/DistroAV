@@ -36,7 +36,15 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
   }
 
   sudo add-apt-repository --yes ppa:obsproject/obs-studio
+
+  # Ubuntu 26.04 prefers the archive's amd64v3 obs-studio build over the PPA one, and the archive
+  # package does not ship the libobs headers and CMake files. Pin obs-studio to the PPA.
+  print -r -- 'Package: obs-studio
+Pin: release o=LP-PPA-obsproject-obs-studio
+Pin-Priority: 1001' | sudo tee /etc/apt/preferences.d/obs-studio-ppa > /dev/null
+
   sudo apt update
+  apt-cache policy obs-studio
 
   sudo apt-get install ${apt_args} \
     build-essential \
