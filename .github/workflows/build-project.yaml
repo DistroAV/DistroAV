@@ -59,6 +59,10 @@ jobs:
               ;;
             workflow_dispatch)
               config_data=('codesign:true' 'notarize:false' 'package:false' 'config:RelWithDebInfo')
+              if gh pr view "${GITHUB_REF_NAME}" --json labels,state \
+                | jq -e -r 'select(.state == "OPEN") | .labels[] | select(.name == "Seeking Testers")' > /dev/null; then
+                config_data[2]='package:true'
+              fi
               ;;
             schedule)
               config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo')
