@@ -67,6 +67,13 @@ sudo apt install distroav
 ```
 Maintained by [eeickmeyer](https://github.com/eeickmeyer)
 
+
+Manual .deb install (Linux - Unsupported)
+Pick the file matching your release :
+- `…-x86_64-linux-gnu.deb` for ubuntu/debian distros using the `t64` packages suffix (Ubuntu 24 / Debain 12)
+- `…-x86_64-ubuntu-26.04.deb` for ubuntu/debian distros usng regular packages name (Ubuntu 26 / Debian 13)
+
+
 Any other options, or errors: See [release page](https://distroav.org/download) and [installation Wiki](https://github.com/DistroAV/DistroAV/wiki/1.-Installation)
 
 ## Requirements

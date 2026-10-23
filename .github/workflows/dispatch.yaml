@@ -1,5 +1,5 @@
 name: Dispatch
-run-name: Dispatched Repository Actions - ${{ inputs.job }} ⌛️
+run-name: Dispatched Repository Actions - ${{ inputs.job }} (${{ inputs.target }}) ⌛️
 on:
   workflow_dispatch:
     inputs:
@@ -9,12 +9,26 @@ on:
         type: choice
         options:
           - build
+      target:
+        description: Build target to run
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - macos
+          - ubuntu
+          - ubuntu-24
+          - ubuntu-26
+          - windows
 permissions:
   contents: write
 jobs:
   check-and-build:
     if: inputs.job == 'build'
     uses: ./.github/workflows/build-project.yaml
+    with:
+      target: ${{ inputs.target }}
     secrets: inherit
     permissions:
       actions: read

@@ -1,6 +1,11 @@
 name: Build Project
 on:
   workflow_call:
+    inputs:
+      target:
+        description: Build target to run (all, macos, ubuntu, ubuntu-24, ubuntu-26, windows)
+        type: string
+        default: all
     outputs:
       pluginName:
         description: Project name detected by parsing build spec file
@@ -54,6 +59,10 @@ jobs:
               ;;
             workflow_dispatch)
               config_data=('codesign:true' 'notarize:false' 'package:false' 'config:RelWithDebInfo')
+              if gh pr view "${GITHUB_REF_NAME}" --json labels,state \
+                | jq -e -r 'select(.state == "OPEN") | .labels[] | select(.name == "Seeking Testers")' > /dev/null; then
+                config_data[2]='package:true'
+              fi
               ;;
             schedule)
               config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo')
@@ -81,6 +90,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'macos'
     defaults:
       run:
         shell: zsh --no-rcs --errexit --pipefail {0}
@@ -181,14 +191,22 @@ jobs:
           path: ${{ github.workspace }}/.ccache
           key: ${{ runner.os }}-ccache-${{ needs.check-event.outputs.config }}
 
+  # Ubuntu 26.04 renamed the Qt6 runtime packages (libqt6gui6t64 -> libqt6gui6), so a .deb built on
+  # 24.04 depends on package names that do not exist there. Build in a 26.04 container instead.
   ubuntu-build:
     name: Build for Ubuntu 🐧
     strategy:
       matrix:
-        os: [ubuntu-24.04]
+        os: >-
+          ${{ fromJSON(
+            inputs.target == 'ubuntu-24' && '["ubuntu-24.04"]'
+            || inputs.target == 'ubuntu-26' && '["ubuntu-26.04"]'
+            || '["ubuntu-24.04", "ubuntu-26.04"]'
+          ) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || startsWith(inputs.target, 'ubuntu')
     defaults:
       run:
         shell: bash
@@ -201,6 +219,7 @@ jobs:
       - name: Set Up Environment 🔧
         id: setup
         run: |
+          echo "Running on ${{ matrix.os }}"
           : Set Up Environment 🔧
           if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
 
@@ -261,6 +280,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'windows'
     defaults:
       run:
         shell: pwsh
