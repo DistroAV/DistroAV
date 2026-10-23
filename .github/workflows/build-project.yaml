@@ -204,7 +204,7 @@ jobs:
             || '["ubuntu-24.04", "ubuntu-26.04"]'
           ) }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 10
     needs: check-event
     if: inputs.target == 'all' || startsWith(inputs.target, 'ubuntu')
     defaults:
