@@ -162,7 +162,8 @@ ${_usage_host:-}"
     popd
   } else {
     log_group "Archiving ${product_name}..."
-    local output_name="${product_name}-${product_version}-${target##*-}-ubuntu-gnu"
+    local distro_version=$(. /etc/os-release && print -r -- ${VERSION_ID})
+    local output_name="${product_name}-${product_version}-${target##*-}-ubuntu-${distro_version}-gnu"
     local _tarflags='cJf'
     if (( _loglevel > 1 || ${+CI} )) _tarflags="v${_tarflags}"
 

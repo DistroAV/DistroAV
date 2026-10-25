@@ -16,6 +16,13 @@ set(CPACK_PACKAGE_NAME "${CMAKE_PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION "${CMAKE_PROJECT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_C_LIBRARY_ARCHITECTURE}")
 
+# Tag packages with the distribution release (e.g. ubuntu-26.04), as .deb dependencies differ between releases
+cmake_host_system_information(RESULT _distro_id QUERY DISTRIB_ID)
+cmake_host_system_information(RESULT _distro_version QUERY DISTRIB_VERSION_ID)
+if(_distro_id AND _distro_version)
+  string(APPEND CPACK_PACKAGE_FILE_NAME "-${_distro_id}-${_distro_version}")
+endif()
+
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${PLUGIN_EMAIL}")
