@@ -16,7 +16,7 @@ set(CPACK_PACKAGE_NAME "${CMAKE_PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION "${CMAKE_PROJECT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_C_LIBRARY_ARCHITECTURE}")
 
-# Tag packages with the distribution release (e.g. ubuntu-26.04), as .deb dependencies differ between releases
+# Tag packages with the distribution release (e.g. ubuntu-26.04, debian-13), as .deb dependencies differ between releases
 cmake_host_system_information(RESULT _distro_id QUERY DISTRIB_ID)
 cmake_host_system_information(RESULT _distro_version QUERY DISTRIB_VERSION_ID)
 if(_distro_id AND _distro_version)
