@@ -36,7 +36,24 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
   }
 
   sudo add-apt-repository --yes ppa:obsproject/obs-studio
+
+  # Ubuntu 26.04 runners enable the amd64v3 architecture variant, so apt reads the PPA's amd64v3
+  # index, which Launchpad publishes empty. Restrict the PPA to the baseline architecture so apt
+  # reads its amd64 index, then pin obs-studio to the PPA: the archive package does not ship the
+  # libobs headers and CMake files.
+  local sources_file
+  for sources_file (/etc/apt/sources.list.d/obsproject-ubuntu-obs-studio-*.sources(N)) {
+    if ! grep -q '^Architectures:' ${sources_file}; then
+      sudo sed -i "/^Types:/a Architectures: $(dpkg --print-architecture)" ${sources_file}
+    fi
+  }
+
+  print -r -- 'Package: obs-studio
+Pin: release o=LP-PPA-obsproject-obs-studio
+Pin-Priority: 1001' | sudo tee /etc/apt/preferences.d/obs-studio-ppa > /dev/null
+
   sudo apt update
+  apt-cache policy obs-studio
 
   sudo apt-get install ${apt_args} \
     build-essential \
