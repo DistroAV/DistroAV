@@ -115,6 +115,9 @@ public:
 	// because it needs access to global externs from plugin-main.h.
 	void calculate_stats();
 
+	// Clears the running and published stats (e.g. when monitoring is re-enabled).
+	void reset_stats();
+
 private:
 	NDIlib_send_instance_t m_sender;
 	mutable std::mutex m_mutex;

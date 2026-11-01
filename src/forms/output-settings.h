@@ -35,4 +35,7 @@ private:
 
 private:
 	std::unique_ptr<Ui::OutputSettings> ui;
+	// Shown between the output group boxes and the requirements while the Network
+	// Monitor is switched off, since the D/R indicators can't update without it.
+	QLabel *monitorOffLabel = nullptr;
 };

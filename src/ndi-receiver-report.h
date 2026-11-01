@@ -127,6 +127,9 @@ public:
 	void calculate_stats();
 	void add_drift_sample(uint64_t wall_ns, int64_t drift_ns);
 
+	// Clears the running and published stats (e.g. when monitoring is re-enabled).
+	void reset_stats();
+
 private:
 	// Clears running/snapshot stats and AV-drift tracking state. Caller must hold m_mutex.
 	void reset_stats_locked();

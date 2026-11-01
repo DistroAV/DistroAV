@@ -25,6 +25,7 @@
 #include "update.h"
 #include "../config-notifier.h"
 
+#include <QBoxLayout>
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QMessageBox>
@@ -38,6 +39,13 @@
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+
+	monitorOffLabel = new QLabel(QString::fromUtf8("Network Monitor off"), this);
+	monitorOffLabel->setAlignment(Qt::AlignCenter);
+	monitorOffLabel->setStyleSheet("QLabel { color: #c62828; font-weight: bold; }");
+	monitorOffLabel->setVisible(false);
+	if (auto *box = qobject_cast<QBoxLayout *>(layout()))
+		box->insertWidget(box->indexOf(ui->labelRequirements), monitorOffLabel);
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
 
@@ -386,6 +394,15 @@ void OutputSettings::refreshUI()
 					: "QWidget { color: #c62828; padding:0; }");
 	};
 
+	// Without the Network Monitor, discoverable/receiving can't be tracked: show
+	// them as unknown (grey) and say why.
+	const bool monitorOn = network_monitor && network_monitor->isEnabled();
+	monitorOffLabel->setVisible(!monitorOn);
+	auto applyUnknown = [](QLabel *label, const QString &letter) {
+		label->setText(letter);
+		label->setStyleSheet("QWidget { color: #757575; padding:0; }");
+	};
+
 	// Enable Output (Main & Preview) settings as long as Main Output can be supported.
 
 	if (main_output_is_supported()) {
@@ -411,7 +428,10 @@ void OutputSettings::refreshUI()
 	auto mainSendInfo = network_monitor->getSenderInfo("NDI Main Output");
 	applyStatus(ui->mainOutputSending, mainSendInfo != nullptr, "S");
 
-	if (mainSendInfo) {
+	if (!monitorOn) {
+		applyUnknown(ui->mainOutputDiscoverable, "D");
+		applyUnknown(ui->mainOutputReceiving, "R");
+	} else if (mainSendInfo) {
 		applyStatus(ui->mainOutputDiscoverable, mainSendInfo->is_discoverable(), "D");
 		applyStatus(ui->mainOutputReceiving, mainSendInfo->get_receivers() > 0, "R");
 	} else {
@@ -441,7 +461,10 @@ void OutputSettings::refreshUI()
 	auto previewSendInfo = network_monitor->getSenderInfo("NDI Preview Output");
 	applyStatus(ui->previewOutputSending, previewSendInfo != nullptr, "S");
 
-	if (previewSendInfo) {
+	if (!monitorOn) {
+		applyUnknown(ui->previewOutputDiscoverable, "D");
+		applyUnknown(ui->previewOutputReceiving, "R");
+	} else if (previewSendInfo) {
 		applyStatus(ui->previewOutputDiscoverable, previewSendInfo->is_discoverable(), "D");
 		applyStatus(ui->previewOutputReceiving, previewSendInfo->get_receivers() > 0, "R");
 	} else {

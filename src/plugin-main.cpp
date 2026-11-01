@@ -458,6 +458,8 @@ bool obs_module_load(void)
 
 	// Start the network monitor to detect network changes and update the NDI output settings accordingly
 	network_monitor = new NetworkMonitor();
+	// Monitoring (stats capture + monitor thread) follows the Network Monitor's "Monitor" checkbox.
+	network_monitor->setEnabled(Config::Current()->NetworkMonitorEnabled());
 
 	// SOFT requirement Check END
 

@@ -37,6 +37,7 @@
 #define PARAM_TALLY_PREVIEW_ENABLED "TallyPreviewEnabled"
 #define PARAM_SKIP_UPDATE_VERSION "SkipUpdateVersion"
 #define PARAM_NETWORK_MONITOR_UP "NetworkMonitorUp"
+#define PARAM_NETWORK_MONITOR_ENABLED "NetworkMonitorEnabled"
 #define PARAM_NETWORK_MONITOR_LOC_X "NetworkMonitorLocX"
 #define PARAM_NETWORK_MONITOR_LOC_Y "NetworkMonitorLocY"
 #define PARAM_NETWORK_MONITOR_WIDTH "NetworkMonitorWidth"
@@ -254,6 +255,7 @@ void Config::SetDefaultsToUserStore()
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
 
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_UP, false);
+		config_set_default_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ENABLED, true);
 		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_X, -1);
 		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_LOC_Y, -1);
 		config_set_default_int(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_WIDTH, -1);
@@ -429,6 +431,24 @@ void Config::NetworkMonitorUp(bool value)
 	auto obs_config = GetUserConfig();
 	if (obs_config) {
 		config_set_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_UP, value);
+		config_save(obs_config);
+	}
+}
+
+bool Config::NetworkMonitorEnabled()
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		return config_get_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ENABLED);
+	}
+	return true;
+}
+
+void Config::NetworkMonitorEnabled(bool value)
+{
+	auto obs_config = GetUserConfig();
+	if (obs_config) {
+		config_set_bool(obs_config, SECTION_NAME, PARAM_NETWORK_MONITOR_ENABLED, value);
 		config_save(obs_config);
 	}
 }

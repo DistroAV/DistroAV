@@ -22,6 +22,7 @@
 #include "ndi-receiver-table-widget.h"
 #include "ndi-config-widget.h"
 #include "config.h"
+#include "config-notifier.h"
 
 #include <obs-frontend-api.h>
 
@@ -36,6 +37,9 @@
 #include <QSizePolicy>
 #include <QWidget>
 #include <QTabWidget>
+#include <QTabBar>
+#include <QTimer>
+#include <QCoreApplication>
 #include <QPointer>
 #include <QClipboard>
 #include <QGuiApplication>
@@ -156,6 +160,13 @@ bool open_network_monitor_dialog()
 	QObject::connect(tabWidget, &QTabWidget::currentChanged, dialog,
 			 [](int index) { Config::Current()->NetworkMonitorActiveTab(index); });
 
+	// "Monitor" toggle at the top right, on the same row as the tabs. It reflects
+	// (and controls) whether the monitor is recording, independent of this dialog
+	// being open; everything else except Close is only sensitive while it is on.
+	QCheckBox *monitorCheck = new QCheckBox(dialog->tr("Monitor"), tabWidget);
+	monitorCheck->setChecked(network_monitor->isEnabled());
+	tabWidget->setCornerWidget(monitorCheck, Qt::TopRightCorner);
+
 	layout->addWidget(tabWidget);
 
 	// Footer with OK buttons. OK closes the top-level window (dialog).
@@ -216,6 +227,43 @@ bool open_network_monitor_dialog()
 	footer->setAlignment(Qt::AlignRight);
 	layout->addLayout(footer);
 	layout->setAlignment(footer, Qt::AlignRight);
+
+	// Enables/disables the tabs and every button except Close (and the Monitor
+	// checkbox itself).
+	auto applyMonitorState = [tabWidget, helpBtn, dumpBtn, copyBtn](bool monitoring) {
+		tabWidget->tabBar()->setEnabled(monitoring);
+		for (int i = 0; i < tabWidget->count(); ++i)
+			tabWidget->widget(i)->setEnabled(monitoring);
+		helpBtn->setEnabled(monitoring);
+		dumpBtn->setEnabled(monitoring);
+		copyBtn->setEnabled(monitoring);
+	};
+	applyMonitorState(monitorCheck->isChecked());
+	QObject::connect(monitorCheck, &QCheckBox::toggled, dialog, [applyMonitorState, monitorCheck](bool checked) {
+		// Show the new state immediately. Stopping the monitor thread blocks until
+		// its current pass finishes (up to a second or more), and the checkbox
+		// can't repaint until this handler returns - so do that part right after
+		// the repaint instead of inline.
+		applyMonitorState(checked);
+		monitorCheck->repaint();
+
+		QTimer::singleShot(0, QCoreApplication::instance(), [checked]() {
+			if (!checked)
+				QGuiApplication::setOverrideCursor(Qt::WaitCursor);
+			network_monitor->setEnabled(checked);
+			if (!checked)
+				QGuiApplication::restoreOverrideCursor();
+			Config::Current()->NetworkMonitorEnabled(checked);
+
+			// Nudge the live views (source/filter properties, Output settings) so
+			// they show "Network Monitor off" / resume updating right away.
+			for (const auto &sender : network_monitor->getAllSenderInfo())
+				sender->notify_change();
+			for (const auto &receiver : network_monitor->getAllReceiverInfo())
+				receiver->notify_change();
+			emit ConfigNotifier::instance() -> configChanged();
+		});
+	});
 
 	// Restore the last saved size/position, if any. -1 (the default) means
 	// "never saved" - leave Qt's own computed size/placement alone in that case.

@@ -28,6 +28,9 @@
 #include <iomanip>
 
 namespace {
+// Shown in place of live sender/receiver status while monitoring is switched off.
+const char *const kMonitorOffStatus = "Network Monitor off";
+
 struct SenderColumnDef {
 	const char *header;
 	const char *unit;
@@ -160,11 +163,10 @@ void appendReceiverRow(std::ostringstream &out, const std::array<std::string, N>
 }
 } // namespace
 
-NetworkMonitor::NetworkMonitor() : m_running(true), m_checkInterval(std::chrono::milliseconds(1000))
+NetworkMonitor::NetworkMonitor() : m_checkInterval(std::chrono::milliseconds(1000))
 {
-	// Launch the background monitor thread. It runs until m_running is
-	// cleared in the destructor.
-	m_thread = std::thread(&NetworkMonitor::monitorLoop, this);
+	// The background monitor thread is not started here; it only runs while
+	// monitoring is enabled (see setEnabled()).
 	m_senders.clear();
 	NDIlib_find_create_t find_desc = {0};
 	find_desc.show_local_sources = true;
@@ -177,16 +179,52 @@ NetworkMonitor::NetworkMonitor() : m_running(true), m_checkInterval(std::chrono:
 
 NetworkMonitor::~NetworkMonitor()
 {
-	// Signal the monitor thread to stop and wake it immediately, then
-	// wait for it to exit cleanly.
-	m_running.store(false);
-	m_cv.notify_all();
+	// Stop the monitor thread (if running) before tearing anything down.
+	setEnabled(false);
 
-	if (m_thread.joinable()) {
-		m_thread.join();
-	}
 	if (ndiLib)
 		ndiLib->find_destroy(m_ndi_find);
+}
+
+void NetworkMonitor::setEnabled(bool enabled)
+{
+	std::lock_guard<std::mutex> state_lock(m_state_mutex);
+
+	if (enabled == m_enabled.load())
+		return;
+
+	if (enabled) {
+		// Start from clean counters so stale data from before monitoring was
+		// switched off doesn't skew the first report.
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			for (const auto &pair : m_senders)
+				pair.second->reset_stats();
+			for (const auto &pair : m_receivers)
+				pair.second->reset_stats();
+		}
+		m_running.store(true);
+		m_enabled.store(true);
+		m_thread = std::thread(&NetworkMonitor::monitorLoop, this);
+	} else {
+		// Stop the capture functions first, then wake the monitor thread
+		// immediately and wait for it to exit cleanly. m_mutex must not be held
+		// here: the thread takes it while waking.
+		m_enabled.store(false);
+		m_running.store(false);
+		m_cv.notify_all();
+		if (m_thread.joinable())
+			m_thread.join();
+	}
+}
+
+std::vector<std::string> NetworkMonitor::getNDISourceList()
+{
+	if (!m_enabled.load())
+		updateNDISourceList(false);
+
+	std::lock_guard<std::mutex> lock(m_list_mutex);
+	return m_ndi_source_list;
 }
 
 SenderInfo *NetworkMonitor::registerSender(NDIlib_send_instance_t sender, std::string tag)
@@ -268,6 +306,10 @@ std::string NetworkMonitor::getSenderStatus(SenderInfo *senderInfo) const
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
+	if (!m_enabled.load()) {
+		return kMonitorOffStatus;
+	}
+
 	if (!senderInfo) {
 		return SenderInfo::get_missing_sender_status();
 	}
@@ -284,6 +326,10 @@ std::string NetworkMonitor::getSenderStatus(SenderInfo *senderInfo) const
 std::string NetworkMonitor::getReceiverStatus(ReceiverInfo *receiverInfo) const
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
+
+	if (!m_enabled.load()) {
+		return kMonitorOffStatus;
+	}
 
 	if (!receiverInfo) {
 		return ReceiverInfo::get_missing_receiver_status();
@@ -625,7 +671,7 @@ void NetworkMonitor::setCheckInterval(std::chrono::milliseconds interval)
 
 void NetworkMonitor::getCurrentSenderInfo(NDIlib_send_instance_t sender, SenderInfo *senderInfo)
 {
-	if (senderInfo == nullptr) {
+	if (senderInfo == nullptr || !m_enabled.load()) {
 		return;
 	}
 
@@ -636,7 +682,7 @@ void NetworkMonitor::getCurrentSenderInfo(NDIlib_send_instance_t sender, SenderI
 
 void NetworkMonitor::getCurrentReceiverInfo(obs_source_t *ndi_source, ReceiverInfo *receiverInfo)
 {
-	if (receiverInfo == nullptr) {
+	if (receiverInfo == nullptr || !m_enabled.load()) {
 		return;
 	}
 
@@ -815,34 +861,46 @@ void NetworkMonitor::updateNetworkReport()
 		m_network_report.adapters.end());
 }
 
-void NetworkMonitor::updateNDISourceList()
+void NetworkMonitor::updateNDISourceList(bool wait)
 {
 	// Safety check to avoid crash if the Lib is not loaded.
 	if (!ndiLib) {
 		return;
 	}
 
-	uint32_t n_sources = 0;
-	uint32_t last_n_sources = 0;
-	const NDIlib_source_t *sources = NULL;
-	do {
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if (ndiLib && m_ndi_find)
-			ndiLib->find_wait_for_sources(m_ndi_find, 1000);
-		last_n_sources = n_sources;
-
-		n_sources = 0;
-		if (ndiLib)
-			sources = ndiLib->find_get_current_sources(m_ndi_find, &n_sources);
-	} while (n_sources > last_n_sources);
-
 	std::vector<std::string> newList;
-	newList.reserve(n_sources);
+	if (wait) {
+		uint32_t n_sources = 0;
+		uint32_t last_n_sources = 0;
+		const NDIlib_source_t *sources = NULL;
+		do {
+			std::lock_guard<std::mutex> lock(m_mutex);
 
-	for (uint32_t i = 0; i < n_sources; ++i) {
-		std::string name = std::string(sources[i].p_ndi_name ? sources[i].p_ndi_name : "");
-		newList.push_back(name);
+			if (ndiLib && m_ndi_find)
+				ndiLib->find_wait_for_sources(m_ndi_find, 1000);
+			last_n_sources = n_sources;
+
+			n_sources = 0;
+			if (ndiLib)
+				sources = ndiLib->find_get_current_sources(m_ndi_find, &n_sources);
+		} while (n_sources > last_n_sources);
+
+		newList.reserve(n_sources);
+		for (uint32_t i = 0; i < n_sources; ++i) {
+			std::string name = std::string(sources[i].p_ndi_name ? sources[i].p_ndi_name : "");
+			newList.push_back(name);
+		}
+	} else {
+		// The names are copied while the lock is held; the SDK only guarantees the
+		// returned array until the next find call.
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (!m_ndi_find)
+			return;
+		uint32_t n_sources = 0;
+		const NDIlib_source_t *sources = ndiLib->find_get_current_sources(m_ndi_find, &n_sources);
+		newList.reserve(n_sources);
+		for (uint32_t i = 0; i < n_sources; ++i)
+			newList.push_back(std::string(sources[i].p_ndi_name ? sources[i].p_ndi_name : ""));
 	}
 
 	std::vector<std::string> oldList;
@@ -870,7 +928,10 @@ void NetworkMonitor::updateNDISourceList()
 	if (listChanged) {
 		std::lock_guard<std::mutex> lock(m_list_mutex);
 		m_ndi_source_list = newList;
-		emit ConfigNotifier::instance() -> configChanged();
+		// The no-wait path runs on callers building property lists; notifying from
+		// there would re-enter them, so only the monitor thread announces changes.
+		if (wait)
+			emit ConfigNotifier::instance() -> configChanged();
 	}
 }
 

@@ -106,6 +106,11 @@ public:
 	// should leave the dialog's Qt-computed placement/size alone in that case.
 	bool NetworkMonitorUp();
 	void NetworkMonitorUp(bool value);
+	// Whether the Network Monitor's "Monitor" checkbox is on, i.e. statistics are
+	// recorded and the monitor thread runs (independently of the dialog being
+	// open). Defaults to true.
+	bool NetworkMonitorEnabled();
+	void NetworkMonitorEnabled(bool value);
 	int NetworkMonitorLocX();
 	int NetworkMonitorLocY();
 	int NetworkMonitorWidth();

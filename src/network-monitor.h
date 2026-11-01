@@ -151,7 +151,18 @@ public:
 
 	// Interval between checks performed by the monitor thread.
 	void setCheckInterval(std::chrono::milliseconds interval);
-	std::vector<std::string> getNDISourceList() { return m_ndi_source_list; };
+
+	// Monitoring is off by default. While off, no monitor thread runs and the
+	// statistics capture functions (send_*/receive_* frame callbacks) return
+	// immediately. Turning it on starts the monitor thread; turning it off
+	// stops and joins it. Safe to call from any thread except the monitor thread.
+	void setEnabled(bool enabled);
+	bool isEnabled() const { return m_enabled.load(); }
+
+	// Returns the discovered NDI sources. While monitoring is on this is the list
+	// maintained by the monitor thread; while off it is refreshed on demand
+	// (without waiting) so source pickers keep working.
+	std::vector<std::string> getNDISourceList();
 	std::string get_fourcc_string(NDIlib_FourCC_video_type_e fourcc);
 	std::string framerate_to_string(int frame_rate_N, int frame_rate_D);
 	std::string getFormatDescription(int xres, int yres, int frame_rate_D, int frame_rate_N,
@@ -164,14 +175,19 @@ private:
 	void onReceiverChanged(StatusMap before, StatusMap now); // hook for the periodic check
 	void getCurrentSenderInfo(NDIlib_send_instance_t sender, SenderInfo *senderInfo);
 	void getCurrentReceiverInfo(obs_source_t *ndi_source, ReceiverInfo *receiverInfo);
-	void updateNDISourceList();
+	// `wait` blocks (up to 1s per pass) for discovery to settle and notifies
+	// listeners on change; the no-wait form is for on-demand refreshes while the
+	// monitor thread is not running.
+	void updateNDISourceList(bool wait = true);
 	void updateNetworkReport();
 	std::string FormattedReceiverReport(const ReceiverInfoMap &m_receivers) const;
 	mutable std::mutex m_list_mutex;
 	std::vector<std::string> m_ndi_source_list;
 	std::condition_variable m_cv;
 	std::thread m_thread;
-	std::atomic<bool> m_running;
+	std::mutex m_state_mutex; // serializes setEnabled() start/stop of m_thread
+	std::atomic<bool> m_enabled{false};
+	std::atomic<bool> m_running{false}; // true while the monitor thread should keep looping
 	std::atomic<std::chrono::milliseconds> m_checkInterval;
 	mutable std::mutex m_mutex;
 	SenderInfoMap m_senders;     // map of sender to status info

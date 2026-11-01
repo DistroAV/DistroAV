@@ -149,6 +149,12 @@ void ReceiverInfo::reset_stats_locked()
 	reg_start_wall_ns_ = 0;
 }
 
+void ReceiverInfo::reset_stats()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	reset_stats_locked();
+}
+
 void ReceiverInfo::set_receiver(NDIlib_recv_instance_t receiver)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
@@ -247,6 +253,9 @@ std::string format_av_drift_ms_per_hour(const NDIReceiverStats &stats)
 // Frame callbacks
 void ReceiverInfo::receive_video_frame(uint64_t t0, uint64_t t1, uint64_t t2, NDIlib_video_frame_v2_t &ndi_frame)
 {
+	if (!network_monitor || !network_monitor->isEnabled())
+		return;
+
 	std::lock_guard<std::mutex> lock(m_mutex);
 	const bool ts_valid = is_valid_ndi_timestamp(ndi_frame.timestamp);
 	if (!ts_valid) {
@@ -332,6 +341,9 @@ void ReceiverInfo::receive_video_frame(uint64_t t0, uint64_t t1, uint64_t t2, ND
 
 void ReceiverInfo::receive_audio_frame(uint64_t t0, uint64_t t1, uint64_t, NDIlib_audio_frame_v3_t &ndi_frame)
 {
+	if (!network_monitor || !network_monitor->isEnabled())
+		return;
+
 	// receive_video_frame() and receive_audio_frame() are both only ever called from
 	// the single NDI source thread, so they never race each other - but calculate_stats()
 	// (on the network-monitor thread) locks m_mutex to snapshot `running`, and without
@@ -391,6 +403,9 @@ void ReceiverInfo::receive_audio_frame(uint64_t t0, uint64_t t1, uint64_t, NDIli
 // Calculate stats and update snapshot
 void ReceiverInfo::calculate_stats()
 {
+	if (!network_monitor || !network_monitor->isEnabled())
+		return;
+
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		snapshot = running;            // Copy running stats to snapshot for reporting

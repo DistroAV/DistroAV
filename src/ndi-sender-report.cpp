@@ -134,6 +134,9 @@ std::string SenderInfo::get_missing_sender_status()
 void SenderInfo::send_video_frame(uint64_t t0, uint64_t t1, uint64_t t2, NDIlib_video_frame_v2_t &ndi_frame,
 				  video_data *)
 {
+	if (!network_monitor || !network_monitor->isEnabled())
+		return;
+
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	if (running.video_frame_count == 0) {
@@ -177,6 +180,9 @@ void SenderInfo::send_video_frame(uint64_t t0, uint64_t t1, uint64_t t2, NDIlib_
 void SenderInfo::send_audio_frame(uint64_t t0, uint64_t, uint64_t, NDIlib_audio_frame_v3_t &ndi_frame,
 				  uint64_t timestamp)
 {
+	if (!network_monitor || !network_monitor->isEnabled())
+		return;
+
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	if (running.audio_sample_count == 0) {
@@ -189,9 +195,19 @@ void SenderInfo::send_audio_frame(uint64_t t0, uint64_t, uint64_t, NDIlib_audio_
 	running.audio_sample_count += ndi_frame.no_samples;
 }
 
+void SenderInfo::reset_stats()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	running = NDISenderStats();
+	snapshot = NDISenderStats();
+}
+
 // Compute stats and update snapshot. Implementation lives here (needs ndiLib/network_monitor).
 void SenderInfo::calculate_stats()
 {
+	if (!network_monitor || !network_monitor->isEnabled())
+		return;
+
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		snapshot = running;            // Copy running stats to snapshot for reporting
