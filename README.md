@@ -89,12 +89,12 @@ sudo flatpak override com.obsproject.Studio --system-talk-name=org.freedesktop.A
 
 ### Linux — Debian / Ubuntu (.deb) &nbsp;[![.deb](https://img.shields.io/github/v/release/DistroAV/DistroAV?label=.deb&logo=ubuntu)](https://github.com/DistroAV/DistroAV/releases/latest)
 
-Download `distroav-<version>-x86_64-linux-gnu.deb` from the [latest release](https://github.com/DistroAV/DistroAV/releases/latest):
-- `…-x86_64-linux-gnu.deb` for ubuntu/debian distros using the `t64` packages suffix (Ubuntu 24 / Debain 12)
-- `…-x86_64-ubuntu-26.04.deb` for ubuntu/debian distros usng regular packages name (Ubuntu 26 / Debian 13)
+Download `distroav-<version>-<distro>-x86_64.deb` from the [latest release](https://github.com/DistroAV/DistroAV/releases/latest):
+- `…-ubuntu-24.04-x86_64.deb` for ubuntu/debian distros using the `t64` packages suffix (Ubuntu 24 / Debain 12)
+- `…-ubuntu-26.04-x86_64.deb` for ubuntu/debian distros usng regular packages name (Ubuntu 26 / Debian 13)
 
 ```sh
-sudo dpkg -i distroav-*-x86_64-linux-gnu.deb
+sudo dpkg -i distroav-*-x86_64.deb
 ```
 If it reports missing dependencies, run `sudo apt -f install` to fix them.
 

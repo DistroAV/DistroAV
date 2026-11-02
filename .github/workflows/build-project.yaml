@@ -229,6 +229,9 @@ jobs:
           echo "pluginName=${product_name}" >> $GITHUB_OUTPUT
           echo "pluginVersion=${product_version}" >> $GITHUB_OUTPUT
 
+          # The source tarball is the same on every Ubuntu version, so only one build creates it.
+          echo "sources=${{ matrix.os == (inputs.target == 'ubuntu-26' && 'ubuntu-26.04' || 'ubuntu-24.04') }}" >> $GITHUB_OUTPUT
+
       - uses: actions/cache/restore@v6
         id: ccache-cache
         with:
@@ -249,25 +252,27 @@ jobs:
           target: x86_64
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
+          sources: ${{ fromJSON(steps.setup.outputs.sources) }}
 
       - name: Upload Source Tarball 🗜️
         uses: actions/upload-artifact@v7
+        if: fromJSON(steps.setup.outputs.sources)
         with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-sources-${{ needs.check-event.outputs.commitHash }}
+          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-sources-${{ needs.check-event.outputs.commitHash }}
           path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-source.*
 
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*.*
+          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64.*
 
       - name: Upload debug symbol artifacts 🪲
         uses: actions/upload-artifact@v7
         if: ${{ fromJSON(needs.check-event.outputs.package) }}
         with:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}-dbgsym
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*-dbgsym.ddeb
+          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-dbgsym.ddeb
 
       - uses: actions/cache/save@v6
         if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'

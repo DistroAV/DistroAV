@@ -61,6 +61,7 @@ package() {
   local -i notarize=0
   local -i package=0
   local -i skip_deps=0
+  local -i skip_sources=0
 
   local -r _usage="
 Usage: %B${functrace[1]%:*}%b <option> [<options>]
@@ -72,6 +73,7 @@ Usage: %B${functrace[1]%:*}%b <option> [<options>]
   %B-t | --target%b                     Specify target
   %B-c | --config%b                     Build configuration
   %B--skip-deps%b                       Skip checking for dependencies
+  %B--skip-sources%b                    Skip creating the source tarball
 
 %F{yellow} Output options%f
  -----------------------------------------------------------------------------
@@ -124,6 +126,7 @@ ${_usage_host:-}"
       -n|--notarize) typeset -g notarize=1; typeset -g codesign=1; shift ;;
       -p|--package) typeset -g package=1; shift ;;
       --skip-deps) typeset -g skip_deps=1; shift ;;
+      --skip-sources) typeset -g skip_sources=1; shift ;;
       -q|--quiet) (( verbosity -= 1 )) || true; shift ;;
       -v|--verbose) (( verbosity += 1 )); shift ;;
       -h|--help) log_output ${_usage}; exit 0 ;;
@@ -150,10 +153,12 @@ ${_usage_host:-}"
   local -a cmake_args=()
   if (( _loglevel > 1 )) cmake_args+=(--verbose)
 
-  log_group "Creating source tarball for ${product_name}..."
-  pushd ${project_root}
-  cmake --build build_${target##*-} --config ${config} -t package_source ${cmake_args}
-  popd
+  if (( ! skip_sources )) {
+    log_group "Creating source tarball for ${product_name}..."
+    pushd ${project_root}
+    cmake --build build_${target##*-} --config ${config} -t package_source ${cmake_args}
+    popd
+  }
 
   if (( package )) {
     log_group "Packaging ${product_name}..."
@@ -163,7 +168,7 @@ ${_usage_host:-}"
   } else {
     log_group "Archiving ${product_name}..."
     local distro=$(. /etc/os-release && print -r -- "${ID}-${VERSION_ID}")
-    local output_name="${product_name}-${product_version}-${target##*-}-${distro}-gnu"
+    local output_name="${product_name}-${product_version}-${distro}-${target##*-}"
     local _tarflags='cJf'
     if (( _loglevel > 1 || ${+CI} )) _tarflags="v${_tarflags}"
 
