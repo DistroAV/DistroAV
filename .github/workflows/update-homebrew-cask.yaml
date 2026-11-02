@@ -38,7 +38,7 @@ jobs:
           echo "sha256=$(sha256sum "${package_path}" | cut -d ' ' -f 1)" >> "${GITHUB_OUTPUT}"
 
       - name: Check out Homebrew tap
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: DistroAV/homebrew-tap
           ref: main

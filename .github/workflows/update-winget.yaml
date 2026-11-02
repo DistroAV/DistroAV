@@ -50,7 +50,7 @@ jobs:
       #   3. Add it as repo secret WINGET_UPDATER_TOKEN at
       #      https://github.com/DistroAV/DistroAV/settings/secrets/actions/new
       - name: Submit WinGet manifest PR
-        uses: vedantmgoyal9/winget-releaser@v2
+        uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
         with:
           identifier: DistroAV.DistroAV
           installers-regex: '-windows-x64-Installer\.exe$' # Only the Inno Setup installer; excludes zip/portable.
