@@ -1,5 +1,6 @@
 /******************************************************************************
 	Copyright (C) 2016-2026 DistroAV <contact@distroav.org>
+	Assisted-by: Claude:claude-sonnet-5.5
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
