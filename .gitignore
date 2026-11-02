@@ -8,14 +8,18 @@
 !/data
 !/assets
 !/src
+!/docs
 !.clang-format
 !.gersemirc
 !.gitignore
+!AGENTS.md
 !buildspec.json
 !CMakeLists.txt
 !CMakePresets.json
 !LICENSE
 !README.md
+!AI_DISCLOSURE.md
+!CONTRIBUTING.md
 
 # Exclude lock files
 *.lock.json

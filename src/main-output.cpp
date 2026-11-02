@@ -58,7 +58,7 @@ void on_main_output_stopped(void *, calldata_t *)
 void main_output_stop()
 {
 	obs_log(LOG_DEBUG, "+main_output_stop()");
-	if ((context.output) && obs_output_active(context.output)) {
+	if (context.output) {
 		obs_log(LOG_DEBUG, "main_output_stop: stopping NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
 		obs_output_stop(context.output);
 
@@ -74,27 +74,12 @@ void main_output_stop()
 void main_output_start()
 {
 	obs_log(LOG_DEBUG, "+main_output_start()");
-
-	auto config = Config::Current();
-	auto output_name = config->OutputName;
-	auto output_groups = config->OutputGroups;
-	auto is_enabled = config->OutputEnabled;
-	if (is_enabled && !main_output_is_supported()) {
-		is_enabled = false;
-		obs_log(LOG_WARNING, "WARN-426 - NDI Main Output disabled, format not supported");
-	}
-
 	if (context.output) {
 		if (obs_output_active(context.output)) {
 			main_output_stop();
 		}
 
 		obs_log(LOG_DEBUG, "main_output_start: starting NDI Main Output '%s'", QT_TO_UTF8(context.ndi_name));
-
-		// Re-bind to the current video/audio handles before starting.
-		// obs_reset_video() may have freed/recreated the main video_t since
-		// context.output was created, leaving output->video stale.
-		obs_output_set_media(context.output, obs_get_video(), obs_get_audio());
 
 		obs_output_start(context.output);
 		if (obs_output_active(context.output)) {
@@ -187,6 +172,14 @@ void main_output_init()
 	auto output_name = config->OutputName;
 	auto output_groups = config->OutputGroups;
 	auto is_enabled = config->OutputEnabled;
+
+	if (is_enabled && !main_output_is_supported()) {
+		is_enabled = false;
+		obs_log(LOG_WARNING, "WARN-426 - NDI Main Output disabled, format not supported");
+	}
+
+	if (context.output)
+		main_output_close();
 
 	obs_log(LOG_DEBUG, "main_output_init: creating NDI Main Output '%s'", QT_TO_UTF8(output_name));
 	obs_data_t *output_settings = obs_data_create();

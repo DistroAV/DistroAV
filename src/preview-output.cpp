@@ -76,7 +76,6 @@ void preview_output_stop()
 		obs_frontend_remove_event_callback(on_preview_scene_changed, &context);
 
 		obs_source_release(context.current_source);
-		context.current_source = nullptr;
 
 		obs_enter_graphics();
 		gs_stagesurface_destroy(context.stagesurface);
@@ -223,6 +222,9 @@ void preview_output_init()
 	auto output_name = config->PreviewOutputName;
 	auto output_groups = config->PreviewOutputGroups;
 	auto is_enabled = config->PreviewOutputEnabled;
+
+	if (context.output)
+		preview_output_close();
 
 	obs_log(LOG_DEBUG, "preview_output_init: creating NDI Preview Output '%s'", QT_TO_UTF8(output_name));
 	obs_data_t *output_settings = obs_data_create();

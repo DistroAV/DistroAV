@@ -409,6 +409,7 @@ void ndi_output_rawvideo(void *data, video_data *frame)
 		100; // TODO : investigate if there is a better way to get both _D & _N set to the proper framerate from OBS output.
 	video_frame.frame_format_type = NDIlib_frame_format_type_progressive;
 	video_frame.timestamp = frame->timestamp / 100;
+
 	video_frame.timecode = NDIlib_send_timecode_synthesize;
 	video_frame.FourCC = o->frame_fourcc;
 

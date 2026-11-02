@@ -1,0 +1,103 @@
+name: Update Homebrew Cask
+run-name: Update Homebrew cask for ${{ github.event.release.tag_name || inputs.release_tag }}
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published stable release tag to retry (for example, 6.2.2)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: homebrew-cask-${{ github.event.release.tag_name || inputs.release_tag }}
+  cancel-in-progress: false
+jobs:
+  update-cask:
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate release and calculate package checksum
+        id: package
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        run: |
+          if [[ ! "${RELEASE_TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Unexpected stable release tag: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          package="distroav-${RELEASE_TAG}-macos-universal.pkg"
+          package_path="${RUNNER_TEMP}/${package}"
+          package_url="https://github.com/DistroAV/DistroAV/releases/download/${RELEASE_TAG}/${package}"
+          curl --fail --location --retry 3 --silent --show-error \
+            "${package_url}" --output "${package_path}"
+          echo "sha256=$(sha256sum "${package_path}" | cut -d ' ' -f 1)" >> "${GITHUB_OUTPUT}"
+
+      - name: Check out Homebrew tap
+        uses: actions/checkout@v7
+        with:
+          repository: DistroAV/homebrew-tap
+          ref: main
+          path: homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update cask metadata
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+          RELEASE_SHA256: ${{ steps.package.outputs.sha256 }}
+        run: |
+          ruby <<'RUBY'
+          path = "homebrew-tap/Casks/distroav.rb"
+          version = ENV.fetch("RELEASE_TAG")
+          sha256 = ENV.fetch("RELEASE_SHA256")
+          content = File.read(path)
+          version_line = /^  version "[^"]+"$/
+          sha256_line = /^  sha256 "[0-9a-f]{64}"$/
+
+          abort "Expected exactly one cask version line" unless content.scan(version_line).length == 1
+          abort "Expected exactly one cask SHA-256 line" unless content.scan(sha256_line).length == 1
+          abort "Invalid release SHA-256" unless sha256.match?(/\A[0-9a-f]{64}\z/)
+
+          content.sub!(version_line, %Q(  version "#{version}"))
+          content.sub!(sha256_line, %Q(  sha256 "#{sha256}"))
+          File.write(path, content)
+          RUBY
+          ruby -c homebrew-tap/Casks/distroav.rb
+          git -C homebrew-tap diff --check
+
+      - name: Create or update tap pull request
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+          RELEASE_SHA256: ${{ steps.package.outputs.sha256 }}
+        run: |
+          branch="automation/bump-distroav"
+          git -C homebrew-tap config user.name "github-actions[bot]"
+          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C homebrew-tap switch -c "${branch}"
+          git -C homebrew-tap add Casks/distroav.rb
+
+          if git -C homebrew-tap diff --cached --quiet; then
+            echo "Cask already matches release ${RELEASE_TAG}; no PR update needed."
+            exit 0
+          fi
+
+          git -C homebrew-tap commit -m "Update DistroAV cask to ${RELEASE_TAG}"
+          git -C homebrew-tap push --force origin "HEAD:${branch}"
+
+          title="Update DistroAV cask to ${RELEASE_TAG}"
+          body="$(printf 'Updates the DistroAV Homebrew cask to %s.\n\nRelease: https://github.com/DistroAV/DistroAV/releases/tag/%s\n\nSHA-256: %s\n' "${RELEASE_TAG}" "${RELEASE_TAG}" "${RELEASE_SHA256}")"
+          pr_number="$(gh pr list --repo DistroAV/homebrew-tap --state open \
+            --head "DistroAV:${branch}" --json number --jq '.[0].number // empty')"
+
+          if [[ -n "${pr_number}" ]]; then
+            gh pr edit "${pr_number}" --repo DistroAV/homebrew-tap \
+              --title "${title}" --body "${body}"
+          else
+            gh pr create --repo DistroAV/homebrew-tap --base main \
+              --head "${branch}" --title "${title}" --body "${body}"
+          fi

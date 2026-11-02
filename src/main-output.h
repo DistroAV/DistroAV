@@ -20,7 +20,6 @@
 #include "obs-frontend-api.h"
 void main_output_close();
 void main_output_init();
-void main_output_start();
 void main_output_stop();
 QString main_output_last_error();
 bool main_output_is_supported();
