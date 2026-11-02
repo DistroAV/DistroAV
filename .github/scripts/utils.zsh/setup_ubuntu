@@ -35,26 +35,32 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
     sudo apt-get install ${apt_args} gcc-${${target##*-}//_/-}-linux-gnu g++-${${target##*-}//_/-}-linux-gnu
   }
 
-  # Use the obs-studio .deb published on the GitHub release of the OBS version set in buildspec.json.
+  # Use the obs-studio .deb published on the GitHub release of the OBS version set in buildspec.json,
+  # falling back to the Ubuntu archive packages when that release has none for this Ubuntu version.
+  # The archive obs-studio package does not ship the libobs headers and CMake files, libobs-dev does.
   local obs_version=$(jq -r '.dependencies."obs-studio".version' buildspec.json)
   local ubuntu_version=$(. /etc/os-release && print -r -- ${VERSION_ID})
   local obs_url="https://github.com/obsproject/obs-studio/releases/download/${obs_version}/OBS-Studio-${obs_version}-Ubuntu-${ubuntu_version}-x86_64.deb"
   local obs_deb=${TMPDIR:-/tmp}/obs-studio.deb
+  local -a obs_packages
 
-  if ! curl -fsSL -o ${obs_deb} ${obs_url}; then
-    log_error "obs-studio ${obs_version} has no .deb for Ubuntu ${ubuntu_version}: ${obs_url}"
-    return 2
+  if curl -fsSL -o ${obs_deb} ${obs_url}; then
+    log_info "Using obs-studio from ${obs_url}"
+    obs_packages=(${obs_deb})
+  else
+    log_warning "obs-studio ${obs_version} has no .deb for Ubuntu ${ubuntu_version}, using the Ubuntu ${ubuntu_version} archive version instead"
+    obs_packages=(obs-studio libobs-dev)
   fi
-  log_info "Using obs-studio from ${obs_url}"
 
   sudo apt update
+  if [[ ${obs_packages[1]} == obs-studio ]] apt-cache policy obs-studio
 
   sudo apt-get install ${apt_args} \
     build-essential \
     libgles2-mesa-dev \
     libsimde-dev \
     libcurl4-openssl-dev \
-    ${obs_deb}
+    ${obs_packages}
 
   local -a _qt_packages=()
 
