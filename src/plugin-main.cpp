@@ -23,6 +23,7 @@
 #include "forms/update.h"
 #include "main-output.h"
 #include "preview-output.h"
+#include "network-monitor-dialog.h"
 
 #include <QAction>
 #include <QDir>
@@ -74,6 +75,7 @@ typedef const NDIlib_v6 *(*NDIlib_v6_load_)(void);
 QLibrary *loaded_lib = nullptr;
 
 OutputSettings *output_settings = nullptr;
+NetworkMonitor *network_monitor = nullptr;
 
 //
 //
@@ -461,6 +463,12 @@ bool obs_module_load(void)
 			}
 		}
 	}
+
+	// Start the network monitor to detect network changes and update the NDI output settings accordingly
+	network_monitor = new NetworkMonitor();
+	// Monitoring (stats capture + monitor thread) follows the Network Monitor's "Monitor" checkbox.
+	network_monitor->setEnabled(Config::Current()->NetworkMonitorEnabled());
+
 	// SOFT requirement Check END
 
 	if (main_window) {
@@ -491,12 +499,15 @@ bool obs_module_load(void)
 						[] {
 							main_output_init();
 							preview_output_init();
+							if (Config::Current()->NetworkMonitorUp())
+								open_network_monitor_dialog();
 						},
 						Qt::QueuedConnection);
 				} else if (event == OBS_FRONTEND_EVENT_EXIT) {
 					// Unknown why putting this in obs_module_unload causes a crash when closing OBS
 					main_output_close();
 					preview_output_close();
+					close_network_monitor_dialog();
 				} else if (event == OBS_FRONTEND_EVENT_PROFILE_CHANGING) {
 					main_output_close();
 					preview_output_close();
@@ -531,6 +542,12 @@ void obs_module_post_load(void)
 void obs_module_unload(void)
 {
 	obs_log(LOG_DEBUG, "+obs_module_unload()");
+
+	if (network_monitor) {
+		// Use delete so NetworkMonitor destructor runs and stops the background thread.
+		delete network_monitor;
+		network_monitor = nullptr;
+	}
 
 	updateCheckStop();
 

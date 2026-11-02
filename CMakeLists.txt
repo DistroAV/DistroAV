@@ -77,7 +77,26 @@ target_sources(
     src/config.h
     src/config-notifier.cpp
     src/config-notifier.h
+    src/change-notifier.cpp
+    src/change-notifier.h
+    src/network-monitor.cpp
+    src/network-monitor.h
+    src/ndi-sender-report.cpp
+    src/ndi-sender-report.h
+    src/ndi-receiver-report.cpp
+    src/ndi-receiver-report.h
+    src/ndi-network-report.h
+    src/ndi-network-report.cpp
+    src/ndi-config-widget.h
     src/main-output.cpp
+    src/ndi-adapter-table-widget.cpp
+    src/ndi-adapter-table-widget.h
+    src/ndi-sender-table-widget.cpp
+    src/ndi-sender-table-widget.h
+    src/ndi-receiver-table-widget.cpp
+    src/ndi-receiver-table-widget.h
+    src/network-monitor-dialog.cpp
+    src/network-monitor-dialog.h
     src/main-output.h
     src/ndi-filter.cpp
     src/ndi-finder.h

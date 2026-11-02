@@ -17,7 +17,7 @@
 
 #include "plugin-main.h"
 #include "sync-debug.h"
-#include "ndi-finder.h"
+#include "ndi-receiver-report.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -30,6 +30,7 @@
 #include <thread>
 
 #define PROP_SOURCE "ndi_source_name"
+#define PROP_STATUS "ndi_status_status"
 #define PROP_BEHAVIOR "ndi_behavior"
 #define PROP_TIMEOUT "ndi_behavior_timeout"
 #define PROP_BANDWIDTH "ndi_bw_mode"
@@ -120,6 +121,14 @@ typedef struct ndi_source_config_t {
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
+	ReceiverInfo *ndi_receiver_info;
+	ChangeNotifier *change_notifier;
+	// This is used to determine whether to update the NDI source list in the property dialog, or when the receiver status changes.
+	std::atomic<bool> update_properties{true};
+
+	// A count of how many property dialogs are currently open. This can be more than one when opening the dialog.
+	// But once the dialog is being interacted with, the count shoule be 1. The count is decremented when the dialog is closed.
+	std::shared_ptr<std::atomic<unsigned int>> properties_dialog_open;
 
 	bool running;
 	pthread_t av_thread;
@@ -129,6 +138,15 @@ typedef struct ndi_source_t {
 
 	uint64_t last_frame_timestamp;
 } ndi_source_t;
+
+static void property_dialog_destroyed(void *param)
+{
+	auto *flag = static_cast<std::shared_ptr<std::atomic<unsigned int>> *>(param);
+	unsigned int count = flag->get()->load();
+	if (count > 0) {
+		flag->get()->store(count - 1);
+	}
+}
 
 static obs_source_t *find_filter_by_id(obs_source_t *context, const char *id)
 {
@@ -224,19 +242,24 @@ obs_properties_t *ndi_source_getproperties(void *data)
 	obs_property_t *source_list = obs_properties_add_list(props, PROP_SOURCE,
 							      obs_module_text("NDIPlugin.SourceProps.SourceName"),
 							      OBS_COMBO_TYPE_EDITABLE, OBS_COMBO_FORMAT_STRING);
-	NDIFinder finder;
-	// Create a callback that is called when the NDI source list is complete
-	auto finder_callback = [source_list, s](void *ndi_names) {
-		auto ndi_sources = (std::vector<std::string> *)ndi_names;
-		for (auto &source : *ndi_sources) {
-			obs_property_list_add_string(source_list, source.c_str(), source.c_str());
-		}
-		obs_source_update_properties(s->obs_source);
-	};
-	auto ndi_sources = finder.getNDISourceList(finder_callback);
+
+	// Set the property dialog open flag to true when the properties are being displayed
+	// Increase the counter by one (initialize to0 first if necessary).
+	if (s->properties_dialog_open) {
+		auto *param = new std::shared_ptr<std::atomic<unsigned int>>(s->properties_dialog_open);
+		obs_properties_set_param(props, param, property_dialog_destroyed);
+	}
+
+	// Increment the counter to indicate a new property dialog is open.
+	s->properties_dialog_open->fetch_add(1u);
+
+	auto ndi_sources = network_monitor->getNDISourceList();
 	for (auto &source : ndi_sources) {
 		obs_property_list_add_string(source_list, source.c_str(), source.c_str());
 	}
+
+	// Read-only status field to display current NDI sender status
+	obs_properties_add_text(props, PROP_STATUS, "Status", OBS_TEXT_INFO);
 
 	obs_property_t *behavior_list = obs_properties_add_list(props, PROP_BEHAVIOR,
 								obs_module_text("NDIPlugin.SourceProps.Behavior"),
@@ -334,6 +357,7 @@ obs_properties_t *ndi_source_getproperties(void *data)
 void ndi_source_getdefaults(obs_data_t *settings)
 {
 	obs_log(LOG_DEBUG, "+ndi_source_getdefaults(…)");
+	obs_data_set_default_string(settings, PROP_STATUS, "");
 	obs_data_set_default_int(settings, PROP_BANDWIDTH, PROP_BW_HIGHEST);
 	obs_data_set_default_int(settings, PROP_BEHAVIOR, PROP_BEHAVIOR_STOP_RESUME_LAST_FRAME);
 	obs_data_set_default_int(settings, PROP_TIMEOUT, PROP_TIMEOUT_KEEP_CONTENT);
@@ -450,6 +474,29 @@ void *ndi_source_thread(void *data)
 	// Main NDI receiver loop: BEGIN
 	//
 	while (s->running) {
+
+		// If the property dialog is open, update the list of NDI sources if changed
+		// if (s->config.properties_dialog_open && s->config.properties_dialog_open->load()) {
+		if (s->properties_dialog_open && s->properties_dialog_open->load() > 0) {
+			if (s->update_properties.exchange(false)) {
+				auto properties = ndi_source_getproperties(s);
+				auto source_list_property = obs_properties_get(properties, PROP_SOURCE);
+				obs_property_list_clear(source_list_property);
+				auto ndi_sources = network_monitor->getNDISourceList();
+				for (auto &source : ndi_sources) {
+					obs_property_list_add_string(source_list_property, source.c_str(),
+								     source.c_str());
+				}
+				auto settings = obs_source_get_settings(s->obs_source);
+				std::string status = network_monitor->getReceiverStatus(s->ndi_receiver_info);
+				obs_data_set_string(settings, PROP_STATUS, status.c_str());
+				obs_source_update_properties(s->obs_source);
+				obs_log(LOG_DEBUG,
+					"'%s' ndi_source_thread: Property dialog open; Updated NDI source list",
+					obs_source_name);
+			}
+		}
+
 		//
 		// reset_ndi_receiver: BEGIN
 		//
@@ -530,6 +577,7 @@ void *ndi_source_thread(void *data)
 				obs_log(LOG_DEBUG,
 					"'%s' ndi_source_thread: reset_ndi_receiver: ndiLib->recv_destroy(ndi_receiver)",
 					obs_source_name);
+				network_monitor->setReceiver(s->obs_source, (NDIlib_recv_instance_t) nullptr);
 				ndiLib->recv_destroy(ndi_receiver);
 				ndi_receiver = nullptr;
 			}
@@ -545,6 +593,8 @@ void *ndi_source_thread(void *data)
 			ndi_receiver = ndiLib->recv_create_v3(&recv_desc);
 			// Poll the new receiver's Web Control URL as soon as it connects
 			web_control_last_poll = {};
+
+			network_monitor->setReceiver(s->obs_source, ndi_receiver);
 
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: reset_ndi_receiver: -ndi_receiver = ndiLib->recv_create_v3(&recv_desc)",
@@ -711,17 +761,23 @@ void *ndi_source_thread(void *data)
 			// AUDIO
 			//
 			audio_frame = {};
+			uint64_t t0 = os_gettime_ns();
 			ndiLib->framesync_capture_audio_v2(
 				ndi_frame_sync, &audio_frame,
 				0,     // "The desired sample rate. 0 to get the source value."
 				0,     // "The desired channel count. 0 to get the source value."
 				1024); // "The desired sample count. 0 to get the source value."
+			uint64_t t1 = os_gettime_ns();
+
 			// Note: "This function will always return data immediately, inserting silence if no current audio data is present."
 			if (audio_frame.p_data && (audio_frame.timestamp > timestamp_audio)) {
 				timestamp_audio = audio_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync ON): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
+				uint64_t t2 = os_gettime_ns();
+				if (s->ndi_receiver_info)
+					s->ndi_receiver_info->receive_audio_frame(t0, t1, t2, audio_frame);
 			}
 			ndiLib->framesync_free_audio_v2(ndi_frame_sync, &audio_frame);
 
@@ -729,12 +785,17 @@ void *ndi_source_thread(void *data)
 			// VIDEO
 			//
 			video_frame = {};
+			t0 = os_gettime_ns();
 			ndiLib->framesync_capture_video(ndi_frame_sync, &video_frame,
 							NDIlib_frame_format_type_progressive);
+			t1 = os_gettime_ns();
 			if (video_frame.p_data && (video_frame.timestamp > timestamp_video)) {
 				timestamp_video = video_frame.timestamp;
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync ON): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
+				uint64_t t2 = os_gettime_ns();
+				if (s->ndi_receiver_info)
+					s->ndi_receiver_info->receive_video_frame(t0, t1, t2, video_frame);
 			}
 			ndiLib->framesync_free_video(ndi_frame_sync, &video_frame);
 
@@ -744,9 +805,10 @@ void *ndi_source_thread(void *data)
 			//
 			// !ndi_frame_sync
 			//
+			uint64_t t0 = os_gettime_ns();
 			frame_received =
 				ndiLib->recv_capture_v3(ndi_receiver, &video_frame, &audio_frame, nullptr, 100);
-
+			uint64_t t1 = os_gettime_ns();
 			if (frame_received == NDIlib_frame_type_audio) {
 				//
 				// AUDIO
@@ -754,7 +816,9 @@ void *ndi_source_thread(void *data)
 				// obs_log(LOG_DEBUG, "%s: New Audio Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, audio_frame.timestamp, audio_frame.timecode);
 				ndi_source_thread_process_audio3(&s->config, &audio_frame, s->obs_source,
 								 &obs_audio_frame);
-
+				uint64_t t2 = os_gettime_ns();
+				if (s->ndi_receiver_info)
+					s->ndi_receiver_info->receive_audio_frame(t0, t1, t2, audio_frame);
 				ndiLib->recv_free_audio_v3(ndi_receiver, &audio_frame);
 				continue;
 			}
@@ -765,8 +829,10 @@ void *ndi_source_thread(void *data)
 				//
 				// obs_log(LOG_DEBUG, "%s: New Video Frame (Framesync OFF): ts=%d tc=%d", obs_source_name, video_frame.timestamp, video_frame.timecode);
 				ndi_source_thread_process_video2(s, &video_frame, s->obs_source, &obs_video_frame);
-
+				uint64_t t2 = os_gettime_ns();
 				ndiLib->recv_free_video_v2(ndi_receiver, &video_frame);
+				if (s->ndi_receiver_info)
+					s->ndi_receiver_info->receive_video_frame(t0, t1, t2, video_frame);
 				continue;
 			}
 
@@ -794,6 +860,7 @@ void *ndi_source_thread(void *data)
 		if (ndiLib) {
 			obs_log(LOG_DEBUG, "'%s' ndi_source_thread: ndiLib->recv_destroy(ndi_receiver)",
 				obs_source_name);
+			network_monitor->setReceiver(s->obs_source, (NDIlib_recv_instance_t) nullptr);
 			ndiLib->recv_destroy(ndi_receiver);
 		}
 		obs_log(LOG_DEBUG, "'%s' ndi_source_thread: Reset NDI Receiver", obs_source_name);
@@ -976,6 +1043,8 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	}
 
 	s->config.ndi_source_name = bstrdup(new_ndi_source_name);
+	if (s->ndi_receiver_info)
+		s->ndi_receiver_info->set_ndi_name(s->config.ndi_source_name);
 
 	auto new_bandwidth = (int)obs_data_get_int(settings, PROP_BANDWIDTH);
 	reset_ndi_receiver |= (s->config.bandwidth != new_bandwidth);
@@ -1253,6 +1322,13 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
+
+	s->ndi_receiver_info = network_monitor->registerReceiver(obs_source);
+
+	s->properties_dialog_open = std::make_shared<std::atomic<unsigned int>>(0u);
+	s->update_properties = true;
+	s->change_notifier = new ChangeNotifier([s]() { s->update_properties.store(true); });
+	s->ndi_receiver_info->registerChangeNotifier(s->change_notifier, "ndi-source");
 	ndi_source_update(s, settings);
 
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_create(…)", obs_source_name);
@@ -1270,6 +1346,14 @@ void ndi_source_destroy(void *data)
 	signal_handler_disconnect(sh, "rename", on_ndi_source_renamed, s);
 	ndi_source_thread_stop(s);
 
+	if (s->change_notifier) {
+		if (s->ndi_receiver_info)
+			s->ndi_receiver_info->unregisterChangeNotifier(s->change_notifier, "ndi-source");
+		delete s->change_notifier;
+		s->change_notifier = nullptr;
+	}
+
+	network_monitor->unregisterReceiver(s->obs_source);
 	if (s->config.ndi_receiver_name) {
 		bfree(s->config.ndi_receiver_name);
 		s->config.ndi_receiver_name = nullptr;
