@@ -40,10 +40,6 @@ inputs:
     description: Create Windows or macOS installation package
     required: false
     default: 'false'
-  sources:
-    description: Create source tarball (Linux only)
-    required: false
-    default: 'true'
   workingDirectory:
     description: Working directory for packaging
     required: false
@@ -97,7 +93,6 @@ runs:
         if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
 
         if [[ '${{ inputs.package }}' == 'true' ]] package_args+=(--package)
-        if [[ '${{ inputs.sources }}' != 'true' ]] package_args+=(--skip-sources)
 
         .github/scripts/package-ubuntu ${package_args}
 

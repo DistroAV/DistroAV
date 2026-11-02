@@ -21,6 +21,7 @@ on:
           - ubuntu-24
           - ubuntu-26
           - windows
+          - sources
 permissions:
   contents: write
 jobs:

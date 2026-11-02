@@ -49,16 +49,16 @@ jobs:
 
           case "${GITHUB_REF_NAME}" in
             +([0-9]).+([0-9]).+([0-9]) )
-              echo 'validTag=true' >> $GITHUB_OUTPUT
-              echo 'prerelease=false' >> $GITHUB_OUTPUT
-              echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+              echo 'validTag=true' >> "$GITHUB_OUTPUT"
+              echo 'prerelease=false' >> "$GITHUB_OUTPUT"
+              echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
               ;;
             +([0-9]).+([0-9]).+([0-9])-@(beta|rc)*([0-9]) )
-              echo 'validTag=true' >> $GITHUB_OUTPUT
-              echo 'prerelease=true' >> $GITHUB_OUTPUT
-              echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+              echo 'validTag=true' >> "$GITHUB_OUTPUT"
+              echo 'prerelease=true' >> "$GITHUB_OUTPUT"
+              echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
               ;;
-            *) echo 'validTag=false' >> $GITHUB_OUTPUT ;;
+            *) echo 'validTag=false' >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Download Build Artifacts 📥
@@ -90,7 +90,7 @@ jobs:
           for variant_data in "${variants[@]}"; do
             IFS=';' read -r variant suffix <<< "${variant_data}"
 
-            candidates=(*-${variant}-${commit_hash}/*.@(${suffix}))
+            candidates=(*-"${variant}"-"${commit_hash}"/*.@(${suffix}))
 
             for candidate in "${candidates[@]}"; do
               mv "${candidate}" "${root_dir}"
@@ -98,7 +98,7 @@ jobs:
           done
 
           if [[ "${ATTACH_DBGSYM}" == 'true' ]]; then
-            for candidate in *-${commit_hash}-dbgsym/*-dbgsym.ddeb; do
+            for candidate in *-"${commit_hash}"-dbgsym/*-dbgsym.ddeb; do
               mv "${candidate}" "${root_dir}"
             done
           fi
