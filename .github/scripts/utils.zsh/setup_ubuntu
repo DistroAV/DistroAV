@@ -35,32 +35,26 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
     sudo apt-get install ${apt_args} gcc-${${target##*-}//_/-}-linux-gnu g++-${${target##*-}//_/-}-linux-gnu
   }
 
-  sudo add-apt-repository --yes ppa:obsproject/obs-studio
+  # Use the obs-studio .deb published on the GitHub release of the OBS version set in buildspec.json.
+  local obs_version=$(jq -r '.dependencies."obs-studio".version' buildspec.json)
+  local ubuntu_version=$(. /etc/os-release && print -r -- ${VERSION_ID})
+  local obs_url="https://github.com/obsproject/obs-studio/releases/download/${obs_version}/OBS-Studio-${obs_version}-Ubuntu-${ubuntu_version}-x86_64.deb"
+  local obs_deb=${TMPDIR:-/tmp}/obs-studio.deb
 
-  # Ubuntu 26.04 runners enable the amd64v3 architecture variant, so apt reads the PPA's amd64v3
-  # index, which Launchpad publishes empty. Restrict the PPA to the baseline architecture so apt
-  # reads its amd64 index, then pin obs-studio to the PPA: the archive package does not ship the
-  # libobs headers and CMake files.
-  local sources_file
-  for sources_file (/etc/apt/sources.list.d/obsproject-ubuntu-obs-studio-*.sources(N)) {
-    if ! grep -q '^Architectures:' ${sources_file}; then
-      sudo sed -i "/^Types:/a Architectures: $(dpkg --print-architecture)" ${sources_file}
-    fi
-  }
-
-  print -r -- 'Package: obs-studio
-Pin: release o=LP-PPA-obsproject-obs-studio
-Pin-Priority: 1001' | sudo tee /etc/apt/preferences.d/obs-studio-ppa > /dev/null
+  if ! curl -fsSL -o ${obs_deb} ${obs_url}; then
+    log_error "obs-studio ${obs_version} has no .deb for Ubuntu ${ubuntu_version}: ${obs_url}"
+    return 2
+  fi
+  log_info "Using obs-studio from ${obs_url}"
 
   sudo apt update
-  apt-cache policy obs-studio
 
   sudo apt-get install ${apt_args} \
     build-essential \
     libgles2-mesa-dev \
     libsimde-dev \
     libcurl4-openssl-dev \
-    obs-studio
+    ${obs_deb}
 
   local -a _qt_packages=()
 

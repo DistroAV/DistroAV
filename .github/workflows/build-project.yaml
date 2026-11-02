@@ -29,6 +29,7 @@ jobs:
       config: ${{ steps.setup.outputs.config }}
       commitHash: ${{ steps.setup.outputs.commitHash }}
       pluginName: ${{ steps.setup.outputs.pluginName }}
+      ubuntuMatrix: ${{ steps.ubuntu.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -84,6 +85,34 @@ jobs:
           else
             echo "pluginName=${plugin_name}" >> $GITHUB_OUTPUT
           fi
+
+      # Only build for the Ubuntu versions that the buildspec OBS release publishes a .deb for.
+      - name: Check Ubuntu OBS Packages 🐧
+        id: ubuntu
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          : Check Ubuntu OBS Packages 🐧
+          if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
+
+          case "${TARGET}" in
+            ubuntu-24) candidates=(24.04) ;;
+            ubuntu-26) candidates=(26.04) ;;
+            *) candidates=(24.04 26.04) ;;
+          esac
+
+          obs_version="$(jq -r '.dependencies."obs-studio".version' buildspec.json)"
+          available=()
+          for version in "${candidates[@]}"; do
+            url="https://github.com/obsproject/obs-studio/releases/download/${obs_version}/OBS-Studio-${obs_version}-Ubuntu-${version}-x86_64.deb"
+            if curl -fsIL -o /dev/null "${url}"; then
+              available+=("ubuntu-${version}")
+            else
+              echo "::notice::OBS ${obs_version} has no Ubuntu ${version} package, skipping the Ubuntu ${version} build"
+            fi
+          done
+
+          echo "matrix=$(printf '%s\n' "${available[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
   macos-build:
     name: Build for macOS 🍏
@@ -197,16 +226,11 @@ jobs:
     name: Build for Ubuntu 🐧
     strategy:
       matrix:
-        os: >-
-          ${{ fromJSON(
-            inputs.target == 'ubuntu-24' && '["ubuntu-24.04"]'
-            || inputs.target == 'ubuntu-26' && '["ubuntu-26.04"]'
-            || '["ubuntu-24.04", "ubuntu-26.04"]'
-          ) }}
+        os: ${{ fromJSON(needs.check-event.outputs.ubuntuMatrix) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     needs: check-event
-    if: inputs.target == 'all' || startsWith(inputs.target, 'ubuntu')
+    if: (inputs.target == 'all' || startsWith(inputs.target, 'ubuntu')) && needs.check-event.outputs.ubuntuMatrix != '[]'
     defaults:
       run:
         shell: bash
