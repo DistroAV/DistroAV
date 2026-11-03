@@ -5,6 +5,23 @@ on:
       pluginName:
         description: Project name detected by parsing build spec file
         value: ${{ jobs.check-event.outputs.pluginName }}
+    secrets:
+      MACOS_SIGNING_APPLICATION_IDENTITY:
+        required: false
+      MACOS_SIGNING_INSTALLER_IDENTITY:
+        required: false
+      MACOS_SIGNING_CERT:
+        required: false
+      MACOS_SIGNING_CERT_PASSWORD:
+        required: false
+      MACOS_KEYCHAIN_PASSWORD:
+        required: false
+      MACOS_SIGNING_PROVISIONING_PROFILE:
+        required: false
+      MACOS_NOTARIZATION_USERNAME:
+        required: false
+      MACOS_NOTARIZATION_PASSWORD:
+        required: false
 permissions:
   contents: read
   pull-requests: read

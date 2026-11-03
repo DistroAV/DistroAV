@@ -1,0 +1,17 @@
+# zizmor configuration (https://docs.zizmor.sh/configuration/)
+rules:
+  template-injection:
+    ignore:
+      # Composite actions from the OBS plugin template (.github/actions/*/action.yaml).
+      # They only expand their own `inputs.*` (set by this repository's workflows:
+      # build config, target, codesign settings) and runner/event fields that aren't
+      # attacker-controlled (runner.os, github.workspace, github.event.before/forced).
+      # PR-controlled values (changed file names) are already passed through `env:`.
+      # Kept as-is to stay close to the upstream template.
+      - action.yaml
+  unpinned-uses:
+    config:
+      policies:
+        # Actions are pinned to their major version tag (e.g. actions/checkout@v7) rather than
+        # a commit SHA: they rarely change, and Dependabot proposes the major version bumps.
+        "*": ref-pin
