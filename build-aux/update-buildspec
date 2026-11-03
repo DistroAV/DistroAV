@@ -1,0 +1,107 @@
+#!/usr/bin/env zsh
+
+builtin emulate -L zsh
+setopt EXTENDED_GLOB
+setopt ERR_EXIT
+setopt ERR_RETURN
+setopt NO_UNSET
+setopt PIPE_FAIL
+setopt FUNCTION_ARGZERO
+
+## Enable for script debugging
+# setopt XTRACE
+
+# Update the obs-studio, prebuilt and qt6 dependencies in buildspec.json to a given OBS release:
+#   1. Download the obs-studio release sources (.tar.gz for macos, .zip for windows-x64) and hash them
+#   2. Copy the prebuilt and qt6 versions and hashes from obs-studio at that tag
+#      (CMakePresets.json on recent versions, buildspec.json on older ones)
+update_buildspec() {
+  if (( ! ${+SCRIPT_HOME} )) typeset -g SCRIPT_HOME=${ZSH_ARGZERO:A:h}
+  local project_root=${SCRIPT_HOME:A:h}
+  local buildspec_file=${project_root}/buildspec.json
+
+  fpath=("${SCRIPT_HOME}/.functions" ${fpath})
+  autoload -Uz log_info log_error log_output log_status
+
+  local -r _usage="Usage: %B${functrace[1]%:*}%b [<obs_version>]
+
+Update buildspec.json OBS dependencies to the given obs-studio release tag (default: latest release)."
+
+  case ${1:-} {
+    -h|--help) log_output ${_usage}; return 0 ;;
+  }
+
+  local cmd
+  for cmd (curl jq) {
+    if (( ! ${+commands[${cmd}]} )) {
+      log_error "${cmd} is required."
+      return 2
+    }
+  }
+
+  local -a sha256_cmd
+  if (( ${+commands[sha256sum]} )) {
+    sha256_cmd=(sha256sum)
+  } else {
+    sha256_cmd=(shasum -a 256)
+  }
+
+  local obs_version=${1:-}
+  if [[ -z ${obs_version} ]] {
+    obs_version=$(curl -fsSL https://api.github.com/repos/obsproject/obs-studio/releases/latest | jq -r '.tag_name')
+  }
+  log_info "Updating buildspec.json to obs-studio ${obs_version}"
+
+  local work_dir=$(mktemp -d)
+  trap "rm -rf ${(q)work_dir}" EXIT
+
+  local base_url=$(jq -r '.dependencies."obs-studio".baseUrl' ${buildspec_file})
+  local -A obs_hashes
+  local ext
+  for ext (tar.gz zip) {
+    log_status "Downloading ${base_url}/${obs_version}.${ext}"
+    curl -fsSL -o ${work_dir}/obs-studio.${ext} ${base_url}/${obs_version}.${ext}
+    obs_hashes[${ext}]=${$(${sha256_cmd} ${work_dir}/obs-studio.${ext})[1]}
+  }
+
+  # Recent obs-studio versions keep their dependencies in CMakePresets.json, older ones in buildspec.json
+  local raw_url=https://raw.githubusercontent.com/obsproject/obs-studio/${obs_version}
+  local upstream_deps
+  if curl -fsSL -o ${work_dir}/CMakePresets.json ${raw_url}/CMakePresets.json \
+    && upstream_deps=$(jq -e '.configurePresets[] | select(.name == "dependencies") | .vendor."obsproject.com/obs-studio".dependencies' ${work_dir}/CMakePresets.json); then
+    log_status "Using dependencies from obs-studio ${obs_version} CMakePresets.json"
+  elif curl -fsSL -o ${work_dir}/buildspec.json ${raw_url}/buildspec.json; then
+    upstream_deps=$(jq '.dependencies' ${work_dir}/buildspec.json)
+    log_status "Using dependencies from obs-studio ${obs_version} buildspec.json"
+  else
+    log_error "Could not find obs-studio ${obs_version} dependencies."
+    return 2
+  fi
+
+  # Keep the hash keys this buildspec already uses; upstream names the macOS universal build "macos-universal"
+  jq --indent 4 \
+    --arg version ${obs_version} \
+    --arg tar_hash ${obs_hashes[tar.gz]} \
+    --arg zip_hash ${obs_hashes[zip]} \
+    --argjson upstream ${upstream_deps} '
+    def upstream_hash($dep; $group; $key):
+      $upstream[$dep][$group] // {} | (.[$key] // (if $key == "macos" then .["macos-universal"] else null end))
+      // error("obs-studio \($version) has no \($dep) \($group) hash for \($key)");
+
+    .dependencies."obs-studio".version = $version
+    | .dependencies."obs-studio".hashes |= with_entries(
+        .value = (if .key | startswith("windows") then $zip_hash else $tar_hash end))
+    | reduce ("prebuilt", "qt6") as $dep (.;
+        .dependencies[$dep].version = $upstream[$dep].version
+        | reduce ("hashes", "debugSymbols") as $group (.;
+            if .dependencies[$dep][$group] then
+              .dependencies[$dep][$group] |= with_entries(.value = upstream_hash($dep; $group; .key))
+            else . end))
+    ' ${buildspec_file} > ${work_dir}/buildspec.json.new
+
+  mv ${work_dir}/buildspec.json.new ${buildspec_file}
+  log_info "buildspec.json updated:"
+  jq -r '.dependencies | to_entries[] | "  \(.key): \(.value.version)"' ${buildspec_file}
+}
+
+update_buildspec ${@}

@@ -1,5 +1,5 @@
 name: Dispatch
-run-name: Dispatched Repository Actions - ${{ inputs.job }} ⌛️
+run-name: Dispatched Repository Actions - ${{ inputs.job }} (${{ inputs.target }}) ⌛️
 on:
   workflow_dispatch:
     inputs:
@@ -9,12 +9,27 @@ on:
         type: choice
         options:
           - build
+      target:
+        description: Build target to run
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - macos
+          - ubuntu
+          - ubuntu-24
+          - ubuntu-26
+          - windows
+          - sources
 permissions:
   contents: read
 jobs:
   check-and-build:
     if: inputs.job == 'build'
     uses: ./.github/workflows/build-project.yaml
+    with:
+      target: ${{ inputs.target }}
     secrets:
       MACOS_SIGNING_APPLICATION_IDENTITY: ${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}
       MACOS_SIGNING_INSTALLER_IDENTITY: ${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}
@@ -24,6 +39,7 @@ jobs:
       MACOS_SIGNING_PROVISIONING_PROFILE: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
       MACOS_NOTARIZATION_USERNAME: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
       MACOS_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+
     permissions:
       actions: read
       contents: read

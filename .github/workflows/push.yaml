@@ -46,6 +46,9 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      # Set the RELEASE_ATTACH_DBGSYM repository variable to 'true' to attach the Ubuntu .ddeb debug symbol packages.
+      ATTACH_DBGSYM: ${{ vars.RELEASE_ATTACH_DBGSYM == 'true' }}
     steps:
       - name: Check Release Tag ☑️
         id: check
@@ -56,16 +59,16 @@ jobs:
 
           case "${GITHUB_REF_NAME}" in
             +([0-9]).+([0-9]).+([0-9]) )
-              echo 'validTag=true' >> $GITHUB_OUTPUT
-              echo 'prerelease=false' >> $GITHUB_OUTPUT
-              echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+              echo 'validTag=true' >> "$GITHUB_OUTPUT"
+              echo 'prerelease=false' >> "$GITHUB_OUTPUT"
+              echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
               ;;
             +([0-9]).+([0-9]).+([0-9])-@(beta|rc)*([0-9]) )
-              echo 'validTag=true' >> $GITHUB_OUTPUT
-              echo 'prerelease=true' >> $GITHUB_OUTPUT
-              echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+              echo 'validTag=true' >> "$GITHUB_OUTPUT"
+              echo 'prerelease=true' >> "$GITHUB_OUTPUT"
+              echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
               ;;
-            *) echo 'validTag=false' >> $GITHUB_OUTPUT ;;
+            *) echo 'validTag=false' >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Download Build Artifacts 📥
@@ -89,19 +92,26 @@ jobs:
             'windows-x64-portable;zip|exe'
             'windows-x64-installer;zip|exe'
             'macos-universal;tar.xz|pkg'
-            'ubuntu-24.04-x86_64;tar.xz|deb|ddeb'
+            'ubuntu-24.04-x86_64;tar.xz|deb'
+            'ubuntu-26.04-x86_64;tar.xz|deb'
             'sources;tar.xz'
           )
 
           for variant_data in "${variants[@]}"; do
             IFS=';' read -r variant suffix <<< "${variant_data}"
 
-            candidates=(*-${variant}-${commit_hash}/@(*|*-dbgsym).@(${suffix}))
+            candidates=(*-"${variant}"-"${commit_hash}"/*.@(${suffix}))
 
             for candidate in "${candidates[@]}"; do
               mv "${candidate}" "${root_dir}"
             done
           done
+
+          if [[ "${ATTACH_DBGSYM}" == 'true' ]]; then
+            for candidate in *-"${commit_hash}"-dbgsym/*-dbgsym.ddeb; do
+              mv "${candidate}" "${root_dir}"
+            done
+          fi
 
       - name: Generate Checksums 🪪
         if: fromJSON(steps.check.outputs.validTag)

@@ -1,6 +1,11 @@
 name: Build Project
 on:
   workflow_call:
+    inputs:
+      target:
+        description: Build target to run (all, macos, ubuntu, ubuntu-24, ubuntu-26, windows, sources)
+        type: string
+        default: all
     outputs:
       pluginName:
         description: Project name detected by parsing build spec file
@@ -71,6 +76,10 @@ jobs:
               ;;
             workflow_dispatch)
               config_data=('codesign:true' 'notarize:false' 'package:false' 'config:RelWithDebInfo')
+              if gh pr view "${GITHUB_REF_NAME}" --json labels,state \
+                | jq -e -r 'select(.state == "OPEN") | .labels[] | select(.name == "Seeking Testers")' > /dev/null; then
+                config_data[2]='package:true'
+              fi
               ;;
             schedule)
               config_data=('codesign:true' 'notarize:false' 'package:true' 'config:RelWithDebInfo')
@@ -80,17 +89,17 @@ jobs:
 
           for config in "${config_data[@]}"; do
             IFS=':' read -r key value <<< "${config}"
-            echo "${key}=${value}" >> $GITHUB_OUTPUT
+            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
           done
-          echo "commitHash=${GITHUB_SHA:0:9}" >> $GITHUB_OUTPUT
+          echo "commitHash=${GITHUB_SHA:0:9}" >> "$GITHUB_OUTPUT"
 
           plugin_name="$(grep 'name' buildspec.json | sed -E -e 's/^.+"name":[^"]+"(.+)",?$/\1/g')"
           plugin_display_name="$(grep 'displayName' buildspec.json | sed -E -e 's/^.+"displayName":[^"]+"(.+)",?$/\1/g' || echo "")"
 
           if [[ "${plugin_display_name}" ]]; then
-            echo "pluginName=${plugin_display_name}" >> $GITHUB_OUTPUT
+            echo "pluginName=${plugin_display_name}" >> "$GITHUB_OUTPUT"
           else
-            echo "pluginName=${plugin_name}" >> $GITHUB_OUTPUT
+            echo "pluginName=${plugin_name}" >> "$GITHUB_OUTPUT"
           fi
 
   macos-build:
@@ -98,6 +107,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'macos'
     defaults:
       run:
         shell: zsh --no-rcs --errexit --pipefail {0}
@@ -132,8 +142,8 @@ jobs:
           read -r product_name product_version <<< \
             "$(jq -r '. | {name, version} | join(" ")' buildspec.json)"
 
-          print "pluginName=${product_name}" >> $GITHUB_OUTPUT
-          print "pluginVersion=${product_version}" >> $GITHUB_OUTPUT
+          print "pluginName=${product_name}" >> "$GITHUB_OUTPUT"
+          print "pluginVersion=${product_version}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache/restore@v6
         id: ccache-cache
@@ -198,14 +208,63 @@ jobs:
           path: ${{ github.workspace }}/.ccache
           key: ${{ runner.os }}-ccache-${{ needs.check-event.outputs.config }}
 
+  # The source tarball does not depend on the platform: build it once, without libobs, Qt or a compiler.
+  sources-build:
+    name: Build Source Tarball 🗜️
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'sources'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set Up Environment 🔧
+        id: setup
+        run: |
+          : Set Up Environment 🔧
+          if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
+
+          read -r product_name product_version <<< \
+            "$(jq -r '. | {name, version} | join(" ")' buildspec.json)"
+
+          echo "pluginName=${product_name}" >> "$GITHUB_OUTPUT"
+          echo "pluginVersion=${product_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Source Tarball 🗜️
+        run: |
+          : Create Source Tarball 🗜️
+          if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
+
+          cmake -S cmake/source-package -B build_source
+          cmake --build build_source -t package_source
+
+      - name: Upload Source Tarball 🗜️
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-sources-${{ needs.check-event.outputs.commitHash }}
+          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-source.*
+
+  # Ubuntu 26.04 renamed the Qt6 runtime packages (libqt6gui6t64 -> libqt6gui6), so a .deb built on
+  # 24.04 depends on package names that do not exist there. Build one .deb per release on its own runner.
   ubuntu-build:
     name: Build for Ubuntu 🐧
     strategy:
       matrix:
-        os: [ubuntu-24.04]
+        os: >-
+          ${{ fromJSON(
+            inputs.target == 'ubuntu-24' && '["ubuntu-24.04"]'
+            || inputs.target == 'ubuntu-26' && '["ubuntu-26.04"]'
+            || '["ubuntu-24.04", "ubuntu-26.04"]'
+          ) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || startsWith(inputs.target, 'ubuntu')
     defaults:
       run:
         shell: bash
@@ -224,8 +283,8 @@ jobs:
           read -r product_name product_version <<< \
             "$(jq -r '. | {name, version} | join(" ")' buildspec.json)"
 
-          echo "pluginName=${product_name}" >> $GITHUB_OUTPUT
-          echo "pluginVersion=${product_version}" >> $GITHUB_OUTPUT
+          echo "pluginName=${product_name}" >> "$GITHUB_OUTPUT"
+          echo "pluginVersion=${product_version}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache/restore@v6
         id: ccache-cache
@@ -248,24 +307,18 @@ jobs:
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
 
-      - name: Upload Source Tarball 🗜️
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-sources-${{ needs.check-event.outputs.commitHash }}
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-source.*
-
       - name: Upload Artifacts 📡
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*.*
+          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64.*
 
       - name: Upload debug symbol artifacts 🪲
         uses: actions/upload-artifact@v7
         if: ${{ fromJSON(needs.check-event.outputs.package) }}
         with:
           name: ${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-${{ needs.check-event.outputs.commitHash }}-dbgsym
-          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-x86_64*-dbgsym.ddeb
+          path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-${{ matrix.os }}-x86_64-dbgsym.ddeb
 
       - uses: actions/cache/save@v6
         if: github.event_name != 'pull_request' && steps.ccache-cache.outputs.cache-hit != 'true'
@@ -278,6 +331,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 10
     needs: check-event
+    if: inputs.target == 'all' || inputs.target == 'windows'
     defaults:
       run:
         shell: pwsh

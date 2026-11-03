@@ -6,7 +6,8 @@
             "label": "OBS sources",
             "hashes": {
                 "macos": "39751f067bacc13d44b116c5138491b5f1391f91516d3d590d874edd21292291",
-                "windows-x64": "2c8427c10b55ac6d68008df2e9a3e82f4647aaad18f105e30d4713c2de678ccf"
+                "windows-x64": "2c8427c10b55ac6d68008df2e9a3e82f4647aaad18f105e30d4713c2de678ccf",
+                "sources": "39751f067bacc13d44b116c5138491b5f1391f91516d3d590d874edd21292291"
             }
         },
         "prebuilt": {
@@ -38,7 +39,7 @@
     },
     "name": "distroav",
     "displayName": "DistroAV",
-    "version": "6.2.2",
+    "version": "6.2.3",
     "website": "https://distroav.org",
     "author": "DistroAV",
     "email": "contact@distroav.org",

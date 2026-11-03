@@ -43,7 +43,7 @@ package() {
   local buildspec_file=${project_root}/buildspec.json
 
   fpath=("${SCRIPT_HOME}/utils.zsh" ${fpath})
-  autoload -Uz log_group log_error log_output check_macos
+  autoload -Uz log_group log_error log_warning log_output check_macos
 
   if [[ ! -r ${buildspec_file} ]] {
     log_error \
@@ -145,7 +145,12 @@ package() {
 
       local -i _status=0
 
-      xcrun stapler staple ${project_root}/release/${output_name}.pkg || _status=1
+      # Stapling fetches the ticket from Apple's CloudKit, which can drop the connection; retry once
+      if ! xcrun stapler staple ${project_root}/release/${output_name}.pkg; then
+        log_warning "Stapling failed, retrying in 30 seconds..."
+        sleep 30
+        xcrun stapler staple ${project_root}/release/${output_name}.pkg || _status=1
+      fi
 
       if (( _status )) {
         log_error "Notarization failed. Use 'xcrun notarytool log <submission ID>' to check for errors."

@@ -14,7 +14,16 @@ set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL TRUE)
 
 set(CPACK_PACKAGE_NAME "${CMAKE_PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION "${CMAKE_PROJECT_VERSION}")
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_C_LIBRARY_ARCHITECTURE}")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
+
+# Name packages <name>-<version>-<distro>-<arch> (e.g. distroav-6.2.3-ubuntu-26.04-x86_64.deb),
+# as .deb dependencies differ between distribution releases
+cmake_host_system_information(RESULT _distro_id QUERY DISTRIB_ID)
+cmake_host_system_information(RESULT _distro_version QUERY DISTRIB_VERSION_ID)
+if(_distro_id AND _distro_version)
+  string(APPEND CPACK_PACKAGE_FILE_NAME "-${_distro_id}-${_distro_version}")
+endif()
+string(APPEND CPACK_PACKAGE_FILE_NAME "-${CMAKE_SYSTEM_PROCESSOR}")
 
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
@@ -27,22 +36,7 @@ endif()
 
 set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/release")
 
-set(CPACK_SOURCE_GENERATOR "TXZ")
-set(
-  CPACK_SOURCE_IGNORE_FILES
-  ".*~$"
-  \\.git/
-  \\.github/
-  \\.gitignore
-  \\.ccache/
-  build_.*
-  cmake/\\.CMakeBuildNumber
-  release/
-)
-
-set(CPACK_VERBATIM_VARIABLES YES)
-set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-source")
-set(CPACK_ARCHIVE_THREADS 0)
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/sourcepackage.cmake")
 
 include(CPack)
 
