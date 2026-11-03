@@ -9,7 +9,7 @@ on:
     tags:
       - '*'
 permissions:
-  contents: write
+  contents: read
 jobs:
   check-format:
     name: Check Formatting 🔍
@@ -21,7 +21,15 @@ jobs:
   build-project:
     name: Build Project 🧱
     uses: ./.github/workflows/build-project.yaml
-    secrets: inherit
+    secrets:
+      MACOS_SIGNING_APPLICATION_IDENTITY: ${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}
+      MACOS_SIGNING_INSTALLER_IDENTITY: ${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}
+      MACOS_SIGNING_CERT: ${{ secrets.MACOS_SIGNING_CERT }}
+      MACOS_SIGNING_CERT_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+      MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+      MACOS_SIGNING_PROVISIONING_PROFILE: ${{ secrets.MACOS_SIGNING_PROVISIONING_PROFILE }}
+      MACOS_NOTARIZATION_USERNAME: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+      MACOS_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
     permissions:
       actions: read
       contents: read
@@ -29,6 +37,8 @@ jobs:
 
   create-release:
     name: Create Release 🛫
+    permissions:
+      contents: write # creates the GitHub release
     if: github.ref_type == 'tag'
     runs-on: ubuntu-26.04
     timeout-minutes: 10
@@ -118,7 +128,7 @@ jobs:
       - name: Create Release 🛫
         if: fromJSON(steps.check.outputs.validTag)
         id: create_release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           prerelease: ${{ fromJSON(steps.check.outputs.prerelease) }}
