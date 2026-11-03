@@ -250,7 +250,7 @@ jobs:
           path: ${{ github.workspace }}/release/${{ steps.setup.outputs.pluginName }}-${{ steps.setup.outputs.pluginVersion }}-source.*
 
   # Ubuntu 26.04 renamed the Qt6 runtime packages (libqt6gui6t64 -> libqt6gui6), so a .deb built on
-  # 24.04 depends on package names that do not exist there. Build in a 26.04 container instead.
+  # 24.04 depends on package names that do not exist there. Build one .deb per release on its own runner.
   ubuntu-build:
     name: Build for Ubuntu 🐧
     strategy:
@@ -277,7 +277,6 @@ jobs:
       - name: Set Up Environment 🔧
         id: setup
         run: |
-          echo "Running on ${{ matrix.os }}"
           : Set Up Environment 🔧
           if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
 
