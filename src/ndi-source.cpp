@@ -18,6 +18,7 @@
 #include "plugin-main.h"
 #include "sync-debug.h"
 #include "ndi-finder.h"
+#include "ndi-ptz.h"
 
 #include <util/platform.h>
 #include <util/threading.h>
@@ -120,6 +121,9 @@ typedef struct ndi_source_config_t {
 typedef struct ndi_source_t {
 	obs_source_t *obs_source;
 	ndi_source_config_t config;
+
+	// A pointer because this struct is bzalloc'd, which can't hold a mutex
+	ndi_ptz_t *ptz_dev;
 
 	bool running;
 	pthread_t av_thread;
@@ -323,8 +327,13 @@ obs_properties_t *ndi_source_getproperties(void *data)
 					0.001);
 	obs_properties_add_float_slider(group_ptz, PROP_ZOOM, obs_module_text("NDIPlugin.SourceProps.Zoom"), 0.0, 1.0,
 					0.001);
-	obs_properties_add_group(props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE,
-				 group_ptz);
+	bool ptz_suppressed = ndi_ptz_suppressed(s->ptz_dev);
+	if (ptz_suppressed)
+		obs_properties_add_text(group_ptz, "ndi_ptz_suppressed",
+					obs_module_text("NDIPlugin.SourceProps.PTZ.Suppressed"), OBS_TEXT_INFO);
+	obs_property_t *ptz_group = obs_properties_add_group(
+		props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE, group_ptz);
+	obs_property_set_enabled(ptz_group, !ptz_suppressed);
 
 	obs_log(LOG_DEBUG, "-ndi_source_getproperties(…)");
 
@@ -343,6 +352,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 	obs_data_set_default_string(settings, "web_control_url", "");
+	ndi_ptz_get_defaults(settings);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -416,6 +426,12 @@ void update_web_control_url(ndi_source_t *s, NDIlib_recv_instance_t ndi_receiver
 	obs_data_release(update);
 }
 
+static void post_ptz_sliders(ndi_ptz_t *dev, const ptz_t &ptz)
+{
+	ndi_ptz_post(dev, {NdiPtzCmdKind::PanTiltAbs, ptz.pan, ptz.tilt});
+	ndi_ptz_post(dev, {NdiPtzCmdKind::ZoomAbs, ptz.zoom});
+}
+
 void *ndi_source_thread(void *data)
 {
 	auto s = (ndi_source_t *)data;
@@ -423,8 +439,12 @@ void *ndi_source_thread(void *data)
 	obs_log(LOG_DEBUG, "'%s' +ndi_source_thread(…)", obs_source_name);
 
 	auto config = Config::Current();
-	ptz_t ptz;
 	NDIlib_tally_t tally;
+
+	// A thread that starts has a receiver the camera was never told the sliders' position on
+	bool ptz_was_suppressed = ndi_ptz_suppressed(s->ptz_dev);
+	if (s->config.ptz.enabled && !ptz_was_suppressed)
+		post_ptz_sliders(s->ptz_dev, s->config.ptz);
 
 	obs_source_audio obs_audio_frame = {};
 	obs_source_frame obs_video_frame = {};
@@ -445,6 +465,8 @@ void *ndi_source_thread(void *data)
 
 	const auto web_control_poll_interval = std::chrono::seconds(1);
 	auto web_control_last_poll = std::chrono::steady_clock::time_point{};
+	const auto ptz_support_poll_interval = std::chrono::milliseconds(500);
+	auto ptz_support_last_poll = std::chrono::steady_clock::time_point{};
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -629,6 +651,7 @@ void *ndi_source_thread(void *data)
 		// If not then micro-pause and restart the loop.
 		//
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
+			ndi_ptz_set_connected(s->ptz_dev, false);
 #if 0
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
@@ -651,22 +674,25 @@ void *ndi_source_thread(void *data)
 		}
 
 		//
-		// Change PTZ: Realtime updated from Source settings UI
+		// Send PTZ commands: posted from the Source settings UI, or by a PTZ controller
 		//
-		if (s->config.ptz.enabled) {
-			const static float tollerance = 0.001f;
-			if (fabs(s->config.ptz.pan - ptz.pan) > tollerance ||
-			    fabs(s->config.ptz.tilt - ptz.tilt) > tollerance ||
-			    fabs(s->config.ptz.zoom - ptz.zoom) > tollerance) {
-				ptz = s->config.ptz;
-				if (ndiLib->recv_ptz_is_supported(ndi_receiver)) {
-					obs_log(LOG_DEBUG,
-						"'%s' ndi_source_thread: ptz changed; Sending PTZ pan=%f, tilt=%f, zoom=%f",
-						obs_source_name, //
-						ptz.pan, ptz.tilt, ptz.zoom);
-					ndiLib->recv_ptz_pan_tilt(ndi_receiver, ptz.pan, ptz.tilt);
-					ndiLib->recv_ptz_zoom(ndi_receiver, ptz.zoom);
-				}
+		if (now - ptz_support_last_poll >= ptz_support_poll_interval) {
+			ptz_support_last_poll = now;
+			ndi_ptz_set_connected(s->ptz_dev, ndiLib->recv_ptz_is_supported(ndi_receiver));
+		}
+		// The sliders were not sent while a PTZ device filter had priority
+		bool ptz_suppressed = ndi_ptz_suppressed(s->ptz_dev);
+		if (ptz_was_suppressed && !ptz_suppressed && s->config.ptz.enabled)
+			post_ptz_sliders(s->ptz_dev, s->config.ptz);
+		ptz_was_suppressed = ptz_suppressed;
+
+		if (ndi_ptz_pending(s->ptz_dev)) {
+			if (ndiLib->recv_ptz_is_supported(ndi_receiver)) {
+				int sent = ndi_ptz_drain(s->ptz_dev, ndi_receiver);
+				obs_log(LOG_DEBUG, "'%s' ndi_source_thread: ptz changed; Sent %d PTZ command(s)",
+					obs_source_name, sent);
+			} else {
+				ndi_ptz_clear(s->ptz_dev);
 			}
 		}
 
@@ -800,6 +826,7 @@ void *ndi_source_thread(void *data)
 		ndi_receiver = nullptr;
 	}
 
+	ndi_ptz_set_connected(s->ptz_dev, false);
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_thread(…)", obs_source_name);
 
 	return nullptr;
@@ -1128,7 +1155,14 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	float pan = (float)obs_data_get_double(settings, PROP_PAN);
 	float tilt = (float)obs_data_get_double(settings, PROP_TILT);
 	float zoom = (float)obs_data_get_double(settings, PROP_ZOOM);
+	const static float tollerance = 0.001f;
+	const ptz_t &old_ptz = s->config.ptz;
+	bool ptz_changed = fabs(pan - old_ptz.pan) > tollerance || fabs(tilt - old_ptz.tilt) > tollerance ||
+			   fabs(zoom - old_ptz.zoom) > tollerance || ptz_enabled != old_ptz.enabled;
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
+	if (ptz_enabled && ptz_changed && !ndi_ptz_suppressed(s->ptz_dev))
+		post_ptz_sliders(s->ptz_dev, s->config.ptz);
+	ndi_ptz_update_settings(s->ptz_dev, settings);
 
 	// Update tally status
 	s->config.tally.on_preview = tally_on_preview(obs_source);
@@ -1237,6 +1271,7 @@ void on_ndi_source_renamed(void *data, calldata_t *)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	ndi_ptz_source_renamed(s->ptz_dev);
 	s->config.reset_ndi_receiver = true;
 	obs_log(LOG_DEBUG, "'%s' on_ndi_source_renamed: new ndi_receiver_name='%s'", obs_source_name,
 		s->config.ndi_receiver_name);
@@ -1250,6 +1285,7 @@ void *ndi_source_create(obs_data_t *settings, obs_source_t *obs_source)
 	auto s = (ndi_source_t *)bzalloc(sizeof(ndi_source_t));
 	s->obs_source = obs_source;
 	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	s->ptz_dev = ndi_ptz_create(obs_source);
 
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_connect(sh, "rename", on_ndi_source_renamed, s);
@@ -1269,6 +1305,8 @@ void ndi_source_destroy(void *data)
 	auto sh = obs_source_get_signal_handler(s->obs_source);
 	signal_handler_disconnect(sh, "rename", on_ndi_source_renamed, s);
 	ndi_source_thread_stop(s);
+	ndi_ptz_destroy(s->ptz_dev);
+	s->ptz_dev = nullptr;
 
 	if (s->config.ndi_receiver_name) {
 		bfree(s->config.ndi_receiver_name);
