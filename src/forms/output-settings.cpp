@@ -66,19 +66,21 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 
 	auto obsVersionCheckResult = is_version_supported(QT_TO_UTF8(obsVersion), PLUGIN_MIN_OBS_VERSION);
 	applyStatus(ui->labelReqObsStatus, obsVersionCheckResult,
-		    obsVersionCheckResult ? QString("OK (%1 ≥ %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION)
-					  : QString("Too old (%1 < %2)").arg(obsVersion, PLUGIN_MIN_OBS_VERSION));
+		    QTStr(obsVersionCheckResult ? "NDIPlugin.OutputSettings.Status.MeetsMinimum"
+				       : "NDIPlugin.OutputSettings.Status.BelowMinimum")
+			    .arg(PLUGIN_MIN_OBS_VERSION));
 
 	// DistroAV Version Check
 	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
-	ui->labelReqDistroTitle->setText(makeLink("#", QT_TO_UTF8(pluginVersionText)));
+	ui->labelReqDistroTitle->setText(makeLink(
+		"#", QT_TO_UTF8(QTStr("NDIPlugin.OutputSettings.InstalledVersion").arg(PLUGIN_VERSION))));
 	connect(ui->labelReqDistroTitle, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
 		QApplication::clipboard()->setText(pluginVersionText);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
 					 Str("NDIPlugin.OutputSettings.TextCopiedToClipboard"));
 	});
 
-	applyStatus(ui->labelReqDistroStatus, true, QString("Loaded (%1)").arg(PLUGIN_VERSION));
+	applyStatus(ui->labelReqDistroStatus, true, QTStr("NDIPlugin.OutputSettings.Status.Loaded"));
 
 	// NDI Version Check
 	QString ndiVersionFull;
@@ -88,10 +90,12 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		ndiVersionShort =
 			QRegularExpression(R"((\d+\.\d+(\.\d+)?(\.\d+)?$))").match(ndiLib->version()).captured(1);
 	} else {
-		ndiVersionFull = "NDI Library not loaded";
+		ndiVersionFull = QTStr("NDIPlugin.OutputSettings.VersionNotDetected");
 	}
 
-	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionFull)));
+	auto ndiVersionDisplay = ndiLib ? QTStr("NDIPlugin.OutputSettings.InstalledVersion").arg(ndiVersionFull)
+					: ndiVersionFull;
+	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionDisplay)));
 	connect(ui->labelReqNdiTitle, &QLabel::linkActivated, [this, ndiVersionFull](const QString &) {
 		QApplication::clipboard()->setText(ndiVersionFull);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
@@ -101,11 +105,11 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	auto ndiVersionCheckResult = !ndiVersionShort.isEmpty() &&
 				     is_version_supported(QT_TO_UTF8(ndiVersionShort), PLUGIN_MIN_NDI_VERSION);
 	applyStatus(ui->labelReqNdiStatus, ndiVersionCheckResult,
-		    ndiVersionCheckResult
-			    ? QString("OK (%1 ≥ %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)
-			    : (ndiVersionShort.isEmpty()
-				       ? QString("Not loaded (need %1+)").arg(PLUGIN_MIN_NDI_VERSION)
-				       : QString("Too old (%1 < %2)").arg(ndiVersionShort, PLUGIN_MIN_NDI_VERSION)));
+		    ndiVersionShort.isEmpty()
+			    ? QTStr("NDIPlugin.OutputSettings.Status.NotDetected").arg(PLUGIN_MIN_NDI_VERSION)
+			    : QTStr(ndiVersionCheckResult ? "NDIPlugin.OutputSettings.Status.MeetsMinimum"
+						  : "NDIPlugin.OutputSettings.Status.BelowMinimum")
+				      .arg(PLUGIN_MIN_NDI_VERSION));
 
 	// DistroAV Section Logic
 	// Check For Update Button
