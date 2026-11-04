@@ -172,16 +172,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </property>
       </spacer>
      </item>
-     <item>
-      <widget class="QLabel" name="labelPrivacyUrl">
-       <property name="text">
-        <string>Privacy URL</string>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse</set>
-       </property>
-      </widget>
-     </item>
     </layout>
    </item>
    <item>

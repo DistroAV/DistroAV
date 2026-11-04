@@ -470,23 +470,54 @@
                         <set>Qt::AlignCenter</set>
                     </property>
                     <item>
-                        <widget class="QPushButton" name="pushButtonWiki">
+                        <widget class="QToolButton" name="toolButtonWiki">
+                            <property name="autoRaise">
+                                <bool>true</bool>
+                            </property>
+                            <property name="toolButtonStyle">
+                                <enum>Qt::ToolButtonTextBesideIcon</enum>
+                            </property>
                             <property name="text">
                                 <string>Wiki</string>
                             </property>
                         </widget>
                     </item>
                     <item>
-                        <widget class="QPushButton" name="pushButtonDiscord">
+                        <widget class="QToolButton" name="toolButtonDiscord">
+                            <property name="autoRaise">
+                                <bool>true</bool>
+                            </property>
+                            <property name="toolButtonStyle">
+                                <enum>Qt::ToolButtonTextBesideIcon</enum>
+                            </property>
                             <property name="text">
                                 <string>Discord</string>
                             </property>
                         </widget>
                     </item>
                     <item>
-                        <widget class="QPushButton" name="pushButtonDonate">
+                        <widget class="QToolButton" name="toolButtonDonate">
+                            <property name="autoRaise">
+                                <bool>true</bool>
+                            </property>
+                            <property name="toolButtonStyle">
+                                <enum>Qt::ToolButtonTextBesideIcon</enum>
+                            </property>
                             <property name="text">
                                 <string>Donate</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QToolButton" name="toolButtonPrivacy">
+                            <property name="autoRaise">
+                                <bool>true</bool>
+                            </property>
+                            <property name="toolButtonStyle">
+                                <enum>Qt::ToolButtonTextBesideIcon</enum>
+                            </property>
+                            <property name="text">
+                                <string>Privacy</string>
                             </property>
                         </widget>
                     </item>

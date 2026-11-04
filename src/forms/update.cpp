@@ -179,12 +179,6 @@ public:
 			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
 #endif
 
-		// What the update check sends and how long it is kept
-		ui->labelPrivacyUrl->setText(
-			makeLink(PLUGIN_REDIRECT_PRIVACY_URL, obs_module_text("NDIPlugin.Update.Privacy")));
-		connect(ui->labelPrivacyUrl, &QLabel::linkActivated,
-			[](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
-
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
 			reject();

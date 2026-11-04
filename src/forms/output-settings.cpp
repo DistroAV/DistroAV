@@ -32,10 +32,15 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QStyle>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+	ui->toolButtonWiki->setIcon(style()->standardIcon(QStyle::SP_DialogHelpButton));
+	ui->toolButtonDiscord->setIcon(style()->standardIcon(QStyle::SP_DriveNetIcon));
+	ui->toolButtonDonate->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+	ui->toolButtonPrivacy->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
 
@@ -264,14 +269,17 @@ If you are running a local build, don't forget to add your build info to the upd
 #endif
 	});
 
-	connect(ui->pushButtonDiscord, &QPushButton::clicked,
+	connect(ui->toolButtonDiscord, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DISCORD_URL))); });
 
-	connect(ui->pushButtonDonate, &QPushButton::clicked,
+	connect(ui->toolButtonDonate, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DONATE_URL))); });
 
-	connect(ui->pushButtonWiki, &QPushButton::clicked,
+	connect(ui->toolButtonWiki, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
+
+	connect(ui->toolButtonPrivacy, &QToolButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_PRIVACY_URL))); });
 
 	//Display of NDI registered trademark info with link to NDI website
 	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
