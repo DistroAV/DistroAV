@@ -347,6 +347,7 @@ void ndi_source_getdefaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, PROP_LATENCY, PROP_LATENCY_NORMAL);
 	obs_data_set_default_bool(settings, PROP_AUDIO, true);
 	obs_data_set_default_string(settings, "web_control_url", "");
+	ndi_ptz_get_defaults(settings);
 	obs_log(LOG_DEBUG, "-ndi_source_getdefaults(…)");
 }
 
@@ -458,6 +459,8 @@ void *ndi_source_thread(void *data)
 
 	const auto web_control_poll_interval = std::chrono::seconds(1);
 	auto web_control_last_poll = std::chrono::steady_clock::time_point{};
+	const auto ptz_support_poll_interval = std::chrono::milliseconds(500);
+	auto ptz_support_last_poll = std::chrono::steady_clock::time_point{};
 
 	//
 	// Main NDI receiver loop: BEGIN
@@ -642,6 +645,7 @@ void *ndi_source_thread(void *data)
 		// If not then micro-pause and restart the loop.
 		//
 		if (ndiLib->recv_get_no_connections(ndi_receiver) == 0) {
+			ndi_ptz_set_connected(s->ptz_dev, false);
 #if 0
 			obs_log(LOG_DEBUG,
 				"'%s' ndi_source_thread: No connection; sleep and restart loop",
@@ -666,6 +670,10 @@ void *ndi_source_thread(void *data)
 		//
 		// Send PTZ commands: posted from the Source settings UI, or by a PTZ controller
 		//
+		if (now - ptz_support_last_poll >= ptz_support_poll_interval) {
+			ptz_support_last_poll = now;
+			ndi_ptz_set_connected(s->ptz_dev, ndiLib->recv_ptz_is_supported(ndi_receiver));
+		}
 		if (ndi_ptz_pending(s->ptz_dev)) {
 			if (ndiLib->recv_ptz_is_supported(ndi_receiver)) {
 				int sent = ndi_ptz_drain(s->ptz_dev, ndi_receiver);
@@ -806,6 +814,7 @@ void *ndi_source_thread(void *data)
 		ndi_receiver = nullptr;
 	}
 
+	ndi_ptz_set_connected(s->ptz_dev, false);
 	obs_log(LOG_DEBUG, "'%s' -ndi_source_thread(…)", obs_source_name);
 
 	return nullptr;
@@ -1141,6 +1150,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
 	if (ptz_enabled && ptz_changed)
 		post_ptz_sliders(s->ptz_dev, s->config.ptz);
+	ndi_ptz_update_settings(s->ptz_dev, settings);
 
 	// Update tally status
 	s->config.tally.on_preview = tally_on_preview(obs_source);
@@ -1249,6 +1259,7 @@ void on_ndi_source_renamed(void *data, calldata_t *)
 	auto s = (ndi_source_t *)data;
 	auto obs_source_name = obs_source_get_name(s->obs_source);
 	new_ndi_receiver_name(obs_source_name, &(s->config.ndi_receiver_name));
+	ndi_ptz_source_renamed(s->ptz_dev);
 	s->config.reset_ndi_receiver = true;
 	obs_log(LOG_DEBUG, "'%s' on_ndi_source_renamed: new ndi_receiver_name='%s'", obs_source_name,
 		s->config.ndi_receiver_name);

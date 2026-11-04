@@ -65,3 +65,24 @@ void ndi_ptz_clear(ndi_ptz_t *p);
 
 // Source thread only. Sends and clears what is pending; returns how many.
 int ndi_ptz_drain(ndi_ptz_t *p, NDIlib_recv_instance_t recv);
+
+// PTZ Device API (obs-ptz's ptz-device-api.md), on the source's own
+// proc_handler and signal_handler.
+#define NDI_PTZ_API_MAJOR 0
+#define NDI_PTZ_API_MINOR 10
+
+// Registers the procs and signals on the source. Call once, from create.
+void ndi_ptz_register(ndi_ptz_t *p);
+
+// From the source's update(): speed caps, inversion and the saved presets.
+void ndi_ptz_update_settings(ndi_ptz_t *p, obs_data_t *settings);
+
+// For get_defaults(): the settings of the device the source keeps.
+void ndi_ptz_get_defaults(obs_data_t *settings);
+
+// Source thread: whether the receiver can do PTZ has been seen again.
+// Announces a change as ptz_state_changed.
+void ndi_ptz_set_connected(ndi_ptz_t *p, bool supported);
+
+// The source was renamed: its state's "source" follows it.
+void ndi_ptz_source_renamed(ndi_ptz_t *p);
