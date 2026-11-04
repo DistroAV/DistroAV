@@ -151,11 +151,38 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
-     <property name="text">
-      <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayoutAutoCheck">
+     <item>
+      <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
+       <property name="text">
+        <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelPrivacyUrl">
+       <property name="text">
+        <string>Privacy URL</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutButtonBox">
