@@ -327,8 +327,13 @@ obs_properties_t *ndi_source_getproperties(void *data)
 					0.001);
 	obs_properties_add_float_slider(group_ptz, PROP_ZOOM, obs_module_text("NDIPlugin.SourceProps.Zoom"), 0.0, 1.0,
 					0.001);
-	obs_properties_add_group(props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE,
-				 group_ptz);
+	bool ptz_suppressed = ndi_ptz_suppressed(s->ptz_dev);
+	if (ptz_suppressed)
+		obs_properties_add_text(group_ptz, "ndi_ptz_suppressed",
+					obs_module_text("NDIPlugin.SourceProps.PTZ.Suppressed"), OBS_TEXT_INFO);
+	obs_property_t *ptz_group = obs_properties_add_group(
+		props, PROP_PTZ, obs_module_text("NDIPlugin.SourceProps.PTZ"), OBS_GROUP_CHECKABLE, group_ptz);
+	obs_property_set_enabled(ptz_group, !ptz_suppressed);
 
 	obs_log(LOG_DEBUG, "-ndi_source_getproperties(…)");
 
@@ -437,7 +442,8 @@ void *ndi_source_thread(void *data)
 	NDIlib_tally_t tally;
 
 	// A thread that starts has a receiver the camera was never told the sliders' position on
-	if (s->config.ptz.enabled)
+	bool ptz_was_suppressed = ndi_ptz_suppressed(s->ptz_dev);
+	if (s->config.ptz.enabled && !ptz_was_suppressed)
 		post_ptz_sliders(s->ptz_dev, s->config.ptz);
 
 	obs_source_audio obs_audio_frame = {};
@@ -674,6 +680,12 @@ void *ndi_source_thread(void *data)
 			ptz_support_last_poll = now;
 			ndi_ptz_set_connected(s->ptz_dev, ndiLib->recv_ptz_is_supported(ndi_receiver));
 		}
+		// The sliders were not sent while a PTZ device filter had priority
+		bool ptz_suppressed = ndi_ptz_suppressed(s->ptz_dev);
+		if (ptz_was_suppressed && !ptz_suppressed && s->config.ptz.enabled)
+			post_ptz_sliders(s->ptz_dev, s->config.ptz);
+		ptz_was_suppressed = ptz_suppressed;
+
 		if (ndi_ptz_pending(s->ptz_dev)) {
 			if (ndiLib->recv_ptz_is_supported(ndi_receiver)) {
 				int sent = ndi_ptz_drain(s->ptz_dev, ndi_receiver);
@@ -1148,7 +1160,7 @@ void ndi_source_update(void *data, obs_data_t *settings)
 	bool ptz_changed = fabs(pan - old_ptz.pan) > tollerance || fabs(tilt - old_ptz.tilt) > tollerance ||
 			   fabs(zoom - old_ptz.zoom) > tollerance || ptz_enabled != old_ptz.enabled;
 	s->config.ptz = ptz_t(ptz_enabled, pan, tilt, zoom);
-	if (ptz_enabled && ptz_changed)
+	if (ptz_enabled && ptz_changed && !ndi_ptz_suppressed(s->ptz_dev))
 		post_ptz_sliders(s->ptz_dev, s->config.ptz);
 	ndi_ptz_update_settings(s->ptz_dev, settings);
 

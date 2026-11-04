@@ -61,6 +61,9 @@ struct ndi_ptz_t {
 	// This device has said ptz_device_add and not ptz_device_remove; under live_lock
 	bool announced = false;
 
+	// A PTZ Device filter is on the source: it has said ptz_device_add and not ptz_device_remove
+	std::atomic<bool> suppressed{false};
+	std::vector<const obs_source_t *> devices; // Only compared, never used; under lock
 
 	// Settings: speed caps and inversion for pan, tilt, zoom and focus
 	std::atomic<float> speed_max[4] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -95,6 +98,60 @@ static std::vector<ndi_ptz_t *> live;
 static void rebuild_state(ndi_ptz_t *p);
 static void announce_presence(ndi_ptz_t *p);
 static void queue_announce(ndi_ptz_t *p);
+static void devices_changed(ndi_ptz_t *p);
+
+// A filter on this source that is a device of the API's major version
+static bool is_device_here(const ndi_ptz_t *p, obs_source_t *device)
+{
+	if (!device || device == p->source)
+		return false;
+	proc_handler_t *ph = obs_source_get_proc_handler(device);
+	if (!ph)
+		return false;
+	calldata_t cd = {};
+	bool ours = proc_handler_call(ph, "ptz_get_api_version", &cd) &&
+		    calldata_int(&cd, "major") == NDI_PTZ_API_MAJOR;
+	calldata_free(&cd);
+	if (!ours)
+		return false;
+	calldata_t parent = {};
+	bool here = proc_handler_call(ph, "ptz_get_parent_source", &parent);
+	obs_source_t *on = (obs_source_t *)calldata_ptr(&parent, "return");
+	here = here && on == p->source;
+	obs_source_release(on);
+	calldata_free(&parent);
+	return here;
+}
+
+// The only way a PTZ Device on this source is learned of: it says it is ready, and says it is gone
+static void on_device_added(void *data, calldata_t *cd)
+{
+	auto p = static_cast<ndi_ptz_t *>(data);
+	auto device = static_cast<obs_source_t *>(calldata_ptr(cd, "source"));
+	if (!is_device_here(p, device))
+		return;
+	{
+		std::lock_guard<std::mutex> guard(p->lock);
+		if (std::find(p->devices.begin(), p->devices.end(), device) != p->devices.end())
+			return;
+		p->devices.push_back(device);
+	}
+	devices_changed(p);
+}
+
+static void on_device_removed(void *data, calldata_t *cd)
+{
+	auto p = static_cast<ndi_ptz_t *>(data);
+	auto device = static_cast<obs_source_t *>(calldata_ptr(cd, "source"));
+	{
+		std::lock_guard<std::mutex> guard(p->lock);
+		auto it = std::find(p->devices.begin(), p->devices.end(), device);
+		if (it == p->devices.end())
+			return;
+		p->devices.erase(it);
+	}
+	devices_changed(p);
+}
 
 ndi_ptz_t *ndi_ptz_create(obs_source_t *source)
 {
@@ -107,6 +164,9 @@ ndi_ptz_t *ndi_ptz_create(obs_source_t *source)
 		std::lock_guard<std::mutex> guard(live_lock);
 		live.push_back(p);
 	}
+	signal_handler_t *global = obs_get_signal_handler();
+	signal_handler_connect(global, "ptz_device_add", on_device_added, p);
+	signal_handler_connect(global, "ptz_device_remove", on_device_removed, p);
 	rebuild_state(p);
 	queue_announce(p);
 	return p;
@@ -121,9 +181,16 @@ void ndi_ptz_destroy(ndi_ptz_t *p)
 		p->enabled = false;
 		announce_presence(p);
 	}
+	signal_handler_disconnect(obs_get_signal_handler(), "ptz_device_add", on_device_added, p);
+	signal_handler_disconnect(obs_get_signal_handler(), "ptz_device_remove", on_device_removed, p);
 	if (p->state)
 		obs_data_release(p->state);
 	delete p;
+}
+
+bool ndi_ptz_suppressed(const ndi_ptz_t *p)
+{
+	return p->suppressed.load(std::memory_order_relaxed);
 }
 
 static void set_locked(ndi_ptz_t *p, const NdiPtzCmd &cmd)
@@ -136,6 +203,10 @@ static void set_locked(ndi_ptz_t *p, const NdiPtzCmd &cmd)
 void ndi_ptz_post(ndi_ptz_t *p, const NdiPtzCmd &cmd)
 {
 	std::lock_guard<std::mutex> guard(p->lock);
+	// Decided here, under the lock that drops the slot when a device arrives, so a command that raced
+	// the filter being added cannot land after the stop
+	if (p->suppressed.load())
+		return;
 	if (cmd.kind == NdiPtzCmdKind::Stop) {
 		set_locked(p, {NdiPtzCmdKind::PanTiltSpeed});
 		set_locked(p, {NdiPtzCmdKind::ZoomSpeed});
@@ -227,11 +298,12 @@ int ndi_ptz_drain(ndi_ptz_t *p, NDIlib_recv_instance_t recv)
 // The PTZ Device API
 //
 
-// The device is off while its PTZ is switched off: it answers no version, its other procs do
-// nothing and its signals say nothing, as the API has it of a device that turns its PTZ off
+// The device is off while its PTZ is switched off, or a PTZ Device filter has priority: it answers
+// no version, its other procs do nothing and its signals say nothing, as the API has it of a device
+// that turns its PTZ off
 static bool off(const ndi_ptz_t *p)
 {
-	return !p->enabled.load(std::memory_order_relaxed);
+	return !p->enabled.load(std::memory_order_relaxed) || p->suppressed.load(std::memory_order_relaxed);
 }
 
 static bool device_active(const ndi_ptz_t *p)
@@ -303,7 +375,7 @@ void ndi_ptz_set_connected(ndi_ptz_t *p, bool supported)
 {
 	if (p->connected.exchange(supported) == supported)
 		return;
-	// Under the live lock, so that the source is not destroyed while it is said
+	// Under the live lock, so that it says what is so after any change of priority that came between
 	std::lock_guard<std::mutex> guard(live_lock);
 	if (std::find(live.begin(), live.end(), p) == live.end())
 		return;
@@ -594,6 +666,34 @@ static void ensure_presets_loaded(ndi_ptz_t *p)
 		presets = std::move(ordered);
 	}
 	p->presets = std::move(presets);
+}
+
+//
+// Priority: a PTZ Device filter on the same source wins
+//
+
+static void devices_changed(ndi_ptz_t *p)
+{
+	bool active;
+	{
+		std::lock_guard<std::mutex> guard(p->lock);
+		active = !p->devices.empty();
+		if (p->suppressed.exchange(active) == active)
+			return;
+		if (active) {
+			// Drop what was waiting, and stop what is moving once, so the camera does not drift
+			p->present.fill(false);
+			if (p->connected.load()) {
+				set_locked(p, {NdiPtzCmdKind::PanTiltSpeed});
+				set_locked(p, {NdiPtzCmdKind::ZoomSpeed});
+				set_locked(p, {NdiPtzCmdKind::FocusSpeed});
+			}
+			p->pending.store(p->connected.load(), std::memory_order_release);
+		}
+	}
+	obs_log(LOG_INFO, "'%s' PTZ device filter %s; NDI PTZ %s", obs_source_get_name(p->source),
+		active ? "is on the source" : "is gone", active ? "stopped" : "resumed");
+	queue_announce(p);
 }
 
 static void persist_presets(ndi_ptz_t *p)

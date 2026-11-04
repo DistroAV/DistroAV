@@ -84,5 +84,9 @@ void ndi_ptz_get_defaults(obs_data_t *settings);
 // Announces a change as ptz_state_changed.
 void ndi_ptz_set_connected(ndi_ptz_t *p, bool supported);
 
+// True while an enabled PTZ Device filter is on the source: it has priority,
+// so the source sends no NDI PTZ and says it can do nothing.
+bool ndi_ptz_suppressed(const ndi_ptz_t *p);
+
 // The source was renamed: its state's "source" follows it.
 void ndi_ptz_source_renamed(ndi_ptz_t *p);
