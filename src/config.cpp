@@ -222,6 +222,7 @@ Config::Config()
 	  TallyPreviewEnabled(true)
 {
 	ProcessCommandLine();
+	SetDefaultsToAppStore();
 	SetDefaultsToUserStore();
 	if (obs_get_version() >= MAKE_SEMANTIC_VERSION(31, 0, 0))
 		GlobalToUserMigration();
@@ -243,6 +244,21 @@ void Config::SetDefaultsToUserStore()
 
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PROGRAM_ENABLED, TallyProgramEnabled);
 		config_set_default_bool(obs_config, SECTION_NAME, PARAM_TALLY_PREVIEW_ENABLED, TallyPreviewEnabled);
+	}
+}
+
+void Config::SetDefaultsToAppStore()
+{
+	auto app_config = GetAppConfig();
+	if (app_config) {
+		config_set_default_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
+
+		const char *installed_version = config_get_string(app_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK);
+		if (!installed_version || std::strcmp(installed_version, PLUGIN_VERSION) != 0) {
+			config_set_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
+			config_set_string(app_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK, PLUGIN_VERSION);
+			config_save(app_config);
+		}
 	}
 }
 
