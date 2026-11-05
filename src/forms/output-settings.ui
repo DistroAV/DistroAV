@@ -27,7 +27,7 @@
             <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>565</width>
+                <width>460</width>
                 <height>549</height>
             </rect>
         </property>
@@ -287,12 +287,331 @@
             <item>
                 <layout class="QGridLayout" name="gridLayoutRequirementsStatus">
                     <property name="horizontalSpacing">
-                        <number>12</number>
+                        <number>8</number>
                     </property>
                     <property name="verticalSpacing">
-                        <number>4</number>
+                        <number>6</number>
                     </property>
                     <item row="0" column="0">
+                        <widget class="QLabel" name="labelRequirementHeader">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.Table.Component</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="1">
+                        <widget class="QLabel" name="labelInstalledHeader">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.Table.Installed</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="2">
+                        <widget class="QLabel" name="labelMinimumHeader">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.Table.Minimum</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="3">
+                        <widget class="QLabel" name="labelStatusHeader">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.Table.Status</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="4">
+                        <widget class="QLabel" name="labelActionsHeader">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.Table.Actions</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="5">
+                        <widget class="QLabel" name="labelAutoUpdatesHeader">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.Table.AutoUpdates</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="0">
+                        <widget class="QLabel" name="labelRequirementDistro">
+                            <property name="text">
+                                <string>DistroAV</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="1">
+                        <widget class="QLabel" name="labelReqDistroTitle">
+                            <property name="text">
+                                <string>DistroAV</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="2">
+                        <widget class="QLabel" name="labelReqDistroMinimum">
+                            <property name="text">
+                                <string>NDIPlugin.OutputSettings.NotApplicable</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="3">
+                        <widget class="QLabel" name="labelReqDistroStatus">
+                            <property name="alignment">
+                                <set>Qt::AlignCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="4">
+                        <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
+                            <property name="spacing">
+                                <number>8</number>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignLeft</set>
+                            </property>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonCheckForUpdate">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>16</width>
+                                            <height>16</height>
+                                        </size>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                    <property name="toolTip">
+                                        <string>NDIPlugin.OutputSettings.CheckForUpdate</string>
+                                    </property>
+                                    <property name="accessibleName">
+                                        <string>NDIPlugin.OutputSettings.CheckForUpdate</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonInstallPlugin">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>16</width>
+                                            <height>16</height>
+                                        </size>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                    <property name="toolTip">
+                                        <string>NDIPlugin.OutputSettings.InstallPlugin</string>
+                                    </property>
+                                    <property name="accessibleName">
+                                        <string>NDIPlugin.OutputSettings.InstallPlugin</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                    <item row="1" column="5">
+                        <widget class="QToolButton" name="toolButtonAutoCheckForUpdates">
+                            <property name="minimumSize">
+                                <size>
+                                    <width>22</width>
+                                    <height>22</height>
+                                </size>
+                            </property>
+                            <property name="maximumSize">
+                                <size>
+                                    <width>22</width>
+                                    <height>22</height>
+                                </size>
+                            </property>
+                            <property name="iconSize">
+                                <size>
+                                    <width>20</width>
+                                    <height>20</height>
+                                </size>
+                            </property>
+                            <property name="checkable">
+                                <bool>true</bool>
+                            </property>
+                            <property name="autoRaise">
+                                <bool>true</bool>
+                            </property>
+                            <property name="toolButtonStyle">
+                                <enum>Qt::ToolButtonIconOnly</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="0">
+                        <widget class="QLabel" name="labelRequirementNdi">
+                            <property name="text">
+                                <string>NDI Runtime</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="1">
+                        <widget class="QLabel" name="labelReqNdiTitle">
+                            <property name="text">
+                                <string>NDI Library</string>
+                            </property>
+                            <property name="textInteractionFlags">
+                                <set>Qt::LinksAccessibleByMouse</set>
+                            </property>
+                            <property name="textFormat">
+                                <enum>Qt::RichText</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="2">
+                        <widget class="QLabel" name="labelReqNdiMinimum">
+                            <property name="text">
+                                <string>labelReqNdiMinimum</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignRight|Qt::AlignVCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="3">
+                        <widget class="QLabel" name="labelReqNdiStatus">
+                            <property name="alignment">
+                                <set>Qt::AlignCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="4">
+                        <layout class="QHBoxLayout" name="horizontalLayoutNdi">
+                            <property name="spacing">
+                                <number>8</number>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignLeft</set>
+                            </property>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonGetNdi">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>16</width>
+                                            <height>16</height>
+                                        </size>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                    <property name="toolTip">
+                                        <string>NDIPlugin.OutputSettings.GetNDILibrary</string>
+                                    </property>
+                                    <property name="accessibleName">
+                                        <string>NDIPlugin.OutputSettings.GetNDILibrary</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonInstallNdi">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>16</width>
+                                            <height>16</height>
+                                        </size>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                    <property name="toolTip">
+                                        <string>NDIPlugin.OutputSettings.InstallNDILibrary</string>
+                                    </property>
+                                    <property name="accessibleName">
+                                        <string>NDIPlugin.OutputSettings.InstallNDILibrary</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                    <item row="3" column="0">
+                        <widget class="QLabel" name="labelRequirementObs">
+                            <property name="text">
+                                <string>OBS</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="3" column="1">
                         <widget class="QLabel" name="labelReqObsTitle">
                             <property name="text">
                                 <string>OBS</string>
@@ -305,188 +624,45 @@
                             </property>
                         </widget>
                     </item>
-                    <item row="0" column="1">
-                        <widget class="QLabel" name="labelReqObsStatus">
+                    <item row="3" column="2">
+                        <widget class="QLabel" name="labelReqObsMinimum">
                             <property name="text">
-                                <string>✗ Pending check</string>
+                                <string>labelReqObsMinimum</string>
                             </property>
                             <property name="alignment">
                                 <set>Qt::AlignRight|Qt::AlignVCenter</set>
                             </property>
                         </widget>
                     </item>
+                    <item row="3" column="3">
+                        <widget class="QLabel" name="labelReqObsStatus">
+                            <property name="alignment">
+                                <set>Qt::AlignCenter</set>
+                            </property>
+                        </widget>
+                    </item>
                 </layout>
             </item>
             <item>
-                <widget class="QGroupBox" name="groupBoxDistroAv">
-                    <property name="title">
-                        <string>DistroAV Plugin</string>
+                <widget class="QLabel" name="labelNdiRegisteredTrademark">
+                    <property name="text">
+                        <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
                     </property>
-                    <layout class="QVBoxLayout" name="verticalLayoutDistroAv">
-                        <property name="spacing">
-                            <number>4</number>
-                        </property>
-                        <item>
-                            <layout class="QGridLayout" name="gridLayoutDistroAvStatus">
-                                <property name="horizontalSpacing">
-                                    <number>12</number>
-                                </property>
-                                <property name="verticalSpacing">
-                                    <number>4</number>
-                                </property>
-                                <item row="0" column="0">
-                                    <widget class="QLabel" name="labelReqDistroTitle">
-                                        <property name="text">
-                                            <string>DistroAV</string>
-                                        </property>
-                                        <property name="textInteractionFlags">
-                                            <set>Qt::LinksAccessibleByMouse</set>
-                                        </property>
-                                        <property name="textFormat">
-                                            <enum>Qt::RichText</enum>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item row="0" column="1">
-                                    <widget class="QLabel" name="labelReqDistroStatus">
-                                        <property name="text">
-                                            <string>✓ Pending check</string>
-                                        </property>
-                                        <property name="alignment">
-                                            <set>Qt::AlignRight|Qt::AlignVCenter</set>
-                                        </property>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </item>
-                        <item>
-                            <layout class="QHBoxLayout" name="horizontalLayoutDistroAv">
-                                <item>
-                                    <widget class="QPushButton" name="pushButtonCheckForUpdate">
-                                        <property name="text">
-                                            <string>NDIPlugin.OutputSettings.CheckForUpdate</string>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item>
-                                    <widget class="QPushButton" name="pushButtonInstallPlugin">
-                                        <property name="text">
-                                            <string>NDIPlugin.OutputSettings.InstallPlugin</string>
-                                        </property>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </item>
-                        <item>
-                            <layout class="QHBoxLayout" name="horizontalLayoutAutoCheckForUpdates">
-                                <item>
-                                    <spacer>
-                                        <property name="orientation">
-                                            <enum>Qt::Horizontal</enum>
-                                        </property>
-                                        <property name="sizeHint" stdset="0">
-                                            <size>
-                                                <width>40</width>
-                                                <height>20</height>
-                                            </size>
-                                        </property>
-                                    </spacer>
-                                </item>
-                                <item>
-                                    <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
-                                        <property name="text">
-                                            <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
-                                        </property>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </item>
-                    </layout>
-                </widget>
-            </item>
-            <item>
-                <widget class="QGroupBox" name="groupBoxNdiRuntime">
-                    <property name="title">
-                        <string>NDI Runtime</string>
+                    <property name="alignment">
+                        <set>Qt::AlignCenter</set>
                     </property>
-                    <layout class="QVBoxLayout" name="verticalLayoutNdi">
-                        <property name="spacing">
-                            <number>4</number>
-                        </property>
-                        <item>
-                            <layout class="QGridLayout" name="gridLayoutNdiStatus">
-                                <property name="horizontalSpacing">
-                                    <number>12</number>
-                                </property>
-                                <property name="verticalSpacing">
-                                    <number>4</number>
-                                </property>
-                                <item row="0" column="0">
-                                    <widget class="QLabel" name="labelReqNdiTitle">
-                                        <property name="text">
-                                            <string>NDI Library</string>
-                                        </property>
-                                        <property name="textInteractionFlags">
-                                            <set>Qt::LinksAccessibleByMouse</set>
-                                        </property>
-                                        <property name="textFormat">
-                                            <enum>Qt::RichText</enum>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item row="0" column="1">
-                                    <widget class="QLabel" name="labelReqNdiStatus">
-                                        <property name="text">
-                                            <string>✗ Pending check</string>
-                                        </property>
-                                        <property name="alignment">
-                                            <set>Qt::AlignRight|Qt::AlignVCenter</set>
-                                        </property>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </item>
-                        <item>
-                            <layout class="QHBoxLayout" name="horizontalLayoutNdi">
-                                <item>
-                                    <widget class="QPushButton" name="pushButtonGetNdi">
-                                        <property name="text">
-                                            <string>NDIPlugin.OutputSettings.GetNDILibrary</string>
-                                        </property>
-                                    </widget>
-                                </item>
-                                <item>
-                                    <widget class="QPushButton" name="pushButtonInstallNdi">
-                                        <property name="text">
-                                            <string>NDIPlugin.OutputSettings.InstallNDILibrary</string>
-                                        </property>
-                                    </widget>
-                                </item>
-                            </layout>
-                        </item>
-                        <item>
-                            <widget class="QLabel" name="labelNdiRegisteredTrademark">
-                                <property name="text">
-                                    <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
-                                </property>
-                                <property name="alignment">
-                                    <set>Qt::AlignCenter</set>
-                                </property>
-                                <property name="textFormat">
-                                    <enum>Qt::RichText</enum>
-                                </property>
-                                <property name="textInteractionFlags">
-                                    <set>Qt::TextBrowserInteraction</set>
-                                </property>
-                                <property name="openExternalLinks">
-                                    <bool>true</bool>
-                                </property>
-                                <property name="wordWrap">
-                                    <bool>true</bool>
-                                </property>
-                            </widget>
-                        </item>
-                    </layout>
+                    <property name="textFormat">
+                        <enum>Qt::RichText</enum>
+                    </property>
+                    <property name="textInteractionFlags">
+                        <set>Qt::TextBrowserInteraction</set>
+                    </property>
+                    <property name="openExternalLinks">
+                        <bool>true</bool>
+                    </property>
+                    <property name="wordWrap">
+                        <bool>true</bool>
+                    </property>
                 </widget>
             </item>
             <item>
@@ -524,6 +700,19 @@
                             </property>
                             <property name="text">
                                 <string>Discord</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QToolButton" name="toolButtonGithub">
+                            <property name="autoRaise">
+                                <bool>true</bool>
+                            </property>
+                            <property name="toolButtonStyle">
+                                <enum>Qt::ToolButtonTextBesideIcon</enum>
+                            </property>
+                            <property name="text">
+                                <string>GitHub</string>
                             </property>
                         </widget>
                     </item>

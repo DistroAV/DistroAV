@@ -1,0 +1,28 @@
+SVG Repo icon attribution
+
+LICENSE: CC Attribution License
+AUTHOR: Catalin Fertu
+
+update.svg
+https://www.svgrepo.com/download/521954/arrow-bottom.svg
+update-dark.svg
+Dark-theme variant of update.svg
+
+link.svg
+https://www.svgrepo.com/download/522216/output.svg
+link-dark.svg
+Dark-theme variant of link.svg
+
+repair.svg
+https://www.svgrepo.com/download/522318/tools.svg
+repair-dark.svg
+Dark-theme variant of repair.svg
+
+discord.svg
+Source: SVG Repo
+
+github.svg
+Source: SVG Repo
+
+currency.svg
+Source: SVG Repo

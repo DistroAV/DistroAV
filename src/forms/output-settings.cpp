@@ -26,6 +26,7 @@
 
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QIcon>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QProcess>
@@ -33,31 +34,66 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QStyle>
+#include <QToolButton>
 
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+	auto loadModuleIcon = [](const char *relative_path) {
+		char *module_path = obs_module_file(relative_path);
+		if (!module_path)
+			return QIcon();
+
+		const QIcon icon(QString::fromUtf8(module_path));
+		bfree(module_path);
+		return icon;
+	};
 	ui->toolButtonWiki->setIcon(style()->standardIcon(QStyle::SP_DialogHelpButton));
-	ui->toolButtonDiscord->setIcon(style()->standardIcon(QStyle::SP_DriveNetIcon));
-	ui->toolButtonDonate->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+	ui->toolButtonDiscord->setIcon(loadModuleIcon("icons/discord.svg"));
+	ui->toolButtonGithub->setIcon(loadModuleIcon("icons/github.svg"));
+	ui->toolButtonDonate->setIcon(loadModuleIcon("icons/currency.svg"));
 	ui->toolButtonPrivacy->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+	const bool darkTheme = palette().color(QPalette::Window).lightness() < 128;
+	auto loadThemeIcon = [&loadModuleIcon, darkTheme](const char *light, const char *dark) {
+		return loadModuleIcon(darkTheme ? dark : light);
+	};
+	ui->toolButtonCheckForUpdate->setIcon(loadThemeIcon("icons/update.svg", "icons/update-dark.svg"));
+	ui->toolButtonInstallPlugin->setIcon(loadThemeIcon("icons/repair.svg", "icons/repair-dark.svg"));
+	ui->toolButtonGetNdi->setIcon(loadThemeIcon("icons/link.svg", "icons/link-dark.svg"));
+	ui->toolButtonInstallNdi->setIcon(loadThemeIcon("icons/repair.svg", "icons/repair-dark.svg"));
+	const auto statusCheckIcon = style()->standardIcon(QStyle::SP_DialogApplyButton);
+	const auto statusCrossIcon = style()->standardIcon(QStyle::SP_MessageBoxCritical);
+	auto statusIcon = [statusCheckIcon, statusCrossIcon](bool ok) { return ok ? statusCheckIcon : statusCrossIcon; };
+	auto updateAutoUpdateState = [this, statusIcon](bool enabled) {
+		const auto description = QTStr(enabled ? "NDIPlugin.OutputSettings.AutoUpdate.Enabled"
+						      : "NDIPlugin.OutputSettings.AutoUpdate.Disabled");
+		ui->toolButtonAutoCheckForUpdates->setIcon(statusIcon(enabled));
+		ui->toolButtonAutoCheckForUpdates->setToolTip(description);
+		ui->toolButtonAutoCheckForUpdates->setAccessibleName(description);
+	};
+		ui->toolButtonAutoCheckForUpdates->setStyleSheet(
+			"QToolButton:checked, QToolButton:checked:hover, QToolButton:checked:pressed { "
+			"background-color: transparent; border: none; }");
+	connect(ui->toolButtonAutoCheckForUpdates, &QToolButton::toggled, this, updateAutoUpdateState);
+	updateAutoUpdateState(ui->toolButtonAutoCheckForUpdates->isChecked());
 
 	connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onFormAccepted()));
 
 	// Listen for external config changes so the dialog can update while visible.
 	connect(ConfigNotifier::instance(), &ConfigNotifier::configChanged, this, &OutputSettings::onConfigChanged);
 
-	// Requirements checks and status display
-	// Global rules for color based on requirement checks: red for fail, green for pass. Text is set per check below.
-	auto applyStatus = [](QLabel *label, bool ok, const QString &message) {
-		label->setText(QString::fromUtf8("%1 %2").arg(ok ? "✓" : "✗", message));
-		label->setStyleSheet(ok ? "QWidget { color: #2e7d32; }" : "QWidget { color: #c62828; }");
+	// Requirement statuses use icons with localized descriptions for tooltips and accessibility.
+	auto applyStatus = [statusIcon](QLabel *label, bool ok, const QString &description) {
+		label->setPixmap(statusIcon(ok).pixmap(22, 22));
+		label->setToolTip(description);
+		label->setAccessibleName(description);
 	};
 
 	// OBS Version Check
 	auto obsVersion = QString::fromUtf8(obs_get_version_string());
 	auto obsVersionDisplay = QString("%1 %2").arg("OBS", QString::fromUtf8(obs_get_version_string()));
-	ui->labelReqObsTitle->setText(makeLink("#", QT_TO_UTF8(obsVersionDisplay)));
+	ui->labelReqObsTitle->setText(makeLink("#", QT_TO_UTF8(obsVersion)));
+	ui->labelReqObsMinimum->setText(PLUGIN_MIN_OBS_VERSION);
 	connect(ui->labelReqObsTitle, &QLabel::linkActivated, [this, obsVersionDisplay](const QString &) {
 		QApplication::clipboard()->setText(obsVersionDisplay);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
@@ -67,13 +103,12 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	auto obsVersionCheckResult = is_version_supported(QT_TO_UTF8(obsVersion), PLUGIN_MIN_OBS_VERSION);
 	applyStatus(ui->labelReqObsStatus, obsVersionCheckResult,
 		    QTStr(obsVersionCheckResult ? "NDIPlugin.OutputSettings.Status.MeetsMinimum"
-				       : "NDIPlugin.OutputSettings.Status.BelowMinimum")
-			    .arg(PLUGIN_MIN_OBS_VERSION));
+				       : "NDIPlugin.OutputSettings.Status.BelowMinimum"));
 
 	// DistroAV Version Check
 	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
-	ui->labelReqDistroTitle->setText(makeLink(
-		"#", QT_TO_UTF8(QTStr("NDIPlugin.OutputSettings.InstalledVersion").arg(PLUGIN_VERSION))));
+	ui->labelReqDistroTitle->setText(makeLink("#", PLUGIN_VERSION));
+	ui->labelReqDistroMinimum->setText(QTStr("NDIPlugin.OutputSettings.NotApplicable"));
 	connect(ui->labelReqDistroTitle, &QLabel::linkActivated, [this, pluginVersionText](const QString &) {
 		QApplication::clipboard()->setText(pluginVersionText);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
@@ -93,9 +128,9 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		ndiVersionFull = QTStr("NDIPlugin.OutputSettings.VersionNotDetected");
 	}
 
-	auto ndiVersionDisplay = ndiLib ? QTStr("NDIPlugin.OutputSettings.InstalledVersion").arg(ndiVersionFull)
-					: ndiVersionFull;
+	const auto ndiVersionDisplay = ndiVersionShort.isEmpty() ? ndiVersionFull : ndiVersionShort;
 	ui->labelReqNdiTitle->setText(makeLink("#", QT_TO_UTF8(ndiVersionDisplay)));
+	ui->labelReqNdiMinimum->setText(PLUGIN_MIN_NDI_VERSION);
 	connect(ui->labelReqNdiTitle, &QLabel::linkActivated, [this, ndiVersionFull](const QString &) {
 		QApplication::clipboard()->setText(ndiVersionFull);
 		QMessageBox::information(this, Str("NDIPlugin.OutputSettings.TextCopied"),
@@ -106,14 +141,14 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 				     is_version_supported(QT_TO_UTF8(ndiVersionShort), PLUGIN_MIN_NDI_VERSION);
 	applyStatus(ui->labelReqNdiStatus, ndiVersionCheckResult,
 		    ndiVersionShort.isEmpty()
-			    ? QTStr("NDIPlugin.OutputSettings.Status.NotDetected").arg(PLUGIN_MIN_NDI_VERSION)
+			    ? QTStr("NDIPlugin.OutputSettings.Status.NotDetected")
 			    : QTStr(ndiVersionCheckResult ? "NDIPlugin.OutputSettings.Status.MeetsMinimum"
 						  : "NDIPlugin.OutputSettings.Status.BelowMinimum")
 				      .arg(PLUGIN_MIN_NDI_VERSION));
 
 	// DistroAV Section Logic
 	// Check For Update Button
-	connect(ui->pushButtonCheckForUpdate, &QPushButton::clicked, [this]() {
+	connect(ui->toolButtonCheckForUpdate, &QToolButton::clicked, [this]() {
 		// Whew! QProgressDialog is ugly on Windows!
 		// TODO: Write our own.
 		QPointer<QProgressDialog> progressDialog =
@@ -203,8 +238,22 @@ If you are running a local build, don't forget to add your build info to the upd
 		connect(testButton, &QPushButton::clicked, [] { showSampleUpdateDialog(); });
 	}
 
+	auto confirmAutomatedFix = [this]() {
+		QMessageBox prompt(QMessageBox::Warning, QTStr("NDIPlugin.OutputSettings.AutoFix.Title"),
+				   QTStr("NDIPlugin.OutputSettings.AutoFix.Message"), QMessageBox::NoButton, this);
+		auto *proceedButton = prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Proceed"),
+					       QMessageBox::AcceptRole);
+		prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Cancel"), QMessageBox::RejectRole);
+		prompt.setDefaultButton(proceedButton);
+		prompt.exec();
+		return prompt.clickedButton() == proceedButton;
+	};
+
 	// Auto re-install DistroAV Plugin Button
-	connect(ui->pushButtonInstallPlugin, &QPushButton::clicked, [this]() {
+	connect(ui->toolButtonInstallPlugin, &QToolButton::clicked, [this, confirmAutomatedFix]() {
+		if (!confirmAutomatedFix())
+			return;
+
 		obs_log(LOG_DEBUG, "Re-Install DistroAV Plugin button clicked");
 #if defined(Q_OS_MACOS)
 		const auto script = QString(
@@ -238,10 +287,13 @@ If you are running a local build, don't forget to add your build info to the upd
 	});
 
 	// NDI Library Section Logic
-	connect(ui->pushButtonGetNdi, &QPushButton::clicked,
+	connect(ui->toolButtonGetNdi, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
 
-	connect(ui->pushButtonInstallNdi, &QPushButton::clicked, [this]() {
+	connect(ui->toolButtonInstallNdi, &QToolButton::clicked, [this, confirmAutomatedFix]() {
+		if (!confirmAutomatedFix())
+			return;
+
 		obs_log(LOG_DEBUG, "Install NDI button clicked");
 #if defined(Q_OS_MACOS)
 		const auto script = QString("tell application \"Terminal\"\n"
@@ -276,6 +328,9 @@ If you are running a local build, don't forget to add your build info to the upd
 	connect(ui->toolButtonDiscord, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DISCORD_URL))); });
 
+	connect(ui->toolButtonGithub, &QToolButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl("https://github.com/DistroAV/DistroAV")); });
+
 	connect(ui->toolButtonDonate, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DONATE_URL))); });
 
@@ -284,6 +339,13 @@ If you are running a local build, don't forget to add your build info to the upd
 
 	connect(ui->toolButtonPrivacy, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_PRIVACY_URL))); });
+
+	auto donationText = QTStr("NDIPlugin.Donate");
+	donationText.replace(QStringLiteral("DistroAV"),
+			     QStringLiteral("<a href=\"https://github.com/DistroAV/DistroAV\">DistroAV</a>"));
+	ui->labelDonate->setTextFormat(Qt::RichText);
+	ui->labelDonate->setOpenExternalLinks(true);
+	ui->labelDonate->setText(donationText);
 
 	//Display of NDI registered trademark info with link to NDI website
 	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
@@ -317,7 +379,7 @@ void OutputSettings::onFormAccepted()
 	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	config->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
-	config->AutoCheckForUpdates(ui->checkBoxAutoCheckForUpdates->isChecked());
+	config->AutoCheckForUpdates(ui->toolButtonAutoCheckForUpdates->isChecked());
 
 	auto mainSupported = ui->mainOutputGroupBox->isEnabled();
 
@@ -426,5 +488,5 @@ void OutputSettings::refreshUI()
 	ui->tallyProgramCheckBox->setChecked(config->TallyProgramEnabled);
 	ui->tallyPreviewCheckBox->setChecked(config->TallyPreviewEnabled);
 
-	ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
+	ui->toolButtonAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
 }
