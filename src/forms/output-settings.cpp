@@ -167,8 +167,9 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 			}
 
 			if (!pluginUpdateInfo.errorData.isEmpty()) {
-				QString errorData = pluginUpdateInfo.errorData;
+				auto errorText = QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text");
 				if (LOG_LEVEL >= LOG_DEBUG) {
+					QString errorData = pluginUpdateInfo.errorData;
 					QJsonParseError parseError;
 					QJsonDocument jsonDoc =
 						QJsonDocument::fromJson(errorData.toUtf8(), &parseError);
@@ -178,10 +179,8 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 							errorData = jsonObject["error"].toString();
 						}
 					}
+					errorText += QString("<pre>%1</pre>").arg(errorData.toHtmlEscaped());
 				}
-
-				auto errorText = QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Text");
-				errorText += QString("<pre>%1</pre>").arg(errorData);
 
 				if (pluginUpdateInfo.httpStatusCode == 404    // Not Found
 				    || pluginUpdateInfo.httpStatusCode == 412 // Precondition Failed
