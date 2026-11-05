@@ -253,12 +253,10 @@ void Config::SetDefaultsToAppStore()
 	if (app_config) {
 		config_set_default_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
 
-		const char *installed_version =
-			config_get_string(app_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK);
+		const char *installed_version = config_get_string(app_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK);
 		if (!installed_version || std::strcmp(installed_version, PLUGIN_VERSION) != 0) {
 			config_set_bool(app_config, SECTION_NAME, PARAM_AUTO_CHECK_FOR_UPDATES, true);
-			config_set_string(app_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK,
-					  PLUGIN_VERSION);
+			config_set_string(app_config, SECTION_NAME, PARAM_LAST_UPDATE_CHECK, PLUGIN_VERSION);
 			config_save(app_config);
 		}
 	}

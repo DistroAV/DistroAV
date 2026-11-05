@@ -39,9 +39,8 @@
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
-	auto config = Config::Current();
-	ui->toolButtonNdiDisclaimer->setIcon(
-		QIcon::fromTheme("dialog-information-symbolic", style()->standardIcon(QStyle::SP_MessageBoxInformation)));
+	ui->toolButtonNdiDisclaimer->setIcon(QIcon::fromTheme("dialog-information-symbolic",
+							      style()->standardIcon(QStyle::SP_MessageBoxInformation)));
 	ui->toolButtonNdiDisclaimer->setToolTip(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
 	ui->toolButtonNdiDisclaimer->setAccessibleName(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
 	connect(ui->toolButtonNdiDisclaimer, &QToolButton::clicked, this, [this]() {
@@ -75,17 +74,19 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	ui->toolButtonInstallNdi->setIcon(loadThemeIcon("icons/repair.svg", "icons/repair-dark.svg"));
 	const auto statusCheckIcon = style()->standardIcon(QStyle::SP_DialogApplyButton);
 	const auto statusCrossIcon = style()->standardIcon(QStyle::SP_MessageBoxCritical);
-	auto statusIcon = [statusCheckIcon, statusCrossIcon](bool ok) { return ok ? statusCheckIcon : statusCrossIcon; };
+	auto statusIcon = [statusCheckIcon, statusCrossIcon](bool ok) {
+		return ok ? statusCheckIcon : statusCrossIcon;
+	};
 	auto updateAutoUpdateState = [this, statusIcon](bool enabled) {
 		const auto description = QTStr(enabled ? "NDIPlugin.OutputSettings.AutoUpdate.Enabled"
-						      : "NDIPlugin.OutputSettings.AutoUpdate.Disabled");
+						       : "NDIPlugin.OutputSettings.AutoUpdate.Disabled");
 		ui->toolButtonAutoCheckForUpdates->setIcon(statusIcon(enabled));
 		ui->toolButtonAutoCheckForUpdates->setToolTip(description);
 		ui->toolButtonAutoCheckForUpdates->setAccessibleName(description);
 	};
-		ui->toolButtonAutoCheckForUpdates->setStyleSheet(
-			"QToolButton:checked, QToolButton:checked:hover, QToolButton:checked:pressed { "
-			"background-color: transparent; border: none; }");
+	ui->toolButtonAutoCheckForUpdates->setStyleSheet(
+		"QToolButton:checked, QToolButton:checked:hover, QToolButton:checked:pressed { "
+		"background-color: transparent; border: none; }");
 	connect(ui->toolButtonAutoCheckForUpdates, &QToolButton::toggled, this, updateAutoUpdateState);
 	updateAutoUpdateState(ui->toolButtonAutoCheckForUpdates->isChecked());
 
@@ -115,7 +116,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	auto obsVersionCheckResult = is_version_supported(QT_TO_UTF8(obsVersion), PLUGIN_MIN_OBS_VERSION);
 	applyStatus(ui->labelReqObsStatus, obsVersionCheckResult,
 		    QTStr(obsVersionCheckResult ? "NDIPlugin.OutputSettings.Status.MeetsMinimum"
-				       : "NDIPlugin.OutputSettings.Status.BelowMinimum"));
+						: "NDIPlugin.OutputSettings.Status.BelowMinimum"));
 
 	// DistroAV Version Check
 	auto pluginVersionText = QString("%1 %2").arg(PLUGIN_DISPLAY_NAME, PLUGIN_VERSION);
@@ -155,7 +156,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		    ndiVersionShort.isEmpty()
 			    ? QTStr("NDIPlugin.OutputSettings.Status.NotDetected")
 			    : QTStr(ndiVersionCheckResult ? "NDIPlugin.OutputSettings.Status.MeetsMinimum"
-						  : "NDIPlugin.OutputSettings.Status.BelowMinimum")
+							  : "NDIPlugin.OutputSettings.Status.BelowMinimum")
 				      .arg(PLUGIN_MIN_NDI_VERSION));
 
 	// DistroAV Section Logic
@@ -195,22 +196,30 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 				}
 
 				const bool unsupportedBuild = pluginUpdateInfo.httpStatusCode == 404 ||
-						      pluginUpdateInfo.httpStatusCode == 412;
+							      pluginUpdateInfo.httpStatusCode == 412;
 				if (unsupportedBuild) {
-					errorText += QString("<br>") + QTStr("NDIPlugin.Update.CheckingForUpdate.Error.UnsupportedBuild");
+					errorText += QString("<br>") +
+						     QTStr("NDIPlugin.Update.CheckingForUpdate.Error.UnsupportedBuild");
 					if (LOG_LEVEL >= LOG_DEBUG) {
-						errorText += QString("<br>") +
-							    QTStr("NDIPlugin.Update.CheckingForUpdate.Error.LocalBuildHint");
+						errorText +=
+							QString("<br>") +
+							QTStr("NDIPlugin.Update.CheckingForUpdate.Error.LocalBuildHint");
 					}
 				}
 
+				if (pluginUpdateInfo.httpStatusCode == 400) {
+					errorText += QString("<br>") +
+						     QTStr("NDIPlugin.Update.CheckingForUpdate.Error.InvalidRequest");
+				}
+
 				QMessageBox errorDialog(QMessageBox::Warning,
-							Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"), errorText,
-							QMessageBox::Ok, this);
+							Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
+							errorText, QMessageBox::Ok, this);
 				QPushButton *downloadButton = nullptr;
 				if (unsupportedBuild) {
 					downloadButton = errorDialog.addButton(
-						QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Download"), QMessageBox::ActionRole);
+						QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Download"),
+						QMessageBox::ActionRole);
 				}
 				errorDialog.exec();
 				if (errorDialog.clickedButton() == downloadButton) {
@@ -255,8 +264,8 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 				   QTStr("NDIPlugin.OutputSettings.AutoFix.Message").arg(command.toHtmlEscaped()),
 				   QMessageBox::NoButton, this);
 		prompt.setMaximumWidth(500);
-		auto *proceedButton = prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Proceed"),
-					       QMessageBox::AcceptRole);
+		auto *proceedButton =
+			prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Proceed"), QMessageBox::AcceptRole);
 		prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Cancel"), QMessageBox::RejectRole);
 		prompt.setDefaultButton(proceedButton);
 		prompt.exec();
@@ -267,7 +276,8 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	connect(ui->toolButtonInstallPlugin, &QToolButton::clicked, [this, confirmAutomatedFix]() {
 		QString command;
 #if defined(Q_OS_MACOS)
-		command = QStringLiteral("brew tap distroav/tap && brew reinstall --cask distroav/tap/distroav && exit");
+		command =
+			QStringLiteral("brew tap distroav/tap && brew reinstall --cask distroav/tap/distroav && exit");
 #elif defined(Q_OS_WIN)
 		command = QStringLiteral(
 			"winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements --force || pause");
@@ -289,8 +299,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-					     QTStr("NDIPlugin.OneclickInstallError.Message") +
-						     command);
+					     QTStr("NDIPlugin.OneclickInstallError.Message") + command);
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -336,8 +345,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-					     QTStr("NDIPlugin.OneclickInstallError.Message") +
-						     command);
+					     QTStr("NDIPlugin.OneclickInstallError.Message") + command);
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -369,13 +377,11 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
 	auto donationText = QTStr("NDIPlugin.Donate");
-	donationText.replace(QStringLiteral("DistroAV"),
-			     makeLink(PLUGIN_REDIRECT_HOME_URL, "DistroAV"));
+	donationText.replace(QStringLiteral("DistroAV"), makeLink(PLUGIN_REDIRECT_HOME_URL, "DistroAV"));
 	ui->labelDonate->setTextFormat(Qt::RichText);
 	ui->labelDonate->setOpenExternalLinks(true);
 	ui->labelDonate->setTextInteractionFlags(Qt::LinksAccessibleByKeyboard | Qt::LinksAccessibleByMouse);
 	ui->labelDonate->setText(donationText);
-
 }
 void replace_invalid_filename_chars(QString *s)
 {
@@ -407,7 +413,8 @@ void OutputSettings::onFormAccepted()
 
 	const bool auto_check_for_updates = ui->toolButtonAutoCheckForUpdates->isChecked();
 	if (last_config.AutoCheckForUpdates() != auto_check_for_updates) {
-		obs_log(LOG_INFO, "Automatic update checks changed to %s", auto_check_for_updates ? "enabled" : "disabled");
+		obs_log(LOG_INFO, "Automatic update checks changed to %s",
+			auto_check_for_updates ? "enabled" : "disabled");
 	}
 	config->AutoCheckForUpdates(auto_check_for_updates);
 

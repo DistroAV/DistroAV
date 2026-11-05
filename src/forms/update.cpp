@@ -140,8 +140,6 @@ public:
 
 		auto pluginDisplayName = QString(PLUGIN_DISPLAY_NAME);
 
-		auto config = Config::Current();
-
 		auto textTemp = QTStr("NDIPlugin.Update.Title").arg(pluginDisplayName);
 		setWindowTitle(textTemp);
 
@@ -152,7 +150,8 @@ public:
 						.arg(pluginUpdateInfo.versionLatest.toString()));
 		ui->labelVersionNew->setText(textTemp);
 		ui->labelVersionNew->setOpenExternalLinks(true);
-		ui->labelVersionNew->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
+		ui->labelVersionNew->setTextInteractionFlags(Qt::LinksAccessibleByMouse |
+							     Qt::LinksAccessibleByKeyboard);
 
 		QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
 		textTemp = QString("<font size='+1'>%1</font>")
