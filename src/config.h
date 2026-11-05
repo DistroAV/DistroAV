@@ -104,6 +104,7 @@ public:
 
 private:
 	void Load();
+	void SetDefaultsToAppStore();
 	void GlobalToUserMigration();
 	void SetDefaultsToUserStore();
 	Config();

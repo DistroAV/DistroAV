@@ -459,42 +459,124 @@
                         </layout>
                     </item>
                     <item row="1" column="5">
-                        <widget class="QToolButton" name="toolButtonAutoCheckForUpdates">
-                            <property name="minimumSize">
-                                <size>
-                                    <width>22</width>
-                                    <height>22</height>
-                                </size>
+                        <layout class="QHBoxLayout" name="horizontalLayoutAutoUpdateControls">
+                            <property name="spacing">
+                                <number>2</number>
                             </property>
-                            <property name="maximumSize">
-                                <size>
-                                    <width>22</width>
-                                    <height>22</height>
-                                </size>
+                            <property name="alignment">
+                                <set>Qt::AlignLeft|Qt::AlignVCenter</set>
                             </property>
-                            <property name="iconSize">
-                                <size>
-                                    <width>20</width>
-                                    <height>20</height>
-                                </size>
-                            </property>
-                            <property name="checkable">
-                                <bool>true</bool>
-                            </property>
-                            <property name="autoRaise">
-                                <bool>true</bool>
-                            </property>
-                            <property name="toolButtonStyle">
-                                <enum>Qt::ToolButtonIconOnly</enum>
-                            </property>
-                        </widget>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonAutoCheckForUpdates">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>22</width>
+                                            <height>22</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>20</width>
+                                            <height>20</height>
+                                        </size>
+                                    </property>
+                                    <property name="checkable">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonAutoUpdateInfo">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>18</width>
+                                            <height>18</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>18</width>
+                                            <height>18</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>14</width>
+                                            <height>14</height>
+                                        </size>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                    <property name="toolTip">
+                                        <string>NDIPlugin.OutputSettings.AutoUpdate.Privacy</string>
+                                    </property>
+                                    <property name="accessibleName">
+                                        <string>NDIPlugin.OutputSettings.AutoUpdate.Privacy</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
                     </item>
                     <item row="2" column="0">
-                        <widget class="QLabel" name="labelRequirementNdi">
-                            <property name="text">
-                                <string>NDI Runtime</string>
+                        <layout class="QHBoxLayout" name="horizontalLayoutNdiRequirement">
+                            <property name="spacing">
+                                <number>2</number>
                             </property>
-                        </widget>
+                            <property name="alignment">
+                                <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+                            </property>
+                            <item>
+                                <widget class="QLabel" name="labelRequirementNdi">
+                                    <property name="text">
+                                        <string>NDI Runtime</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QToolButton" name="toolButtonNdiDisclaimer">
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>18</width>
+                                            <height>18</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>18</width>
+                                            <height>18</height>
+                                        </size>
+                                    </property>
+                                    <property name="iconSize">
+                                        <size>
+                                            <width>14</width>
+                                            <height>14</height>
+                                        </size>
+                                    </property>
+                                    <property name="autoRaise">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="toolButtonStyle">
+                                        <enum>Qt::ToolButtonIconOnly</enum>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
                     </item>
                     <item row="2" column="1">
                         <widget class="QLabel" name="labelReqNdiTitle">
@@ -644,28 +726,6 @@
                 </layout>
             </item>
             <item>
-                <widget class="QLabel" name="labelNdiRegisteredTrademark">
-                    <property name="text">
-                        <string>NDI_IS_A_REGISTERED_TRADEMARK_TEXT</string>
-                    </property>
-                    <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                    </property>
-                    <property name="textFormat">
-                        <enum>Qt::RichText</enum>
-                    </property>
-                    <property name="textInteractionFlags">
-                        <set>Qt::TextBrowserInteraction</set>
-                    </property>
-                    <property name="openExternalLinks">
-                        <bool>true</bool>
-                    </property>
-                    <property name="wordWrap">
-                        <bool>true</bool>
-                    </property>
-                </widget>
-            </item>
-            <item>
                 <widget class="Line" name="line2">
                     <property name="orientation">
                         <enum>Qt::Horizontal</enum>
@@ -729,19 +789,6 @@
                             </property>
                         </widget>
                     </item>
-                    <item>
-                        <widget class="QToolButton" name="toolButtonPrivacy">
-                            <property name="autoRaise">
-                                <bool>true</bool>
-                            </property>
-                            <property name="toolButtonStyle">
-                                <enum>Qt::ToolButtonTextBesideIcon</enum>
-                            </property>
-                            <property name="text">
-                                <string>Privacy</string>
-                            </property>
-                        </widget>
-                    </item>
                 </layout>
             </item>
             <item>
@@ -756,6 +803,16 @@
                         <set>Qt::AlignCenter</set>
                     </property>
                 </widget>
+            </item>
+            <item>
+                <layout class="QHBoxLayout" name="horizontalLayoutDebugFooter">
+                    <property name="spacing">
+                        <number>0</number>
+                    </property>
+                    <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                    </property>
+                </layout>
             </item>
             <item>
                 <spacer>

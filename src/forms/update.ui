@@ -28,19 +28,19 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+     <height>520</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>640</width>
-    <height>480</height>
+     <height>520</height>
    </size>
   </property>
   <property name="baseSize">
    <size>
     <width>640</width>
-    <height>480</height>
+     <height>520</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -120,7 +120,12 @@
    <item>
     <widget class="QTextBrowser" name="textReleaseNotes">
      <property name="styleSheet">
-      <string notr="true">background: #212121; padding: 8px;</string>
+     <string notr="true">QTextBrowser#textReleaseNotes { background: #212121; padding: 8px; }
+QTextBrowser#textReleaseNotes QScrollBar:vertical { background: #2b2b2b; width: 12px; margin: 0; }
+QTextBrowser#textReleaseNotes QScrollBar::handle:vertical { background: #777777; min-height: 28px; border-radius: 5px; }
+QTextBrowser#textReleaseNotes QScrollBar::handle:vertical:hover { background: #999999; }
+QTextBrowser#textReleaseNotes QScrollBar::add-line:vertical, QTextBrowser#textReleaseNotes QScrollBar::sub-line:vertical { height: 0; }
+QTextBrowser#textReleaseNotes QScrollBar::add-page:vertical, QTextBrowser#textReleaseNotes QScrollBar::sub-page:vertical { background: transparent; }</string>
      </property>
      <property name="readOnly">
       <bool>true</bool>
@@ -151,30 +156,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutAutoCheck">
-     <item>
-      <widget class="QCheckBox" name="checkBoxAutoCheckForUpdates">
-       <property name="text">
-        <string>NDIPlugin.Update.ContinueToCheckForUpdate</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </item>
-   <item>
     <layout class="QHBoxLayout" name="horizontalLayoutButtonBox">
      <item>
       <widget class="QPushButton" name="buttonSkipThisVersion">
@@ -184,24 +165,24 @@ li.checked::marker { content: &quot;\2612&quot;; }
       </widget>
      </item>
      <item>
-      <spacer>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
+                  <widget class="QPushButton" name="buttonRemindMeLater">
+                   <property name="text">
+                        <string>NDIPlugin.Update.RemindMeLater</string>
+                   </property>
+                  </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="buttonRemindMeLater">
-       <property name="text">
-        <string>NDIPlugin.Update.RemindMeLater</string>
-       </property>
-      </widget>
+                  <spacer>
+                   <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>40</width>
+                         <height>20</height>
+                        </size>
+                   </property>
+                  </spacer>
      </item>
      <item>
       <widget class="QPushButton" name="buttonInstallUpdate">
@@ -224,22 +205,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="labelDonateUrl">
-       <property name="text">
-        <string>Donate URL</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="openExternalLinks">
-        <bool>true</bool>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse</set>
        </property>
       </widget>
      </item>

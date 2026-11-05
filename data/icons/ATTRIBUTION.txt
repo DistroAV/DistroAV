@@ -1,28 +1,46 @@
-SVG Repo icon attribution
+Icons Attribution
 
+=====
+
+COLLECTION: Bigmug Interface Icons
 LICENSE: CC Attribution License
 AUTHOR: Catalin Fertu
 
 update.svg
-https://www.svgrepo.com/download/521954/arrow-bottom.svg
+https://www.svgrepo.com/svg/521954/arrow-bottom
+
 update-dark.svg
 Dark-theme variant of update.svg
 
 link.svg
-https://www.svgrepo.com/download/522216/output.svg
+https://www.svgrepo.com/svg/522216/output
+
 link-dark.svg
 Dark-theme variant of link.svg
 
 repair.svg
-https://www.svgrepo.com/download/522318/tools.svg
+https://www.svgrepo.com/svg/522317/tools
+
 repair-dark.svg
 Dark-theme variant of repair.svg
 
+=====
+
+COLLECTION: Colored Interface And Logo Icons
+LICENSE: MIT License
+AUTHOR: Garuda Technology
+
 discord.svg
-Source: SVG Repo
+https://www.svgrepo.com/svg/452188/discord
 
 github.svg
-Source: SVG Repo
+https://www.svgrepo.com/svg/452211/github
+
+=====
+
+COLLECTION: Flat Colored Interface Icons
+LICENSE: CC0 License
+UPLOADER: SVG Repo
 
 currency.svg
-Source: SVG Repo
+https://www.svgrepo.com/svg/474783/currency-exchange

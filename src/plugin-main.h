@@ -65,6 +65,8 @@ extern OutputSettings *output_settings;
 
 #define PLUGIN_REDIRECT_DISCORD_URL "https://distroav.org/discord"
 #define PLUGIN_REDIRECT_DONATE_URL "https://distroav.org/donate"
+#define PLUGIN_REDIRECT_DOWNLOAD_URL "https://distroav.org/download"
+#define PLUGIN_REDIRECT_HOME_URL "https://distroav.org/"
 #define PLUGIN_REDIRECT_PRIVACY_URL "https://distroav.org/privacy"
 #define PLUGIN_REDIRECT_REPORT_BUG_URL "https://distroav.org/report-bug"
 #define PLUGIN_REDIRECT_HELP_URL "https://distroav.org/help"

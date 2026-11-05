@@ -38,6 +38,7 @@ Inspiration(s):
 #include <QMainWindow>
 #include <QMetaEnum>
 #include <QPointer>
+#include <QScrollBar>
 #include <QSslSocket>
 #include <QTextDocument>
 #include <QTimer>
@@ -144,11 +145,14 @@ public:
 		auto textTemp = QTStr("NDIPlugin.Update.Title").arg(pluginDisplayName);
 		setWindowTitle(textTemp);
 
+		const auto linkedPluginName = makeLink(PLUGIN_REDIRECT_HOME_URL, QT_TO_UTF8(pluginDisplayName));
 		textTemp = QString("<h2>%1</h2>")
 				   .arg(QTStr("NDIPlugin.Update.NewVersionAvailable")
-						.arg(pluginDisplayName)
+						.arg(linkedPluginName)
 						.arg(pluginUpdateInfo.versionLatest.toString()));
 		ui->labelVersionNew->setText(textTemp);
+		ui->labelVersionNew->setOpenExternalLinks(true);
+		ui->labelVersionNew->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
 
 		QVersionNumber yourVersion = QVersionNumber::fromString(PLUGIN_VERSION);
 		textTemp = QString("<font size='+1'>%1</font>")
@@ -169,15 +173,10 @@ public:
 			pluginUpdateInfo.releaseNotes,
 			QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub |
 							QTextDocument::MarkdownNoHTML));
-
-		ui->checkBoxAutoCheckForUpdates->setChecked(config->AutoCheckForUpdates());
-#if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::stateChanged, this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
-#else
-		connect(ui->checkBoxAutoCheckForUpdates, &QCheckBox::checkStateChanged, this,
-			[](int state) { Config::Current(false)->AutoCheckForUpdates(state == Qt::Checked); });
-#endif
+		QTimer::singleShot(0, ui->textReleaseNotes, [text_release_notes = ui->textReleaseNotes]() {
+			auto *scroll_bar = text_release_notes->verticalScrollBar();
+			scroll_bar->setValue(scroll_bar->minimum());
+		});
 
 		connect(ui->buttonSkipThisVersion, &QPushButton::clicked, this, [this, pluginUpdateInfo]() {
 			Config::Current(false)->SkipUpdateVersion(pluginUpdateInfo.versionLatest);
@@ -201,9 +200,12 @@ public:
 			accept();
 		});
 
-		ui->labelDonateUrl->setText(makeLink(PLUGIN_REDIRECT_DONATE_URL));
-		connect(ui->labelDonateUrl, &QLabel::linkActivated,
-			[this](const QString &url) { QDesktopServices::openUrl(QUrl(url)); });
+		auto donationText = QTStr("NDIPlugin.Donate");
+		donationText.replace(QStringLiteral("DistroAV"), makeLink(PLUGIN_REDIRECT_HOME_URL, "DistroAV"));
+		ui->labelDonate->setText(donationText);
+		ui->labelDonate->setTextFormat(Qt::RichText);
+		ui->labelDonate->setOpenExternalLinks(true);
+		ui->labelDonate->setTextInteractionFlags(Qt::LinksAccessibleByKeyboard | Qt::LinksAccessibleByMouse);
 	}
 };
 

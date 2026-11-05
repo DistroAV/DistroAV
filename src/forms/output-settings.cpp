@@ -39,6 +39,15 @@
 OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::OutputSettings)
 {
 	ui->setupUi(this);
+	auto config = Config::Current();
+	ui->toolButtonNdiDisclaimer->setIcon(
+		QIcon::fromTheme("dialog-information-symbolic", style()->standardIcon(QStyle::SP_MessageBoxInformation)));
+	ui->toolButtonNdiDisclaimer->setToolTip(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+	ui->toolButtonNdiDisclaimer->setAccessibleName(NDI_IS_A_REGISTERED_TRADEMARK_TEXT);
+	connect(ui->toolButtonNdiDisclaimer, &QToolButton::clicked, this, [this]() {
+		QMessageBox::information(this, QTStr("NDIPlugin.OutputSettings.NdiDisclaimer.Title"),
+					 QString::fromUtf8(NDI_IS_A_REGISTERED_TRADEMARK_TEXT));
+	});
 	auto loadModuleIcon = [](const char *relative_path) {
 		char *module_path = obs_module_file(relative_path);
 		if (!module_path)
@@ -52,7 +61,10 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 	ui->toolButtonDiscord->setIcon(loadModuleIcon("icons/discord.svg"));
 	ui->toolButtonGithub->setIcon(loadModuleIcon("icons/github.svg"));
 	ui->toolButtonDonate->setIcon(loadModuleIcon("icons/currency.svg"));
-	ui->toolButtonPrivacy->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+	ui->toolButtonAutoUpdateInfo->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+	const auto autoUpdatePrivacyText = QTStr("NDIPlugin.OutputSettings.AutoUpdate.Privacy");
+	ui->toolButtonAutoUpdateInfo->setToolTip(autoUpdatePrivacyText);
+	ui->toolButtonAutoUpdateInfo->setAccessibleName(autoUpdatePrivacyText);
 	const bool darkTheme = palette().color(QPalette::Window).lightness() < 128;
 	auto loadThemeIcon = [&loadModuleIcon, darkTheme](const char *light, const char *dark) {
 		return loadModuleIcon(darkTheme ? dark : light);
@@ -182,27 +194,28 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 					errorText += QString("<pre>%1</pre>").arg(errorData.toHtmlEscaped());
 				}
 
-				if (pluginUpdateInfo.httpStatusCode == 404    // Not Found
-				    || pluginUpdateInfo.httpStatusCode == 412 // Precondition Failed
-				) {
-					// Only someone building and loading their own plugin should see this.
-					// This is effectively just a code comment to them/me in the UI.
-					// English only text is OK here, just like it is for all code comments.
-					errorText += R"(
-The update server says you are not using an official release.<br>
-<br>
-Update checks are only supported for official releases.
-)";
+				const bool unsupportedBuild = pluginUpdateInfo.httpStatusCode == 404 ||
+						      pluginUpdateInfo.httpStatusCode == 412;
+				if (unsupportedBuild) {
+					errorText += QString("<br>") + QTStr("NDIPlugin.Update.CheckingForUpdate.Error.UnsupportedBuild");
 					if (LOG_LEVEL >= LOG_DEBUG) {
-						errorText += R"(<br>
-<br>
-If you are running a local build, don't forget to add your build info to the update server.
-)";
+						errorText += QString("<br>") +
+							    QTStr("NDIPlugin.Update.CheckingForUpdate.Error.LocalBuildHint");
 					}
 				}
 
-				QMessageBox::warning(this, Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"),
-						     errorText);
+				QMessageBox errorDialog(QMessageBox::Warning,
+							Str("NDIPlugin.Update.CheckingForUpdate.Error.Title"), errorText,
+							QMessageBox::Ok, this);
+				QPushButton *downloadButton = nullptr;
+				if (unsupportedBuild) {
+					downloadButton = errorDialog.addButton(
+						QTStr("NDIPlugin.Update.CheckingForUpdate.Error.Download"), QMessageBox::ActionRole);
+				}
+				errorDialog.exec();
+				if (errorDialog.clickedButton() == downloadButton) {
+					QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DOWNLOAD_URL)));
+				}
 				return false;
 			}
 
@@ -233,7 +246,7 @@ If you are running a local build, don't forget to add your build info to the upd
 		auto testButton = new QPushButton("Test Release Notes (debug)", this);
 		testButton->setToolTip("Debug: show the update dialog with sample hostile releaseNotes "
 				       "(HTML / script injection attempts) to verify the markdown escape.");
-		ui->horizontalLayoutDistroAv->addWidget(testButton);
+		ui->horizontalLayoutDebugFooter->addWidget(testButton);
 		connect(testButton, &QPushButton::clicked, [] { showSampleUpdateDialog(); });
 	}
 
@@ -332,23 +345,20 @@ If you are running a local build, don't forget to add your build info to the upd
 
 	connect(ui->toolButtonDonate, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_DONATE_URL))); });
+	connect(ui->toolButtonAutoUpdateInfo, &QToolButton::clicked,
+		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_PRIVACY_URL))); });
 
 	connect(ui->toolButtonWiki, &QToolButton::clicked,
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_HELP_URL))); });
 
-	connect(ui->toolButtonPrivacy, &QToolButton::clicked,
-		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_PRIVACY_URL))); });
-
 	auto donationText = QTStr("NDIPlugin.Donate");
 	donationText.replace(QStringLiteral("DistroAV"),
-			     QStringLiteral("<a href=\"https://github.com/DistroAV/DistroAV\">DistroAV</a>"));
+			     makeLink(PLUGIN_REDIRECT_HOME_URL, "DistroAV"));
 	ui->labelDonate->setTextFormat(Qt::RichText);
 	ui->labelDonate->setOpenExternalLinks(true);
+	ui->labelDonate->setTextInteractionFlags(Qt::LinksAccessibleByKeyboard | Qt::LinksAccessibleByMouse);
 	ui->labelDonate->setText(donationText);
 
-	//Display of NDI registered trademark info with link to NDI website
-	ui->labelNdiRegisteredTrademark->setText(QString("%1 - %2").arg(
-		NDI_IS_A_REGISTERED_TRADEMARK_TEXT, makeLink(PLUGIN_REDIRECT_NDI_WEB_URL, NDI_OFFICIAL_WEB_URL)));
 }
 void replace_invalid_filename_chars(QString *s)
 {
