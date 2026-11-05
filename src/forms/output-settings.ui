@@ -270,6 +270,13 @@
             </item>
 
             <item>
+                <widget class="Line" name="lineRequirementsSeparator">
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                </widget>
+            </item>
+            <item>
                 <widget class="QLabel" name="labelRequirements">
                     <property name="text">
                         <string>NDIPlugin.OutputSettings.Requirements</string>

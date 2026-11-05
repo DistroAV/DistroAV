@@ -254,6 +254,7 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		QMessageBox prompt(QMessageBox::Warning, QTStr("NDIPlugin.OutputSettings.AutoFix.Title"),
 				   QTStr("NDIPlugin.OutputSettings.AutoFix.Message").arg(command.toHtmlEscaped()),
 				   QMessageBox::NoButton, this);
+		prompt.setMaximumWidth(500);
 		auto *proceedButton = prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Proceed"),
 					       QMessageBox::AcceptRole);
 		prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Cancel"), QMessageBox::RejectRole);
