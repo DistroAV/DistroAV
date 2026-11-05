@@ -250,9 +250,10 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		connect(testButton, &QPushButton::clicked, [] { showSampleUpdateDialog(); });
 	}
 
-	auto confirmAutomatedFix = [this]() {
+	auto confirmAutomatedFix = [this](const QString &command) {
 		QMessageBox prompt(QMessageBox::Warning, QTStr("NDIPlugin.OutputSettings.AutoFix.Title"),
-				   QTStr("NDIPlugin.OutputSettings.AutoFix.Message"), QMessageBox::NoButton, this);
+				   QTStr("NDIPlugin.OutputSettings.AutoFix.Message").arg(command.toHtmlEscaped()),
+				   QMessageBox::NoButton, this);
 		auto *proceedButton = prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Proceed"),
 					       QMessageBox::AcceptRole);
 		prompt.addButton(QTStr("NDIPlugin.OutputSettings.AutoFix.Cancel"), QMessageBox::RejectRole);
@@ -263,21 +264,32 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 
 	// Auto re-install DistroAV Plugin Button
 	connect(ui->toolButtonInstallPlugin, &QToolButton::clicked, [this, confirmAutomatedFix]() {
-		if (!confirmAutomatedFix())
+		QString command;
+#if defined(Q_OS_MACOS)
+		command = QStringLiteral("brew tap distroav/tap && brew reinstall --cask distroav/tap/distroav && exit");
+#elif defined(Q_OS_WIN)
+		command = QStringLiteral(
+			"winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements --force || pause");
+#else
+		QMessageBox::information(this, QTStr("NDIPlugin.OutputSettings.AutoFix.Title"),
+					 QTStr("NDIPlugin.OutputSettings.AutoFix.UnsupportedPlatform"));
+			return;
+#endif
+		if (!confirmAutomatedFix(command))
 			return;
 
 		obs_log(LOG_DEBUG, "Re-Install DistroAV Plugin button clicked");
 #if defined(Q_OS_MACOS)
-		const auto script = QString(
-			"tell application \"Terminal\"\n"
-			"activate\n"
-			"do script \"brew tap distroav/tap && brew reinstall --cask distroav/tap/distroav && exit\"\n"
-			"end tell");
+		const auto script = QString("tell application \"Terminal\"\n"
+					    "activate\n"
+					    "do script \"%1\"\n"
+					    "end tell")
+					    .arg(command);
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
 					     QTStr("NDIPlugin.OneclickInstallError.Message") +
-						     QStringLiteral("brew reinstall --cask distroav/tap/distroav"));
+						     command);
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -286,15 +298,11 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 					<< "/c"
 					<< "start"
 					<< "cmd.exe"
-					<< "/c"
-					<< "winget install -e --id DistroAV.DistroAV --accept-package-agreements --accept-source-agreements || pause")) {
+					<< "/c" << command)) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-						 QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id DistroAV.DistroAV"));
+					 QTStr("NDIPlugin.OneclickInstallError.Message") + command);
 			obs_log(LOG_DEBUG, "Install DistroAV button: something went wrong");
 		}
-#else
-			QMessageBox::information(this, "Unsupported platform",
-						"Automatic DistroAV installation is currently only supported on Windows and macOS using the default installation methods.");
 #endif
 	});
 
@@ -303,20 +311,32 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 		[]() { QDesktopServices::openUrl(QUrl(rehostUrl(PLUGIN_REDIRECT_NDI_REDIST_URL))); });
 
 	connect(ui->toolButtonInstallNdi, &QToolButton::clicked, [this, confirmAutomatedFix]() {
-		if (!confirmAutomatedFix())
+		QString command;
+#if defined(Q_OS_MACOS)
+		command = QStringLiteral("brew reinstall libndi && exit");
+#elif defined(Q_OS_WIN)
+		command = QStringLiteral(
+			"winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements --force || pause");
+#else
+		QMessageBox::information(this, QTStr("NDIPlugin.OutputSettings.AutoFix.Title"),
+					 QTStr("NDIPlugin.OutputSettings.AutoFix.UnsupportedPlatform"));
+			return;
+#endif
+		if (!confirmAutomatedFix(command))
 			return;
 
 		obs_log(LOG_DEBUG, "Install NDI button clicked");
 #if defined(Q_OS_MACOS)
 		const auto script = QString("tell application \"Terminal\"\n"
 					    "activate\n"
-					    "do script \"brew reinstall libndi && exit\"\n"
-					    "end tell");
+					    "do script \"%1\"\n"
+					    "end tell")
+					    .arg(command);
 
 		if (!QProcess::startDetached("/usr/bin/osascript", QStringList() << "-e" << script)) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
 					     QTStr("NDIPlugin.OneclickInstallError.Message") +
-						     QStringLiteral("brew reinstall libndi"));
+						     command);
 		}
 #elif defined(Q_OS_WIN)
 		if (!QProcess::startDetached(
@@ -325,15 +345,11 @@ OutputSettings::OutputSettings(QWidget *parent) : QDialog(parent), ui(new Ui::Ou
 					<< "/c"
 					<< "start"
 					<< "cmd.exe"
-					<< "/c"
-					<< "winget install -e --id NDI.NDIRuntime --accept-package-agreements --accept-source-agreements || pause")) {
+					<< "/c" << command)) {
 			QMessageBox::warning(this, QTStr("NDIPlugin.OneclickInstallError.Title"),
-						 QTStr("NDIPlugin.OneclickInstallError.Message") + QStringLiteral("winget install -e --id NDI.NDIRuntime"));
+					 QTStr("NDIPlugin.OneclickInstallError.Message") + command);
 			obs_log(LOG_DEBUG, "Install NDI button: something went wrong");
 		}
-#else
-		QMessageBox::information(this, "Unsupported platform",
-						 "Automatic NDI installation is currently only supported on Windows and macOS using the default installation methods.");
 #endif
 	});
 
