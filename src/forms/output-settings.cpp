@@ -388,7 +388,11 @@ void OutputSettings::onFormAccepted()
 	config->TallyProgramEnabled = ui->tallyProgramCheckBox->isChecked();
 	config->TallyPreviewEnabled = ui->tallyPreviewCheckBox->isChecked();
 
-	config->AutoCheckForUpdates(ui->toolButtonAutoCheckForUpdates->isChecked());
+	const bool auto_check_for_updates = ui->toolButtonAutoCheckForUpdates->isChecked();
+	if (last_config.AutoCheckForUpdates() != auto_check_for_updates) {
+		obs_log(LOG_INFO, "Automatic update checks changed to %s", auto_check_for_updates ? "enabled" : "disabled");
+	}
+	config->AutoCheckForUpdates(auto_check_for_updates);
 
 	auto mainSupported = ui->mainOutputGroupBox->isEnabled();
 
