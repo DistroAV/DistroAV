@@ -31,20 +31,12 @@ In some places [nearly] the full code implementation is copied.
 
 inline config_t *GetAppConfig()
 {
-#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time
 	return obs_frontend_get_app_config();
-#else
-	return obs_frontend_get_global_config();
-#endif
 }
 
 inline config_t *GetUserConfig()
 {
-#if LIBOBS_API_MAJOR_VER >= 31 // only works at compile time
 	return obs_frontend_get_user_config();
-#else
-	return obs_frontend_get_global_config();
-#endif
 }
 
 // Changed to use obs_module_text instead of ((OBSApp*)App())->GetString
